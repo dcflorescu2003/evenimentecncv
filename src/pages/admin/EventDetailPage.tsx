@@ -142,7 +142,54 @@ export default function EventDetailPage() {
     enabled: !!id,
   });
 
-  // File upload
+  // Participants with tickets (for admin override)
+  const { data: participants = [] } = useQuery({
+    queryKey: ["admin_event_participants", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("*, profiles:student_id(id, first_name, last_name, display_name), tickets(*)")
+        .eq("event_id", id!)
+        .neq("status", "cancelled");
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!id,
+  });
+
+  // Admin attendance override
+  async function adminOverrideStatus(ticketId: string, currentStatus: string, newStatus: string) {
+    const { error } = await supabase
+      .from("tickets")
+      .update({
+        status: newStatus as any,
+        checkin_timestamp: ["present", "late"].includes(newStatus) ? new Date().toISOString() : null,
+      })
+      .eq("id", ticketId);
+    if (error) { toast.error(error.message); return; }
+
+    await supabase.from("attendance_log").insert({
+      ticket_id: ticketId,
+      previous_status: currentStatus as any,
+      new_status: newStatus as any,
+      changed_by: user!.id,
+      notes: "Override admin",
+    });
+
+    // Also log to audit_logs
+    await supabase.from("audit_logs").insert({
+      user_id: user!.id,
+      action: "attendance_mark",
+      entity_type: "ticket",
+      entity_id: ticketId,
+      details: { previous_status: currentStatus, new_status: newStatus, event_id: id },
+    });
+
+    queryClient.invalidateQueries({ queryKey: ["admin_event_participants", id] });
+    queryClient.invalidateQueries({ queryKey: ["reservation_count", id] });
+    toast.success("Status prezență actualizat");
+  }
+
   async function handleFileUpload() {
     const file = fileInputRef.current?.files?.[0];
     if (!file || !uploadTitle || !user) {
