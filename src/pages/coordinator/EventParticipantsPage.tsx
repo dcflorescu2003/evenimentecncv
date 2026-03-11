@@ -8,12 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, AlertCircle } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, AlertCircle, ShieldAlert, ChevronDown, ChevronUp,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const statusLabels: Record<string, string> = {
@@ -28,6 +31,13 @@ const statusColors: Record<string, string> = {
   excused: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
   cancelled: "bg-muted text-muted-foreground",
 };
+const statusIcons: Record<string, typeof CheckCircle2> = {
+  present: CheckCircle2,
+  late: Clock,
+  absent: XCircle,
+  excused: ShieldAlert,
+  reserved: AlertCircle,
+};
 
 type TicketStatus = "present" | "late" | "absent" | "excused";
 
@@ -38,6 +48,13 @@ export default function EventParticipantsPage() {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [confirmChange, setConfirmChange] = useState<{
+    ticketId: string;
+    currentStatus: string;
+    newStatus: TicketStatus;
+    studentName: string;
+  } | null>(null);
 
   const { data: event } = useQuery({
     queryKey: ["coord_event_detail", eventId],
@@ -54,7 +71,7 @@ export default function EventParticipantsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("*, profiles:student_id(id, first_name, last_name, display_name), tickets(*)")
+        .select("*, profiles:student_id(id, first_name, last_name, display_name, student_identifier), tickets(*)")
         .eq("event_id", eventId!)
         .neq("status", "cancelled");
       if (error) throw error;
@@ -63,25 +80,39 @@ export default function EventParticipantsPage() {
     enabled: !!eventId,
   });
 
+  function getTicket(p: any) {
+    return Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+  }
+
   const filtered = participants.filter((p: any) => {
     const profile = p.profiles;
     if (!profile) return false;
     const name = `${profile.first_name} ${profile.last_name}`.toLowerCase();
     const display = (profile.display_name || "").toLowerCase();
-    if (search && !name.includes(search.toLowerCase()) && !display.includes(search.toLowerCase())) return false;
+    const identifier = (profile.student_identifier || "").toLowerCase();
+    if (search && !name.includes(search.toLowerCase()) && !display.includes(search.toLowerCase()) && !identifier.includes(search.toLowerCase())) return false;
     if (filterStatus !== "all") {
-      const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+      const ticket = getTicket(p);
       if (ticket?.status !== filterStatus) return false;
     }
     return true;
   });
 
+  // Sort: reserved first, then present, late, absent, excused
+  const statusOrder: Record<string, number> = { reserved: 0, present: 1, late: 2, absent: 3, excused: 4 };
+  const sorted = [...filtered].sort((a, b) => {
+    const sa = getTicket(a)?.status || "reserved";
+    const sb = getTicket(b)?.status || "reserved";
+    return (statusOrder[sa] ?? 5) - (statusOrder[sb] ?? 5);
+  });
+
   const stats = {
     total: participants.length,
-    present: participants.filter((p: any) => { const t = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets; return t?.status === "present"; }).length,
-    late: participants.filter((p: any) => { const t = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets; return t?.status === "late"; }).length,
-    absent: participants.filter((p: any) => { const t = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets; return t?.status === "absent"; }).length,
-    reserved: participants.filter((p: any) => { const t = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets; return t?.status === "reserved"; }).length,
+    present: participants.filter((p) => getTicket(p)?.status === "present").length,
+    late: participants.filter((p) => getTicket(p)?.status === "late").length,
+    absent: participants.filter((p) => getTicket(p)?.status === "absent").length,
+    reserved: participants.filter((p) => getTicket(p)?.status === "reserved").length,
+    excused: participants.filter((p) => getTicket(p)?.status === "excused").length,
   };
 
   async function updateStatus(ticketId: string, currentStatus: string, newStatus: TicketStatus) {
@@ -103,7 +134,17 @@ export default function EventParticipantsPage() {
     });
 
     queryClient.invalidateQueries({ queryKey: ["event_participants", eventId] });
-    toast.success("Status actualizat");
+    toast.success(`Status actualizat: ${statusLabels[newStatus]}`);
+    setConfirmChange(null);
+  }
+
+  function handleStatusClick(ticketId: string, currentStatus: string, newStatus: TicketStatus, studentName: string) {
+    // If changing from an already-processed status, confirm first
+    if (currentStatus !== "reserved") {
+      setConfirmChange({ ticketId, currentStatus, newStatus, studentName });
+    } else {
+      updateStatus(ticketId, currentStatus, newStatus);
+    }
   }
 
   return (
@@ -114,7 +155,7 @@ export default function EventParticipantsPage() {
         </Button>
         <div className="flex-1">
           <h1 className="font-display text-lg font-bold">{event?.title || "Participanți"}</h1>
-          {event && <p className="text-xs text-muted-foreground">{event.date} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</p>}
+          {event && <p className="text-xs text-muted-foreground">{event.date} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)} • {event.location}</p>}
         </div>
         <Button size="sm" onClick={() => navigate(`/coordinator/scan/${eventId}`)}>
           <ScanLine className="mr-2 h-4 w-4" /> Scanează
@@ -122,22 +163,26 @@ export default function EventParticipantsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-2 text-center">
+      <div className="grid grid-cols-5 gap-2 text-center">
         <Card><CardContent className="p-2">
           <p className="text-lg font-bold">{stats.total}</p>
-          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="text-[10px] text-muted-foreground">Total</p>
         </CardContent></Card>
         <Card><CardContent className="p-2">
           <p className="text-lg font-bold text-green-700 dark:text-green-400">{stats.present}</p>
-          <p className="text-xs text-muted-foreground">Prezenți</p>
+          <p className="text-[10px] text-muted-foreground">Prezenți</p>
         </CardContent></Card>
         <Card><CardContent className="p-2">
           <p className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{stats.late}</p>
-          <p className="text-xs text-muted-foreground">Întârziați</p>
+          <p className="text-[10px] text-muted-foreground">Întârziați</p>
+        </CardContent></Card>
+        <Card><CardContent className="p-2">
+          <p className="text-lg font-bold text-red-700 dark:text-red-400">{stats.absent}</p>
+          <p className="text-[10px] text-muted-foreground">Absenți</p>
         </CardContent></Card>
         <Card><CardContent className="p-2">
           <p className="text-lg font-bold text-blue-700 dark:text-blue-400">{stats.reserved}</p>
-          <p className="text-xs text-muted-foreground">Așteptați</p>
+          <p className="text-[10px] text-muted-foreground">Așteptați</p>
         </CardContent></Card>
       </div>
 
@@ -152,12 +197,12 @@ export default function EventParticipantsPage() {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Toate</SelectItem>
-            <SelectItem value="reserved">Rezervat</SelectItem>
-            <SelectItem value="present">Prezent</SelectItem>
-            <SelectItem value="late">Întârziat</SelectItem>
-            <SelectItem value="absent">Absent</SelectItem>
-            <SelectItem value="excused">Motivat</SelectItem>
+            <SelectItem value="all">Toate ({stats.total})</SelectItem>
+            <SelectItem value="reserved">Rezervat ({stats.reserved})</SelectItem>
+            <SelectItem value="present">Prezent ({stats.present})</SelectItem>
+            <SelectItem value="late">Întârziat ({stats.late})</SelectItem>
+            <SelectItem value="absent">Absent ({stats.absent})</SelectItem>
+            <SelectItem value="excused">Motivat ({stats.excused})</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -165,43 +210,90 @@ export default function EventParticipantsPage() {
       {/* Participant List */}
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Se încarcă…</div>
-      ) : filtered.length === 0 ? (
+      ) : sorted.length === 0 ? (
         <Card><CardContent className="py-6 text-center text-muted-foreground">Niciun participant găsit.</CardContent></Card>
       ) : (
         <div className="space-y-2">
-          {filtered.map((p: any) => {
+          {sorted.map((p: any) => {
             const profile = p.profiles;
-            const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+            const ticket = getTicket(p);
             const name = profile?.display_name || `${profile?.first_name} ${profile?.last_name}`;
+            const isExpanded = expandedId === p.id;
+            const currentStatus = ticket?.status || "reserved";
 
             return (
-              <Card key={p.id}>
-                <CardContent className="p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{name}</span>
-                    {ticket && (
-                      <Badge variant="secondary" className={`text-xs ${statusColors[ticket.status]}`}>
-                        {statusLabels[ticket.status]}
-                      </Badge>
-                    )}
-                  </div>
-                  {ticket && ticket.status === "reserved" && (
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="default" className="flex-1 h-8 text-xs" onClick={() => updateStatus(ticket.id, ticket.status, "present")}>
-                        <CheckCircle2 className="mr-1 h-3 w-3" /> Prezent
-                      </Button>
-                      <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => updateStatus(ticket.id, ticket.status, "late")}>
-                        <Clock className="mr-1 h-3 w-3" /> Întârziat
-                      </Button>
-                      <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => updateStatus(ticket.id, ticket.status, "absent")}>
-                        <XCircle className="mr-1 h-3 w-3" /> Absent
-                      </Button>
+              <Card key={p.id} className="overflow-hidden">
+                <CardContent className="p-0">
+                  {/* Main row */}
+                  <div
+                    className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                    onClick={() => setExpandedId(isExpanded ? null : p.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{name}</p>
+                      {profile?.student_identifier && (
+                        <p className="text-xs text-muted-foreground">{profile.student_identifier}</p>
+                      )}
                     </div>
-                  )}
-                  {ticket && ticket.checkin_timestamp && (
-                    <p className="text-xs text-muted-foreground">
-                      Check-in: {new Date(ticket.checkin_timestamp).toLocaleString("ro-RO")}
-                    </p>
+                    <Badge variant="secondary" className={`text-xs shrink-0 ${statusColors[currentStatus]}`}>
+                      {statusLabels[currentStatus]}
+                    </Badge>
+                    {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  </div>
+
+                  {/* Expanded actions */}
+                  {isExpanded && ticket && (
+                    <div className="border-t px-3 py-3 space-y-3 bg-muted/10">
+                      {/* Check-in info */}
+                      {ticket.checkin_timestamp && (
+                        <p className="text-xs text-muted-foreground">
+                          Check-in: {new Date(ticket.checkin_timestamp).toLocaleString("ro-RO")}
+                        </p>
+                      )}
+
+                      {/* Status change buttons */}
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Schimbă statusul:</p>
+                        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                          <Button
+                            size="sm"
+                            variant={currentStatus === "present" ? "default" : "outline"}
+                            className="h-9 text-xs"
+                            disabled={currentStatus === "present"}
+                            onClick={(e) => { e.stopPropagation(); handleStatusClick(ticket.id, currentStatus, "present", name); }}
+                          >
+                            <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Prezent
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={currentStatus === "late" ? "default" : "outline"}
+                            className="h-9 text-xs"
+                            disabled={currentStatus === "late"}
+                            onClick={(e) => { e.stopPropagation(); handleStatusClick(ticket.id, currentStatus, "late", name); }}
+                          >
+                            <Clock className="mr-1 h-3.5 w-3.5" /> Întârziat
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={currentStatus === "absent" ? "destructive" : "outline"}
+                            className="h-9 text-xs"
+                            disabled={currentStatus === "absent"}
+                            onClick={(e) => { e.stopPropagation(); handleStatusClick(ticket.id, currentStatus, "absent", name); }}
+                          >
+                            <XCircle className="mr-1 h-3.5 w-3.5" /> Absent
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={currentStatus === "excused" ? "secondary" : "outline"}
+                            className="h-9 text-xs"
+                            disabled={currentStatus === "excused"}
+                            onClick={(e) => { e.stopPropagation(); handleStatusClick(ticket.id, currentStatus, "excused", name); }}
+                          >
+                            <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Motivat
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -209,6 +301,29 @@ export default function EventParticipantsPage() {
           })}
         </div>
       )}
+
+      {/* Confirm status override dialog */}
+      <AlertDialog open={!!confirmChange} onOpenChange={(o) => !o && setConfirmChange(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmă schimbarea statusului</AlertDialogTitle>
+            <AlertDialogDescription>
+              Schimbi statusul pentru <strong>{confirmChange?.studentName}</strong> din{" "}
+              <strong>{statusLabels[confirmChange?.currentStatus || ""]}</strong> în{" "}
+              <strong>{statusLabels[confirmChange?.newStatus || ""]}</strong>.
+              Această acțiune va fi înregistrată în jurnal.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmChange && updateStatus(confirmChange.ticketId, confirmChange.currentStatus, confirmChange.newStatus)}
+            >
+              Confirmă
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
