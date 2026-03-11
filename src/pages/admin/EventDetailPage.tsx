@@ -598,4 +598,3 @@ function FileTable({
   );
 }
 
-type EventFile = Tables<"event_files">;
