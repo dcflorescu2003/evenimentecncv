@@ -1,0 +1,1 @@
+UPDATE tickets SET status = 'reserved', qr_code_data = gen_random_uuid()::text WHERE id = 'bbbb1111-1111-1111-1111-111111111111';
