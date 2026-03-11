@@ -184,7 +184,7 @@ function TicketCard({
   past?: boolean;
 }) {
   const ticket = reservation.tickets;
-  const ticketStatus = ticket?.status || reservation.status;
+  const ticketStatus = reservation.status === "cancelled" ? "cancelled" : (ticket?.status || reservation.status);
 
   return (
     <Card className={`overflow-hidden transition-all ${past ? "opacity-70" : ""}`}>
