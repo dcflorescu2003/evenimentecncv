@@ -52,7 +52,7 @@ export default function StudentTicketsPage() {
         .eq("student_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as unknown as (Reservation & { events: Event; tickets: TicketRow[] })[];
+      return data as unknown as (Reservation & { events: Event; tickets: TicketRow | null })[];
     },
     enabled: !!user,
   });
@@ -176,15 +176,15 @@ function TicketCard({
   onNavigate,
   past,
 }: {
-  reservation: Reservation & { events: Event; tickets: TicketRow[] };
+  reservation: Reservation & { events: Event; tickets: TicketRow | null };
   expanded: boolean;
   onToggle: () => void;
   onCancel?: () => void;
   onNavigate: () => void;
   past?: boolean;
 }) {
-  const ticket = reservation.tickets?.[0];
-  const ticketStatus = ticket?.status || reservation.status;
+  const ticket = reservation.tickets;
+  const ticketStatus = reservation.status === "cancelled" ? "cancelled" : (ticket?.status || reservation.status);
 
   return (
     <Card className={`overflow-hidden transition-all ${past ? "opacity-70" : ""}`}>
