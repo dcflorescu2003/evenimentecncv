@@ -24,8 +24,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, FileText, Upload, Trash2, Download,
-  UserPlus, X, FolderOpen,
+  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle,
 } from "lucide-react";
+import {
+  Select as StatusSelect, SelectContent as StatusSelectContent,
+  SelectItem as StatusSelectItem, SelectTrigger as StatusSelectTrigger,
+  SelectValue as StatusSelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
