@@ -1,0 +1,1 @@
+INSERT INTO tickets (reservation_id) VALUES ('2f1332c9-5f49-4453-a756-65e6a13f4479') ON CONFLICT (reservation_id) DO NOTHING;
