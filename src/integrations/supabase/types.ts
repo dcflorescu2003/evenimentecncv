@@ -666,6 +666,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_booking_eligibility: {
+        Args: { _event_id: string; _student_id: string }
+        Returns: Json
+      }
+      get_student_progress: {
+        Args: { _session_id: string; _student_id: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
