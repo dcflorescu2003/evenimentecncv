@@ -421,6 +421,75 @@ export default function EventDetailPage() {
           </div>
         </TabsContent>
 
+        {/* Participants Tab - Admin Override */}
+        <TabsContent value="participants" className="space-y-4">
+          <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
+          {participants.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <Users className="mx-auto mb-2 h-8 w-8" />
+                <p>Niciun participant înscris.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Elev</TableHead>
+                    <TableHead>Status bilet</TableHead>
+                    <TableHead>Check-in</TableHead>
+                    <TableHead className="w-40">Override</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {participants.map((p: any) => {
+                    const profile = p.profiles;
+                    const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+                    const name = profile?.display_name || `${profile?.first_name} ${profile?.last_name}`;
+                    const ticketStatusLabels: Record<string, string> = {
+                      reserved: "Rezervat", present: "Prezent", late: "Întârziat",
+                      absent: "Absent", excused: "Motivat", cancelled: "Anulat",
+                    };
+                    return (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-medium">{name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs">
+                            {ticket ? ticketStatusLabels[ticket.status] || ticket.status : "—"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {ticket?.checkin_timestamp ? new Date(ticket.checkin_timestamp).toLocaleString("ro-RO") : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {ticket && (
+                            <Select
+                              value={ticket.status}
+                              onValueChange={(v) => adminOverrideStatus(ticket.id, ticket.status, v)}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="reserved">Rezervat</SelectItem>
+                                <SelectItem value="present">Prezent</SelectItem>
+                                <SelectItem value="late">Întârziat</SelectItem>
+                                <SelectItem value="absent">Absent</SelectItem>
+                                <SelectItem value="excused">Motivat</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </TabsContent>
+
         {/* Dossier Tab */}
         <TabsContent value="dossier" className="space-y-4">
           <div className="flex items-center justify-between">
