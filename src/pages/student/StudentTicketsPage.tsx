@@ -176,14 +176,14 @@ function TicketCard({
   onNavigate,
   past,
 }: {
-  reservation: Reservation & { events: Event; tickets: TicketRow[] };
+  reservation: Reservation & { events: Event; tickets: TicketRow | null };
   expanded: boolean;
   onToggle: () => void;
   onCancel?: () => void;
   onNavigate: () => void;
   past?: boolean;
 }) {
-  const ticket = reservation.tickets?.[0];
+  const ticket = reservation.tickets;
   const ticketStatus = ticket?.status || reservation.status;
 
   return (
