@@ -91,13 +91,56 @@ export default function StudentEventsPage() {
         throw new Error(result.reason);
       }
 
-      // Create reservation
+      // Check if there's an existing cancelled reservation to reactivate
+      const { data: existing } = await supabase
+        .from("reservations")
+        .select("id")
+        .eq("student_id", user!.id)
+        .eq("event_id", eventId)
+        .eq("status", "cancelled")
+        .maybeSingle();
+
+      if (existing) {
+        // Reactivate cancelled reservation
+        const { error: reactivateError } = await supabase
+          .from("reservations")
+          .update({ status: "reserved", cancelled_at: null })
+          .eq("id", existing.id);
+        if (reactivateError) throw new Error(reactivateError.message);
+
+        // Reactivate or create ticket
+        const { data: existingTicket } = await supabase
+          .from("tickets")
+          .select("id")
+          .eq("reservation_id", existing.id)
+          .maybeSingle();
+
+        if (existingTicket) {
+          await supabase
+            .from("tickets")
+            .update({ status: "reserved", qr_code_data: crypto.randomUUID() })
+            .eq("id", existingTicket.id);
+        } else {
+          const { error: ticketError } = await supabase
+            .from("tickets")
+            .insert({ reservation_id: existing.id });
+          if (ticketError) throw new Error(ticketError.message);
+        }
+        return existing;
+      }
+
+      // Create new reservation
       const { data: reservation, error: resError } = await supabase
         .from("reservations")
         .insert({ student_id: user!.id, event_id: eventId })
         .select()
         .single();
-      if (resError) throw new Error(resError.message);
+      if (resError) {
+        if (resError.message.includes("duplicate key")) {
+          throw new Error("Ai deja o rezervare pentru acest eveniment.");
+        }
+        throw new Error(resError.message);
+      }
 
       // Create ticket
       const { error: ticketError } = await supabase
@@ -111,6 +154,7 @@ export default function StudentEventsPage() {
       queryClient.invalidateQueries({ queryKey: ["my_reservations"] });
       queryClient.invalidateQueries({ queryKey: ["published_events"] });
       queryClient.invalidateQueries({ queryKey: ["student_progress"] });
+      queryClient.invalidateQueries({ queryKey: ["all_my_reservations"] });
       toast.success("Rezervare confirmată! Biletul a fost generat.");
       setBookingEventId(null);
     },
