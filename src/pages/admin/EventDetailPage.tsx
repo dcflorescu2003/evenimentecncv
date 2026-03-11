@@ -24,8 +24,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, FileText, Upload, Trash2, Download,
-  UserPlus, X, FolderOpen,
+  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle,
 } from "lucide-react";
+import {
+  Select as StatusSelect, SelectContent as StatusSelectContent,
+  SelectItem as StatusSelectItem, SelectTrigger as StatusSelectTrigger,
+  SelectValue as StatusSelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -137,7 +142,54 @@ export default function EventDetailPage() {
     enabled: !!id,
   });
 
-  // File upload
+  // Participants with tickets (for admin override)
+  const { data: participants = [] } = useQuery({
+    queryKey: ["admin_event_participants", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("*, profiles:student_id(id, first_name, last_name, display_name), tickets(*)")
+        .eq("event_id", id!)
+        .neq("status", "cancelled");
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!id,
+  });
+
+  // Admin attendance override
+  async function adminOverrideStatus(ticketId: string, currentStatus: string, newStatus: string) {
+    const { error } = await supabase
+      .from("tickets")
+      .update({
+        status: newStatus as any,
+        checkin_timestamp: ["present", "late"].includes(newStatus) ? new Date().toISOString() : null,
+      })
+      .eq("id", ticketId);
+    if (error) { toast.error(error.message); return; }
+
+    await supabase.from("attendance_log").insert({
+      ticket_id: ticketId,
+      previous_status: currentStatus as any,
+      new_status: newStatus as any,
+      changed_by: user!.id,
+      notes: "Override admin",
+    });
+
+    // Also log to audit_logs
+    await supabase.from("audit_logs").insert({
+      user_id: user!.id,
+      action: "attendance_mark",
+      entity_type: "ticket",
+      entity_id: ticketId,
+      details: { previous_status: currentStatus, new_status: newStatus, event_id: id },
+    });
+
+    queryClient.invalidateQueries({ queryKey: ["admin_event_participants", id] });
+    queryClient.invalidateQueries({ queryKey: ["reservation_count", id] });
+    toast.success("Status prezență actualizat");
+  }
+
   async function handleFileUpload() {
     const file = fileInputRef.current?.files?.[0];
     if (!file || !uploadTitle || !user) {
@@ -325,6 +377,7 @@ export default function EventDetailPage() {
       <Tabs defaultValue="info" className="space-y-4">
         <TabsList>
           <TabsTrigger value="info">Informații</TabsTrigger>
+          <TabsTrigger value="participants">Participanți ({participants.length})</TabsTrigger>
           <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
           <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
           <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
@@ -366,6 +419,75 @@ export default function EventDetailPage() {
               </Card>
             )}
           </div>
+        </TabsContent>
+
+        {/* Participants Tab - Admin Override */}
+        <TabsContent value="participants" className="space-y-4">
+          <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
+          {participants.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <Users className="mx-auto mb-2 h-8 w-8" />
+                <p>Niciun participant înscris.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Elev</TableHead>
+                    <TableHead>Status bilet</TableHead>
+                    <TableHead>Check-in</TableHead>
+                    <TableHead className="w-40">Override</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {participants.map((p: any) => {
+                    const profile = p.profiles;
+                    const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+                    const name = profile?.display_name || `${profile?.first_name} ${profile?.last_name}`;
+                    const ticketStatusLabels: Record<string, string> = {
+                      reserved: "Rezervat", present: "Prezent", late: "Întârziat",
+                      absent: "Absent", excused: "Motivat", cancelled: "Anulat",
+                    };
+                    return (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-medium">{name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs">
+                            {ticket ? ticketStatusLabels[ticket.status] || ticket.status : "—"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {ticket?.checkin_timestamp ? new Date(ticket.checkin_timestamp).toLocaleString("ro-RO") : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {ticket && (
+                            <Select
+                              value={ticket.status}
+                              onValueChange={(v) => adminOverrideStatus(ticket.id, ticket.status, v)}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="reserved">Rezervat</SelectItem>
+                                <SelectItem value="present">Prezent</SelectItem>
+                                <SelectItem value="late">Întârziat</SelectItem>
+                                <SelectItem value="absent">Absent</SelectItem>
+                                <SelectItem value="excused">Motivat</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </TabsContent>
 
         {/* Dossier Tab */}
