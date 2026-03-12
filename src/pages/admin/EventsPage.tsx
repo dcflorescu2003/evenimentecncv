@@ -444,6 +444,17 @@ export default function EventsPage() {
                 </Select>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="ev-public"
+                checked={form.is_public}
+                onCheckedChange={(v) => setForm({ ...form, is_public: !!v })}
+              />
+              <Label htmlFor="ev-public" className="text-sm font-normal cursor-pointer">
+                Eveniment public (fără autentificare, vizitatorii pot rezerva locuri)
+              </Label>
+            </div>
+            {!form.is_public && (
             <div className="space-y-2">
               <Label>Clase eligibile (pe nivel)</Label>
               <div className="flex flex-wrap gap-3">
