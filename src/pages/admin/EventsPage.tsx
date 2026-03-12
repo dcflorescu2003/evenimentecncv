@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Copy, Eye, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import { isValidTime24h, normalizeTimeInput } from "@/lib/time";
 
 type Event = Tables<"events">;
 type Session = Tables<"program_sessions">;
