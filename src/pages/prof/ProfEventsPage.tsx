@@ -394,11 +394,11 @@ export default function ProfEventsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Înscriere de la</Label>
-                <Input type="datetime-local" value={form.booking_open_at} onChange={(e) => setForm({ ...form, booking_open_at: e.target.value })} />
+                <Input type="datetime-local" lang="ro-RO" value={form.booking_open_at} onChange={(e) => setForm({ ...form, booking_open_at: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>Înscriere până la</Label>
-                <Input type="datetime-local" value={form.booking_close_at} onChange={(e) => setForm({ ...form, booking_close_at: e.target.value })} />
+                <Input type="datetime-local" lang="ro-RO" value={form.booking_close_at} onChange={(e) => setForm({ ...form, booking_close_at: e.target.value })} />
               </div>
             </div>
             <label className="flex items-center gap-2 text-sm">
