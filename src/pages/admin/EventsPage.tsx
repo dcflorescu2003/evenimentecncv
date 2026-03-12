@@ -412,11 +412,27 @@ export default function EventsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ev-start">Ora început *</Label>
-                <Input id="ev-start" type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
+                <Input
+                  id="ev-start"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="HH:MM"
+                  value={form.start_time}
+                  onChange={(e) => setForm({ ...form, start_time: normalizeTimeInput(e.target.value) })}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ev-end">Ora sfârșit *</Label>
-                <Input id="ev-end" type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
+                <Input
+                  id="ev-end"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="HH:MM"
+                  value={form.end_time}
+                  onChange={(e) => setForm({ ...form, end_time: normalizeTimeInput(e.target.value) })}
+                />
               </div>
             </div>
             {dur.hours > 0 && (
