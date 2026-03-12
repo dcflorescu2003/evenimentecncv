@@ -252,8 +252,8 @@ export default function ScanPage() {
       if (!isPublic) {
         await supabase.from("attendance_log").insert({
           ticket_id: ticketId,
-          previous_status: currentTicket?.status || null,
-          new_status: status,
+          previous_status: (currentTicket?.status as any) || null,
+          new_status: status as any,
           changed_by: user!.id,
           notes: "Marcat de coordonator",
         });
