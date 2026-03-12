@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Eye, Search } from "lucide-react";
 import { toast } from "sonner";
+import { isValidTime24h, normalizeTimeInput } from "@/lib/time";
 
 type EventStatus = "draft" | "published" | "closed" | "cancelled";
 
@@ -185,8 +186,8 @@ export default function ProfEventsPage() {
       title: ev.title,
       description: ev.description || "",
       date: ev.date,
-      start_time: ev.start_time,
-      end_time: ev.end_time,
+      start_time: ev.start_time?.slice(0, 5),
+      end_time: ev.end_time?.slice(0, 5),
       location: ev.location || "",
       room_details: ev.room_details || "",
       max_capacity: ev.max_capacity,
@@ -214,6 +215,10 @@ export default function ProfEventsPage() {
     }
     if (!form.is_public && !form.session_id) {
       toast.error("Selectați sesiunea sau marcați ca public");
+      return;
+    }
+    if (!isValidTime24h(form.start_time) || !isValidTime24h(form.end_time)) {
+      toast.error("Orele trebuie în format 24h HH:MM (00:00–23:59)");
       return;
     }
     if (form.end_time <= form.start_time) {
@@ -326,11 +331,25 @@ export default function ProfEventsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Ora început *</Label>
-                <Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="HH:MM"
+                  value={form.start_time}
+                  onChange={(e) => setForm({ ...form, start_time: normalizeTimeInput(e.target.value) })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Ora sfârșit *</Label>
-                <Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="HH:MM"
+                  value={form.end_time}
+                  onChange={(e) => setForm({ ...form, end_time: normalizeTimeInput(e.target.value) })}
+                />
               </div>
             </div>
             {dur.hours > 0 && (
@@ -375,11 +394,11 @@ export default function ProfEventsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Înscriere de la</Label>
-                <Input type="datetime-local" value={form.booking_open_at} onChange={(e) => setForm({ ...form, booking_open_at: e.target.value })} />
+                <Input type="datetime-local" lang="ro-RO" value={form.booking_open_at} onChange={(e) => setForm({ ...form, booking_open_at: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>Înscriere până la</Label>
-                <Input type="datetime-local" value={form.booking_close_at} onChange={(e) => setForm({ ...form, booking_close_at: e.target.value })} />
+                <Input type="datetime-local" lang="ro-RO" value={form.booking_close_at} onChange={(e) => setForm({ ...form, booking_close_at: e.target.value })} />
               </div>
             </div>
             <label className="flex items-center gap-2 text-sm">
