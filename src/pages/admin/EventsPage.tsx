@@ -239,8 +239,12 @@ export default function EventsPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.title || !form.date || !form.session_id || !form.start_time || !form.end_time) {
+    if (!form.title || !form.date || !form.start_time || !form.end_time) {
       toast.error("Completați toate câmpurile obligatorii");
+      return;
+    }
+    if (!form.is_public && !form.session_id) {
+      toast.error("Selectați sesiunea sau marcați evenimentul ca public");
       return;
     }
     if (form.end_time <= form.start_time) {
