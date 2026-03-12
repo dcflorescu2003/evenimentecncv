@@ -42,6 +42,38 @@ export default function StudentEventsPage() {
     },
   });
 
+  // Get student's class assignment
+  const { data: studentClass } = useQuery({
+    queryKey: ["my_class", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("student_class_assignments")
+        .select("class_id")
+        .eq("student_id", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Get student's class details (grade)
+  const { data: classInfo } = useQuery({
+    queryKey: ["my_class_info", studentClass?.class_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, grade_number")
+        .eq("id", studentClass!.class_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!studentClass?.class_id,
+  });
+
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["published_events"],
     queryFn: async () => {
@@ -72,7 +104,18 @@ export default function StudentEventsPage() {
 
   const reservedEventIds = new Set(myReservations.map((r) => r.event_id));
 
+  // Filter events by eligibility (class/grade) + search + session
   const filtered = events.filter((e) => {
+    // Check class/grade eligibility
+    const hasClassRestriction = e.eligible_classes && (e.eligible_classes as string[]).length > 0;
+    const hasGradeRestriction = e.eligible_grades && (e.eligible_grades as number[]).length > 0;
+
+    if (hasClassRestriction && studentClass?.class_id) {
+      if (!(e.eligible_classes as string[]).includes(studentClass.class_id)) return false;
+    } else if (hasGradeRestriction && classInfo?.grade_number) {
+      if (!(e.eligible_grades as number[]).includes(classInfo.grade_number)) return false;
+    }
+
     if (filterSession !== "all" && e.session_id !== filterSession) return false;
     if (search && !e.title.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
