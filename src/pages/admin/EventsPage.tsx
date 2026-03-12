@@ -150,6 +150,7 @@ export default function EventsPage() {
         booking_close_at: values.booking_close_at || null,
         notes_for_teachers: values.notes_for_teachers || null,
         published: values.status === "published",
+        is_public: values.is_public,
       };
 
       if (editingId) {
