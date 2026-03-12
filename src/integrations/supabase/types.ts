@@ -273,6 +273,7 @@ export type Database = {
           computed_duration_display: string | null
           counted_duration_hours: number
           created_at: string
+          created_by: string | null
           date: string
           description: string | null
           eligible_classes: string[] | null
@@ -297,6 +298,7 @@ export type Database = {
           computed_duration_display?: string | null
           counted_duration_hours: number
           created_at?: string
+          created_by?: string | null
           date: string
           description?: string | null
           eligible_classes?: string[] | null
@@ -321,6 +323,7 @@ export type Database = {
           computed_duration_display?: string | null
           counted_duration_hours?: number
           created_at?: string
+          created_by?: string | null
           date?: string
           description?: string | null
           eligible_classes?: string[] | null
