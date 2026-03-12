@@ -83,12 +83,23 @@ export default function ProfEventDetailPage() {
   const { data: availableTeachers = [] } = useQuery({
     queryKey: ["assignable_teachers"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get user_ids with teacher roles
+      const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
-        .select("user_id, profiles:user_id(id, first_name, last_name, display_name)")
+        .select("user_id")
         .in("role", ["teacher", "coordinator_teacher", "homeroom_teacher"]);
-      if (error) throw error;
-      return (data || []).map((r: any) => r.profiles).filter(Boolean);
+      if (rolesError) throw rolesError;
+      const userIds = [...new Set((roles || []).map((r) => r.user_id))];
+      if (userIds.length === 0) return [];
+      // Then fetch their profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", userIds)
+        .order("last_name", { ascending: true })
+        .order("first_name", { ascending: true });
+      if (profilesError) throw profilesError;
+      return profiles || [];
     },
   });
 
