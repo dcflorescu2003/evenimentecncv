@@ -65,7 +65,7 @@ function parseCsv(text: string): CsvRow[] {
 
 function validateRows(rows: CsvRow[]): ValidationError[] {
   const errors: ValidationError[] = [];
-  const validRoles = ["student", "homeroom_teacher", "coordinator_teacher"];
+  const validRoles = ["student", "homeroom_teacher", "coordinator_teacher", "teacher"];
 
   rows.forEach((row, i) => {
     const rowNum = i + 2; // 1-indexed + header
