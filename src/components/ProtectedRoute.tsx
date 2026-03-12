@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
-type AppRole = "admin" | "student" | "homeroom_teacher" | "coordinator_teacher";
+type AppRole = "admin" | "student" | "homeroom_teacher" | "coordinator_teacher" | "teacher";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
