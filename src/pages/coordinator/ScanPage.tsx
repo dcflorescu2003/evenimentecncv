@@ -286,7 +286,7 @@ export default function ScanPage() {
       await supabase.from("attendance_log").insert({
         ticket_id: ticketId,
         previous_status: currentStatus as any,
-        new_status: status,
+        new_status: status as any,
         changed_by: user!.id,
         notes: "Marcat manual de coordonator",
       });
