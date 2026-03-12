@@ -46,7 +46,8 @@ const CSV_TEMPLATE = `role,first_name,last_name,class_grade,class_section,studen
 student,Ion,Popescu,9,A,,
 student,Maria,Ionescu,9,B,,
 homeroom_teacher,Elena,Dumitrescu,,,,elena@school.ro
-coordinator_teacher,Andrei,Georgescu,,,,andrei@school.ro`;
+coordinator_teacher,Andrei,Georgescu,,,,andrei@school.ro
+teacher,Mihai,Stanescu,,,,mihai@school.ro`;
 
 function parseCsv(text: string): CsvRow[] {
   const lines = text.trim().split("\n");
