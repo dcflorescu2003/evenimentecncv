@@ -92,6 +92,21 @@ const App = () => (
               <Route path="/student/tickets" element={<StudentTicketsPage />} />
             </Route>
 
+            {/* Teacher (profesor) routes */}
+            <Route
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <ProfLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/prof" element={<ProfDashboard />} />
+              <Route path="/prof/events" element={<ProfEventsPage />} />
+              <Route path="/prof/events/:id" element={<ProfEventDetailPage />} />
+              <Route path="/prof/scan/:eventId" element={<ProfScanPage />} />
+              <Route path="/prof/event/:eventId" element={<ProfEventParticipantsPage />} />
+            </Route>
+
             {/* Homeroom teacher routes */}
             <Route
               element={

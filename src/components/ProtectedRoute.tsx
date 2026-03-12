@@ -26,6 +26,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   if (allowedRoles && !allowedRoles.some((r) => roles.includes(r))) {
     // Redirect to appropriate dashboard based on role
     if (roles.includes("admin")) return <Navigate to="/admin" replace />;
+    if (roles.includes("teacher")) return <Navigate to="/prof" replace />;
     if (roles.includes("student")) return <Navigate to="/student" replace />;
     if (roles.includes("homeroom_teacher")) return <Navigate to="/teacher" replace />;
     if (roles.includes("coordinator_teacher")) return <Navigate to="/coordinator" replace />;
