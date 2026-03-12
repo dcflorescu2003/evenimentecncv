@@ -42,6 +42,38 @@ export default function StudentEventsPage() {
     },
   });
 
+  // Get student's class assignment
+  const { data: studentClass } = useQuery({
+    queryKey: ["my_class", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("student_class_assignments")
+        .select("class_id")
+        .eq("student_id", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  // Get student's class details (grade)
+  const { data: classInfo } = useQuery({
+    queryKey: ["my_class_info", studentClass?.class_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, grade_number")
+        .eq("id", studentClass!.class_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!studentClass?.class_id,
+  });
+
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["published_events"],
     queryFn: async () => {
