@@ -167,12 +167,42 @@ function EventReport({ sessionId }: { sessionId: string }) {
       const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
       const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
 
+      // Get public data
+      const eventIds = (events ?? []).map(e => e.id);
+      const { data: publicRes } = await supabase.from("public_reservations").select("id, event_id, status");
+      const { data: publicTickets } = await supabase.from("public_tickets").select("id, public_reservation_id, status");
+      
+      const publicResByEvent = new Map<string, any[]>();
+      (publicRes ?? []).filter(pr => eventIds.includes(pr.event_id) && pr.status === "reserved").forEach(pr => {
+        if (!publicResByEvent.has(pr.event_id)) publicResByEvent.set(pr.event_id, []);
+        publicResByEvent.get(pr.event_id)!.push(pr);
+      });
+      const publicTicketByRes = Object.fromEntries((publicTickets ?? []).map(t => [t.public_reservation_id, t]));
+
       return (events ?? []).map(e => {
         const evRes = (reservations ?? []).filter(r => r.event_id === e.id && r.status === "reserved");
         const present = evRes.filter(r => ticketByRes[r.id]?.status === "present").length;
         const late = evRes.filter(r => ticketByRes[r.id]?.status === "late").length;
         const absent = evRes.filter(r => ticketByRes[r.id]?.status === "absent").length;
-        return { ...e, reserved: evRes.length, present, late, absent, fillRate: e.max_capacity > 0 ? Math.round(evRes.length / e.max_capacity * 100) : 0 };
+
+        // Public counts
+        const pubRes = publicResByEvent.get(e.id) ?? [];
+        const pubTickets = pubRes.map(pr => publicTicketByRes[pr.id]).filter(Boolean);
+        const pubPresent = pubTickets.filter(t => t.status === "present").length;
+        const pubLate = pubTickets.filter(t => t.status === "late").length;
+        const pubAbsent = pubTickets.filter(t => t.status === "absent").length;
+        const pubTotal = pubTickets.length;
+
+        const totalReserved = evRes.length + pubTotal;
+        return {
+          ...e,
+          reserved: totalReserved,
+          present: present + pubPresent,
+          late: late + pubLate,
+          absent: absent + pubAbsent,
+          guests: pubTotal,
+          fillRate: e.max_capacity > 0 ? Math.round(totalReserved / e.max_capacity * 100) : 0,
+        };
       });
     },
   });
@@ -182,8 +212,8 @@ function EventReport({ sessionId }: { sessionId: string }) {
       <div className="flex justify-end print:hidden">
         <Button variant="outline" size="sm" onClick={() => {
           if (!data) return;
-          exportToCSV("raport-evenimente", ["Eveniment", "Data", "Rezervări", "Capacitate", "% Ocupare", "Prezenți", "Întârziați", "Absenți"],
-            data.map(e => [e.title, e.date, String(e.reserved), String(e.max_capacity), `${e.fillRate}%`, String(e.present), String(e.late), String(e.absent)]));
+          exportToCSV("raport-evenimente", ["Eveniment", "Data", "Rezervări", "Vizitatori", "Capacitate", "% Ocupare", "Prezenți", "Întârziați", "Absenți"],
+            data.map(e => [e.title, e.date, String(e.reserved), String(e.guests), String(e.max_capacity), `${e.fillRate}%`, String(e.present), String(e.late), String(e.absent)]));
         }}>
           <Download className="mr-2 h-4 w-4" /> Export CSV
         </Button>
@@ -196,6 +226,7 @@ function EventReport({ sessionId }: { sessionId: string }) {
                 <TableHead>Eveniment</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="text-right">Rezervări</TableHead>
+                <TableHead className="text-right">Vizitatori</TableHead>
                 <TableHead className="text-right">Capacitate</TableHead>
                 <TableHead className="text-right">% Ocupare</TableHead>
                 <TableHead className="text-right">Prezenți</TableHead>
@@ -205,12 +236,16 @@ function EventReport({ sessionId }: { sessionId: string }) {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center">Se încarcă...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center">Se încarcă...</TableCell></TableRow>
               ) : data?.map(e => (
                 <TableRow key={e.id}>
-                  <TableCell className="font-medium">{e.title}</TableCell>
+                  <TableCell className="font-medium">
+                    {e.title}
+                    {(e as any).is_public && <Badge variant="outline" className="ml-2 text-[10px]">Public</Badge>}
+                  </TableCell>
                   <TableCell>{e.date}</TableCell>
                   <TableCell className="text-right">{e.reserved}</TableCell>
+                  <TableCell className="text-right">{e.guests}</TableCell>
                   <TableCell className="text-right">{e.max_capacity}</TableCell>
                   <TableCell className="text-right">
                     <Badge variant={e.fillRate >= 90 ? "destructive" : e.fillRate >= 70 ? "secondary" : "outline"}>

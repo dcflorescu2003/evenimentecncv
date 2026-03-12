@@ -15,7 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, AlertCircle, ShieldAlert, ChevronDown, ChevronUp,
+  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, AlertCircle, ShieldAlert, ChevronDown, ChevronUp, UserCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,15 +31,18 @@ const statusColors: Record<string, string> = {
   excused: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
   cancelled: "bg-muted text-muted-foreground",
 };
-const statusIcons: Record<string, typeof CheckCircle2> = {
-  present: CheckCircle2,
-  late: Clock,
-  absent: XCircle,
-  excused: ShieldAlert,
-  reserved: AlertCircle,
-};
 
 type TicketStatus = "present" | "late" | "absent" | "excused";
+
+interface UnifiedParticipant {
+  id: string;
+  name: string;
+  identifier?: string;
+  status: string;
+  ticketId: string;
+  checkinTimestamp?: string | null;
+  isPublic: boolean;
+}
 
 export default function EventParticipantsPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -54,6 +57,7 @@ export default function EventParticipantsPage() {
     currentStatus: string;
     newStatus: TicketStatus;
     studentName: string;
+    isPublic: boolean;
   } | null>(null);
 
   const { data: event } = useQuery({
@@ -80,70 +84,98 @@ export default function EventParticipantsPage() {
     enabled: !!eventId,
   });
 
-  function getTicket(p: any) {
-    return Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
-  }
+  const { data: publicParticipants = [] } = useQuery({
+    queryKey: ["event_public_participants", eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("public_reservations")
+        .select("*, public_tickets(*)")
+        .eq("event_id", eventId!)
+        .eq("status", "reserved");
+      if (error) return [];
+      return data as any[];
+    },
+    enabled: !!eventId,
+  });
 
-  const filtered = participants.filter((p: any) => {
-    const profile = p.profiles;
-    if (!profile) return false;
-    const name = `${profile.first_name} ${profile.last_name}`.toLowerCase();
-    const display = (profile.display_name || "").toLowerCase();
-    const identifier = (profile.student_identifier || "").toLowerCase();
-    if (search && !name.includes(search.toLowerCase()) && !display.includes(search.toLowerCase()) && !identifier.includes(search.toLowerCase())) return false;
-    if (filterStatus !== "all") {
-      const ticket = getTicket(p);
-      if (ticket?.status !== filterStatus) return false;
-    }
+  // Unify participants
+  const unified: UnifiedParticipant[] = [
+    ...participants.map((p: any) => {
+      const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+      const profile = p.profiles;
+      return {
+        id: `reg-${p.id}`,
+        name: profile?.display_name || `${profile?.first_name} ${profile?.last_name}`,
+        identifier: profile?.student_identifier,
+        status: ticket?.status || "reserved",
+        ticketId: ticket?.id,
+        checkinTimestamp: ticket?.checkin_timestamp,
+        isPublic: false,
+      };
+    }),
+    ...publicParticipants.flatMap((pr: any) =>
+      (pr.public_tickets || []).map((t: any) => ({
+        id: `pub-${t.id}`,
+        name: t.attendee_name,
+        identifier: undefined,
+        status: t.status || "reserved",
+        ticketId: t.id,
+        checkinTimestamp: t.checkin_timestamp,
+        isPublic: true,
+      }))
+    ),
+  ];
+
+  const filtered = unified.filter((p) => {
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !(p.identifier || "").toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterStatus !== "all" && p.status !== filterStatus) return false;
     return true;
   });
 
-  // Sort: reserved first, then present, late, absent, excused
   const statusOrder: Record<string, number> = { reserved: 0, present: 1, late: 2, absent: 3, excused: 4 };
-  const sorted = [...filtered].sort((a, b) => {
-    const sa = getTicket(a)?.status || "reserved";
-    const sb = getTicket(b)?.status || "reserved";
-    return (statusOrder[sa] ?? 5) - (statusOrder[sb] ?? 5);
-  });
+  const sorted = [...filtered].sort((a, b) => (statusOrder[a.status] ?? 5) - (statusOrder[b.status] ?? 5));
 
   const stats = {
-    total: participants.length,
-    present: participants.filter((p) => getTicket(p)?.status === "present").length,
-    late: participants.filter((p) => getTicket(p)?.status === "late").length,
-    absent: participants.filter((p) => getTicket(p)?.status === "absent").length,
-    reserved: participants.filter((p) => getTicket(p)?.status === "reserved").length,
-    excused: participants.filter((p) => getTicket(p)?.status === "excused").length,
+    total: unified.length,
+    present: unified.filter((p) => p.status === "present").length,
+    late: unified.filter((p) => p.status === "late").length,
+    absent: unified.filter((p) => p.status === "absent").length,
+    reserved: unified.filter((p) => p.status === "reserved").length,
+    excused: unified.filter((p) => p.status === "excused").length,
   };
 
-  async function updateStatus(ticketId: string, currentStatus: string, newStatus: TicketStatus) {
+  async function updateStatus(ticketId: string, currentStatus: string, newStatus: TicketStatus, isPublic: boolean) {
+    const table = isPublic ? "public_tickets" : "tickets";
     const { error } = await supabase
-      .from("tickets")
+      .from(table)
       .update({
         status: newStatus,
         checkin_timestamp: ["present", "late"].includes(newStatus) ? new Date().toISOString() : null,
-      })
+      } as any)
       .eq("id", ticketId);
     if (error) { toast.error(error.message); return; }
 
-    await supabase.from("attendance_log").insert({
-      ticket_id: ticketId,
-      previous_status: currentStatus as any,
-      new_status: newStatus,
-      changed_by: user!.id,
-      notes: "Actualizat din lista participanți",
-    });
+    if (!isPublic) {
+      await supabase.from("attendance_log").insert({
+        ticket_id: ticketId,
+        previous_status: currentStatus as any,
+        new_status: newStatus,
+        changed_by: user!.id,
+        notes: "Actualizat din lista participanți",
+      });
+    }
 
     queryClient.invalidateQueries({ queryKey: ["event_participants", eventId] });
+    queryClient.invalidateQueries({ queryKey: ["event_public_participants", eventId] });
     toast.success(`Status actualizat: ${statusLabels[newStatus]}`);
     setConfirmChange(null);
   }
 
-  function handleStatusClick(ticketId: string, currentStatus: string, newStatus: TicketStatus, studentName: string) {
-    // If changing from an already-processed status, confirm first
+  function handleStatusClick(ticketId: string, currentStatus: string, newStatus: TicketStatus, studentName: string, isPublic: boolean) {
     if (currentStatus !== "reserved") {
-      setConfirmChange({ ticketId, currentStatus, newStatus, studentName });
+      setConfirmChange({ ticketId, currentStatus, newStatus, studentName, isPublic });
     } else {
-      updateStatus(ticketId, currentStatus, newStatus);
+      updateStatus(ticketId, currentStatus, newStatus, isPublic);
     }
   }
 
@@ -190,7 +222,7 @@ export default function EventParticipantsPage() {
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Caută elev…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Caută participant…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-[140px]">
@@ -214,81 +246,52 @@ export default function EventParticipantsPage() {
         <Card><CardContent className="py-6 text-center text-muted-foreground">Niciun participant găsit.</CardContent></Card>
       ) : (
         <div className="space-y-2">
-          {sorted.map((p: any) => {
-            const profile = p.profiles;
-            const ticket = getTicket(p);
-            const name = profile?.display_name || `${profile?.first_name} ${profile?.last_name}`;
+          {sorted.map((p) => {
             const isExpanded = expandedId === p.id;
-            const currentStatus = ticket?.status || "reserved";
-
             return (
               <Card key={p.id} className="overflow-hidden">
                 <CardContent className="p-0">
-                  {/* Main row */}
                   <div
                     className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
                     onClick={() => setExpandedId(isExpanded ? null : p.id)}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{name}</p>
-                      {profile?.student_identifier && (
-                        <p className="text-xs text-muted-foreground">{profile.student_identifier}</p>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm truncate">{p.name}</p>
+                        {p.isPublic && <Badge variant="outline" className="text-[10px] shrink-0">Vizitator</Badge>}
+                      </div>
+                      {p.identifier && <p className="text-xs text-muted-foreground">{p.identifier}</p>}
                     </div>
-                    <Badge variant="secondary" className={`text-xs shrink-0 ${statusColors[currentStatus]}`}>
-                      {statusLabels[currentStatus]}
+                    <Badge variant="secondary" className={`text-xs shrink-0 ${statusColors[p.status]}`}>
+                      {statusLabels[p.status]}
                     </Badge>
                     {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                   </div>
 
-                  {/* Expanded actions */}
-                  {isExpanded && ticket && (
+                  {isExpanded && p.ticketId && (
                     <div className="border-t px-3 py-3 space-y-3 bg-muted/10">
-                      {/* Check-in info */}
-                      {ticket.checkin_timestamp && (
+                      {p.checkinTimestamp && (
                         <p className="text-xs text-muted-foreground">
-                          Check-in: {new Date(ticket.checkin_timestamp).toLocaleString("ro-RO")}
+                          Check-in: {new Date(p.checkinTimestamp).toLocaleString("ro-RO")}
                         </p>
                       )}
-
-                      {/* Status change buttons */}
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-2">Schimbă statusul:</p>
                         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                          <Button
-                            size="sm"
-                            variant={currentStatus === "present" ? "default" : "outline"}
-                            className="h-9 text-xs"
-                            disabled={currentStatus === "present"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(ticket.id, currentStatus, "present", name); }}
-                          >
+                          <Button size="sm" variant={p.status === "present" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "present"}
+                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "present", p.name, p.isPublic); }}>
                             <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Prezent
                           </Button>
-                          <Button
-                            size="sm"
-                            variant={currentStatus === "late" ? "default" : "outline"}
-                            className="h-9 text-xs"
-                            disabled={currentStatus === "late"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(ticket.id, currentStatus, "late", name); }}
-                          >
+                          <Button size="sm" variant={p.status === "late" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "late"}
+                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "late", p.name, p.isPublic); }}>
                             <Clock className="mr-1 h-3.5 w-3.5" /> Întârziat
                           </Button>
-                          <Button
-                            size="sm"
-                            variant={currentStatus === "absent" ? "destructive" : "outline"}
-                            className="h-9 text-xs"
-                            disabled={currentStatus === "absent"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(ticket.id, currentStatus, "absent", name); }}
-                          >
+                          <Button size="sm" variant={p.status === "absent" ? "destructive" : "outline"} className="h-9 text-xs" disabled={p.status === "absent"}
+                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "absent", p.name, p.isPublic); }}>
                             <XCircle className="mr-1 h-3.5 w-3.5" /> Absent
                           </Button>
-                          <Button
-                            size="sm"
-                            variant={currentStatus === "excused" ? "secondary" : "outline"}
-                            className="h-9 text-xs"
-                            disabled={currentStatus === "excused"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(ticket.id, currentStatus, "excused", name); }}
-                          >
+                          <Button size="sm" variant={p.status === "excused" ? "secondary" : "outline"} className="h-9 text-xs" disabled={p.status === "excused"}
+                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "excused", p.name, p.isPublic); }}>
                             <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Motivat
                           </Button>
                         </div>
@@ -317,7 +320,7 @@ export default function EventParticipantsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Anulează</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => confirmChange && updateStatus(confirmChange.ticketId, confirmChange.currentStatus, confirmChange.newStatus)}
+              onClick={() => confirmChange && updateStatus(confirmChange.ticketId, confirmChange.currentStatus, confirmChange.newStatus, confirmChange.isPublic)}
             >
               Confirmă
             </AlertDialogAction>
