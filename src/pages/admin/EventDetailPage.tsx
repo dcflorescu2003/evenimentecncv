@@ -122,7 +122,7 @@ export default function EventDetailPage() {
       const { data, error } = await supabase
         .from("user_roles")
         .select("user_id, profiles:user_id(id, first_name, last_name, display_name)")
-        .in("role", ["coordinator_teacher", "teacher"]);
+        .in("role", ["coordinator_teacher", "teacher", "homeroom_teacher"]);
       if (error) throw error;
       return (data || []).map((r: any) => r.profiles).filter(Boolean) as Profile[];
     },
