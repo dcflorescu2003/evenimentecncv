@@ -58,15 +58,14 @@ serve(async (req) => {
       if (authError) throw authError;
 
       const userId = authUser.user.id;
-      const displayName = `${first_name} ${last_name}`;
 
-      await supabase.from("profiles").insert({
+      const { error: profileError } = await supabase.from("profiles").insert({
         id: userId,
         first_name,
         last_name,
         username,
-        display_name: displayName,
       });
+      if (profileError) throw profileError;
 
       await supabase.from("user_roles").insert({
         user_id: userId,
