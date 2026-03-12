@@ -762,7 +762,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "student" | "homeroom_teacher" | "coordinator_teacher"
+      app_role:
+        | "admin"
+        | "student"
+        | "homeroom_teacher"
+        | "coordinator_teacher"
+        | "teacher"
       event_status: "draft" | "published" | "closed" | "cancelled"
       file_category: "event_dossier" | "form_template"
       form_submission_status: "uploaded" | "reviewed" | "accepted" | "rejected"
@@ -903,7 +908,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "student", "homeroom_teacher", "coordinator_teacher"],
+      app_role: [
+        "admin",
+        "student",
+        "homeroom_teacher",
+        "coordinator_teacher",
+        "teacher",
+      ],
       event_status: ["draft", "published", "closed", "cancelled"],
       file_category: ["event_dossier", "form_template"],
       form_submission_status: ["uploaded", "reviewed", "accepted", "rejected"],
