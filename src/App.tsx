@@ -35,6 +35,10 @@ import CoordinatorDashboard from "./pages/coordinator/CoordinatorDashboard";
 import ScanPage from "./pages/coordinator/ScanPage";
 import EventParticipantsPage from "./pages/coordinator/EventParticipantsPage";
 
+import PublicEventsPage from "./pages/public/PublicEventsPage";
+import PublicEventBookingPage from "./pages/public/PublicEventBookingPage";
+import PublicTicketViewPage from "./pages/public/PublicTicketViewPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
