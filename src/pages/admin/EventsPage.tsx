@@ -44,8 +44,6 @@ const statusColors: Record<EventStatus, string> = {
   cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
-const ALL_GRADES = [5, 6, 7, 8, 9, 10, 11, 12];
-
 function computeDuration(start: string, end: string): { display: string; hours: number } {
   if (!start || !end) return { display: "", hours: 0 };
   const [sh, sm] = start.split(":").map(Number);
@@ -70,8 +68,11 @@ interface EventForm {
   max_capacity: number;
   status: EventStatus;
   eligible_grades: number[];
-  booking_open_at: string;
-  booking_close_at: string;
+  eligible_classes: string[];
+  booking_open_date: string;
+  booking_open_time: string;
+  booking_close_date: string;
+  booking_close_time: string;
   notes_for_teachers: string;
   is_public: boolean;
 }
@@ -88,11 +89,30 @@ const emptyForm: EventForm = {
   max_capacity: 30,
   status: "draft",
   eligible_grades: [],
-  booking_open_at: "",
-  booking_close_at: "",
+  eligible_classes: [],
+  booking_open_date: "",
+  booking_open_time: "",
+  booking_close_date: "",
+  booking_close_time: "",
   notes_for_teachers: "",
   is_public: false,
 };
+
+function splitDatetime(dt: string | null): { date: string; time: string } {
+  if (!dt) return { date: "", time: "" };
+  const d = new Date(dt);
+  if (isNaN(d.getTime())) return { date: "", time: "" };
+  return {
+    date: d.toISOString().slice(0, 10),
+    time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+  };
+}
+
+function joinDatetime(date: string, time: string): string | null {
+  if (!date) return null;
+  const t = time || "00:00";
+  return `${date}T${t}:00`;
+}
 
 export default function EventsPage() {
   const queryClient = useQueryClient();
@@ -111,6 +131,20 @@ export default function EventsPage() {
       const { data, error } = await supabase.from("program_sessions").select("*").order("start_date", { ascending: false });
       if (error) throw error;
       return data as Session[];
+    },
+  });
+
+  const { data: classes = [] } = useQuery({
+    queryKey: ["active_classes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, display_name, grade_number, section")
+        .eq("is_active", true)
+        .order("grade_number")
+        .order("section");
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -147,8 +181,9 @@ export default function EventsPage() {
         max_capacity: values.max_capacity,
         status: values.status,
         eligible_grades: values.eligible_grades.length > 0 ? values.eligible_grades : null,
-        booking_open_at: values.booking_open_at || null,
-        booking_close_at: values.booking_close_at || null,
+        eligible_classes: values.eligible_classes.length > 0 ? values.eligible_classes : null,
+        booking_open_at: joinDatetime(values.booking_open_date, values.booking_open_time),
+        booking_close_at: joinDatetime(values.booking_close_date, values.booking_close_time),
         notes_for_teachers: values.notes_for_teachers || null,
         published: values.status === "published",
         is_public: values.is_public,
@@ -190,6 +225,8 @@ export default function EventsPage() {
   }
 
   function openEdit(ev: Event) {
+    const openAt = splitDatetime(ev.booking_open_at);
+    const closeAt = splitDatetime(ev.booking_close_at);
     setEditingId(ev.id);
     setForm({
       session_id: ev.session_id,
@@ -203,8 +240,11 @@ export default function EventsPage() {
       max_capacity: ev.max_capacity,
       status: ev.status as EventStatus,
       eligible_grades: (ev.eligible_grades as number[]) || [],
-      booking_open_at: ev.booking_open_at ? ev.booking_open_at.slice(0, 16) : "",
-      booking_close_at: ev.booking_close_at ? ev.booking_close_at.slice(0, 16) : "",
+      eligible_classes: (ev.eligible_classes as string[]) || [],
+      booking_open_date: openAt.date,
+      booking_open_time: openAt.time,
+      booking_close_date: closeAt.date,
+      booking_close_time: closeAt.time,
       notes_for_teachers: ev.notes_for_teachers || "",
       is_public: (ev as any).is_public ?? false,
     });
@@ -225,8 +265,11 @@ export default function EventsPage() {
       max_capacity: ev.max_capacity,
       status: "draft",
       eligible_grades: (ev.eligible_grades as number[]) || [],
-      booking_open_at: "",
-      booking_close_at: "",
+      eligible_classes: (ev.eligible_classes as string[]) || [],
+      booking_open_date: "",
+      booking_open_time: "",
+      booking_close_date: "",
+      booking_close_time: "",
       notes_for_teachers: ev.notes_for_teachers || "",
       is_public: (ev as any).is_public ?? false,
     });
@@ -261,16 +304,55 @@ export default function EventsPage() {
   }
 
   function toggleGrade(grade: number) {
-    setForm((f) => ({
-      ...f,
-      eligible_grades: f.eligible_grades.includes(grade)
+    setForm((f) => {
+      const newGrades = f.eligible_grades.includes(grade)
         ? f.eligible_grades.filter((g) => g !== grade)
-        : [...f.eligible_grades, grade].sort((a, b) => a - b),
-    }));
+        : [...f.eligible_grades, grade].sort((a, b) => a - b);
+      // When toggling a grade, also toggle all classes of that grade
+      const gradeClassIds = classes.filter((c) => c.grade_number === grade).map((c) => c.id);
+      let newClasses: string[];
+      if (newGrades.includes(grade)) {
+        // Adding grade: add all its classes
+        newClasses = [...new Set([...f.eligible_classes, ...gradeClassIds])];
+      } else {
+        // Removing grade: remove all its classes
+        newClasses = f.eligible_classes.filter((id) => !gradeClassIds.includes(id));
+      }
+      return { ...f, eligible_grades: newGrades, eligible_classes: newClasses };
+    });
+  }
+
+  function toggleClass(classId: string, gradeNumber: number) {
+    setForm((f) => {
+      const newClasses = f.eligible_classes.includes(classId)
+        ? f.eligible_classes.filter((id) => id !== classId)
+        : [...f.eligible_classes, classId];
+      // Check if all classes of this grade are selected
+      const gradeClassIds = classes.filter((c) => c.grade_number === gradeNumber).map((c) => c.id);
+      const allSelected = gradeClassIds.every((id) => newClasses.includes(id));
+      const noneSelected = gradeClassIds.every((id) => !newClasses.includes(id));
+      let newGrades = [...f.eligible_grades];
+      if (allSelected && !newGrades.includes(gradeNumber)) {
+        newGrades = [...newGrades, gradeNumber].sort((a, b) => a - b);
+      } else if (!allSelected && newGrades.includes(gradeNumber)) {
+        // Keep the grade if at least one class is selected (partial selection)
+        if (noneSelected) {
+          newGrades = newGrades.filter((g) => g !== gradeNumber);
+        }
+      }
+      return { ...f, eligible_classes: newClasses, eligible_grades: newGrades };
+    });
   }
 
   const getSessionName = (id: string) => sessions.find((s) => s.id === id)?.name || "—";
   const dur = computeDuration(form.start_time, form.end_time);
+
+  // Group classes by grade
+  const classesByGrade = classes.reduce((acc, c) => {
+    if (!acc[c.grade_number]) acc[c.grade_number] = [];
+    acc[c.grade_number].push(c);
+    return acc;
+  }, {} as Record<number, typeof classes>);
 
   return (
     <div className="space-y-6">
@@ -476,29 +558,77 @@ export default function EventsPage() {
               </Label>
             </div>
             {!form.is_public && (
-            <div className="space-y-2">
-              <Label>Clase eligibile (pe nivel)</Label>
-              <div className="flex flex-wrap gap-3">
-                {ALL_GRADES.map((g) => (
-                  <label key={g} className="flex items-center gap-1.5 text-sm">
-                    <Checkbox checked={form.eligible_grades.includes(g)} onCheckedChange={() => toggleGrade(g)} />
-                    Clasa {g === 5 ? "a V-a" : g === 6 ? "a VI-a" : g === 7 ? "a VII-a" : g === 8 ? "a VIII-a" : g === 9 ? "a IX-a" : g === 10 ? "a X-a" : g === 11 ? "a XI-a" : "a XII-a"}
-                  </label>
-                ))}
+              <div className="space-y-3">
+                <Label>Clase eligibile</Label>
+                <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-3">
+                  {Object.entries(classesByGrade).sort(([a], [b]) => Number(a) - Number(b)).map(([grade, gradeClasses]) => {
+                    const gradeNum = Number(grade);
+                    const allClassIds = gradeClasses.map((c) => c.id);
+                    const allSelected = allClassIds.every((id) => form.eligible_classes.includes(id));
+                    const someSelected = allClassIds.some((id) => form.eligible_classes.includes(id));
+                    return (
+                      <div key={grade}>
+                        <label className="flex items-center gap-1.5 text-sm font-medium cursor-pointer">
+                          <Checkbox
+                            checked={allSelected}
+                            onCheckedChange={() => toggleGrade(gradeNum)}
+                            className={someSelected && !allSelected ? "opacity-60" : ""}
+                          />
+                          Clasa {grade}
+                        </label>
+                        <div className="ml-6 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                          {gradeClasses.map((c) => (
+                            <label key={c.id} className="flex items-center gap-1 text-sm cursor-pointer">
+                              <Checkbox
+                                checked={form.eligible_classes.includes(c.id)}
+                                onCheckedChange={() => toggleClass(c.id, gradeNum)}
+                              />
+                              {c.display_name}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {form.eligible_classes.length === 0 && form.eligible_grades.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Nicio selecție = toate clasele sunt eligibile</p>
+                )}
               </div>
-              {form.eligible_grades.length === 0 && (
-                <p className="text-xs text-muted-foreground">Nicio selecție = toate clasele sunt eligibile</p>
-              )}
-            </div>
             )}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="ev-bopen">Înscriere deschisă de la</Label>
-                <Input id="ev-bopen" type="datetime-local" lang="ro-RO" value={form.booking_open_at} onChange={(e) => setForm({ ...form, booking_open_at: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ev-bclose">Înscriere închisă la</Label>
-                <Input id="ev-bclose" type="datetime-local" lang="ro-RO" value={form.booking_close_at} onChange={(e) => setForm({ ...form, booking_close_at: e.target.value })} />
+            <div className="space-y-2">
+              <Label>Perioada de înscriere</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">De la - Data</Label>
+                  <Input type="date" value={form.booking_open_date} onChange={(e) => setForm({ ...form, booking_open_date: e.target.value })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">De la - Ora</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={5}
+                    placeholder="HH:MM"
+                    value={form.booking_open_time}
+                    onChange={(e) => setForm({ ...form, booking_open_time: normalizeTimeInput(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Până la - Data</Label>
+                  <Input type="date" value={form.booking_close_date} onChange={(e) => setForm({ ...form, booking_close_date: e.target.value })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Până la - Ora</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={5}
+                    placeholder="HH:MM"
+                    value={form.booking_close_time}
+                    onChange={(e) => setForm({ ...form, booking_close_time: normalizeTimeInput(e.target.value) })}
+                  />
+                </div>
               </div>
             </div>
             <div className="space-y-2">
