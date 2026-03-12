@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, BarChart3, CalendarDays, LogOut } from "lucide-react";
+import { GraduationCap, LayoutDashboard, BarChart3, CalendarDays, LogOut, Users2 } from "lucide-react";
 
 export default function TeacherLayout() {
   const { profile, roles, signOut } = useAuth();
@@ -13,14 +13,9 @@ export default function TeacherLayout() {
   const navItems = [
     ...(hasTeacherOrHomeroom ? [{ title: "Dashboard", icon: LayoutDashboard, path: "/prof" }] : []),
     ...(hasTeacherOrHomeroom ? [{ title: "Evenimentele mele", icon: CalendarDays, path: "/prof/events" }] : []),
-    { title: "Clasa mea", icon: LayoutDashboard, path: "/teacher" },
+    { title: "Clasa mea", icon: Users2, path: "/teacher" },
     { title: "Rapoarte", icon: BarChart3, path: "/teacher/reports" },
   ];
-
-export default function TeacherLayout() {
-  const { profile, signOut } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
 
   return (
     <div className="flex min-h-screen flex-col">
