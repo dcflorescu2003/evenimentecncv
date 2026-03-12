@@ -217,6 +217,10 @@ export default function ProfEventsPage() {
       toast.error("Selectați sesiunea sau marcați ca public");
       return;
     }
+    if (!isValidTime24h(form.start_time) || !isValidTime24h(form.end_time)) {
+      toast.error("Orele trebuie în format 24h HH:MM (00:00–23:59)");
+      return;
+    }
     if (form.end_time <= form.start_time) {
       toast.error("Ora de sfârșit trebuie să fie după ora de început");
       return;
