@@ -13,7 +13,7 @@ export default function CoordinatorLayout() {
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-4 shadow-sm">
         <div className="flex items-center gap-2">
           <GraduationCap className="h-6 w-6 text-primary" />
-          <span className="font-display text-lg font-semibold">CNCV Coordonator</span>
+          <span className="font-display text-lg font-semibold">CNCV Asistent</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">{profile?.display_name}</span>

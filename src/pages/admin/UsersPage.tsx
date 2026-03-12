@@ -29,7 +29,7 @@ const roleLabels: Record<string, string> = {
   admin: "Administrator",
   student: "Elev",
   homeroom_teacher: "Diriginte",
-  coordinator_teacher: "Coordonator",
+  coordinator_teacher: "Asistent",
   teacher: "Profesor",
 };
 
@@ -50,7 +50,8 @@ export default function UsersPage() {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .order("last_name");
+        .order("last_name")
+        .limit(10000);
       if (error) throw error;
       return data as Profile[];
     },
@@ -147,7 +148,7 @@ export default function UsersPage() {
         <div>
           <h1 className="font-display text-2xl font-bold">Utilizatori</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gestionare conturi: elevi, diriginți, coordonatori.
+            Gestionare conturi: elevi, diriginți, asistenți.
           </p>
         </div>
         <Button onClick={() => setCreateDialog(true)}>

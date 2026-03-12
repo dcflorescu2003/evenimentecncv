@@ -46,7 +46,8 @@ const CSV_TEMPLATE = `role,first_name,last_name,class_grade,class_section,studen
 student,Ion,Popescu,9,A,,
 student,Maria,Ionescu,9,B,,
 homeroom_teacher,Elena,Dumitrescu,,,,elena@school.ro
-coordinator_teacher,Andrei,Georgescu,,,,andrei@school.ro`;
+coordinator_teacher,Andrei,Georgescu,,,,andrei@school.ro
+teacher,Mihai,Stanescu,,,,mihai@school.ro`;
 
 function parseCsv(text: string): CsvRow[] {
   const lines = text.trim().split("\n");
@@ -64,7 +65,7 @@ function parseCsv(text: string): CsvRow[] {
 
 function validateRows(rows: CsvRow[]): ValidationError[] {
   const errors: ValidationError[] = [];
-  const validRoles = ["student", "homeroom_teacher", "coordinator_teacher"];
+  const validRoles = ["student", "homeroom_teacher", "coordinator_teacher", "teacher"];
 
   rows.forEach((row, i) => {
     const rowNum = i + 2; // 1-indexed + header
@@ -171,6 +172,46 @@ export default function ImportPage() {
     URL.revokeObjectURL(url);
   }
 
+  function printCredentials() {
+    const successful = results.filter((r) => !r.error);
+    if (successful.length === 0) {
+      toast.error("Nu există credențiale de printat");
+      return;
+    }
+    const roleLabels: Record<string, string> = {
+      student: "Elev", homeroom_teacher: "Diriginte", coordinator_teacher: "Asistent", teacher: "Profesor", admin: "Admin",
+    };
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Credențiale</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        h1 { font-size: 18px; margin-bottom: 4px; }
+        p { font-size: 12px; color: #666; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+        th { background: #f5f5f5; font-weight: 600; }
+        .mono { font-family: monospace; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <h1>Credențiale conturi — ${new Date().toLocaleDateString("ro-RO")}</h1>
+      <p>Colegiul Național Cantemir Vodă</p>
+      <table>
+        <thead><tr><th>#</th><th>Nume</th><th>Utilizator</th><th>Parolă</th><th>Rol</th></tr></thead>
+        <tbody>${successful.map((r, i) => `<tr>
+          <td>${i + 1}</td>
+          <td>${r.first_name} ${r.last_name}</td>
+          <td class="mono">${r.username}</td>
+          <td class="mono">${r.password}</td>
+          <td>${roleLabels[r.role] || r.role}</td>
+        </tr>`).join("")}</tbody>
+      </table></body></html>`;
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      w.setTimeout(() => w.print(), 300);
+    }
+  }
+
   function reset() {
     setStep("upload");
     setRows([]);
@@ -186,7 +227,7 @@ export default function ImportPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Import CSV</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Importați elevi, diriginți și profesori coordonatori din fișiere CSV.
+          Importați elevi, diriginți, asistenți și profesori din fișiere CSV.
         </p>
       </div>
 
@@ -223,7 +264,7 @@ export default function ImportPage() {
             <CardContent>
               <p className="text-sm text-muted-foreground mb-2">Coloane acceptate:</p>
               <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
-                <li><strong>role</strong> — student / homeroom_teacher / coordinator_teacher</li>
+                <li><strong>role</strong> — student / homeroom_teacher / coordinator_teacher / teacher</li>
                 <li><strong>first_name</strong> — prenumele</li>
                 <li><strong>last_name</strong> — numele de familie</li>
                 <li><strong>class_grade</strong> — clasa (5–12), obligatoriu pt elevi</li>
@@ -366,7 +407,10 @@ export default function ImportPage() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={exportCredentials}>
-                <Download className="mr-2 h-4 w-4" /> Exportă credențiale CSV
+                <Download className="mr-2 h-4 w-4" /> Exportă CSV
+              </Button>
+              <Button variant="outline" onClick={printCredentials}>
+                <FileText className="mr-2 h-4 w-4" /> Printează PDF
               </Button>
               <Button onClick={reset}>Import nou</Button>
             </div>
