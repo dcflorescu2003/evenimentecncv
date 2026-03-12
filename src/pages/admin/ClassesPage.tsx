@@ -92,12 +92,21 @@ export default function ClassesPage() {
   const { data: teachers = [] } = useQuery({
     queryKey: ["homeroom_teachers"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select("user_id, profiles:user_id(id, first_name, last_name, display_name)")
+        .select("user_id")
         .eq("role", "homeroom_teacher");
+      if (roleError) throw roleError;
+      const ids = (roleData || []).map((r) => r.user_id);
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", ids)
+        .order("last_name")
+        .order("first_name");
       if (error) throw error;
-      return (data || []).map((r: any) => r.profiles).filter(Boolean) as Profile[];
+      return data as Profile[];
     },
   });
 
@@ -105,12 +114,21 @@ export default function ClassesPage() {
   const { data: students = [] } = useQuery({
     queryKey: ["all_students"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
-        .select("user_id, profiles:user_id(id, first_name, last_name, display_name)")
+        .select("user_id")
         .eq("role", "student");
+      if (roleError) throw roleError;
+      const ids = (roleData || []).map((r) => r.user_id);
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", ids)
+        .order("last_name")
+        .order("first_name");
       if (error) throw error;
-      return (data || []).map((r: any) => r.profiles).filter(Boolean) as Profile[];
+      return data as Profile[];
     },
   });
 
