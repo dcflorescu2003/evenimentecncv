@@ -331,11 +331,25 @@ export default function ProfEventsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Ora început *</Label>
-                <Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="HH:MM"
+                  value={form.start_time}
+                  onChange={(e) => setForm({ ...form, start_time: normalizeTimeInput(e.target.value) })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Ora sfârșit *</Label>
-                <Input type="time" value={form.end_time} onChange={(e) => setForm({ ...form, end_time: e.target.value })} />
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="HH:MM"
+                  value={form.end_time}
+                  onChange={(e) => setForm({ ...form, end_time: normalizeTimeInput(e.target.value) })}
+                />
               </div>
             </div>
             {dur.hours > 0 && (
