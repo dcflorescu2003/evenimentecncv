@@ -227,6 +227,7 @@ export default function EventsPage() {
       booking_open_at: "",
       booking_close_at: "",
       notes_for_teachers: ev.notes_for_teachers || "",
+      is_public: (ev as any).is_public ?? false,
     });
     setDialogOpen(true);
   }
