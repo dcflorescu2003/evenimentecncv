@@ -224,7 +224,7 @@ export default function ImportPage() {
             <CardContent>
               <p className="text-sm text-muted-foreground mb-2">Coloane acceptate:</p>
               <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
-                <li><strong>role</strong> — student / homeroom_teacher / coordinator_teacher</li>
+                <li><strong>role</strong> — student / homeroom_teacher / coordinator_teacher / teacher</li>
                 <li><strong>first_name</strong> — prenumele</li>
                 <li><strong>last_name</strong> — numele de familie</li>
                 <li><strong>class_grade</strong> — clasa (5–12), obligatoriu pt elevi</li>
