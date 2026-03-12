@@ -29,7 +29,7 @@ const roleLabels: Record<string, string> = {
   admin: "Administrator",
   student: "Elev",
   homeroom_teacher: "Diriginte",
-  coordinator_teacher: "Coordonator",
+  coordinator_teacher: "Asistent",
   teacher: "Profesor",
 };
 
