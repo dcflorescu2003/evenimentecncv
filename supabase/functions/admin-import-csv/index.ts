@@ -123,15 +123,15 @@ serve(async (req) => {
         const userId = authUser.user.id;
 
         // Create profile
-        await supabase.from("profiles").insert({
+        const { error: profileError } = await supabase.from("profiles").insert({
           id: userId,
           first_name: row.first_name,
           last_name: row.last_name,
           username,
-          display_name: displayName,
           student_identifier: row.student_identifier || null,
           email: row.email || null,
         });
+        if (profileError) throw profileError;
 
         // Assign role
         await supabase.from("user_roles").insert({

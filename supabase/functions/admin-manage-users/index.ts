@@ -67,10 +67,11 @@ serve(async (req) => {
       });
       if (profileError) throw profileError;
 
-      await supabase.from("user_roles").insert({
+      const { error: roleError } = await supabase.from("user_roles").insert({
         user_id: userId,
         role,
       });
+      if (roleError) throw roleError;
 
       return new Response(JSON.stringify({ password, username }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
