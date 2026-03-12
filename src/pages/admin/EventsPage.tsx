@@ -469,6 +469,7 @@ export default function EventsPage() {
                 <p className="text-xs text-muted-foreground">Nicio selecție = toate clasele sunt eligibile</p>
               )}
             </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ev-bopen">Înscriere deschisă de la</Label>
