@@ -59,7 +59,7 @@ export default function CoordinatorDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold">
-          Bună, {profile?.first_name || "Coordonator"}! 👋
+          Bună, {profile?.first_name || "Asistent"}! 👋
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Evenimentele tale și scanarea prezenței.

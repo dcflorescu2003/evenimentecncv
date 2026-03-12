@@ -367,7 +367,10 @@ export default function ImportPage() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={exportCredentials}>
-                <Download className="mr-2 h-4 w-4" /> Exportă credențiale CSV
+                <Download className="mr-2 h-4 w-4" /> Exportă CSV
+              </Button>
+              <Button variant="outline" onClick={printCredentials}>
+                <FileText className="mr-2 h-4 w-4" /> Printează PDF
               </Button>
               <Button onClick={reset}>Import nou</Button>
             </div>

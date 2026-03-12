@@ -1,24 +1,28 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, ScanLine, LogOut } from "lucide-react";
-
-const navItems = [
-  { title: "Dashboard", icon: LayoutDashboard, path: "/prof" },
-  { title: "Evenimentele mele", icon: CalendarDays, path: "/prof/events" },
-];
+import { GraduationCap, LayoutDashboard, CalendarDays, Users2, LogOut } from "lucide-react";
 
 export default function ProfLayout() {
-  const { profile, signOut } = useAuth();
+  const { profile, roles, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isHomeroom = roles.includes("homeroom_teacher");
+  const title = isHomeroom && !roles.includes("teacher") ? "CNCV Diriginte" : "CNCV Profesor";
+
+  const navItems = [
+    { title: "Dashboard", icon: LayoutDashboard, path: "/prof" },
+    { title: "Evenimentele mele", icon: CalendarDays, path: "/prof/events" },
+    ...(isHomeroom ? [{ title: "Clasa mea", icon: Users2, path: "/teacher" }] : []),
+  ];
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-4 shadow-sm">
         <div className="flex items-center gap-2">
           <GraduationCap className="h-6 w-6 text-primary" />
-          <span className="font-display text-lg font-semibold">CNCV Profesor</span>
+          <span className="font-display text-lg font-semibold">{title}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">{profile?.display_name}</span>

@@ -95,7 +95,7 @@ const App = () => (
             {/* Teacher (profesor) routes */}
             <Route
               element={
-                <ProtectedRoute allowedRoles={["teacher"]}>
+                <ProtectedRoute allowedRoles={["teacher", "homeroom_teacher"]}>
                   <ProfLayout />
                 </ProtectedRoute>
               }

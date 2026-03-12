@@ -148,7 +148,7 @@ export default function UsersPage() {
         <div>
           <h1 className="font-display text-2xl font-bold">Utilizatori</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gestionare conturi: elevi, diriginți, coordonatori.
+            Gestionare conturi: elevi, diriginți, asistenți.
           </p>
         </div>
         <Button onClick={() => setCreateDialog(true)}>
