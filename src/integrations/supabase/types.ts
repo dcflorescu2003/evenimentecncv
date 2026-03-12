@@ -279,6 +279,7 @@ export type Database = {
           eligible_grades: number[] | null
           end_time: string
           id: string
+          is_public: boolean
           location: string | null
           max_capacity: number
           notes_for_teachers: string | null
@@ -302,6 +303,7 @@ export type Database = {
           eligible_grades?: number[] | null
           end_time: string
           id?: string
+          is_public?: boolean
           location?: string | null
           max_capacity: number
           notes_for_teachers?: string | null
@@ -325,6 +327,7 @@ export type Database = {
           eligible_grades?: number[] | null
           end_time?: string
           id?: string
+          is_public?: boolean
           location?: string | null
           max_capacity?: number
           notes_for_teachers?: string | null
@@ -520,6 +523,82 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      public_reservations: {
+        Row: {
+          created_at: string
+          event_id: string
+          guest_email: string | null
+          guest_name: string
+          id: string
+          reservation_code: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          guest_email?: string | null
+          guest_name: string
+          id?: string
+          reservation_code?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          guest_email?: string | null
+          guest_name?: string
+          id?: string
+          reservation_code?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_reservations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_tickets: {
+        Row: {
+          attendee_name: string
+          checkin_timestamp: string | null
+          created_at: string
+          id: string
+          public_reservation_id: string
+          qr_code_data: string
+          status: string
+        }
+        Insert: {
+          attendee_name: string
+          checkin_timestamp?: string | null
+          created_at?: string
+          id?: string
+          public_reservation_id: string
+          qr_code_data?: string
+          status?: string
+        }
+        Update: {
+          attendee_name?: string
+          checkin_timestamp?: string | null
+          created_at?: string
+          id?: string
+          public_reservation_id?: string
+          qr_code_data?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_tickets_public_reservation_id_fkey"
+            columns: ["public_reservation_id"]
+            isOneToOne: false
+            referencedRelation: "public_reservations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reservations: {
         Row: {
