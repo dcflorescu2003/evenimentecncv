@@ -72,6 +72,7 @@ interface EventForm {
   booking_open_at: string;
   booking_close_at: string;
   notes_for_teachers: string;
+  is_public: boolean;
 }
 
 const emptyForm: EventForm = {
@@ -89,6 +90,7 @@ const emptyForm: EventForm = {
   booking_open_at: "",
   booking_close_at: "",
   notes_for_teachers: "",
+  is_public: false,
 };
 
 export default function EventsPage() {
@@ -148,6 +150,7 @@ export default function EventsPage() {
         booking_close_at: values.booking_close_at || null,
         notes_for_teachers: values.notes_for_teachers || null,
         published: values.status === "published",
+        is_public: values.is_public,
       };
 
       if (editingId) {
@@ -202,6 +205,7 @@ export default function EventsPage() {
       booking_open_at: ev.booking_open_at ? ev.booking_open_at.slice(0, 16) : "",
       booking_close_at: ev.booking_close_at ? ev.booking_close_at.slice(0, 16) : "",
       notes_for_teachers: ev.notes_for_teachers || "",
+      is_public: (ev as any).is_public ?? false,
     });
     setDialogOpen(true);
   }
@@ -223,6 +227,7 @@ export default function EventsPage() {
       booking_open_at: "",
       booking_close_at: "",
       notes_for_teachers: ev.notes_for_teachers || "",
+      is_public: (ev as any).is_public ?? false,
     });
     setDialogOpen(true);
   }
@@ -235,8 +240,12 @@ export default function EventsPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.title || !form.date || !form.session_id || !form.start_time || !form.end_time) {
+    if (!form.title || !form.date || !form.start_time || !form.end_time) {
       toast.error("Completați toate câmpurile obligatorii");
+      return;
+    }
+    if (!form.is_public && !form.session_id) {
+      toast.error("Selectați sesiunea sau marcați evenimentul ca public");
       return;
     }
     if (form.end_time <= form.start_time) {
@@ -435,6 +444,17 @@ export default function EventsPage() {
                 </Select>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="ev-public"
+                checked={form.is_public}
+                onCheckedChange={(v) => setForm({ ...form, is_public: !!v })}
+              />
+              <Label htmlFor="ev-public" className="text-sm font-normal cursor-pointer">
+                Eveniment public (fără autentificare, vizitatorii pot rezerva locuri)
+              </Label>
+            </div>
+            {!form.is_public && (
             <div className="space-y-2">
               <Label>Clase eligibile (pe nivel)</Label>
               <div className="flex flex-wrap gap-3">
@@ -449,6 +469,7 @@ export default function EventsPage() {
                 <p className="text-xs text-muted-foreground">Nicio selecție = toate clasele sunt eligibile</p>
               )}
             </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ev-bopen">Înscriere deschisă de la</Label>

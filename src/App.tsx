@@ -35,6 +35,10 @@ import CoordinatorDashboard from "./pages/coordinator/CoordinatorDashboard";
 import ScanPage from "./pages/coordinator/ScanPage";
 import EventParticipantsPage from "./pages/coordinator/EventParticipantsPage";
 
+import PublicEventsPage from "./pages/public/PublicEventsPage";
+import PublicEventBookingPage from "./pages/public/PublicEventBookingPage";
+import PublicTicketViewPage from "./pages/public/PublicTicketViewPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -105,6 +109,12 @@ const App = () => (
               <Route path="/coordinator/scan/:eventId" element={<ScanPage />} />
               <Route path="/coordinator/event/:eventId" element={<EventParticipantsPage />} />
             </Route>
+
+            {/* Public routes (no auth) */}
+            <Route path="/public/events" element={<PublicEventsPage />} />
+            <Route path="/public/events/:id" element={<PublicEventBookingPage />} />
+            <Route path="/public/tickets/:code" element={<PublicTicketViewPage />} />
+            <Route path="/public/tickets" element={<PublicTicketViewPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

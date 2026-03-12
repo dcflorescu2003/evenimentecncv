@@ -41,6 +41,7 @@ export default function ScanPage() {
     message: string;
     studentName?: string;
     ticketId?: string;
+    isPublicTicket?: boolean;
   } | null>(null);
   const [markStatus, setMarkStatus] = useState<TicketStatus>("present");
   const [scannerActive, setScannerActive] = useState(false);
@@ -57,6 +58,7 @@ export default function ScanPage() {
     enabled: !!eventId,
   });
 
+  // Search regular participants
   const { data: searchResults = [] } = useQuery({
     queryKey: ["search_participants", eventId, searchQuery],
     queryFn: async () => {
@@ -75,6 +77,32 @@ export default function ScanPage() {
         const display = (p.display_name || "").toLowerCase();
         return name.includes(q) || display.includes(q);
       }) as any[];
+    },
+    enabled: !!eventId && searchQuery.length >= 2,
+  });
+
+  // Search public participants
+  const { data: publicSearchResults = [] } = useQuery({
+    queryKey: ["search_public_participants", eventId, searchQuery],
+    queryFn: async () => {
+      if (!searchQuery || searchQuery.length < 2) return [];
+      const { data, error } = await supabase
+        .from("public_reservations")
+        .select("*, public_tickets(*)")
+        .eq("event_id", eventId!)
+        .eq("status", "reserved");
+      if (error) return [];
+      const q = searchQuery.toLowerCase();
+      const results: any[] = [];
+      (data || []).forEach((r: any) => {
+        const tickets = r.public_tickets || [];
+        tickets.forEach((t: any) => {
+          if (t.attendee_name.toLowerCase().includes(q)) {
+            results.push({ ...t, reservation: r, isPublic: true });
+          }
+        });
+      });
+      return results;
     },
     enabled: !!eventId && searchQuery.length >= 2,
   });
@@ -117,7 +145,6 @@ export default function ScanPage() {
 
   useEffect(() => {
     if (activeTab === "scan") {
-      // Small delay so DOM mounts
       const t = setTimeout(() => startScanner(), 300);
       return () => clearTimeout(t);
     } else {
@@ -137,73 +164,106 @@ export default function ScanPage() {
   }
 
   async function processTicket(qrCodeData: string) {
-    // Find ticket by qr_code_data
+    // First try regular tickets
     const { data: ticket, error } = await supabase
       .from("tickets")
       .select("*, reservations(*, profiles:student_id(first_name, last_name, display_name))")
       .eq("qr_code_data", qrCodeData)
       .maybeSingle();
 
-    if (error || !ticket) {
-      setScanResult({ success: false, message: "Bilet negăsit. Verificați codul." });
-      return;
-    }
+    if (ticket) {
+      const reservation = (ticket as any).reservations;
+      if (!reservation || reservation.event_id !== eventId) {
+        setScanResult({ success: false, message: "Biletul nu aparține acestui eveniment." });
+        return;
+      }
 
-    const reservation = (ticket as any).reservations;
-    if (!reservation || reservation.event_id !== eventId) {
-      setScanResult({ success: false, message: "Biletul nu aparține acestui eveniment." });
-      return;
-    }
+      if (ticket.status !== "reserved") {
+        const name = reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`;
+        setScanResult({
+          success: false,
+          message: `Biletul a fost deja procesat (${statusLabels[ticket.status]}).`,
+          studentName: name,
+          ticketId: ticket.id,
+        });
+        return;
+      }
 
-    if (ticket.status !== "reserved") {
       const name = reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`;
+      setScanResult({ success: true, message: "Bilet valid!", studentName: name, ticketId: ticket.id });
+      return;
+    }
+
+    // Try public tickets
+    const { data: publicTicket } = await supabase
+      .from("public_tickets")
+      .select("*, public_reservations(event_id, guest_name)")
+      .eq("qr_code_data", qrCodeData)
+      .maybeSingle();
+
+    if (publicTicket) {
+      const pr = (publicTicket as any).public_reservations;
+      if (!pr || pr.event_id !== eventId) {
+        setScanResult({ success: false, message: "Biletul nu aparține acestui eveniment." });
+        return;
+      }
+
+      if (publicTicket.status !== "reserved") {
+        setScanResult({
+          success: false,
+          message: `Biletul a fost deja procesat (${statusLabels[publicTicket.status]}).`,
+          studentName: `${publicTicket.attendee_name} (Vizitator)`,
+          ticketId: publicTicket.id,
+          isPublicTicket: true,
+        });
+        return;
+      }
+
       setScanResult({
-        success: false,
-        message: `Biletul a fost deja procesat (${statusLabels[ticket.status]}).`,
-        studentName: name,
-        ticketId: ticket.id,
+        success: true,
+        message: "Bilet valid!",
+        studentName: `${publicTicket.attendee_name} (Vizitator)`,
+        ticketId: publicTicket.id,
+        isPublicTicket: true,
       });
       return;
     }
 
-    const name = reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`;
-    setScanResult({
-      success: true,
-      message: "Bilet valid!",
-      studentName: name,
-      ticketId: ticket.id,
-    });
+    setScanResult({ success: false, message: "Bilet negăsit. Verificați codul." });
   }
 
   const markMutation = useMutation({
-    mutationFn: async ({ ticketId, status }: { ticketId: string; status: TicketStatus }) => {
-      // Get current ticket status for audit
-      const { data: currentTicket } = await supabase.from("tickets").select("status").eq("id", ticketId).single();
+    mutationFn: async ({ ticketId, status, isPublic }: { ticketId: string; status: TicketStatus; isPublic?: boolean }) => {
+      const table = isPublic ? "public_tickets" : "tickets";
+
+      // Get current status
+      const { data: currentTicket } = await supabase.from(table).select("status").eq("id", ticketId).single();
 
       const { error: updateError } = await supabase
-        .from("tickets")
+        .from(table)
         .update({
           status,
           checkin_timestamp: ["present", "late"].includes(status) ? new Date().toISOString() : null,
-        })
+        } as any)
         .eq("id", ticketId);
       if (updateError) throw new Error(updateError.message);
 
       // Log attendance
-      const { error: logError } = await supabase.from("attendance_log").insert({
-        ticket_id: ticketId,
-        previous_status: currentTicket?.status || null,
-        new_status: status,
-        changed_by: user!.id,
-        notes: `Marcat de coordonator`,
-      });
-      if (logError) console.error("Audit log error:", logError);
+      if (!isPublic) {
+        await supabase.from("attendance_log").insert({
+          ticket_id: ticketId,
+          previous_status: (currentTicket?.status as any) || null,
+          new_status: status as any,
+          changed_by: user!.id,
+          notes: "Marcat de coordonator",
+        });
+      }
     },
     onSuccess: () => {
       toast.success(`Prezență marcată: ${statusLabels[markStatus]}`);
       setScanResult(null);
       queryClient.invalidateQueries({ queryKey: ["search_participants"] });
-      // Restart scanner
+      queryClient.invalidateQueries({ queryKey: ["search_public_participants"] });
       if (activeTab === "scan") {
         setTimeout(() => startScanner(), 500);
       }
@@ -211,26 +271,30 @@ export default function ScanPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  async function markFromSearch(ticketId: string, status: TicketStatus, currentStatus: string) {
+  async function markFromSearch(ticketId: string, status: TicketStatus, currentStatus: string, isPublic?: boolean) {
+    const table = isPublic ? "public_tickets" : "tickets";
     const { error: updateError } = await supabase
-      .from("tickets")
+      .from(table)
       .update({
         status,
         checkin_timestamp: ["present", "late"].includes(status) ? new Date().toISOString() : null,
-      })
+      } as any)
       .eq("id", ticketId);
     if (updateError) { toast.error(updateError.message); return; }
 
-    await supabase.from("attendance_log").insert({
-      ticket_id: ticketId,
-      previous_status: currentStatus as any,
-      new_status: status,
-      changed_by: user!.id,
-      notes: "Marcat manual de coordonator",
-    });
+    if (!isPublic) {
+      await supabase.from("attendance_log").insert({
+        ticket_id: ticketId,
+        previous_status: currentStatus as any,
+        new_status: status as any,
+        changed_by: user!.id,
+        notes: "Marcat manual de coordonator",
+      });
+    }
 
     toast.success("Prezență actualizată");
     queryClient.invalidateQueries({ queryKey: ["search_participants"] });
+    queryClient.invalidateQueries({ queryKey: ["search_public_participants"] });
   }
 
   return (
@@ -258,62 +322,39 @@ export default function ScanPage() {
             <Keyboard className="mr-2 h-4 w-4" /> Cod manual
           </TabsTrigger>
           <TabsTrigger value="search" className="flex-1">
-            <Search className="mr-2 h-4 w-4" /> Caută elev
+            <Search className="mr-2 h-4 w-4" /> Caută
           </TabsTrigger>
         </TabsList>
 
-        {/* QR Scanner Tab */}
         <TabsContent value="scan" className="space-y-4">
-          <div
-            id="qr-reader"
-            ref={videoRef}
-            className="mx-auto w-full max-w-sm overflow-hidden rounded-lg border bg-muted"
-            style={{ minHeight: 300 }}
-          />
+          <div id="qr-reader" ref={videoRef} className="mx-auto w-full max-w-sm overflow-hidden rounded-lg border bg-muted" style={{ minHeight: 300 }} />
           {!scannerActive && (
-            <Button className="w-full" onClick={startScanner}>
-              <Camera className="mr-2 h-4 w-4" /> Pornește camera
-            </Button>
+            <Button className="w-full" onClick={startScanner}><Camera className="mr-2 h-4 w-4" /> Pornește camera</Button>
           )}
           {scannerActive && (
-            <Button variant="outline" className="w-full" onClick={stopScanner}>
-              <CameraOff className="mr-2 h-4 w-4" /> Oprește camera
-            </Button>
+            <Button variant="outline" className="w-full" onClick={stopScanner}><CameraOff className="mr-2 h-4 w-4" /> Oprește camera</Button>
           )}
         </TabsContent>
 
-        {/* Manual Code Tab */}
         <TabsContent value="manual" className="space-y-4">
           <Card>
             <CardContent className="p-4 space-y-3">
               <p className="text-sm text-muted-foreground">Introduceți codul QR al biletului manual.</p>
               <div className="flex gap-2">
-                <Input
-                  value={manualCode}
-                  onChange={(e) => setManualCode(e.target.value)}
-                  placeholder="Cod bilet…"
-                  onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
-                />
+                <Input value={manualCode} onChange={(e) => setManualCode(e.target.value)} placeholder="Cod bilet…" onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()} />
                 <Button onClick={handleManualSubmit}>Verifică</Button>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Search Tab */}
         <TabsContent value="search" className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Caută elev după nume…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+            <Input placeholder="Caută după nume…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
           </div>
-          {searchResults.length === 0 && searchQuery.length >= 2 && (
-            <p className="text-sm text-center text-muted-foreground py-4">Niciun elev găsit.</p>
-          )}
+
+          {/* Regular participants */}
           {searchResults.map((r: any) => {
             const ticket = Array.isArray(r.tickets) ? r.tickets[0] : r.tickets;
             const p = r.profiles;
@@ -323,11 +364,7 @@ export default function ScanPage() {
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-sm">{name}</span>
-                    {ticket && (
-                      <Badge variant="secondary" className="text-xs">
-                        {statusLabels[ticket.status]}
-                      </Badge>
-                    )}
+                    {ticket && <Badge variant="secondary" className="text-xs">{statusLabels[ticket.status]}</Badge>}
                   </div>
                   {ticket && ticket.status === "reserved" && (
                     <div className="flex gap-1">
@@ -343,6 +380,35 @@ export default function ScanPage() {
               </Card>
             );
           })}
+
+          {/* Public participants */}
+          {publicSearchResults.map((t: any) => (
+            <Card key={t.id}>
+              <CardContent className="p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm">{t.attendee_name}</span>
+                    <Badge variant="outline" className="text-xs">Vizitator</Badge>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">{statusLabels[t.status]}</Badge>
+                </div>
+                {t.status === "reserved" && (
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="default" className="flex-1" onClick={() => markFromSearch(t.id, "present", t.status, true)}>
+                      <CheckCircle2 className="mr-1 h-3 w-3" /> Prezent
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => markFromSearch(t.id, "late", t.status, true)}>
+                      <Clock className="mr-1 h-3 w-3" /> Întârziat
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+
+          {searchResults.length === 0 && publicSearchResults.length === 0 && searchQuery.length >= 2 && (
+            <p className="text-sm text-center text-muted-foreground py-4">Niciun participant găsit.</p>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -381,7 +447,7 @@ export default function ScanPage() {
             <AlertDialogCancel>Închide</AlertDialogCancel>
             {scanResult?.success && scanResult?.ticketId && (
               <AlertDialogAction
-                onClick={() => markMutation.mutate({ ticketId: scanResult.ticketId!, status: markStatus })}
+                onClick={() => markMutation.mutate({ ticketId: scanResult.ticketId!, status: markStatus, isPublic: scanResult.isPublicTicket })}
                 disabled={markMutation.isPending}
               >
                 {markMutation.isPending ? "Se salvează…" : "Marchează"}
