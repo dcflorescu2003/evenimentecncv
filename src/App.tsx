@@ -30,6 +30,13 @@ import TeacherLayout from "./components/layouts/TeacherLayout";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherReportsPage from "./pages/teacher/TeacherReportsPage";
 
+import ProfLayout from "./components/layouts/ProfLayout";
+import ProfDashboard from "./pages/prof/ProfDashboard";
+import ProfEventsPage from "./pages/prof/ProfEventsPage";
+import ProfEventDetailPage from "./pages/prof/ProfEventDetailPage";
+import ProfScanPage from "./pages/prof/ProfScanPage";
+import ProfEventParticipantsPage from "./pages/prof/ProfEventParticipantsPage";
+
 import CoordinatorLayout from "./components/layouts/CoordinatorLayout";
 import CoordinatorDashboard from "./pages/coordinator/CoordinatorDashboard";
 import ScanPage from "./pages/coordinator/ScanPage";
@@ -83,6 +90,21 @@ const App = () => (
               <Route path="/student/events" element={<StudentEventsPage />} />
               <Route path="/student/events/:id" element={<StudentEventDetailPage />} />
               <Route path="/student/tickets" element={<StudentTicketsPage />} />
+            </Route>
+
+            {/* Teacher (profesor) routes */}
+            <Route
+              element={
+                <ProtectedRoute allowedRoles={["teacher"]}>
+                  <ProfLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/prof" element={<ProfDashboard />} />
+              <Route path="/prof/events" element={<ProfEventsPage />} />
+              <Route path="/prof/events/:id" element={<ProfEventDetailPage />} />
+              <Route path="/prof/scan/:eventId" element={<ProfScanPage />} />
+              <Route path="/prof/event/:eventId" element={<ProfEventParticipantsPage />} />
             </Route>
 
             {/* Homeroom teacher routes */}

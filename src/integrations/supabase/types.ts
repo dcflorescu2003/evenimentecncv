@@ -273,6 +273,7 @@ export type Database = {
           computed_duration_display: string | null
           counted_duration_hours: number
           created_at: string
+          created_by: string | null
           date: string
           description: string | null
           eligible_classes: string[] | null
@@ -297,6 +298,7 @@ export type Database = {
           computed_duration_display?: string | null
           counted_duration_hours: number
           created_at?: string
+          created_by?: string | null
           date: string
           description?: string | null
           eligible_classes?: string[] | null
@@ -321,6 +323,7 @@ export type Database = {
           computed_duration_display?: string | null
           counted_duration_hours?: number
           created_at?: string
+          created_by?: string | null
           date?: string
           description?: string | null
           eligible_classes?: string[] | null
@@ -762,7 +765,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "student" | "homeroom_teacher" | "coordinator_teacher"
+      app_role:
+        | "admin"
+        | "student"
+        | "homeroom_teacher"
+        | "coordinator_teacher"
+        | "teacher"
       event_status: "draft" | "published" | "closed" | "cancelled"
       file_category: "event_dossier" | "form_template"
       form_submission_status: "uploaded" | "reviewed" | "accepted" | "rejected"
@@ -903,7 +911,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "student", "homeroom_teacher", "coordinator_teacher"],
+      app_role: [
+        "admin",
+        "student",
+        "homeroom_teacher",
+        "coordinator_teacher",
+        "teacher",
+      ],
       event_status: ["draft", "published", "closed", "cancelled"],
       file_category: ["event_dossier", "form_template"],
       form_submission_status: ["uploaded", "reviewed", "accepted", "rejected"],
