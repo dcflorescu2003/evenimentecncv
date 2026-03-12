@@ -187,7 +187,7 @@ export default function ImportPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Import CSV</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Importați elevi, diriginți și profesori coordonatori din fișiere CSV.
+          Importați elevi, diriginți, asistenți și profesori din fișiere CSV.
         </p>
       </div>
 
