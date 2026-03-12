@@ -494,11 +494,11 @@ export default function EventsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ev-bopen">Înscriere deschisă de la</Label>
-                <Input id="ev-bopen" type="datetime-local" value={form.booking_open_at} onChange={(e) => setForm({ ...form, booking_open_at: e.target.value })} />
+                <Input id="ev-bopen" type="datetime-local" lang="ro-RO" value={form.booking_open_at} onChange={(e) => setForm({ ...form, booking_open_at: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ev-bclose">Înscriere închisă la</Label>
-                <Input id="ev-bclose" type="datetime-local" value={form.booking_close_at} onChange={(e) => setForm({ ...form, booking_close_at: e.target.value })} />
+                <Input id="ev-bclose" type="datetime-local" lang="ro-RO" value={form.booking_close_at} onChange={(e) => setForm({ ...form, booking_close_at: e.target.value })} />
               </div>
             </div>
             <div className="space-y-2">
