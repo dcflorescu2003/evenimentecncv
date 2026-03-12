@@ -212,6 +212,7 @@ export default function ImportPage() {
     }
   }
 
+  function reset() {
     setStep("upload");
     setRows([]);
     setErrors([]);
