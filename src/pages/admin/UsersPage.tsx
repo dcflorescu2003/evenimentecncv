@@ -50,7 +50,8 @@ export default function UsersPage() {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .order("last_name");
+        .order("last_name")
+        .limit(10000);
       if (error) throw error;
       return data as Profile[];
     },
