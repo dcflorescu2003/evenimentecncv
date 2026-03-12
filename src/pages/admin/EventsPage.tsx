@@ -72,6 +72,7 @@ interface EventForm {
   booking_open_at: string;
   booking_close_at: string;
   notes_for_teachers: string;
+  is_public: boolean;
 }
 
 const emptyForm: EventForm = {
@@ -89,6 +90,7 @@ const emptyForm: EventForm = {
   booking_open_at: "",
   booking_close_at: "",
   notes_for_teachers: "",
+  is_public: false,
 };
 
 export default function EventsPage() {
