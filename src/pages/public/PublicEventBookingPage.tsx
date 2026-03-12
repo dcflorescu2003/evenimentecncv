@@ -166,7 +166,7 @@ export default function PublicEventBookingPage() {
                 <Select value={String(numTickets)} onValueChange={handleNumChange}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                    {Array.from({ length: 32 }, (_, i) => i + 1).map((n) => (
                       <SelectItem key={n} value={String(n)}>{n} {n === 1 ? "loc" : "locuri"}</SelectItem>
                     ))}
                   </SelectContent>

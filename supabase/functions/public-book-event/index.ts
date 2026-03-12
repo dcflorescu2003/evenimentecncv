@@ -24,8 +24,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (attendees.length > 10) {
-      return new Response(JSON.stringify({ error: "Maximum 10 bilete per rezervare" }), {
+    if (attendees.length > 32) {
+      return new Response(JSON.stringify({ error: "Maximum 32 bilete per rezervare" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
