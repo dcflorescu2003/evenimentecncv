@@ -299,6 +299,27 @@ export default function UsersPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Delete User Confirm */}
+      <AlertDialog open={!!deleteUserId} onOpenChange={(o) => !o && setDeleteUserId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ștergere utilizator</AlertDialogTitle>
+            <AlertDialogDescription>
+              Această acțiune este ireversibilă. Toate datele asociate (rezervări, bilete, asignări) vor fi șterse definitiv.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteUserId && deleteUserMutation.mutate(deleteUserId)}
+            >
+              {deleteUserMutation.isPending ? "Se șterge…" : "Șterge definitiv"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* New Password Display */}
       <Dialog open={!!newPassword} onOpenChange={(o) => { if (!o) { setNewPassword(null); setResetUserId(null); } }}>
         <DialogContent>
