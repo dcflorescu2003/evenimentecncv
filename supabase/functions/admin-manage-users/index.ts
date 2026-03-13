@@ -225,7 +225,7 @@ serve(async (req) => {
     if (action === "reset_single_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
       const { user_id } = body;
-      const password = generatePassword();
+      const password = DEFAULT_PASSWORD;
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -236,6 +236,8 @@ serve(async (req) => {
 
       const { error } = await supabase.auth.admin.updateUserById(user_id, { password });
       if (error) throw error;
+
+      await supabase.from("profiles").update({ must_change_password: true }).eq("id", user_id);
 
       return new Response(JSON.stringify({ results: [{ first_name: profile.first_name, last_name: profile.last_name, username: profile.username, password }] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
