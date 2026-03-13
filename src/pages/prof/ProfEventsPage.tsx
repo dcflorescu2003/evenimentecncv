@@ -398,7 +398,7 @@ export default function ProfEventsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Data *</Label>
-                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                <DateInput value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
               </div>
               <div className="space-y-2">
                 <Label>Ora început *</Label>
