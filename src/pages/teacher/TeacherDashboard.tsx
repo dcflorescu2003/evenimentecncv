@@ -140,6 +140,59 @@ export default function TeacherDashboard() {
     enabled: !!sessionId && classIds.length > 0,
   });
 
+  const resetPasswordsMutation = useMutation({
+    mutationFn: async (classId: string) => {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "batch_reset_class_passwords", class_id: classId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setCredentialResults(data.results || []);
+      setShowResetConfirm(false);
+      toast.success(`Parolele au fost resetate pentru ${(data.results || []).length} elevi`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function printCredentials(results: any[]) {
+    const successful = results.filter((r: any) => !r.error);
+    if (successful.length === 0) {
+      toast.error("Nu există credențiale de printat");
+      return;
+    }
+    const className = myClasses.map((c) => c.display_name).join(", ");
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Credențiale ${className}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        h1 { font-size: 18px; margin-bottom: 4px; }
+        p { font-size: 12px; color: #666; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+        th { background: #f5f5f5; font-weight: 600; }
+        .mono { font-family: monospace; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <h1>Credențiale elevi — ${className}</h1>
+      <p>Data: ${new Date().toLocaleDateString("ro-RO")}</p>
+      <table>
+        <thead><tr><th>#</th><th>Nume</th><th>Utilizator</th><th>Parolă</th></tr></thead>
+        <tbody>${successful.map((r: any, i: number) => `<tr>
+          <td>${i + 1}</td>
+          <td>${r.first_name} ${r.last_name}</td>
+          <td class="mono">${r.username}</td>
+          <td class="mono">${r.password}</td>
+        </tr>`).join("")}</tbody>
+      </table></body></html>`;
+    const w = window.open("", "_blank");
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      w.setTimeout(() => w.print(), 300);
+    }
+  }
+
   const filtered = reportData.filter(
     (s) => !search || s.name.toLowerCase().includes(search.toLowerCase())
   );
