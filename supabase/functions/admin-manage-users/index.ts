@@ -88,10 +88,12 @@ serve(async (req) => {
     if (action === "reset_password") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
       const { user_id } = body;
-      const password = generatePassword();
+      const password = DEFAULT_PASSWORD;
 
       const { error } = await supabase.auth.admin.updateUserById(user_id, { password });
       if (error) throw error;
+
+      await supabase.from("profiles").update({ must_change_password: true }).eq("id", user_id);
 
       return new Response(JSON.stringify({ password }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
