@@ -202,11 +202,12 @@ serve(async (req) => {
 
       const results = [];
       for (const profile of (profiles || [])) {
-        const password = generatePassword();
+        const password = DEFAULT_PASSWORD;
         const { error } = await supabase.auth.admin.updateUserById(profile.id, { password });
         if (error) {
           results.push({ first_name: profile.first_name, last_name: profile.last_name, username: profile.username, password: "", error: error.message });
         } else {
+          await supabase.from("profiles").update({ must_change_password: true }).eq("id", profile.id);
           results.push({ first_name: profile.first_name, last_name: profile.last_name, username: profile.username, password });
         }
       }
