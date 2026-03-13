@@ -278,6 +278,45 @@ export default function ProfEventParticipantsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Cancel Reservation Confirmation */}
+      <AlertDialog open={!!cancelReservation} onOpenChange={(o) => !o && setCancelReservation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Anulează rezervarea?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rezervarea pentru <strong>{cancelReservation?.name}</strong> va fi anulată și locul va fi eliberat.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Renunță</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!cancelReservation) return;
+                try {
+                  if (cancelReservation.isPublic) {
+                    const { error } = await supabase.from("public_tickets").update({ status: "cancelled" }).eq("id", cancelReservation.id);
+                    if (error) throw error;
+                  } else {
+                    const { error: resErr } = await supabase.from("reservations").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", cancelReservation.id);
+                    if (resErr) throw resErr;
+                    await supabase.from("tickets").update({ status: "cancelled" as any }).eq("reservation_id", cancelReservation.id);
+                  }
+                  queryClient.invalidateQueries({ queryKey: ["prof_participants", eventId] });
+                  queryClient.invalidateQueries({ queryKey: ["prof_public_participants", eventId] });
+                  toast.success("Rezervare anulată");
+                } catch (e: any) {
+                  toast.error(e.message);
+                }
+                setCancelReservation(null);
+              }}
+            >
+              Anulează rezervarea
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
