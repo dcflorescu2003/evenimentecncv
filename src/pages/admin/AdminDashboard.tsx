@@ -16,9 +16,9 @@ const STATUS_COLORS = {
   present: "hsl(160, 60%, 40%)",
   late: "hsl(38, 92%, 50%)",
   absent: "hsl(0, 72%, 51%)",
-  excused: "hsl(220, 70%, 55%)",
-  reserved: "hsl(220, 15%, 70%)",
-  cancelled: "hsl(220, 10%, 55%)",
+  excused: "hsl(350, 60%, 38%)",
+  reserved: "hsl(350, 15%, 55%)",
+  cancelled: "hsl(350, 10%, 45%)",
 };
 
 const pieConfig: ChartConfig = {
