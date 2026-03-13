@@ -34,8 +34,12 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     let caller: any = null;
     if (token) {
-      const { data: { user } } = await supabase.auth.getUser(token);
-      caller = user;
+      try {
+        const { data: { user } } = await supabase.auth.getUser(token);
+        caller = user;
+      } catch (_) {
+        // Service role key won't resolve to a user
+      }
     }
 
     const body = await req.json();
