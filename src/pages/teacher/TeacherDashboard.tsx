@@ -371,6 +371,58 @@ export default function TeacherDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Reset Passwords Confirmation */}
+      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Resetare parole elevi</AlertDialogTitle>
+            <AlertDialogDescription>
+              Aceasta va reseta parolele tuturor elevilor din clasă și va genera parole noi. 
+              Parolele vechi nu vor mai funcționa. Doriți să continuați?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (myClasses.length > 0) {
+                  resetPasswordsMutation.mutate(myClasses[0].id);
+                }
+              }}
+              disabled={resetPasswordsMutation.isPending}
+            >
+              {resetPasswordsMutation.isPending ? "Se resetează…" : "Resetează și printează"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Credential Results Dialog */}
+      <Dialog open={!!credentialResults} onOpenChange={(o) => !o && setCredentialResults(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Credențiale generate</DialogTitle>
+            <DialogDescription>
+              {credentialResults?.length || 0} conturi cu parole noi
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {credentialResults?.map((r: any, i: number) => (
+              <div key={i} className="flex items-center justify-between rounded-lg border px-3 py-2">
+                <span className="text-sm font-medium">{r.first_name} {r.last_name}</span>
+                <code className="text-xs">{r.username}</code>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setCredentialResults(null)}>Închide</Button>
+            <Button onClick={() => credentialResults && printCredentials(credentialResults)}>
+              <Printer className="mr-2 h-4 w-4" /> Printează
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
