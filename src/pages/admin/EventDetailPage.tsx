@@ -151,7 +151,7 @@ export default function EventDetailPage() {
     enabled: !!id,
   });
 
-  // Participants with tickets (for admin override)
+  // Student participants with tickets
   const { data: participants = [] } = useQuery({
     queryKey: ["admin_event_participants", id],
     queryFn: async () => {
@@ -160,6 +160,21 @@ export default function EventDetailPage() {
         .select("*, profiles:student_id(id, first_name, last_name, display_name), tickets(*)")
         .eq("event_id", id!)
         .neq("status", "cancelled");
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!id,
+  });
+
+  // Public ticket participants
+  const { data: publicParticipants = [] } = useQuery({
+    queryKey: ["admin_event_public_participants", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("public_reservations")
+        .select("*, public_tickets(*)")
+        .eq("event_id", id!)
+        .eq("status", "reserved");
       if (error) throw error;
       return data as any[];
     },
