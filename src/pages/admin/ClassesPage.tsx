@@ -727,6 +727,57 @@ export default function ClassesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Class Dialog */}
+      <Dialog open={editClassDialog} onOpenChange={(o) => !o && setEditClassDialog(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editare clasă</DialogTitle>
+            <DialogDescription>Modificați detaliile clasei.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); editClassMutation.mutate(editClassForm); }} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nume afișat *</Label>
+              <Input value={editClassForm.display_name}
+                onChange={(e) => setEditClassForm({ ...editClassForm, display_name: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Număr clasă *</Label>
+              <Input type="number" min={1} max={12} value={editClassForm.grade_number}
+                onChange={(e) => setEditClassForm({ ...editClassForm, grade_number: parseInt(e.target.value) || 0 })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Secțiune</Label>
+              <Input value={editClassForm.section}
+                onChange={(e) => setEditClassForm({ ...editClassForm, section: e.target.value })} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditClassDialog(false)}>Anulează</Button>
+              <Button type="submit" disabled={editClassMutation.isPending}>
+                {editClassMutation.isPending ? "Se salvează…" : "Salvează"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Class Confirmation */}
+      <AlertDialog open={!!deleteClassConfirm} onOpenChange={(o) => !o && setDeleteClassConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Șterge clasa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sigur doriți să ștergeți clasa <strong>{deleteClassConfirm?.name}</strong>? Toți elevii vor fi dezasignați și regulile de participare vor fi șterse.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteClassConfirm && deleteClassMutation.mutate(deleteClassConfirm.id)}>
+              Șterge
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
