@@ -57,7 +57,8 @@ serve(async (req) => {
 
     // Check if this is a service-role call (internal tools pass service role key)
     const apikeyHeader = req.headers.get("apikey") || "";
-    const isServiceRole = apikeyHeader === serviceRoleKey || authHeader.includes(serviceRoleKey);
+    const isServiceRole = apikeyHeader === serviceRoleKey || token === serviceRoleKey;
+    console.log("caller:", caller?.id, "isAdmin:", isAdmin, "isServiceRole:", isServiceRole, "apikeyMatch:", apikeyHeader === serviceRoleKey, "tokenMatch:", token === serviceRoleKey);
 
     if (action === "create_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
