@@ -30,11 +30,13 @@ serve(async (req) => {
     });
 
     // Verify caller
-    const authHeader = req.headers.get("Authorization")!;
-    const { data: { user: caller } } = await supabase.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
-    if (!caller) throw new Error("Nu sunteți autentificat");
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
+    let caller: any = null;
+    if (token) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      caller = user;
+    }
 
     const body = await req.json();
     const { action } = body;
