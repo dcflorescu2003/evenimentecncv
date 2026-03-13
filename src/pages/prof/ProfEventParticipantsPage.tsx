@@ -17,7 +17,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, ShieldAlert, ChevronDown, ChevronUp,
+  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, ShieldAlert, ChevronDown, ChevronUp, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
