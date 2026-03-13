@@ -181,6 +181,13 @@ export default function PublicEventBookingPage() {
                 <Label htmlFor="guest-email">Email (opțional)</Label>
                 <Input id="guest-email" type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="email@exemplu.ro" />
               </div>
+              {numTickets >= 10 && (
+                <div className="space-y-2">
+                  <Label htmlFor="guest-phone">Telefon *</Label>
+                  <Input id="guest-phone" type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="07xxxxxxxx" required />
+                  <p className="text-xs text-muted-foreground">Obligatoriu pentru rezervări de 10+ locuri, pentru confirmarea rezervării.</p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Număr de locuri</Label>
                 <Select value={String(numTickets)} onValueChange={handleNumChange}>

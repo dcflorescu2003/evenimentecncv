@@ -106,7 +106,30 @@ export default function Login() {
             </Button>
           </form>
         </CardContent>
-      </Card>
+    </Card>
+
+      {publicEvents.length > 0 && (
+        <div className="w-full max-w-md mt-6">
+          <h2 className="text-lg font-semibold text-center mb-3">Evenimente publice</h2>
+          <div className="space-y-3">
+            {publicEvents.map((e) => (
+              <Card key={e.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/public/events/${e.id}`)}>
+                <CardContent className="p-4 space-y-1">
+                  <p className="font-semibold">{e.title}</p>
+                  {e.description && <p className="text-xs text-muted-foreground line-clamp-1">{e.description}</p>}
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatDate(e.date)}</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{e.start_time?.slice(0, 5)} – {e.end_time?.slice(0, 5)}</span>
+                    {e.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{e.location}</span>}
+                    <span className="flex items-center gap-1"><Users className="h-3 w-3" />{e.max_capacity} locuri</span>
+                  </div>
+                  <Button size="sm" className="mt-2 w-full">Rezervă</Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
