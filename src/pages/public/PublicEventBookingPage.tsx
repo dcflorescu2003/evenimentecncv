@@ -63,6 +63,9 @@ export default function PublicEventBookingPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (honeypot) { toast.error("Verificare de securitate eșuată"); return; }
+    const elapsed = (Date.now() - formLoadedAt) / 1000;
+    if (elapsed < 3) { toast.error("Vă rugăm să completați formularul mai încet"); return; }
     if (!guestName.trim()) { toast.error("Introduceți numele dvs."); return; }
     if (attendeeNames.some((n) => !n.trim())) { toast.error("Completați numele pentru fiecare participant"); return; }
 
