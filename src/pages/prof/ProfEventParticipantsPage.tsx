@@ -53,6 +53,7 @@ export default function ProfEventParticipantsPage() {
   const [confirmChange, setConfirmChange] = useState<{
     ticketId: string; currentStatus: string; newStatus: TicketStatus; studentName: string; isPublic: boolean;
   } | null>(null);
+  const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; reservationId?: string } | null>(null);
 
   const { data: event } = useQuery({
     queryKey: ["prof_part_event", eventId],
