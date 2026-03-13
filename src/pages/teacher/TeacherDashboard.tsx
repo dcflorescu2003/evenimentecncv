@@ -36,6 +36,8 @@ export default function TeacherDashboard() {
   const [search, setSearch] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<StudentReport | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [credentialResults, setCredentialResults] = useState<any[] | null>(null);
 
   const { data: myClasses = [] } = useQuery({
     queryKey: ["teacher_classes", user?.id],
