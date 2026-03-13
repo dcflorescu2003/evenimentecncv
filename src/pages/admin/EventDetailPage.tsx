@@ -566,6 +566,11 @@ export default function EventDetailPage() {
                             </SelectContent>
                           </Select>
                         </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCancelReservation({ id: t.id, name: t.attendee_name, isPublic: true, publicReservationId: pr.id })}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ));
                   })}
