@@ -116,7 +116,7 @@ export default function EventParticipantsPage() {
       };
     }),
     ...publicParticipants.flatMap((pr: any) =>
-      (pr.public_tickets || []).map((t: any) => ({
+      (pr.public_tickets || []).filter((t: any) => t.status !== "cancelled").map((t: any) => ({
         id: `pub-${t.id}`,
         name: t.attendee_name,
         lastName: t.attendee_name || "",
