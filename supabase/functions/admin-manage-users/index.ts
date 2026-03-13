@@ -53,7 +53,7 @@ serve(async (req) => {
     if (action === "create_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
       const { first_name, last_name, username, role } = body;
-      const password = generatePassword();
+      const password = DEFAULT_PASSWORD;
       const email = `${username}@school.local`;
 
       const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
