@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import cncvLogo from "@/assets/cncv-logo.jpg";
 
 export default function Login() {
   const { session, roles, signIn, loading: authLoading } = useAuth();
@@ -45,9 +46,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-3">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-primary">
-            <GraduationCap className="h-8 w-8 text-primary-foreground" />
-          </div>
+          <img src={cncvLogo} alt="Logo CNCV" className="mx-auto h-16 w-16 object-contain" />
           <CardTitle className="font-display text-2xl">Colegiul Național Cantemir Vodă</CardTitle>
           <CardDescription>Platformă de gestiune activități școlare</CardDescription>
         </CardHeader>
