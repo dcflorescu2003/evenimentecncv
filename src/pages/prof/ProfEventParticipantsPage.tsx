@@ -17,7 +17,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, ShieldAlert, ChevronDown, ChevronUp,
+  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, ShieldAlert, ChevronDown, ChevronUp, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,6 +39,7 @@ type TicketStatus = "present" | "late" | "absent" | "excused";
 interface UnifiedParticipant {
   id: string; name: string; identifier?: string; status: string;
   ticketId: string; checkinTimestamp?: string | null; isPublic: boolean;
+  reservationId?: string; publicReservationId?: string;
 }
 
 export default function ProfEventParticipantsPage() {
@@ -52,6 +53,7 @@ export default function ProfEventParticipantsPage() {
   const [confirmChange, setConfirmChange] = useState<{
     ticketId: string; currentStatus: string; newStatus: TicketStatus; studentName: string; isPublic: boolean;
   } | null>(null);
+  const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; reservationId?: string } | null>(null);
 
   const { data: event } = useQuery({
     queryKey: ["prof_part_event", eventId],
@@ -100,6 +102,7 @@ export default function ProfEventParticipantsPage() {
         lastName: profile?.last_name || "",
         identifier: profile?.student_identifier, status: ticket?.status || "reserved",
         ticketId: ticket?.id, checkinTimestamp: ticket?.checkin_timestamp, isPublic: false,
+        reservationId: p.id,
       };
     }),
     ...publicParticipants.flatMap((pr: any) =>
@@ -107,6 +110,7 @@ export default function ProfEventParticipantsPage() {
         id: `pub-${t.id}`, name: t.attendee_name, lastName: t.attendee_name || "",
         status: t.status || "reserved",
         ticketId: t.id, checkinTimestamp: t.checkin_timestamp, isPublic: true,
+        publicReservationId: pr.id,
       }))
     ),
   ].sort((a, b) => a.lastName.localeCompare(b.lastName));
@@ -241,6 +245,12 @@ export default function ProfEventParticipantsPage() {
                           </Button>
                         </div>
                       </div>
+                      <div className="pt-2 border-t">
+                        <Button size="sm" variant="outline" className="h-8 text-xs text-destructive hover:text-destructive"
+                          onClick={(e) => { e.stopPropagation(); setCancelReservation({ id: p.isPublic ? p.ticketId : p.reservationId!, name: p.name, isPublic: p.isPublic, reservationId: p.reservationId }); }}>
+                          <Trash2 className="mr-1 h-3.5 w-3.5" /> Anulează rezervarea
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -264,6 +274,45 @@ export default function ProfEventParticipantsPage() {
             <AlertDialogCancel>Anulează</AlertDialogCancel>
             <AlertDialogAction onClick={() => confirmChange && updateStatus(confirmChange.ticketId, confirmChange.currentStatus, confirmChange.newStatus, confirmChange.isPublic)}>
               Confirmă
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Reservation Confirmation */}
+      <AlertDialog open={!!cancelReservation} onOpenChange={(o) => !o && setCancelReservation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Anulează rezervarea?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rezervarea pentru <strong>{cancelReservation?.name}</strong> va fi anulată și locul va fi eliberat.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Renunță</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!cancelReservation) return;
+                try {
+                  if (cancelReservation.isPublic) {
+                    const { error } = await supabase.from("public_tickets").update({ status: "cancelled" }).eq("id", cancelReservation.id);
+                    if (error) throw error;
+                  } else {
+                    const { error: resErr } = await supabase.from("reservations").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", cancelReservation.id);
+                    if (resErr) throw resErr;
+                    await supabase.from("tickets").update({ status: "cancelled" as any }).eq("reservation_id", cancelReservation.id);
+                  }
+                  queryClient.invalidateQueries({ queryKey: ["prof_participants", eventId] });
+                  queryClient.invalidateQueries({ queryKey: ["prof_public_participants", eventId] });
+                  toast.success("Rezervare anulată");
+                } catch (e: any) {
+                  toast.error(e.message);
+                }
+                setCancelReservation(null);
+              }}
+            >
+              Anulează rezervarea
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

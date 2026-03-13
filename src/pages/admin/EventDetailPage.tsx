@@ -72,6 +72,7 @@ export default function EventDetailPage() {
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [removeCoordId, setRemoveCoordId] = useState<string | null>(null);
+  const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; publicReservationId?: string } | null>(null);
 
   // Queries
   const { data: event, isLoading: eventLoading } = useQuery({
@@ -461,10 +462,11 @@ export default function EventDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Participant</TableHead>
-                    <TableHead>Tip</TableHead>
-                    <TableHead>Status bilet</TableHead>
-                    <TableHead>Check-in</TableHead>
-                    <TableHead className="w-40">Override</TableHead>
+                     <TableHead>Tip</TableHead>
+                     <TableHead>Status bilet</TableHead>
+                     <TableHead>Check-in</TableHead>
+                     <TableHead className="w-40">Override</TableHead>
+                     <TableHead className="w-16">Șterge</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -506,6 +508,11 @@ export default function EventDetailPage() {
                               </SelectContent>
                             </Select>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCancelReservation({ id: p.id, name, isPublic: false })}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -558,6 +565,11 @@ export default function EventDetailPage() {
                               <SelectItem value="absent">Absent</SelectItem>
                             </SelectContent>
                           </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCancelReservation({ id: t.id, name: t.attendee_name, isPublic: true, publicReservationId: pr.id })}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ));
@@ -743,6 +755,55 @@ export default function EventDetailPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Elimină
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Reservation Confirmation */}
+      <AlertDialog open={!!cancelReservation} onOpenChange={(o) => !o && setCancelReservation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Anulează rezervarea?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Rezervarea pentru <strong>{cancelReservation?.name}</strong> va fi anulată, locul va fi eliberat și se va reflecta în contul participantului.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Renunță</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!cancelReservation) return;
+                try {
+                  if (cancelReservation.isPublic) {
+                    // Cancel public ticket
+                    const { error } = await supabase.from("public_tickets").update({ status: "cancelled" }).eq("id", cancelReservation.id);
+                    if (error) throw error;
+                  } else {
+                    // Cancel student reservation + ticket
+                    const { error: resErr } = await supabase.from("reservations").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", cancelReservation.id);
+                    if (resErr) throw resErr;
+                    await supabase.from("tickets").update({ status: "cancelled" as any }).eq("reservation_id", cancelReservation.id);
+                  }
+                  await supabase.from("audit_logs").insert({
+                    user_id: user!.id,
+                    action: "reservation_cancelled_by_admin",
+                    entity_type: cancelReservation.isPublic ? "public_ticket" : "reservation",
+                    entity_id: cancelReservation.id,
+                    details: { event_id: id, participant_name: cancelReservation.name },
+                  });
+                  queryClient.invalidateQueries({ queryKey: ["admin_event_participants", id] });
+                  queryClient.invalidateQueries({ queryKey: ["admin_event_public_participants", id] });
+                  queryClient.invalidateQueries({ queryKey: ["reservation_count", id] });
+                  toast.success("Rezervare anulată");
+                } catch (e: any) {
+                  toast.error(e.message);
+                }
+                setCancelReservation(null);
+              }}
+            >
+              Anulează rezervarea
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
