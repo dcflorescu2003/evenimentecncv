@@ -17,7 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, KeyRound, UserCheck, UserX, Plus, Copy } from "lucide-react";
+import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import type { Tables } from "@/integrations/supabase/types";
@@ -38,6 +38,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [resetUserId, setResetUserId] = useState<string | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [createDialog, setCreateDialog] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -129,6 +130,23 @@ export default function UsersPage() {
       setCreateDialog(false);
       setNewPassword(data.password);
       toast.success("Utilizator creat");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "delete_user", user_id: userId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["user_roles"] });
+      setDeleteUserId(null);
+      toast.success("Utilizator șters");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -245,6 +263,14 @@ export default function UsersPage() {
                             <UserCheck className="h-4 w-4 text-green-600" />
                           )}
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Șterge utilizator"
+                          onClick={() => setDeleteUserId(p.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -268,6 +294,27 @@ export default function UsersPage() {
             <AlertDialogCancel>Anulează</AlertDialogCancel>
             <AlertDialogAction onClick={() => resetUserId && resetPasswordMutation.mutate(resetUserId)}>
               Resetează
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete User Confirm */}
+      <AlertDialog open={!!deleteUserId} onOpenChange={(o) => !o && setDeleteUserId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ștergere utilizator</AlertDialogTitle>
+            <AlertDialogDescription>
+              Această acțiune este ireversibilă. Toate datele asociate (rezervări, bilete, asignări) vor fi șterse definitiv.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteUserId && deleteUserMutation.mutate(deleteUserId)}
+            >
+              {deleteUserMutation.isPending ? "Se șterge…" : "Șterge definitiv"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
