@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { event_id, guest_name, guest_email, attendees } = await req.json();
+    const { event_id, guest_name, guest_email, guest_phone, attendees } = await req.json();
 
     if (!event_id || !guest_name || !attendees || !Array.isArray(attendees) || attendees.length === 0) {
       return new Response(JSON.stringify({ error: "Câmpuri lipsă: event_id, guest_name, attendees[]" }), {
