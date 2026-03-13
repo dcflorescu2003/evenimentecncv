@@ -37,7 +37,7 @@ type Profile = Tables<"profiles">;
 export default function ClassesPage() {
   const queryClient = useQueryClient();
   const [ruleDialog, setRuleDialog] = useState(false);
-  const [ruleForm, setRuleForm] = useState({ class_id: "", session_id: "", required_value: 18 });
+  const [ruleForm, setRuleForm] = useState({ class_id: "", session_id: "", required_value: 18, no_limit: false });
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<string>("all");
 
@@ -54,6 +54,13 @@ export default function ClassesPage() {
 
   // Students list dialog
   const [studentsListClassId, setStudentsListClassId] = useState<string | null>(null);
+
+  // Edit class state
+  const [editClassDialog, setEditClassDialog] = useState(false);
+  const [editClassForm, setEditClassForm] = useState({ id: "", display_name: "", grade_number: 0, section: "" });
+
+  // Delete class state
+  const [deleteClassConfirm, setDeleteClassConfirm] = useState<{ id: string; name: string } | null>(null);
 
   const { data: classes = [], isLoading } = useQuery({
     queryKey: ["classes"],
