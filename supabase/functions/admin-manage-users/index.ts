@@ -300,6 +300,39 @@ serve(async (req) => {
       });
     }
 
+    if (action === "delete_user") {
+      if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
+      const { user_id } = body;
+      if (!user_id) throw new Error("user_id lipsește");
+
+      // Delete related data first
+      await supabase.from("attendance_log").delete().eq("changed_by", user_id);
+      await supabase.from("form_submissions").delete().eq("student_id", user_id);
+      
+      // Delete tickets via reservations
+      const { data: userReservations } = await supabase
+        .from("reservations")
+        .select("id")
+        .eq("student_id", user_id);
+      if (userReservations && userReservations.length > 0) {
+        const resIds = userReservations.map((r: any) => r.id);
+        await supabase.from("tickets").delete().in("reservation_id", resIds);
+      }
+      
+      await supabase.from("reservations").delete().eq("student_id", user_id);
+      await supabase.from("coordinator_assignments").delete().eq("teacher_id", user_id);
+      await supabase.from("student_class_assignments").delete().eq("student_id", user_id);
+      await supabase.from("user_roles").delete().eq("user_id", user_id);
+      await supabase.from("profiles").delete().eq("id", user_id);
+
+      const { error } = await supabase.auth.admin.deleteUser(user_id);
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     throw new Error(`Acțiune necunoscută: ${action}`);
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
