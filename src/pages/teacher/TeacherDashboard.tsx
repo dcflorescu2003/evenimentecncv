@@ -359,7 +359,7 @@ export default function TeacherDashboard() {
                 <div key={i} className="flex items-center justify-between rounded-lg border px-3 py-2">
                   <div>
                     <p className="text-sm font-medium">{r.eventTitle}</p>
-                    <p className="text-xs text-muted-foreground">{r.date} • {r.hours}h</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(r.date)} • {r.hours}h</p>
                   </div>
                   <Badge variant={
                     r.status === "present" ? "default" :

@@ -170,7 +170,7 @@ export default function StudentDashboard() {
                 <div>
                   <p className="font-medium">{r.events?.title}</p>
                   <p className="text-sm text-muted-foreground">
-                    {r.events?.date} • {r.events?.start_time?.slice(0, 5)} – {r.events?.end_time?.slice(0, 5)}
+                    {formatDate(r.events?.date)} • {r.events?.start_time?.slice(0, 5)} – {r.events?.end_time?.slice(0, 5)}
                   </p>
                 </div>
                 <Badge variant="secondary">{r.events?.counted_duration_hours}h</Badge>
