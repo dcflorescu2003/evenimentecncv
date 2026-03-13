@@ -491,7 +491,7 @@ export default function EventsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ev-date">Data *</Label>
-                <Input id="ev-date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                <DateInput id="ev-date" value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ev-start">Ora început *</Label>
