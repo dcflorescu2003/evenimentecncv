@@ -27,6 +27,8 @@ export default function PublicEventBookingPage() {
   const [attendeeNames, setAttendeeNames] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<BookingResult | null>(null);
+  const [honeypot, setHoneypot] = useState("");
+  const [formLoadedAt] = useState(() => Date.now());
 
   const { data: event, isLoading } = useQuery({
     queryKey: ["public_event", id],
@@ -61,6 +63,9 @@ export default function PublicEventBookingPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (honeypot) { toast.error("Verificare de securitate eșuată"); return; }
+    const elapsed = (Date.now() - formLoadedAt) / 1000;
+    if (elapsed < 3) { toast.error("Vă rugăm să completați formularul mai încet"); return; }
     if (!guestName.trim()) { toast.error("Introduceți numele dvs."); return; }
     if (attendeeNames.some((n) => !n.trim())) { toast.error("Completați numele pentru fiecare participant"); return; }
 
@@ -154,6 +159,11 @@ export default function PublicEventBookingPage() {
           <CardHeader><CardTitle>Rezervare locuri</CardTitle></CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Honeypot - hidden from humans */}
+              <div className="absolute opacity-0 -z-10" aria-hidden="true" tabIndex={-1}>
+                <label htmlFor="website_url">Website</label>
+                <input id="website_url" name="website_url" type="text" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} autoComplete="off" tabIndex={-1} />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="guest-name">Numele dvs. *</Label>
                 <Input id="guest-name" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Numele complet" />

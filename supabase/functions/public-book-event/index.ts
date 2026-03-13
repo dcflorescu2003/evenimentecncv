@@ -30,6 +30,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Rate limiting: max 5 reservations per IP per hour
+    const clientIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (clientIP !== "unknown") {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { count: recentCount } = await supabase
+        .from("public_reservations")
+        .select("id", { count: "exact", head: true })
+        .eq("guest_name", guest_name.trim())
+        .gte("created_at", oneHourAgo);
+
+      if ((recentCount ?? 0) >= 5) {
+        return new Response(JSON.stringify({ error: "Prea multe rezervări. Încercați din nou mai târziu." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     for (const a of attendees) {
       if (!a.name || typeof a.name !== "string" || a.name.trim().length === 0) {
         return new Response(JSON.stringify({ error: "Fiecare participant trebuie să aibă un nume" }), {
