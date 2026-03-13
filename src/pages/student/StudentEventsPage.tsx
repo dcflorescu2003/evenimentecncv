@@ -105,23 +105,17 @@ export default function StudentEventsPage() {
 
   const reservedEventIds = new Set(myReservations.map((r) => r.event_id));
 
-  // Get reservation counts for all published events
+  // Get reservation counts for all published events via RPC (bypasses RLS)
   const { data: reservationCounts = {} } = useQuery({
-    queryKey: ["reservation_counts_all"],
+    queryKey: ["reservation_counts_all", events.map((e) => e.id).join(",")],
     queryFn: async () => {
       const eventIds = events.map((e) => e.id);
       if (eventIds.length === 0) return {};
-      const { data, error } = await supabase
-        .from("reservations")
-        .select("event_id")
-        .in("event_id", eventIds)
-        .eq("status", "reserved");
-      if (error) throw error;
-      const counts: Record<string, number> = {};
-      data.forEach((r) => {
-        counts[r.event_id] = (counts[r.event_id] || 0) + 1;
+      const { data, error } = await supabase.rpc("get_events_reserved_counts", {
+        _event_ids: eventIds,
       });
-      return counts;
+      if (error) throw error;
+      return (data as Record<string, number>) || {};
     },
     enabled: events.length > 0,
   });

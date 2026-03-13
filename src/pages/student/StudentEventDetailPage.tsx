@@ -122,13 +122,12 @@ export default function StudentEventDetailPage() {
   const { data: reservationCount = 0 } = useQuery({
     queryKey: ["reservation_count_student", id],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from("reservations")
-        .select("*", { count: "exact", head: true })
-        .eq("event_id", id!)
-        .eq("status", "reserved");
+      const { data, error } = await supabase.rpc("get_events_reserved_counts", {
+        _event_ids: [id!],
+      });
       if (error) throw error;
-      return count || 0;
+      const counts = data as Record<string, number>;
+      return counts?.[id!] || 0;
     },
     enabled: !!id,
   });
