@@ -119,7 +119,7 @@ serve(async (req) => {
         }
         usedUsernames.add(username);
 
-        const password = generatePassword();
+        const password = DEFAULT_PASSWORD;
         const email = `${username}@school.local`;
 
         // Create auth user
