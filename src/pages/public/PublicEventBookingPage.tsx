@@ -24,6 +24,7 @@ export default function PublicEventBookingPage() {
   const navigate = useNavigate();
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
   const [numTickets, setNumTickets] = useState(1);
   const [attendeeNames, setAttendeeNames] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +69,7 @@ export default function PublicEventBookingPage() {
     const elapsed = (Date.now() - formLoadedAt) / 1000;
     if (elapsed < 3) { toast.error("Vă rugăm să completați formularul mai încet"); return; }
     if (!guestName.trim()) { toast.error("Introduceți numele dvs."); return; }
+    if (numTickets >= 10 && !guestPhone.trim()) { toast.error("Numărul de telefon este obligatoriu pentru 10+ bilete"); return; }
     if (attendeeNames.some((n) => !n.trim())) { toast.error("Completați numele pentru fiecare participant"); return; }
 
     setSubmitting(true);
@@ -77,6 +79,7 @@ export default function PublicEventBookingPage() {
           event_id: id,
           guest_name: guestName.trim(),
           guest_email: guestEmail.trim() || null,
+          guest_phone: guestPhone.trim() || null,
           attendees: attendeeNames.map((n) => ({ name: n.trim() })),
         },
       });
@@ -104,8 +107,10 @@ export default function PublicEventBookingPage() {
           <div className="mb-6 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
             <h1 className="mt-3 font-display text-2xl font-bold">Rezervare confirmată!</h1>
-            <p className="mt-1 text-muted-foreground">Cod rezervare: <strong className="font-mono">{result.reservation_code}</strong></p>
-            <p className="text-xs text-muted-foreground mt-1">Salvează acest cod pentru a-ți accesa biletele ulterior.</p>
+            <div className="mt-3 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-900 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
+              <p className="font-semibold">⚠️ Important!</p>
+              <p className="mt-1">Printează sau salvează ca PDF această pagină acum. Biletele <strong>nu pot fi recuperate ulterior</strong>.</p>
+            </div>
           </div>
 
           <div className="space-y-4 print:space-y-6">
@@ -176,6 +181,13 @@ export default function PublicEventBookingPage() {
                 <Label htmlFor="guest-email">Email (opțional)</Label>
                 <Input id="guest-email" type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="email@exemplu.ro" />
               </div>
+              {numTickets >= 10 && (
+                <div className="space-y-2">
+                  <Label htmlFor="guest-phone">Telefon *</Label>
+                  <Input id="guest-phone" type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="07xxxxxxxx" required />
+                  <p className="text-xs text-muted-foreground">Obligatoriu pentru rezervări de 10+ locuri, pentru confirmarea rezervării.</p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Număr de locuri</Label>
                 <Select value={String(numTickets)} onValueChange={handleNumChange}>

@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { event_id, guest_name, guest_email, attendees } = await req.json();
+    const { event_id, guest_name, guest_email, guest_phone, attendees } = await req.json();
 
     if (!event_id || !guest_name || !attendees || !Array.isArray(attendees) || attendees.length === 0) {
       return new Response(JSON.stringify({ error: "Câmpuri lipsă: event_id, guest_name, attendees[]" }), {
@@ -113,6 +113,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Validate phone for 10+ attendees
+    if (attendees.length >= 10 && (!guest_phone || typeof guest_phone !== "string" || guest_phone.trim().length < 6)) {
+      return new Response(JSON.stringify({ error: "Numărul de telefon este obligatoriu pentru rezervări de 10+ locuri" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Create reservation
     const { data: reservation, error: resErr } = await supabase
       .from("public_reservations")
@@ -120,6 +127,7 @@ Deno.serve(async (req) => {
         event_id,
         guest_name: guest_name.trim(),
         guest_email: guest_email?.trim() || null,
+        guest_phone: guest_phone?.trim() || null,
       })
       .select()
       .single();
