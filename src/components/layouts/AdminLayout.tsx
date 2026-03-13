@@ -26,6 +26,7 @@ import {
   BarChart3,
   Shield,
   LogOut,
+  KeyRound,
 } from "lucide-react";
 
 const menuItems = [
@@ -37,6 +38,7 @@ const menuItems = [
   { title: "Utilizatori", icon: Users, path: "/admin/users" },
   { title: "Rapoarte", icon: BarChart3, path: "/admin/reports" },
   { title: "Jurnal audit", icon: Shield, path: "/admin/audit" },
+  { title: "Credențiale PDF", icon: KeyRound, path: "/admin/credentials" },
 ];
 
 export default function AdminLayout() {

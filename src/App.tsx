@@ -19,6 +19,7 @@ import EventDetailPage from "./pages/admin/EventDetailPage";
 import UsersPage from "./pages/admin/UsersPage";
 import ReportsPage from "./pages/admin/ReportsPage";
 import AuditPage from "./pages/admin/AuditPage";
+import CredentialsPage from "./pages/admin/CredentialsPage";
 
 import StudentLayout from "./components/layouts/StudentLayout";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="/admin/users" element={<UsersPage />} />
               <Route path="/admin/reports" element={<ReportsPage />} />
               <Route path="/admin/audit" element={<AuditPage />} />
+              <Route path="/admin/credentials" element={<CredentialsPage />} />
             </Route>
 
             {/* Student routes */}
