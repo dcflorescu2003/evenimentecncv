@@ -105,6 +105,27 @@ export default function StudentEventsPage() {
 
   const reservedEventIds = new Set(myReservations.map((r) => r.event_id));
 
+  // Get reservation counts for all published events
+  const { data: reservationCounts = {} } = useQuery({
+    queryKey: ["reservation_counts_all"],
+    queryFn: async () => {
+      const eventIds = events.map((e) => e.id);
+      if (eventIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("event_id")
+        .in("event_id", eventIds)
+        .eq("status", "reserved");
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      data.forEach((r) => {
+        counts[r.event_id] = (counts[r.event_id] || 0) + 1;
+      });
+      return counts;
+    },
+    enabled: events.length > 0,
+  });
+
   // Filter events: only show events the student is eligible for OR already registered
   const filtered = events.filter((e) => {
     // Always show events where student is already registered
@@ -216,6 +237,8 @@ export default function StudentEventsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my_reservations"] });
       queryClient.invalidateQueries({ queryKey: ["published_events"] });
+      queryClient.invalidateQueries({ queryKey: ["reservation_counts_all"] });
+      queryClient.invalidateQueries({ queryKey: ["reservation_count_student"] });
       queryClient.invalidateQueries({ queryKey: ["student_progress"] });
       queryClient.invalidateQueries({ queryKey: ["all_my_reservations"] });
       toast.success("Rezervare confirmată! Biletul a fost generat.");
@@ -318,7 +341,7 @@ export default function StudentEventsPage() {
                       </span>
                     )}
                     <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" /> {ev.max_capacity} locuri
+                      <Users className="h-3 w-3" /> {ev.max_capacity - (reservationCounts[ev.id] || 0)} / {ev.max_capacity} locuri libere
                     </span>
                   </div>
 
