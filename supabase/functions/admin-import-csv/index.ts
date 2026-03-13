@@ -140,6 +140,7 @@ serve(async (req) => {
           username,
           student_identifier: row.student_identifier || null,
           email: row.email || null,
+          must_change_password: true,
         });
         if (profileError) throw profileError;
 
