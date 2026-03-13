@@ -13,10 +13,26 @@ import cncvLogo from "@/assets/cncv-logo.jpg";
 
 export default function Login() {
   const { session, roles, profile, signIn, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const { data: publicEvents = [] } = useQuery({
+    queryKey: ["public_events_login"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("id, title, date, start_time, end_time, location, max_capacity, description")
+        .eq("is_public", true)
+        .eq("published", true)
+        .eq("status", "published")
+        .order("date", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
 
   if (authLoading) {
     return (
