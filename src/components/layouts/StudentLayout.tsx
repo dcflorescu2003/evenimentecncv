@@ -2,6 +2,8 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
+import PushNotificationToggle from "@/components/PushNotificationToggle";
 
 const navItems = [
   { title: "Panou principal", icon: LayoutDashboard, path: "/student" },
