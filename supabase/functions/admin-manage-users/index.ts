@@ -178,13 +178,7 @@ serve(async (req) => {
     }
 
     if (action === "bulk_delete_students") {
-      // For this action, allow if caller is admin OR if no caller but service role header
-      if (!isAdmin && !caller) {
-        throw new Error("Nu aveți permisiuni de administrator");
-      }
-      if (!isAdmin && caller) {
-        throw new Error("Nu aveți permisiuni de administrator");
-      }
+      if (!isAdmin && !isServiceRole) throw new Error("Nu aveți permisiuni de administrator");
       const { exclude_usernames = [] } = body;
 
       // List all auth users (paginated)
