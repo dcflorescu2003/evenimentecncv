@@ -26,6 +26,7 @@ import { toast } from "sonner";
 interface StudentReport {
   id: string;
   name: string;
+  lastName: string;
   reservations: { eventTitle: string; date: string; hours: number; status: string }[];
   totalReservedHours: number;
   totalValidatedHours: number;
