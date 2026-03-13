@@ -111,7 +111,7 @@ export default function PublicEventBookingPage() {
                     <p className="font-semibold">{t.attendee_name}</p>
                     <p className="text-sm font-medium">{result.event.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {result.event.date} • {result.event.start_time?.slice(0, 5)} – {result.event.end_time?.slice(0, 5)}
+                      {formatDate(result.event.date)} • {result.event.start_time?.slice(0, 5)} – {result.event.end_time?.slice(0, 5)}
                       {result.event.location && ` • ${result.event.location}`}
                     </p>
                     <p className="text-xs text-muted-foreground">Bilet {i + 1}/{result.tickets.length}</p>
