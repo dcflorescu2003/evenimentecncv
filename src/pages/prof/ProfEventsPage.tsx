@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Eye, Search } from "lucide-react";
 import { toast } from "sonner";
-import { isValidTime24h, normalizeTimeInput } from "@/lib/time";
+import { formatDate, isValidTime24h, normalizeTimeInput } from "@/lib/time";
 
 type EventStatus = "draft" | "published" | "closed" | "cancelled";
 
