@@ -2,6 +2,8 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
+import PushNotificationToggle from "@/components/PushNotificationToggle";
 
 const navItems = [
   { title: "Panou principal", icon: LayoutDashboard, path: "/student" },
@@ -21,8 +23,10 @@ export default function StudentLayout() {
           <GraduationCap className="h-6 w-6 text-primary" />
           <span className="font-display text-lg font-semibold">CNCV</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{profile?.display_name}</span>
+        <div className="flex items-center gap-1">
+          <PushNotificationToggle />
+          <NotificationBell />
+          <span className="text-sm text-muted-foreground hidden sm:inline">{profile?.display_name}</span>
           <Button variant="ghost" size="icon" onClick={signOut}>
             <LogOut className="h-4 w-4" />
           </Button>
