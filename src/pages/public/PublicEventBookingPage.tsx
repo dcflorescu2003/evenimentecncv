@@ -104,8 +104,10 @@ export default function PublicEventBookingPage() {
           <div className="mb-6 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
             <h1 className="mt-3 font-display text-2xl font-bold">Rezervare confirmată!</h1>
-            <p className="mt-1 text-muted-foreground">Cod rezervare: <strong className="font-mono">{result.reservation_code}</strong></p>
-            <p className="text-xs text-muted-foreground mt-1">Salvează acest cod pentru a-ți accesa biletele ulterior.</p>
+            <div className="mt-3 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-900 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
+              <p className="font-semibold">⚠️ Important!</p>
+              <p className="mt-1">Printează sau salvează ca PDF această pagină acum. Biletele <strong>nu pot fi recuperate ulterior</strong>.</p>
+            </div>
           </div>
 
           <div className="space-y-4 print:space-y-6">
