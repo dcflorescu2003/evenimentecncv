@@ -67,7 +67,7 @@ export default function PublicEventsPage() {
                         <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" />{formatDate(e.date)}</span>
                         <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{e.start_time?.slice(0, 5)} – {e.end_time?.slice(0, 5)}</span>
                         {e.location && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{e.location}</span>}
-                        <span className="flex items-center gap-1"><Users className="h-4 w-4" />{e.max_capacity} locuri</span>
+                        <span className="flex items-center gap-1"><Users className="h-4 w-4" />{Math.max(0, e.max_capacity - (reservationCounts[e.id] || 0))} / {e.max_capacity} locuri libere</span>
                       </div>
                     </div>
                     <Button onClick={() => navigate(`/public/events/${e.id}`)}>Rezervă</Button>
