@@ -38,6 +38,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [resetUserId, setResetUserId] = useState<string | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [createDialog, setCreateDialog] = useState(false);
   const [createForm, setCreateForm] = useState({
