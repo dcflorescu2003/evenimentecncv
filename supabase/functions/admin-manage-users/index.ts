@@ -30,20 +30,34 @@ serve(async (req) => {
     });
 
     // Verify caller
-    const authHeader = req.headers.get("Authorization")!;
-    const { data: { user: caller } } = await supabase.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
-    if (!caller) throw new Error("Nu sunteți autentificat");
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace("Bearer ", "");
+    let caller: any = null;
+    if (token) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser(token);
+        caller = user;
+      } catch (_) {
+        // Service role key won't resolve to a user
+      }
+    }
 
     const body = await req.json();
     const { action } = body;
 
     // Check admin for most actions
-    const { data: isAdmin } = await supabase.rpc("has_role", {
-      _user_id: caller.id,
-      _role: "admin",
-    });
+    let isAdmin = false;
+    if (caller) {
+      const { data } = await supabase.rpc("has_role", {
+        _user_id: caller.id,
+        _role: "admin",
+      });
+      isAdmin = !!data;
+    }
+
+    // Check if this is a service-role call (internal tools pass service role key)
+    const apikeyHeader = req.headers.get("apikey") || "";
+    const isServiceRole = apikeyHeader === serviceRoleKey || token === serviceRoleKey;
 
     if (action === "create_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
@@ -164,6 +178,62 @@ serve(async (req) => {
       });
 
       return new Response(JSON.stringify({ results }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "bulk_delete_students") {
+      if (!isAdmin && !isServiceRole) throw new Error("Nu aveți permisiuni de administrator");
+      const { exclude_usernames = [] } = body;
+
+      // List all auth users (paginated)
+      const allStudentIds: string[] = [];
+      let page = 1;
+      const perPage = 1000;
+      while (true) {
+        const { data: { users }, error } = await supabase.auth.admin.listUsers({ page, perPage });
+        if (error) throw error;
+        if (!users || users.length === 0) break;
+
+        // For each user, check if they're a student
+        for (const u of users) {
+          // Get username from email (username@school.local)
+          const username = u.email?.replace("@school.local", "") || "";
+          if (exclude_usernames.includes(username)) continue;
+
+          // Check if student role
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", u.id)
+            .eq("role", "student");
+
+          if (roles && roles.length > 0) {
+            allStudentIds.push(u.id);
+          }
+        }
+
+        if (users.length < perPage) break;
+        page++;
+      }
+
+      let deleted = 0;
+      let errors = 0;
+      for (const id of allStudentIds) {
+        // Delete related data first
+        await supabase.from("student_class_assignments").delete().eq("student_id", id);
+        await supabase.from("user_roles").delete().eq("user_id", id);
+        await supabase.from("profiles").delete().eq("id", id);
+        const { error } = await supabase.auth.admin.deleteUser(id);
+        if (error) {
+          console.error(`Failed to delete ${id}: ${error.message}`);
+          errors++;
+        } else {
+          deleted++;
+        }
+      }
+
+      return new Response(JSON.stringify({ deleted, errors, total: allStudentIds.length }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
