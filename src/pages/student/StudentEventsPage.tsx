@@ -237,6 +237,8 @@ export default function StudentEventsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my_reservations"] });
       queryClient.invalidateQueries({ queryKey: ["published_events"] });
+      queryClient.invalidateQueries({ queryKey: ["reservation_counts_all"] });
+      queryClient.invalidateQueries({ queryKey: ["reservation_count_student"] });
       queryClient.invalidateQueries({ queryKey: ["student_progress"] });
       queryClient.invalidateQueries({ queryKey: ["all_my_reservations"] });
       toast.success("Rezervare confirmată! Biletul a fost generat.");
