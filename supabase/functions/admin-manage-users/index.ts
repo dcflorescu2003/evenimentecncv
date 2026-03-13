@@ -70,6 +70,7 @@ serve(async (req) => {
         first_name,
         last_name,
         username,
+        must_change_password: true,
       });
       if (profileError) throw profileError;
 
