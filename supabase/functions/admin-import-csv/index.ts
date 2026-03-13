@@ -29,6 +29,23 @@ function generatePassword(length = 10): string {
   return result;
 }
 
+// Parse class_grade that could be numeric ("9", "10") or Roman ("IX", "X", "XI", "XII")
+function parseGrade(value: string): number {
+  const trimmed = value.trim();
+  // Try numeric first
+  const num = parseInt(trimmed);
+  if (!isNaN(num) && num >= 1 && num <= 12) return num;
+  // Try Roman numerals
+  const romanMap: Record<string, number> = {
+    "V": 5, "VI": 6, "VII": 7, "VIII": 8,
+    "IX": 9, "X": 10, "XI": 11, "XII": 12,
+    "I": 1, "II": 2, "III": 3, "IV": 4,
+  };
+  const upper = trimmed.toUpperCase();
+  if (romanMap[upper]) return romanMap[upper];
+  return NaN;
+}
+
 interface CsvRow {
   role: string;
   first_name: string;
@@ -79,17 +96,20 @@ serve(async (req) => {
     // Get existing usernames for dedup
     const { data: existingProfiles } = await supabase
       .from("profiles")
-      .select("username");
+      .select("username")
+      .limit(10000);
     const usedUsernames = new Set((existingProfiles || []).map((p: any) => p.username));
 
-    // Get classes for assignment
-    const { data: allClasses } = await supabase.from("classes").select("*");
+    // Get classes for assignment - build multiple lookup keys for flexibility
+    const { data: allClasses } = await supabase.from("classes").select("*").limit(10000);
     const classMap = new Map<string, any>();
     for (const c of (allClasses || [])) {
-      const key = c.section
-        ? `${c.grade_number}-${c.section}`
-        : `${c.grade_number}`;
-      classMap.set(key, c);
+      // Primary key: grade-section (e.g. "10-A")
+      if (c.section) {
+        classMap.set(`${c.grade_number}-${c.section.toUpperCase()}`, c);
+      } else {
+        classMap.set(`${c.grade_number}`, c);
+      }
     }
 
     const results: ImportResult[] = [];
@@ -110,7 +130,6 @@ serve(async (req) => {
 
         const password = generatePassword();
         const email = `${username}@school.local`;
-        const displayName = `${row.first_name} ${row.last_name}`;
 
         // Create auth user
         const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
@@ -141,17 +160,25 @@ serve(async (req) => {
 
         // Assign student to class
         if (row.role === "student" && row.class_grade) {
-          const grade = parseInt(row.class_grade);
-          const key = row.class_section
-            ? `${grade}-${row.class_section.toUpperCase()}`
-            : `${grade}`;
-          const cls = classMap.get(key);
-          if (cls) {
-            await supabase.from("student_class_assignments").insert({
-              student_id: userId,
-              class_id: cls.id,
-              academic_year: cls.academic_year,
-            });
+          const grade = parseGrade(row.class_grade);
+          if (!isNaN(grade)) {
+            const section = (row.class_section || "").trim().toUpperCase();
+            const key = section ? `${grade}-${section}` : `${grade}`;
+            const cls = classMap.get(key);
+            if (cls) {
+              const { error: assignError } = await supabase.from("student_class_assignments").insert({
+                student_id: userId,
+                class_id: cls.id,
+                academic_year: cls.academic_year,
+              });
+              if (assignError) {
+                console.error(`Class assignment error for ${row.first_name} ${row.last_name}: ${assignError.message}`);
+              }
+            } else {
+              console.error(`Class not found for key "${key}" (grade=${grade}, section="${section}")`);
+            }
+          } else {
+            console.error(`Invalid grade "${row.class_grade}" for ${row.first_name} ${row.last_name}`);
           }
         }
 

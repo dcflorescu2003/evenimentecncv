@@ -110,25 +110,33 @@ export default function ClassesPage() {
     },
   });
 
-  // All students
+  // All students - batch fetch to handle large lists
   const { data: students = [] } = useQuery({
     queryKey: ["all_students"],
     queryFn: async () => {
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("user_id")
-        .eq("role", "student");
+        .eq("role", "student")
+        .limit(10000);
       if (roleError) throw roleError;
       const ids = (roleData || []).map((r) => r.user_id);
       if (ids.length === 0) return [];
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, display_name")
-        .in("id", ids)
-        .order("last_name")
-        .order("first_name");
-      if (error) throw error;
-      return data as Profile[];
+      // Batch fetch profiles in chunks to avoid URL length limits
+      const allProfiles: Profile[] = [];
+      for (let i = 0; i < ids.length; i += 200) {
+        const chunk = ids.slice(i, i + 200);
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, display_name")
+          .in("id", chunk);
+        if (error) throw error;
+        if (data) allProfiles.push(...(data as Profile[]));
+      }
+      return allProfiles.sort((a, b) => {
+        const cmp = (a.last_name || "").localeCompare(b.last_name || "");
+        return cmp !== 0 ? cmp : (a.first_name || "").localeCompare(b.first_name || "");
+      });
     },
   });
 
