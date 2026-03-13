@@ -448,7 +448,7 @@ export default function EventDetailPage() {
         {/* Participants Tab - Admin Override */}
         <TabsContent value="participants" className="space-y-4">
           <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
-          {participants.length === 0 ? (
+          {participants.length === 0 && publicParticipants.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
                 <Users className="mx-auto mb-2 h-8 w-8" />
@@ -460,7 +460,8 @@ export default function EventDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Elev</TableHead>
+                    <TableHead>Participant</TableHead>
+                    <TableHead>Tip</TableHead>
                     <TableHead>Status bilet</TableHead>
                     <TableHead>Check-in</TableHead>
                     <TableHead className="w-40">Override</TableHead>
@@ -478,6 +479,7 @@ export default function EventDetailPage() {
                     return (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">{name}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">Elev</Badge></TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-xs">
                             {ticket ? ticketStatusLabels[ticket.status] || ticket.status : "—"}
@@ -507,6 +509,58 @@ export default function EventDetailPage() {
                         </TableCell>
                       </TableRow>
                     );
+                  })}
+                  {publicParticipants.flatMap((pr: any) => {
+                    const tickets = Array.isArray(pr.public_tickets) ? pr.public_tickets : [pr.public_tickets].filter(Boolean);
+                    const ticketStatusLabels: Record<string, string> = {
+                      reserved: "Rezervat", present: "Prezent", late: "Întârziat",
+                      absent: "Absent", excused: "Motivat", cancelled: "Anulat",
+                    };
+                    return tickets.filter((t: any) => t.status !== "cancelled").map((t: any) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="font-medium">
+                          {t.attendee_name}
+                          <span className="ml-1 text-xs text-muted-foreground">({pr.guest_name})</span>
+                        </TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">Vizitator</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs">
+                            {ticketStatusLabels[t.status] || t.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {t.checkin_timestamp ? formatDateTime(t.checkin_timestamp) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={t.status}
+                            onValueChange={async (v) => {
+                              const { error } = await supabase
+                                .from("public_tickets")
+                                .update({
+                                  status: v,
+                                  checkin_timestamp: ["present", "late"].includes(v) ? new Date().toISOString() : null,
+                                })
+                                .eq("id", t.id);
+                              if (error) { toast.error(error.message); return; }
+                              queryClient.invalidateQueries({ queryKey: ["admin_event_public_participants", id] });
+                              queryClient.invalidateQueries({ queryKey: ["reservation_count", id] });
+                              toast.success("Status vizitator actualizat");
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="reserved">Rezervat</SelectItem>
+                              <SelectItem value="present">Prezent</SelectItem>
+                              <SelectItem value="late">Întârziat</SelectItem>
+                              <SelectItem value="absent">Absent</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    ));
                   })}
                 </TableBody>
               </Table>
