@@ -134,6 +134,23 @@ export default function UsersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: { action: "delete_user", user_id: userId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["user_roles"] });
+      setDeleteUserId(null);
+      toast.success("Utilizator șters");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   function handleCreateSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!createForm.first_name || !createForm.last_name || !createForm.username) {
