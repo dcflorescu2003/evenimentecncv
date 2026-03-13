@@ -24,6 +24,7 @@ export default function PublicEventBookingPage() {
   const navigate = useNavigate();
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
   const [numTickets, setNumTickets] = useState(1);
   const [attendeeNames, setAttendeeNames] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
