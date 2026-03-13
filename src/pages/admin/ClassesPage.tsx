@@ -579,18 +579,37 @@ export default function ClassesPage() {
             <DialogTitle>Adaugă elev în clasă</DialogTitle>
             <DialogDescription>Selectează elevul de adăugat.</DialogDescription>
           </DialogHeader>
-          <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-            <SelectTrigger><SelectValue placeholder="Selectează elev" /></SelectTrigger>
-            <SelectContent>
-              {students
-                .filter((s) => !allAssignedStudentIds.includes(s.id))
-                .map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.display_name || `${s.first_name} ${s.last_name}`}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between">
+                {selectedStudentId
+                  ? (() => { const s = students.find(s => s.id === selectedStudentId); return s ? (s.display_name || `${s.first_name} ${s.last_name}`) : "Selectează elev"; })()
+                  : "Selectează elev"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Caută elev..." />
+                <CommandList>
+                  <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+                  <CommandGroup>
+                    {students
+                      .filter((s) => !allAssignedStudentIds.includes(s.id))
+                      .map((s) => {
+                        const name = s.display_name || `${s.first_name} ${s.last_name}`;
+                        return (
+                          <CommandItem key={s.id} value={name} onSelect={() => setSelectedStudentId(s.id)}>
+                            <Check className={cn("mr-2 h-4 w-4", selectedStudentId === s.id ? "opacity-100" : "opacity-0")} />
+                            {name}
+                          </CommandItem>
+                        );
+                      })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStudentDialog(false)}>Anulează</Button>
             <Button disabled={!selectedStudentId || assignStudentMutation.isPending}

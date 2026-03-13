@@ -76,7 +76,9 @@ function validateRows(rows: CsvRow[]): ValidationError[] {
     if (!row.last_name) errors.push({ row: rowNum, field: "last_name", message: "Numele lipsește" });
     if (row.role === "student") {
       if (!row.class_grade) errors.push({ row: rowNum, field: "class_grade", message: "Clasa (grad) lipsește pentru elev" });
-      const grade = parseInt(row.class_grade || "");
+      const romanMap: Record<string, number> = { "V": 5, "VI": 6, "VII": 7, "VIII": 8, "IX": 9, "X": 10, "XI": 11, "XII": 12 };
+      const gradeStr = (row.class_grade || "").trim().toUpperCase();
+      const grade = romanMap[gradeStr] || parseInt(gradeStr);
       if (grade >= 9 && !row.class_section) {
         errors.push({ row: rowNum, field: "class_section", message: "Secțiunea lipsește pentru clasele IX–XII" });
       }
