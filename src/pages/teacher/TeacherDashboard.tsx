@@ -214,6 +214,11 @@ export default function TeacherDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {myClasses.length > 0 && (
+            <Button variant="outline" size="sm" onClick={() => setShowResetConfirm(true)}>
+              <KeyRound className="mr-2 h-4 w-4" /> Printează credențiale
+            </Button>
+          )}
           <Select value={sessionId} onValueChange={setSessionId}>
             <SelectTrigger className="w-[220px]">
               <SelectValue placeholder="Selectează sesiunea" />
