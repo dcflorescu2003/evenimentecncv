@@ -27,6 +27,8 @@ export default function PublicEventBookingPage() {
   const [attendeeNames, setAttendeeNames] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<BookingResult | null>(null);
+  const [honeypot, setHoneypot] = useState("");
+  const [formLoadedAt] = useState(() => Date.now());
 
   const { data: event, isLoading } = useQuery({
     queryKey: ["public_event", id],
