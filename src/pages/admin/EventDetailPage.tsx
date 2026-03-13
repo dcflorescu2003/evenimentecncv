@@ -141,18 +141,17 @@ export default function EventDetailPage() {
   const { data: reservationCount = 0 } = useQuery({
     queryKey: ["reservation_count", id],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from("reservations")
-        .select("*", { count: "exact", head: true })
-        .eq("event_id", id!)
-        .eq("status", "reserved");
+      const { data, error } = await supabase.rpc("get_events_reserved_counts", {
+        _event_ids: [id!],
+      });
       if (error) throw error;
-      return count || 0;
+      const counts = data as Record<string, number>;
+      return counts?.[id!] || 0;
     },
     enabled: !!id,
   });
 
-  // Participants with tickets (for admin override)
+  // Student participants with tickets
   const { data: participants = [] } = useQuery({
     queryKey: ["admin_event_participants", id],
     queryFn: async () => {
@@ -161,6 +160,21 @@ export default function EventDetailPage() {
         .select("*, profiles:student_id(id, first_name, last_name, display_name), tickets(*)")
         .eq("event_id", id!)
         .neq("status", "cancelled");
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!id,
+  });
+
+  // Public ticket participants
+  const { data: publicParticipants = [] } = useQuery({
+    queryKey: ["admin_event_public_participants", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("public_reservations")
+        .select("*, public_tickets(*)")
+        .eq("event_id", id!)
+        .eq("status", "reserved");
       if (error) throw error;
       return data as any[];
     },
@@ -387,7 +401,7 @@ export default function EventDetailPage() {
       <Tabs defaultValue="info" className="space-y-4">
         <TabsList>
           <TabsTrigger value="info">Informații</TabsTrigger>
-          <TabsTrigger value="participants">Participanți ({participants.length})</TabsTrigger>
+          <TabsTrigger value="participants">Participanți ({participants.length + publicParticipants.reduce((sum: number, pr: any) => sum + (pr.public_tickets?.length || 0), 0)})</TabsTrigger>
           <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
           <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
           <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
@@ -434,7 +448,7 @@ export default function EventDetailPage() {
         {/* Participants Tab - Admin Override */}
         <TabsContent value="participants" className="space-y-4">
           <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
-          {participants.length === 0 ? (
+          {participants.length === 0 && publicParticipants.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
                 <Users className="mx-auto mb-2 h-8 w-8" />
@@ -446,7 +460,8 @@ export default function EventDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Elev</TableHead>
+                    <TableHead>Participant</TableHead>
+                    <TableHead>Tip</TableHead>
                     <TableHead>Status bilet</TableHead>
                     <TableHead>Check-in</TableHead>
                     <TableHead className="w-40">Override</TableHead>
@@ -464,6 +479,7 @@ export default function EventDetailPage() {
                     return (
                       <TableRow key={p.id}>
                         <TableCell className="font-medium">{name}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">Elev</Badge></TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-xs">
                             {ticket ? ticketStatusLabels[ticket.status] || ticket.status : "—"}
@@ -493,6 +509,58 @@ export default function EventDetailPage() {
                         </TableCell>
                       </TableRow>
                     );
+                  })}
+                  {publicParticipants.flatMap((pr: any) => {
+                    const tickets = Array.isArray(pr.public_tickets) ? pr.public_tickets : [pr.public_tickets].filter(Boolean);
+                    const ticketStatusLabels: Record<string, string> = {
+                      reserved: "Rezervat", present: "Prezent", late: "Întârziat",
+                      absent: "Absent", excused: "Motivat", cancelled: "Anulat",
+                    };
+                    return tickets.filter((t: any) => t.status !== "cancelled").map((t: any) => (
+                      <TableRow key={t.id}>
+                        <TableCell className="font-medium">
+                          {t.attendee_name}
+                          <span className="ml-1 text-xs text-muted-foreground">({pr.guest_name})</span>
+                        </TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">Vizitator</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs">
+                            {ticketStatusLabels[t.status] || t.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {t.checkin_timestamp ? formatDateTime(t.checkin_timestamp) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={t.status}
+                            onValueChange={async (v) => {
+                              const { error } = await supabase
+                                .from("public_tickets")
+                                .update({
+                                  status: v,
+                                  checkin_timestamp: ["present", "late"].includes(v) ? new Date().toISOString() : null,
+                                })
+                                .eq("id", t.id);
+                              if (error) { toast.error(error.message); return; }
+                              queryClient.invalidateQueries({ queryKey: ["admin_event_public_participants", id] });
+                              queryClient.invalidateQueries({ queryKey: ["reservation_count", id] });
+                              toast.success("Status vizitator actualizat");
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="reserved">Rezervat</SelectItem>
+                              <SelectItem value="present">Prezent</SelectItem>
+                              <SelectItem value="late">Întârziat</SelectItem>
+                              <SelectItem value="absent">Absent</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    ));
                   })}
                 </TableBody>
               </Table>
