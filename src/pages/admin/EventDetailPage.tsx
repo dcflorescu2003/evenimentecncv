@@ -401,7 +401,7 @@ export default function EventDetailPage() {
       <Tabs defaultValue="info" className="space-y-4">
         <TabsList>
           <TabsTrigger value="info">Informații</TabsTrigger>
-          <TabsTrigger value="participants">Participanți ({participants.length})</TabsTrigger>
+          <TabsTrigger value="participants">Participanți ({participants.length + publicParticipants.reduce((sum: number, pr: any) => sum + (pr.public_tickets?.length || 0), 0)})</TabsTrigger>
           <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
           <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
           <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
