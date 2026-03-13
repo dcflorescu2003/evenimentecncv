@@ -6,16 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function generatePassword(length = 10): string {
-  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#";
-  let result = "";
-  const array = new Uint8Array(length);
-  crypto.getRandomValues(array);
-  for (const byte of array) {
-    result += chars[byte % chars.length];
-  }
-  return result;
-}
+const DEFAULT_PASSWORD = "Cncv1234#";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
