@@ -34,6 +34,20 @@ export default function Login() {
     },
   });
 
+  const { data: reservationCounts = {} } = useQuery({
+    queryKey: ["public_events_login_counts", publicEvents.map((e) => e.id).join(",")],
+    queryFn: async () => {
+      const eventIds = publicEvents.map((e) => e.id);
+      if (eventIds.length === 0) return {};
+      const { data, error } = await supabase.rpc("get_events_reserved_counts", {
+        _event_ids: eventIds,
+      });
+      if (error) throw error;
+      return (data as Record<string, number>) || {};
+    },
+    enabled: publicEvents.length > 0,
+  });
+
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
