@@ -139,6 +139,9 @@ export default function PublicEventBookingPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-xl px-4 py-8">
+        <div className="text-center mb-4">
+          <img src={cncvLogo} alt="Logo CNCV" className="mx-auto h-16 w-16 object-contain" />
+        </div>
         <Button variant="ghost" onClick={() => navigate("/public/events")} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" /> Înapoi
         </Button>
