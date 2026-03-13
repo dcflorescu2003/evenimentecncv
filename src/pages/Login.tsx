@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react";
 import cncvLogo from "@/assets/cncv-logo.jpg";
 
 export default function Login() {
-  const { session, roles, signIn, loading: authLoading } = useAuth();
+  const { session, roles, profile, signIn, loading: authLoading } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -23,7 +23,11 @@ export default function Login() {
     );
   }
 
-  if (session) {
+  if (session && profile) {
+    // Force password change if needed
+    if (profile.must_change_password) {
+      return <Navigate to="/change-password" replace />;
+    }
     if (roles.includes("admin")) return <Navigate to="/admin" replace />;
     if (roles.includes("teacher")) return <Navigate to="/prof" replace />;
     if (roles.includes("homeroom_teacher")) return <Navigate to="/prof" replace />;

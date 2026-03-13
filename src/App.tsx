@@ -59,6 +59,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/" element={<Navigate to="/login" replace />} />
 
             {/* Admin routes */}
