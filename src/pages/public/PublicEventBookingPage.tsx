@@ -69,6 +69,7 @@ export default function PublicEventBookingPage() {
     const elapsed = (Date.now() - formLoadedAt) / 1000;
     if (elapsed < 3) { toast.error("Vă rugăm să completați formularul mai încet"); return; }
     if (!guestName.trim()) { toast.error("Introduceți numele dvs."); return; }
+    if (numTickets >= 10 && !guestPhone.trim()) { toast.error("Numărul de telefon este obligatoriu pentru 10+ bilete"); return; }
     if (attendeeNames.some((n) => !n.trim())) { toast.error("Completați numele pentru fiecare participant"); return; }
 
     setSubmitting(true);
