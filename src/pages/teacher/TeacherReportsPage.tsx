@@ -69,12 +69,13 @@ export default function TeacherReportsPage() {
         return {
           id: p.id,
           name: p.display_name || `${p.first_name} ${p.last_name}`,
+          lastName: p.last_name,
           className: classNameMap[classMap[p.id]] ?? "—",
           reservations: sRes.length,
           reservedHours,
           validatedHours,
         };
-      }).sort((a, b) => a.name.localeCompare(b.name));
+      }).sort((a, b) => a.lastName.localeCompare(b.lastName));
     },
     enabled: !!sessionId && classIds.length > 0,
   });

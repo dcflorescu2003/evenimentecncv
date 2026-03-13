@@ -96,17 +96,19 @@ export default function ProfEventParticipantsPage() {
       const profile = p.profiles;
       return {
         id: `reg-${p.id}`, name: profile?.display_name || `${profile?.first_name} ${profile?.last_name}`,
+        lastName: profile?.last_name || "",
         identifier: profile?.student_identifier, status: ticket?.status || "reserved",
         ticketId: ticket?.id, checkinTimestamp: ticket?.checkin_timestamp, isPublic: false,
       };
     }),
     ...publicParticipants.flatMap((pr: any) =>
       (pr.public_tickets || []).map((t: any) => ({
-        id: `pub-${t.id}`, name: t.attendee_name, status: t.status || "reserved",
+        id: `pub-${t.id}`, name: t.attendee_name, lastName: t.attendee_name || "",
+        status: t.status || "reserved",
         ticketId: t.id, checkinTimestamp: t.checkin_timestamp, isPublic: true,
       }))
     ),
-  ];
+  ].sort((a, b) => a.lastName.localeCompare(b.lastName));
 
   const filtered = unified.filter((p) => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
