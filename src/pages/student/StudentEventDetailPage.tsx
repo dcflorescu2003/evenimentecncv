@@ -265,6 +265,24 @@ export default function StudentEventDetailPage() {
         </Badge>
       </div>
 
+      {/* Booking period */}
+      {(event.booking_open_at || event.booking_close_at) && (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm font-medium mb-1">Perioada de înscriere</p>
+            <p className="text-sm text-muted-foreground">
+              {event.booking_open_at && (
+                <>De la: {new Date(event.booking_open_at).toLocaleString("ro-RO", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</>
+              )}
+              {event.booking_open_at && event.booking_close_at && " — "}
+              {event.booking_close_at && (
+                <>Până la: {new Date(event.booking_close_at).toLocaleString("ro-RO", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</>
+              )}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Description */}
       {event.description && (
         <Card>
