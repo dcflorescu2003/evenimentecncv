@@ -168,6 +168,62 @@ serve(async (req) => {
       });
     }
 
+    if (action === "bulk_delete_students") {
+      if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
+      const { exclude_usernames = [] } = body;
+
+      // List all auth users (paginated)
+      const allStudentIds: string[] = [];
+      let page = 1;
+      const perPage = 1000;
+      while (true) {
+        const { data: { users }, error } = await supabase.auth.admin.listUsers({ page, perPage });
+        if (error) throw error;
+        if (!users || users.length === 0) break;
+
+        // For each user, check if they're a student
+        for (const u of users) {
+          // Get username from email (username@school.local)
+          const username = u.email?.replace("@school.local", "") || "";
+          if (exclude_usernames.includes(username)) continue;
+
+          // Check if student role
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", u.id)
+            .eq("role", "student");
+
+          if (roles && roles.length > 0) {
+            allStudentIds.push(u.id);
+          }
+        }
+
+        if (users.length < perPage) break;
+        page++;
+      }
+
+      let deleted = 0;
+      let errors = 0;
+      for (const id of allStudentIds) {
+        // Delete related data first
+        await supabase.from("student_class_assignments").delete().eq("student_id", id);
+        await supabase.from("user_roles").delete().eq("user_id", id);
+        await supabase.from("profiles").delete().eq("id", id);
+        const { error } = await supabase.auth.admin.deleteUser(id);
+        if (error) {
+          console.error(`Failed to delete ${id}: ${error.message}`);
+          errors++;
+        } else {
+          deleted++;
+        }
+      }
+
+      return new Response(JSON.stringify({ deleted, errors, total: allStudentIds.length }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     throw new Error(`Acțiune necunoscută: ${action}`);
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
