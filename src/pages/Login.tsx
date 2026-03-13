@@ -66,7 +66,8 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="min-h-screen bg-background px-4 py-8">
+      <div className="mx-auto w-full max-w-md space-y-8">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-3">
           <img src={cncvLogo} alt="Logo CNCV" className="mx-auto h-16 w-16 object-contain" />

@@ -26,6 +26,21 @@ export default function PublicEventsPage() {
     },
   });
 
+  const { data: reservationCounts = {} } = useQuery({
+    queryKey: ["public_events_reserved_counts", events.map((e) => e.id).join(",")],
+    queryFn: async () => {
+      const eventIds = events.map((e) => e.id);
+      if (eventIds.length === 0) return {};
+
+      const { data, error } = await supabase.rpc("get_events_reserved_counts", {
+        _event_ids: eventIds,
+      });
+      if (error) throw error;
+      return (data as Record<string, number>) || {};
+    },
+    enabled: events.length > 0,
+  });
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-8">
