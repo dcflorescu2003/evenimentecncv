@@ -1,3 +1,4 @@
+import cncvLogo from "@/assets/cncv-logo.jpg";
 import { formatDate } from "@/lib/time";
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
