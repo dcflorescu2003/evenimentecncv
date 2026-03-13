@@ -510,7 +510,7 @@ export default function ProfEventsPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Până la - Data</Label>
-                  <Input type="date" value={form.booking_close_date} onChange={(e) => setForm({ ...form, booking_close_date: e.target.value })} />
+                  <DateInput value={form.booking_close_date} onChange={(v) => setForm({ ...form, booking_close_date: v })} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Până la - Ora</Label>
