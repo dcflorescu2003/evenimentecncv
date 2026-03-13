@@ -34,11 +34,17 @@ interface CredentialResult {
   error?: string;
 }
 
+// jsPDF default fonts don't support Romanian diacritics — strip them
+function stripDiacritics(str: string): string {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\u0163/g, "t").replace(/\u0162/g, "T").replace(/\u015f/g, "s").replace(/\u015e/g, "S");
+}
+
 function generatePDF(results: CredentialResult[], title: string) {
   const doc = new jsPDF();
+  const cleanTitle = stripDiacritics(title);
 
   doc.setFontSize(16);
-  doc.text(title, 14, 20);
+  doc.text(cleanTitle, 14, 20);
 
   doc.setFontSize(9);
   doc.text(`Generat: ${new Date().toLocaleDateString("ro-RO")}`, 14, 28);
@@ -48,8 +54,8 @@ function generatePDF(results: CredentialResult[], title: string) {
     head: [["Nr.", "Nume", "Prenume", "Utilizator", "Parola"]],
     body: results.map((r, i) => [
       i + 1,
-      r.last_name,
-      r.first_name,
+      stripDiacritics(r.last_name),
+      stripDiacritics(r.first_name),
       r.username,
       r.password || "(eroare)",
     ]),
@@ -57,7 +63,7 @@ function generatePDF(results: CredentialResult[], title: string) {
     headStyles: { fillColor: [41, 65, 122] },
   });
 
-  doc.save(`credentiale_${title.replace(/\s+/g, "_").toLowerCase()}.pdf`);
+  doc.save(`credentiale_${cleanTitle.replace(/\s+/g, "_").toLowerCase()}.pdf`);
 }
 
 export default function CredentialsPage() {
