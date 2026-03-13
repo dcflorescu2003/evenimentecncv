@@ -34,6 +34,20 @@ export default function Login() {
     },
   });
 
+  const { data: reservationCounts = {} } = useQuery({
+    queryKey: ["public_events_login_counts", publicEvents.map((e) => e.id).join(",")],
+    queryFn: async () => {
+      const eventIds = publicEvents.map((e) => e.id);
+      if (eventIds.length === 0) return {};
+      const { data, error } = await supabase.rpc("get_events_reserved_counts", {
+        _event_ids: eventIds,
+      });
+      if (error) throw error;
+      return (data as Record<string, number>) || {};
+    },
+    enabled: publicEvents.length > 0,
+  });
+
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -66,7 +80,8 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="min-h-screen bg-background px-4 py-8">
+      <div className="mx-auto w-full max-w-md space-y-8">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-3">
           <img src={cncvLogo} alt="Logo CNCV" className="mx-auto h-16 w-16 object-contain" />
@@ -109,27 +124,32 @@ export default function Login() {
     </Card>
 
       {publicEvents.length > 0 && (
-        <div className="w-full max-w-md mt-6">
+        <section className="w-full">
           <h2 className="text-lg font-semibold text-center mb-3">Evenimente publice</h2>
           <div className="space-y-3">
-            {publicEvents.map((e) => (
-              <Card key={e.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/public/events/${e.id}`)}>
-                <CardContent className="p-4 space-y-1">
-                  <p className="font-semibold">{e.title}</p>
-                  {e.description && <p className="text-xs text-muted-foreground line-clamp-1">{e.description}</p>}
-                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatDate(e.date)}</span>
-                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{e.start_time?.slice(0, 5)} – {e.end_time?.slice(0, 5)}</span>
-                    {e.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{e.location}</span>}
-                    <span className="flex items-center gap-1"><Users className="h-3 w-3" />{e.max_capacity} locuri</span>
-                  </div>
-                  <Button size="sm" className="mt-2 w-full">Rezervă</Button>
-                </CardContent>
-              </Card>
-            ))}
+            {publicEvents.map((e) => {
+              const availableSeats = Math.max(0, e.max_capacity - (reservationCounts[e.id] || 0));
+
+              return (
+                <Card key={e.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4 space-y-1">
+                    <p className="font-semibold">{e.title}</p>
+                    {e.description && <p className="text-xs text-muted-foreground line-clamp-1">{e.description}</p>}
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatDate(e.date)}</span>
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{e.start_time?.slice(0, 5)} – {e.end_time?.slice(0, 5)}</span>
+                      {e.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{e.location}</span>}
+                      <span className="flex items-center gap-1"><Users className="h-3 w-3" />{availableSeats} / {e.max_capacity} locuri libere</span>
+                    </div>
+                    <Button size="sm" className="mt-2 w-full" onClick={() => navigate(`/public/events/${e.id}`)}>Rezervă</Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        </div>
+        </section>
       )}
+      </div>
     </div>
   );
 }
