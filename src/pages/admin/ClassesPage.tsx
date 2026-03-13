@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from "@/components/ui/command";
-import { Plus, Pencil, BookOpen, UserPlus, X, Users, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Pencil, BookOpen, UserPlus, X, Users, Check, ChevronsUpDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
@@ -37,7 +38,7 @@ type Profile = Tables<"profiles">;
 export default function ClassesPage() {
   const queryClient = useQueryClient();
   const [ruleDialog, setRuleDialog] = useState(false);
-  const [ruleForm, setRuleForm] = useState({ class_id: "", session_id: "", required_value: 18 });
+  const [ruleForm, setRuleForm] = useState({ class_id: "", session_id: "", required_value: 18, no_limit: false });
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<string>("all");
 
@@ -54,6 +55,13 @@ export default function ClassesPage() {
 
   // Students list dialog
   const [studentsListClassId, setStudentsListClassId] = useState<string | null>(null);
+
+  // Edit class state
+  const [editClassDialog, setEditClassDialog] = useState(false);
+  const [editClassForm, setEditClassForm] = useState({ id: "", display_name: "", grade_number: 0, section: "" });
+
+  // Delete class state
+  const [deleteClassConfirm, setDeleteClassConfirm] = useState<{ id: string; name: string } | null>(null);
 
   const { data: classes = [], isLoading } = useQuery({
     queryKey: ["classes"],
@@ -252,13 +260,13 @@ export default function ClassesPage() {
 
   function openRuleCreate(classId?: string) {
     setEditingRuleId(null);
-    setRuleForm({ class_id: classId || "", session_id: sessions[0]?.id || "", required_value: 18 });
+    setRuleForm({ class_id: classId || "", session_id: sessions[0]?.id || "", required_value: 18, no_limit: false });
     setRuleDialog(true);
   }
 
   function openRuleEdit(r: Rule) {
     setEditingRuleId(r.id);
-    setRuleForm({ class_id: r.class_id, session_id: r.session_id, required_value: r.required_value });
+    setRuleForm({ class_id: r.class_id, session_id: r.session_id, required_value: r.required_value, no_limit: r.required_value === 0 });
     setRuleDialog(true);
   }
 
@@ -269,12 +277,65 @@ export default function ClassesPage() {
 
   function handleRuleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!ruleForm.class_id || !ruleForm.session_id || ruleForm.required_value < 1) {
+    if (!ruleForm.class_id || !ruleForm.session_id) {
       toast.error("Completați toate câmpurile");
       return;
     }
-    saveRuleMutation.mutate(ruleForm);
+    if (!ruleForm.no_limit && ruleForm.required_value < 1) {
+      toast.error("Introduceți un număr valid de ore");
+      return;
+    }
+    saveRuleMutation.mutate({ ...ruleForm, required_value: ruleForm.no_limit ? 0 : ruleForm.required_value });
   }
+
+  // Edit class mutation
+  const editClassMutation = useMutation({
+    mutationFn: async (values: typeof editClassForm) => {
+      const { error } = await supabase.from("classes")
+        .update({ display_name: values.display_name, grade_number: values.grade_number, section: values.section || null })
+        .eq("id", values.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      toast.success("Clasă actualizată");
+      setEditClassDialog(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Delete class mutation
+  const deleteClassMutation = useMutation({
+    mutationFn: async (classId: string) => {
+      // Delete assignments and rules first
+      await supabase.from("student_class_assignments").delete().eq("class_id", classId);
+      await supabase.from("class_participation_rules").delete().eq("class_id", classId);
+      const { error } = await supabase.from("classes").delete().eq("id", classId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["student_class_assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["class_participation_rules"] });
+      toast.success("Clasă ștearsă");
+      setDeleteClassConfirm(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Delete rule mutation
+  const deleteRuleMutation = useMutation({
+    mutationFn: async (ruleId: string) => {
+      const { error } = await supabase.from("class_participation_rules").delete().eq("id", ruleId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["class_participation_rules"] });
+      toast.success("Regulă ștearsă");
+      closeRuleDialog();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   // Already assigned student IDs for a class
   const assignedStudentIds = (classId: string) =>
@@ -327,16 +388,29 @@ export default function ClassesPage() {
             <div className="flex flex-wrap gap-1">
               {classRules.map((r) => (
                 <Badge key={r.id} variant="outline" className="cursor-pointer hover:bg-accent" onClick={() => openRuleEdit(r)}>
-                  {getSessionName(r.session_id)}: {r.required_value}h
+                  {getSessionName(r.session_id)}: {r.required_value === 0 ? "∞ (fără limită)" : `${r.required_value}h`}
                 </Badge>
               ))}
             </div>
           )}
         </TableCell>
         <TableCell>
-          <Button variant="ghost" size="icon" onClick={() => openRuleCreate(cls.id)}>
-            <Plus className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openRuleCreate(cls.id)} title="Adaugă regulă">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+              setEditClassForm({ id: cls.id, display_name: cls.display_name, grade_number: cls.grade_number, section: cls.section || "" });
+              setEditClassDialog(true);
+            }} title="Editează clasa">
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => {
+              setDeleteClassConfirm({ id: cls.id, name: cls.display_name });
+            }} title="Șterge clasa">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </TableCell>
       </TableRow>
     );
@@ -469,12 +543,28 @@ export default function ClassesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Ore necesare *</Label>
-              <Input type="number" min={1} max={100} value={ruleForm.required_value}
-                onChange={(e) => setRuleForm({ ...ruleForm, required_value: parseInt(e.target.value) || 0 })} />
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="no_limit"
+                checked={ruleForm.no_limit}
+                onCheckedChange={(checked) => setRuleForm({ ...ruleForm, no_limit: !!checked })}
+              />
+              <Label htmlFor="no_limit">Fără limită de ore (participare nelimitată)</Label>
             </div>
+            {!ruleForm.no_limit && (
+              <div className="space-y-2">
+                <Label>Ore necesare *</Label>
+                <Input type="number" min={1} max={100} value={ruleForm.required_value}
+                  onChange={(e) => setRuleForm({ ...ruleForm, required_value: parseInt(e.target.value) || 0 })} />
+              </div>
+            )}
             <DialogFooter>
+              {editingRuleId && (
+                <Button type="button" variant="destructive" className="mr-auto" onClick={() => deleteRuleMutation.mutate(editingRuleId)}
+                  disabled={deleteRuleMutation.isPending}>
+                  Șterge regula
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={closeRuleDialog}>Anulează</Button>
               <Button type="submit" disabled={saveRuleMutation.isPending}>
                 {saveRuleMutation.isPending ? "Se salvează…" : "Salvează"}
@@ -633,6 +723,57 @@ export default function ClassesPage() {
             <AlertDialogCancel>Anulează</AlertDialogCancel>
             <AlertDialogAction onClick={() => removeStudentConfirm && removeStudentMutation.mutate(removeStudentConfirm.assignmentId)}>
               Elimină
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Class Dialog */}
+      <Dialog open={editClassDialog} onOpenChange={(o) => !o && setEditClassDialog(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editare clasă</DialogTitle>
+            <DialogDescription>Modificați detaliile clasei.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); editClassMutation.mutate(editClassForm); }} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nume afișat *</Label>
+              <Input value={editClassForm.display_name}
+                onChange={(e) => setEditClassForm({ ...editClassForm, display_name: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Număr clasă *</Label>
+              <Input type="number" min={1} max={12} value={editClassForm.grade_number}
+                onChange={(e) => setEditClassForm({ ...editClassForm, grade_number: parseInt(e.target.value) || 0 })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Secțiune</Label>
+              <Input value={editClassForm.section}
+                onChange={(e) => setEditClassForm({ ...editClassForm, section: e.target.value })} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditClassDialog(false)}>Anulează</Button>
+              <Button type="submit" disabled={editClassMutation.isPending}>
+                {editClassMutation.isPending ? "Se salvează…" : "Salvează"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Class Confirmation */}
+      <AlertDialog open={!!deleteClassConfirm} onOpenChange={(o) => !o && setDeleteClassConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Șterge clasa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sigur doriți să ștergeți clasa <strong>{deleteClassConfirm?.name}</strong>? Toți elevii vor fi dezasignați și regulile de participare vor fi șterse.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteClassConfirm && deleteClassMutation.mutate(deleteClassConfirm.id)}>
+              Șterge
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
