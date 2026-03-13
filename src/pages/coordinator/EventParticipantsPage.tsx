@@ -274,7 +274,7 @@ export default function EventParticipantsPage() {
                     <div className="border-t px-3 py-3 space-y-3 bg-muted/10">
                       {p.checkinTimestamp && (
                         <p className="text-xs text-muted-foreground">
-                          Check-in: {new Date(p.checkinTimestamp).toLocaleString("ro-RO")}
+                          Check-in: {formatDateTime(p.checkinTimestamp)}
                         </p>
                       )}
                       <div>

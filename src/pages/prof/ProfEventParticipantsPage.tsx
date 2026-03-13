@@ -218,7 +218,7 @@ export default function ProfEventParticipantsPage() {
                   </div>
                   {isExpanded && p.ticketId && (
                     <div className="border-t px-3 py-3 space-y-3 bg-muted/10">
-                      {p.checkinTimestamp && <p className="text-xs text-muted-foreground">Check-in: {new Date(p.checkinTimestamp).toLocaleString("ro-RO")}</p>}
+                      {p.checkinTimestamp && <p className="text-xs text-muted-foreground">Check-in: {formatDateTime(p.checkinTimestamp)}</p>}
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-2">Schimbă statusul:</p>
                         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">

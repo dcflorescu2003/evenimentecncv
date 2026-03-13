@@ -235,7 +235,7 @@ function TicketCard({
             {ticket && ["present", "late"].includes(ticketStatus) && ticket.checkin_timestamp && (
               <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 text-center">
                 <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                  Check-in: {new Date(ticket.checkin_timestamp).toLocaleString("ro-RO")}
+                  Check-in: {formatDateTime(ticket.checkin_timestamp)}
                 </p>
               </div>
             )}

@@ -194,7 +194,7 @@ export default function ImportPage() {
         .mono { font-family: monospace; }
         @media print { body { padding: 0; } }
       </style></head><body>
-      <h1>Credențiale conturi — ${new Date().toLocaleDateString("ro-RO")}</h1>
+      <h1>Credențiale conturi — ${formatDateTime()}</h1>
       <p>Colegiul Național Cantemir Vodă</p>
       <table>
         <thead><tr><th>#</th><th>Nume</th><th>Utilizator</th><th>Parolă</th><th>Rol</th></tr></thead>
@@ -298,7 +298,7 @@ export default function ImportPage() {
                     {batches.map((b) => (
                       <TableRow key={b.id}>
                         <TableCell>{b.file_name}</TableCell>
-                        <TableCell>{new Date(b.imported_at).toLocaleString("ro-RO")}</TableCell>
+                        <TableCell>{formatDateTime(b.imported_at)}</TableCell>
                         <TableCell>{b.row_count}</TableCell>
                         <TableCell>{b.success_count}</TableCell>
                         <TableCell>{b.error_count}</TableCell>

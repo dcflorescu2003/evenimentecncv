@@ -398,7 +398,7 @@ export default function ProfEventDetailPage() {
                     <TableRow key={f.id}>
                       <TableCell className="font-medium">{f.title}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{f.file_name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(f.uploaded_at).toLocaleDateString("ro-RO")}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{formatDateTime(f.uploaded_at)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
@@ -444,7 +444,7 @@ export default function ProfEventDetailPage() {
                     <TableRow key={f.id}>
                       <TableCell className="font-medium">{f.title}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{f.file_name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(f.uploaded_at).toLocaleDateString("ro-RO")}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{formatDateTime(f.uploaded_at)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
