@@ -341,7 +341,7 @@ export default function StudentEventsPage() {
                       </span>
                     )}
                     <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" /> {ev.max_capacity} locuri
+                      <Users className="h-3 w-3" /> {ev.max_capacity - (reservationCounts[ev.id] || 0)} / {ev.max_capacity} locuri libere
                     </span>
                   </div>
 
