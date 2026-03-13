@@ -24,7 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Copy, Eye, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
-import { isValidTime24h, normalizeTimeInput } from "@/lib/time";
+import { formatDate, isValidTime24h, normalizeTimeInput } from "@/lib/time";
 
 type Event = Tables<"events">;
 type Session = Tables<"program_sessions">;
@@ -430,7 +430,7 @@ export default function EventsPage() {
                 <TableRow key={ev.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/admin/events/${ev.id}`)}>
                   <TableCell className="font-medium">{ev.title}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{getSessionName(ev.session_id)}</TableCell>
-                  <TableCell>{ev.date}</TableCell>
+                  <TableCell>{formatDate(ev.date)}</TableCell>
                   <TableCell>{ev.start_time?.slice(0, 5)} – {ev.end_time?.slice(0, 5)}</TableCell>
                   <TableCell>{ev.counted_duration_hours}h</TableCell>
                   <TableCell>{ev.max_capacity}</TableCell>

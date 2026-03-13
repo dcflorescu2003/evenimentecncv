@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from "@/lib/time";
 // Wrapper around coordinator's EventParticipantsPage with prof-specific navigation
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -162,7 +163,7 @@ export default function ProfEventParticipantsPage() {
         </Button>
         <div className="flex-1">
           <h1 className="font-display text-lg font-bold">{event?.title || "Participanți"}</h1>
-          {event && <p className="text-xs text-muted-foreground">{event.date} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</p>}
+          {event && <p className="text-xs text-muted-foreground">{formatDate(event.date)} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</p>}
         </div>
         <Button size="sm" onClick={() => navigate(`/prof/scan/${eventId}`)}>
           <ScanLine className="mr-2 h-4 w-4" /> Scanează
@@ -218,7 +219,7 @@ export default function ProfEventParticipantsPage() {
                   </div>
                   {isExpanded && p.ticketId && (
                     <div className="border-t px-3 py-3 space-y-3 bg-muted/10">
-                      {p.checkinTimestamp && <p className="text-xs text-muted-foreground">Check-in: {new Date(p.checkinTimestamp).toLocaleString("ro-RO")}</p>}
+                      {p.checkinTimestamp && <p className="text-xs text-muted-foreground">Check-in: {formatDateTime(p.checkinTimestamp)}</p>}
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-2">Schimbă statusul:</p>
                         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">

@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from "@/lib/time";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -177,7 +178,7 @@ export default function TeacherDashboard() {
         @media print { body { padding: 0; } }
       </style></head><body>
       <h1>Credențiale elevi — ${className}</h1>
-      <p>Data: ${new Date().toLocaleDateString("ro-RO")}</p>
+      <p>Data: ${formatDate(new Date().toISOString().split("T")[0])}</p>
       <table>
         <thead><tr><th>#</th><th>Nume</th><th>Utilizator</th><th>Parolă</th></tr></thead>
         <tbody>${successful.map((r: any, i: number) => `<tr>
@@ -358,7 +359,7 @@ export default function TeacherDashboard() {
                 <div key={i} className="flex items-center justify-between rounded-lg border px-3 py-2">
                   <div>
                     <p className="text-sm font-medium">{r.eventTitle}</p>
-                    <p className="text-xs text-muted-foreground">{r.date} • {r.hours}h</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(r.date)} • {r.hours}h</p>
                   </div>
                   <Badge variant={
                     r.status === "present" ? "default" :

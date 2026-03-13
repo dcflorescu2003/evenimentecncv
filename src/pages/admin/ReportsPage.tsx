@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/time";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -213,7 +214,7 @@ function EventReport({ sessionId }: { sessionId: string }) {
         <Button variant="outline" size="sm" onClick={() => {
           if (!data) return;
           exportToCSV("raport-evenimente", ["Eveniment", "Data", "Rezervări", "Vizitatori", "Capacitate", "% Ocupare", "Prezenți", "Întârziați", "Absenți"],
-            data.map(e => [e.title, e.date, String(e.reserved), String(e.guests), String(e.max_capacity), `${e.fillRate}%`, String(e.present), String(e.late), String(e.absent)]));
+            data.map(e => [e.title, formatDate(e.date), String(e.reserved), String(e.guests), String(e.max_capacity), `${e.fillRate}%`, String(e.present), String(e.late), String(e.absent)]));
         }}>
           <Download className="mr-2 h-4 w-4" /> Export CSV
         </Button>
@@ -243,7 +244,7 @@ function EventReport({ sessionId }: { sessionId: string }) {
                     {e.title}
                     {(e as any).is_public && <Badge variant="outline" className="ml-2 text-[10px]">Public</Badge>}
                   </TableCell>
-                  <TableCell>{e.date}</TableCell>
+                  <TableCell>{formatDate(e.date)}</TableCell>
                   <TableCell className="text-right">{e.reserved}</TableCell>
                   <TableCell className="text-right">{e.guests}</TableCell>
                   <TableCell className="text-right">{e.max_capacity}</TableCell>

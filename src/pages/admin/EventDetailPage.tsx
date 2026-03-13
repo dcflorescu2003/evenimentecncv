@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from "@/lib/time";
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -349,7 +350,7 @@ export default function EventDetailPage() {
             <CalendarDays className="h-5 w-5 text-primary" />
             <div>
               <p className="text-xs text-muted-foreground">Data</p>
-              <p className="font-medium">{event.date}</p>
+              <p className="font-medium">{formatDate(event.date)}</p>
             </div>
           </CardContent>
         </Card>
@@ -412,10 +413,10 @@ export default function EventDetailPage() {
                     : "Toate"}
                 </p>
                 {event.booking_open_at && (
-                  <p><span className="text-muted-foreground">Înscriere de la:</span> {new Date(event.booking_open_at).toLocaleString("ro-RO")}</p>
+                  <p><span className="text-muted-foreground">Înscriere de la:</span> {formatDateTime(event.booking_open_at)}</p>
                 )}
                 {event.booking_close_at && (
-                  <p><span className="text-muted-foreground">Înscriere până la:</span> {new Date(event.booking_close_at).toLocaleString("ro-RO")}</p>
+                  <p><span className="text-muted-foreground">Înscriere până la:</span> {formatDateTime(event.booking_close_at)}</p>
                 )}
               </CardContent>
             </Card>
@@ -469,7 +470,7 @@ export default function EventDetailPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {ticket?.checkin_timestamp ? new Date(ticket.checkin_timestamp).toLocaleString("ro-RO") : "—"}
+                          {ticket?.checkin_timestamp ? formatDateTime(ticket.checkin_timestamp) : "—"}
                         </TableCell>
                         <TableCell>
                           {ticket && (
@@ -571,7 +572,7 @@ export default function EventDetailPage() {
                         {c.profiles?.display_name || `${c.profiles?.first_name} ${c.profiles?.last_name}`}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {new Date(c.created_at).toLocaleString("ro-RO")}
+                        {formatDateTime(c.created_at)}
                       </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" onClick={() => setRemoveCoordId(c.id)}>
@@ -709,7 +710,7 @@ function FileTable({
               <TableCell className="font-medium">{f.title}</TableCell>
               <TableCell className="text-sm text-muted-foreground">{f.file_name}</TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {new Date(f.uploaded_at).toLocaleString("ro-RO")}
+                {formatDateTime(f.uploaded_at)}
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">

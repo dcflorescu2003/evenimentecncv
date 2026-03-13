@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from "@/lib/time";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -197,7 +198,7 @@ function TicketCard({
             <p className="font-medium">{reservation.events?.title}</p>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <CalendarDays className="h-3 w-3" /> {reservation.events?.date}
+                <CalendarDays className="h-3 w-3" /> {formatDate(reservation.events?.date)}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" /> {reservation.events?.start_time?.slice(0, 5)} – {reservation.events?.end_time?.slice(0, 5)}
@@ -235,7 +236,7 @@ function TicketCard({
             {ticket && ["present", "late"].includes(ticketStatus) && ticket.checkin_timestamp && (
               <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 text-center">
                 <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                  Check-in: {new Date(ticket.checkin_timestamp).toLocaleString("ro-RO")}
+                  Check-in: {formatDateTime(ticket.checkin_timestamp)}
                 </p>
               </div>
             )}

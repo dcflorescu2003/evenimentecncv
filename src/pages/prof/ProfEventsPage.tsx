@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Eye, Search } from "lucide-react";
 import { toast } from "sonner";
-import { isValidTime24h, normalizeTimeInput } from "@/lib/time";
+import { formatDate, isValidTime24h, normalizeTimeInput } from "@/lib/time";
 
 type EventStatus = "draft" | "published" | "closed" | "cancelled";
 
@@ -347,7 +347,7 @@ export default function ProfEventsPage() {
             ) : filtered.map((ev) => (
               <TableRow key={ev.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/prof/events/${ev.id}`)}>
                 <TableCell className="font-medium">{ev.title}</TableCell>
-                <TableCell>{ev.date}</TableCell>
+                <TableCell>{formatDate(ev.date)}</TableCell>
                 <TableCell>{ev.start_time?.slice(0, 5)} – {ev.end_time?.slice(0, 5)}</TableCell>
                 <TableCell>{ev.counted_duration_hours}h</TableCell>
                 <TableCell>

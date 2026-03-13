@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from "@/lib/time";
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -268,7 +269,7 @@ export default function ProfEventDetailPage() {
       <div className="grid gap-4 sm:grid-cols-4">
         <Card><CardContent className="flex items-center gap-3 p-4">
           <CalendarDays className="h-5 w-5 text-primary" />
-          <div><p className="text-xs text-muted-foreground">Data</p><p className="font-medium">{event.date}</p></div>
+          <div><p className="text-xs text-muted-foreground">Data</p><p className="font-medium">{formatDate(event.date)}</p></div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-3 p-4">
           <Clock className="h-5 w-5 text-primary" />
@@ -398,7 +399,7 @@ export default function ProfEventDetailPage() {
                     <TableRow key={f.id}>
                       <TableCell className="font-medium">{f.title}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{f.file_name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(f.uploaded_at).toLocaleDateString("ro-RO")}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{formatDateTime(f.uploaded_at)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
@@ -444,7 +445,7 @@ export default function ProfEventDetailPage() {
                     <TableRow key={f.id}>
                       <TableCell className="font-medium">{f.title}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{f.file_name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(f.uploaded_at).toLocaleDateString("ro-RO")}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{formatDateTime(f.uploaded_at)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>

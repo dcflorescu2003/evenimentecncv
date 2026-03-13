@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/time";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -87,7 +88,7 @@ export default function PublicTicketViewPage() {
                       <>
                         <p className="text-sm font-medium">{data.event.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {data.event.date} • {data.event.start_time?.slice(0, 5)} – {data.event.end_time?.slice(0, 5)}
+                          {formatDate(data.event.date)} • {data.event.start_time?.slice(0, 5)} – {data.event.end_time?.slice(0, 5)}
                           {data.event.location && ` • ${data.event.location}`}
                         </p>
                       </>

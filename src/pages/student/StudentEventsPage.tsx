@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/time";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -112,6 +113,11 @@ export default function StudentEventsPage() {
       if (filterSession !== "all" && e.session_id !== filterSession) return false;
       if (search && !e.title.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
+    }
+
+    // Hide events with expired booking window
+    if (e.booking_close_at && new Date(e.booking_close_at) < new Date()) {
+      return false;
     }
 
     // Check class/grade eligibility
@@ -301,7 +307,7 @@ export default function StudentEventsPage() {
 
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <CalendarDays className="h-3 w-3" /> {ev.date}
+                      <CalendarDays className="h-3 w-3" /> {formatDate(ev.date)}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" /> {ev.start_time?.slice(0, 5)} – {ev.end_time?.slice(0, 5)}

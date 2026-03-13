@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/lib/time";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -132,7 +133,7 @@ export default function AuditPage() {
               filtered.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell className="text-xs whitespace-nowrap">
-                    {new Date(log.created_at).toLocaleString("ro-RO")}
+                    {formatDateTime(log.created_at)}
                   </TableCell>
                   <TableCell className="text-sm">
                     {log.user_id ? (profiles as Record<string, string>)[log.user_id] || log.user_id.slice(0, 8) : "Sistem"}

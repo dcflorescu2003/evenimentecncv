@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/time";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -149,7 +150,7 @@ export default function AdminDashboard() {
               <CardContent className="space-y-1">
                 {stats.upcomingEvents.slice(0, 5).map(e => (
                   <p key={e.id} className="text-sm text-muted-foreground">
-                    {e.date} — {e.title}
+                    {formatDate(e.date)} — {e.title}
                   </p>
                 ))}
               </CardContent>

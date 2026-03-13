@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/time";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -307,7 +308,7 @@ export default function ScanPage() {
           <h1 className="font-display text-lg font-bold">{event?.title || "Scanare QR"}</h1>
           {event && (
             <p className="text-xs text-muted-foreground">
-              {event.date} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}
+              {formatDate(event.date)} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}
             </p>
           )}
         </div>

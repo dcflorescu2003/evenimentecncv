@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from "@/lib/time";
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -189,7 +190,7 @@ export default function EventParticipantsPage() {
         </Button>
         <div className="flex-1">
           <h1 className="font-display text-lg font-bold">{event?.title || "Participanți"}</h1>
-          {event && <p className="text-xs text-muted-foreground">{event.date} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)} • {event.location}</p>}
+          {event && <p className="text-xs text-muted-foreground">{formatDate(event.date)} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)} • {event.location}</p>}
         </div>
         <Button size="sm" onClick={() => navigate(`/coordinator/scan/${eventId}`)}>
           <ScanLine className="mr-2 h-4 w-4" /> Scanează
@@ -274,7 +275,7 @@ export default function EventParticipantsPage() {
                     <div className="border-t px-3 py-3 space-y-3 bg-muted/10">
                       {p.checkinTimestamp && (
                         <p className="text-xs text-muted-foreground">
-                          Check-in: {new Date(p.checkinTimestamp).toLocaleString("ro-RO")}
+                          Check-in: {formatDateTime(p.checkinTimestamp)}
                         </p>
                       )}
                       <div>

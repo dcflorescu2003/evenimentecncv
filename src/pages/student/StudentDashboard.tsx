@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/time";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,7 +100,7 @@ export default function StudentDashboard() {
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">{s.start_date} — {s.end_date}</p>
+                <p className="text-xs text-muted-foreground">{formatDate(s.start_date)} — {formatDate(s.end_date)}</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-3 gap-3 text-center">
@@ -169,7 +170,7 @@ export default function StudentDashboard() {
                 <div>
                   <p className="font-medium">{r.events?.title}</p>
                   <p className="text-sm text-muted-foreground">
-                    {r.events?.date} • {r.events?.start_time?.slice(0, 5)} – {r.events?.end_time?.slice(0, 5)}
+                    {formatDate(r.events?.date)} • {r.events?.start_time?.slice(0, 5)} – {r.events?.end_time?.slice(0, 5)}
                   </p>
                 </div>
                 <Badge variant="secondary">{r.events?.counted_duration_hours}h</Badge>
