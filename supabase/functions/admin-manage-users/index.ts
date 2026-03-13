@@ -42,10 +42,17 @@ serve(async (req) => {
     const { action } = body;
 
     // Check admin for most actions
-    const { data: isAdmin } = await supabase.rpc("has_role", {
-      _user_id: caller.id,
-      _role: "admin",
-    });
+    let isAdmin = false;
+    if (caller) {
+      const { data } = await supabase.rpc("has_role", {
+        _user_id: caller.id,
+        _role: "admin",
+      });
+      isAdmin = !!data;
+    }
+
+    // Check if this is a service-role call (used by internal tools)
+    const isServiceRole = authHeader.includes(serviceRoleKey);
 
     if (action === "create_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
