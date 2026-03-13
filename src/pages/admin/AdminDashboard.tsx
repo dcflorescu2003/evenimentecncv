@@ -106,7 +106,7 @@ export default function AdminDashboard() {
   });
 
   const barConfig: ChartConfig = {
-    evenimente: { label: "Evenimente", color: "hsl(220, 70%, 45%)" },
+    evenimente: { label: "Evenimente", color: "hsl(350, 60%, 30%)" },
   };
 
   return (
