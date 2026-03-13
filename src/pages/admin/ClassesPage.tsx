@@ -491,17 +491,39 @@ export default function ClassesPage() {
             <DialogTitle>Asignează diriginte</DialogTitle>
             <DialogDescription>Selectează dirigintele pentru această clasă.</DialogDescription>
           </DialogHeader>
-          <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
-            <SelectTrigger><SelectValue placeholder="Selectează diriginte" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">— Fără diriginte —</SelectItem>
-              {teachers.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.display_name || `${t.first_name} ${t.last_name}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between">
+                {selectedTeacherId && selectedTeacherId !== "none"
+                  ? (() => { const t = teachers.find(t => t.id === selectedTeacherId); return t ? (t.display_name || `${t.first_name} ${t.last_name}`) : "Selectează diriginte"; })()
+                  : "Selectează diriginte"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Caută profesor..." />
+                <CommandList>
+                  <CommandEmpty>Niciun profesor găsit.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem value="none" onSelect={() => setSelectedTeacherId("none")}>
+                      <Check className={cn("mr-2 h-4 w-4", selectedTeacherId === "none" ? "opacity-100" : "opacity-0")} />
+                      — Fără diriginte —
+                    </CommandItem>
+                    {teachers.map((t) => {
+                      const name = t.display_name || `${t.first_name} ${t.last_name}`;
+                      return (
+                        <CommandItem key={t.id} value={name} onSelect={() => setSelectedTeacherId(t.id)}>
+                          <Check className={cn("mr-2 h-4 w-4", selectedTeacherId === t.id ? "opacity-100" : "opacity-0")} />
+                          {name}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTeacherDialog(false)}>Anulează</Button>
             <Button onClick={() => assignTeacherMutation.mutate({
