@@ -755,6 +755,10 @@ export type Database = {
         Args: { _event_id: string; _student_id: string }
         Returns: Json
       }
+      get_events_reserved_counts: {
+        Args: { _event_ids: string[] }
+        Returns: Json
+      }
       get_student_progress: {
         Args: { _session_id: string; _student_id: string }
         Returns: Json
