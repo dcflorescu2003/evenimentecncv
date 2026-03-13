@@ -72,6 +72,7 @@ export default function EventDetailPage() {
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [removeCoordId, setRemoveCoordId] = useState<string | null>(null);
+  const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; publicReservationId?: string } | null>(null);
 
   // Queries
   const { data: event, isLoading: eventLoading } = useQuery({
