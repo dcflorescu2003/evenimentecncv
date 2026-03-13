@@ -195,7 +195,7 @@ export default function ImportPage() {
         .mono { font-family: monospace; }
         @media print { body { padding: 0; } }
       </style></head><body>
-      <h1>Credențiale conturi — ${formatDateTime()}</h1>
+      <h1>Credențiale conturi — ${formatDate(new Date().toISOString().split("T")[0])}</h1>
       <p>Colegiul Național Cantemir Vodă</p>
       <table>
         <thead><tr><th>#</th><th>Nume</th><th>Utilizator</th><th>Parolă</th><th>Rol</th></tr></thead>

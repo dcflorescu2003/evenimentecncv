@@ -178,7 +178,7 @@ export default function TeacherDashboard() {
         @media print { body { padding: 0; } }
       </style></head><body>
       <h1>Credențiale elevi — ${className}</h1>
-      <p>Data: ${formatDateTime()}</p>
+      <p>Data: ${formatDate(new Date().toISOString().split("T")[0])}</p>
       <table>
         <thead><tr><th>#</th><th>Nume</th><th>Utilizator</th><th>Parolă</th></tr></thead>
         <tbody>${successful.map((r: any, i: number) => `<tr>
