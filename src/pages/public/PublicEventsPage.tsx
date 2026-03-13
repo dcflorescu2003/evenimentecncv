@@ -1,3 +1,4 @@
+import cncvLogo from "@/assets/cncv-logo.jpg";
 import { formatDate } from "@/lib/time";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +30,7 @@ export default function PublicEventsPage() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="mb-8 text-center">
+          <img src={cncvLogo} alt="Logo CNCV" className="mx-auto h-20 w-20 object-contain mb-3" />
           <h1 className="font-display text-3xl font-bold">Evenimente publice</h1>
           <p className="mt-2 text-muted-foreground">Rezervă-ți locul la evenimentele noastre deschise publicului.</p>
         </div>
