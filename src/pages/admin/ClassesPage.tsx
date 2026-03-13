@@ -387,16 +387,29 @@ export default function ClassesPage() {
             <div className="flex flex-wrap gap-1">
               {classRules.map((r) => (
                 <Badge key={r.id} variant="outline" className="cursor-pointer hover:bg-accent" onClick={() => openRuleEdit(r)}>
-                  {getSessionName(r.session_id)}: {r.required_value}h
+                  {getSessionName(r.session_id)}: {r.required_value === 0 ? "∞ (fără limită)" : `${r.required_value}h`}
                 </Badge>
               ))}
             </div>
           )}
         </TableCell>
         <TableCell>
-          <Button variant="ghost" size="icon" onClick={() => openRuleCreate(cls.id)}>
-            <Plus className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openRuleCreate(cls.id)} title="Adaugă regulă">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+              setEditClassForm({ id: cls.id, display_name: cls.display_name, grade_number: cls.grade_number, section: cls.section || "" });
+              setEditClassDialog(true);
+            }} title="Editează clasa">
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => {
+              setDeleteClassConfirm({ id: cls.id, name: cls.display_name });
+            }} title="Șterge clasa">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </TableCell>
       </TableRow>
     );
