@@ -115,6 +115,11 @@ export default function StudentEventsPage() {
       return true;
     }
 
+    // Hide events with expired booking window
+    if (e.booking_close_at && new Date(e.booking_close_at) < new Date()) {
+      return false;
+    }
+
     // Check class/grade eligibility
     const hasClassRestriction = e.eligible_classes && (e.eligible_classes as string[]).length > 0;
     const hasGradeRestriction = e.eligible_grades && (e.eligible_grades as number[]).length > 0;
