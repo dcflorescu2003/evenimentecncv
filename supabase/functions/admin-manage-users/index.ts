@@ -24,13 +24,12 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace("Bearer ", "");
     let caller: any = null;
-    if (token) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser(token);
-        caller = user;
-      } catch (_) {
-        // Service role key won't resolve to a user
+    if (token && token !== serviceRoleKey) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+      if (userError) {
+        console.error("getUser error:", userError.message);
       }
+      caller = user;
     }
 
     const body = await req.json();
