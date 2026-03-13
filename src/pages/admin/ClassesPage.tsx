@@ -259,13 +259,13 @@ export default function ClassesPage() {
 
   function openRuleCreate(classId?: string) {
     setEditingRuleId(null);
-    setRuleForm({ class_id: classId || "", session_id: sessions[0]?.id || "", required_value: 18 });
+    setRuleForm({ class_id: classId || "", session_id: sessions[0]?.id || "", required_value: 18, no_limit: false });
     setRuleDialog(true);
   }
 
   function openRuleEdit(r: Rule) {
     setEditingRuleId(r.id);
-    setRuleForm({ class_id: r.class_id, session_id: r.session_id, required_value: r.required_value });
+    setRuleForm({ class_id: r.class_id, session_id: r.session_id, required_value: r.required_value, no_limit: r.required_value === 0 });
     setRuleDialog(true);
   }
 
@@ -276,12 +276,65 @@ export default function ClassesPage() {
 
   function handleRuleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!ruleForm.class_id || !ruleForm.session_id || ruleForm.required_value < 1) {
+    if (!ruleForm.class_id || !ruleForm.session_id) {
       toast.error("Completați toate câmpurile");
       return;
     }
-    saveRuleMutation.mutate(ruleForm);
+    if (!ruleForm.no_limit && ruleForm.required_value < 1) {
+      toast.error("Introduceți un număr valid de ore");
+      return;
+    }
+    saveRuleMutation.mutate({ ...ruleForm, required_value: ruleForm.no_limit ? 0 : ruleForm.required_value });
   }
+
+  // Edit class mutation
+  const editClassMutation = useMutation({
+    mutationFn: async (values: typeof editClassForm) => {
+      const { error } = await supabase.from("classes")
+        .update({ display_name: values.display_name, grade_number: values.grade_number, section: values.section || null })
+        .eq("id", values.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      toast.success("Clasă actualizată");
+      setEditClassDialog(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Delete class mutation
+  const deleteClassMutation = useMutation({
+    mutationFn: async (classId: string) => {
+      // Delete assignments and rules first
+      await supabase.from("student_class_assignments").delete().eq("class_id", classId);
+      await supabase.from("class_participation_rules").delete().eq("class_id", classId);
+      const { error } = await supabase.from("classes").delete().eq("id", classId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["student_class_assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["class_participation_rules"] });
+      toast.success("Clasă ștearsă");
+      setDeleteClassConfirm(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Delete rule mutation
+  const deleteRuleMutation = useMutation({
+    mutationFn: async (ruleId: string) => {
+      const { error } = await supabase.from("class_participation_rules").delete().eq("id", ruleId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["class_participation_rules"] });
+      toast.success("Regulă ștearsă");
+      closeRuleDialog();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   // Already assigned student IDs for a class
   const assignedStudentIds = (classId: string) =>
