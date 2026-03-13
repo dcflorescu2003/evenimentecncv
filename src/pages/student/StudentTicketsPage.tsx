@@ -75,6 +75,8 @@ export default function StudentTicketsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all_my_reservations"] });
       queryClient.invalidateQueries({ queryKey: ["my_reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["reservation_counts_all"] });
+      queryClient.invalidateQueries({ queryKey: ["reservation_count_student"] });
       queryClient.invalidateQueries({ queryKey: ["student_progress"] });
       toast.success("Rezervare anulată");
       setCancelId(null);
