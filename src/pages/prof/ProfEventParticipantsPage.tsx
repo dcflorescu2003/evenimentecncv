@@ -245,6 +245,12 @@ export default function ProfEventParticipantsPage() {
                           </Button>
                         </div>
                       </div>
+                      <div className="pt-2 border-t">
+                        <Button size="sm" variant="outline" className="h-8 text-xs text-destructive hover:text-destructive"
+                          onClick={(e) => { e.stopPropagation(); setCancelReservation({ id: p.isPublic ? p.ticketId : p.reservationId!, name: p.name, isPublic: p.isPublic, reservationId: p.reservationId }); }}>
+                          <Trash2 className="mr-1 h-3.5 w-3.5" /> Anulează rezervarea
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </CardContent>
