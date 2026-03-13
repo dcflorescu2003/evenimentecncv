@@ -26,6 +26,7 @@ import {
   BarChart3,
   Shield,
   LogOut,
+  KeyRound,
 } from "lucide-react";
 
 const menuItems = [
