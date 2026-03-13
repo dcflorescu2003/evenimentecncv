@@ -1,4 +1,4 @@
-import { formatDateTime } from "@/lib/time";
+import { formatDate, formatDateTime } from "@/lib/time";
 // Wrapper around coordinator's EventParticipantsPage with prof-specific navigation
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
