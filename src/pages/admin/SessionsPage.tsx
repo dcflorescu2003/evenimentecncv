@@ -239,20 +239,18 @@ export default function SessionsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start_date">Data început *</Label>
-                <Input
+                <DateInput
                   id="start_date"
-                  type="date"
                   value={form.start_date}
-                  onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                  onChange={(v) => setForm({ ...form, start_date: v })}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="end_date">Data sfârșit *</Label>
-                <Input
+                <DateInput
                   id="end_date"
-                  type="date"
                   value={form.end_date}
-                  onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                  onChange={(v) => setForm({ ...form, end_date: v })}
                 />
               </div>
             </div>
