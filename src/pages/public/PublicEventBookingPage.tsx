@@ -159,6 +159,11 @@ export default function PublicEventBookingPage() {
           <CardHeader><CardTitle>Rezervare locuri</CardTitle></CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Honeypot - hidden from humans */}
+              <div className="absolute opacity-0 -z-10" aria-hidden="true" tabIndex={-1}>
+                <label htmlFor="website_url">Website</label>
+                <input id="website_url" name="website_url" type="text" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} autoComplete="off" tabIndex={-1} />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="guest-name">Numele dvs. *</Label>
                 <Input id="guest-name" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Numele complet" />
