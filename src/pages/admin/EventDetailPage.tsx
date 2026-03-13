@@ -462,10 +462,11 @@ export default function EventDetailPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Participant</TableHead>
-                    <TableHead>Tip</TableHead>
-                    <TableHead>Status bilet</TableHead>
-                    <TableHead>Check-in</TableHead>
-                    <TableHead className="w-40">Override</TableHead>
+                     <TableHead>Tip</TableHead>
+                     <TableHead>Status bilet</TableHead>
+                     <TableHead>Check-in</TableHead>
+                     <TableHead className="w-40">Override</TableHead>
+                     <TableHead className="w-16">Șterge</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
