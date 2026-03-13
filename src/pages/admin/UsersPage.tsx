@@ -263,6 +263,19 @@ export default function UsersPage() {
                             <UserCheck className="h-4 w-4 text-green-600" />
                           )}
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Șterge utilizator"
+                          onClick={() => setDeleteUserId(p.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                            <UserX className="h-4 w-4 text-destructive" />
+                          ) : (
+                            <UserCheck className="h-4 w-4 text-green-600" />
+                          )}
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
