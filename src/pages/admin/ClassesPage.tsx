@@ -543,12 +543,28 @@ export default function ClassesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Ore necesare *</Label>
-              <Input type="number" min={1} max={100} value={ruleForm.required_value}
-                onChange={(e) => setRuleForm({ ...ruleForm, required_value: parseInt(e.target.value) || 0 })} />
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="no_limit"
+                checked={ruleForm.no_limit}
+                onCheckedChange={(checked) => setRuleForm({ ...ruleForm, no_limit: !!checked })}
+              />
+              <Label htmlFor="no_limit">Fără limită de ore (participare nelimitată)</Label>
             </div>
+            {!ruleForm.no_limit && (
+              <div className="space-y-2">
+                <Label>Ore necesare *</Label>
+                <Input type="number" min={1} max={100} value={ruleForm.required_value}
+                  onChange={(e) => setRuleForm({ ...ruleForm, required_value: parseInt(e.target.value) || 0 })} />
+              </div>
+            )}
             <DialogFooter>
+              {editingRuleId && (
+                <Button type="button" variant="destructive" className="mr-auto" onClick={() => deleteRuleMutation.mutate(editingRuleId)}
+                  disabled={deleteRuleMutation.isPending}>
+                  Șterge regula
+                </Button>
+              )}
               <Button type="button" variant="outline" onClick={closeRuleDialog}>Anulează</Button>
               <Button type="submit" disabled={saveRuleMutation.isPending}>
                 {saveRuleMutation.isPending ? "Se salvează…" : "Salvează"}
