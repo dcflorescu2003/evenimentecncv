@@ -22,7 +22,10 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Pencil, BookOpen, UserPlus, X, Users } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from "@/components/ui/command";
+import { Plus, Pencil, BookOpen, UserPlus, X, Users, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -488,17 +491,39 @@ export default function ClassesPage() {
             <DialogTitle>Asignează diriginte</DialogTitle>
             <DialogDescription>Selectează dirigintele pentru această clasă.</DialogDescription>
           </DialogHeader>
-          <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
-            <SelectTrigger><SelectValue placeholder="Selectează diriginte" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">— Fără diriginte —</SelectItem>
-              {teachers.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.display_name || `${t.first_name} ${t.last_name}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between">
+                {selectedTeacherId && selectedTeacherId !== "none"
+                  ? (() => { const t = teachers.find(t => t.id === selectedTeacherId); return t ? (t.display_name || `${t.first_name} ${t.last_name}`) : "Selectează diriginte"; })()
+                  : "Selectează diriginte"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Caută profesor..." />
+                <CommandList>
+                  <CommandEmpty>Niciun profesor găsit.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem value="none" onSelect={() => setSelectedTeacherId("none")}>
+                      <Check className={cn("mr-2 h-4 w-4", selectedTeacherId === "none" ? "opacity-100" : "opacity-0")} />
+                      — Fără diriginte —
+                    </CommandItem>
+                    {teachers.map((t) => {
+                      const name = t.display_name || `${t.first_name} ${t.last_name}`;
+                      return (
+                        <CommandItem key={t.id} value={name} onSelect={() => setSelectedTeacherId(t.id)}>
+                          <Check className={cn("mr-2 h-4 w-4", selectedTeacherId === t.id ? "opacity-100" : "opacity-0")} />
+                          {name}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTeacherDialog(false)}>Anulează</Button>
             <Button onClick={() => assignTeacherMutation.mutate({
@@ -554,18 +579,37 @@ export default function ClassesPage() {
             <DialogTitle>Adaugă elev în clasă</DialogTitle>
             <DialogDescription>Selectează elevul de adăugat.</DialogDescription>
           </DialogHeader>
-          <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-            <SelectTrigger><SelectValue placeholder="Selectează elev" /></SelectTrigger>
-            <SelectContent>
-              {students
-                .filter((s) => !allAssignedStudentIds.includes(s.id))
-                .map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.display_name || `${s.first_name} ${s.last_name}`}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between">
+                {selectedStudentId
+                  ? (() => { const s = students.find(s => s.id === selectedStudentId); return s ? (s.display_name || `${s.first_name} ${s.last_name}`) : "Selectează elev"; })()
+                  : "Selectează elev"}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Caută elev..." />
+                <CommandList>
+                  <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+                  <CommandGroup>
+                    {students
+                      .filter((s) => !allAssignedStudentIds.includes(s.id))
+                      .map((s) => {
+                        const name = s.display_name || `${s.first_name} ${s.last_name}`;
+                        return (
+                          <CommandItem key={s.id} value={name} onSelect={() => setSelectedStudentId(s.id)}>
+                            <Check className={cn("mr-2 h-4 w-4", selectedStudentId === s.id ? "opacity-100" : "opacity-0")} />
+                            {name}
+                          </CommandItem>
+                        );
+                      })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStudentDialog(false)}>Anulează</Button>
             <Button disabled={!selectedStudentId || assignStudentMutation.isPending}
