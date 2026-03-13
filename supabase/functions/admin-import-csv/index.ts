@@ -18,16 +18,7 @@ function generateUsername(firstName: string, lastName: string): string {
   return `${first[0]}.${first}.${last}`;
 }
 
-function generatePassword(length = 10): string {
-  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#";
-  let result = "";
-  const array = new Uint8Array(length);
-  crypto.getRandomValues(array);
-  for (const byte of array) {
-    result += chars[byte % chars.length];
-  }
-  return result;
-}
+const DEFAULT_PASSWORD = "Cncv1234#";
 
 // Parse class_grade that could be numeric ("9", "10") or Roman ("IX", "X", "XI", "XII")
 function parseGrade(value: string): number {
