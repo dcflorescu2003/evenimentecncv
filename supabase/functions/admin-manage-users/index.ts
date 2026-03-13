@@ -182,6 +182,70 @@ serve(async (req) => {
       });
     }
 
+    if (action === "batch_reset_by_role") {
+      if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
+      const { role } = body;
+      if (!role) throw new Error("role lipsește");
+
+      const { data: roleRows } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", role)
+        .limit(10000);
+
+      const userIds = (roleRows || []).map((r: any) => r.user_id);
+      if (userIds.length === 0) {
+        return new Response(JSON.stringify({ results: [] }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, username")
+        .in("id", userIds);
+
+      const results = [];
+      for (const profile of (profiles || [])) {
+        const password = generatePassword();
+        const { error } = await supabase.auth.admin.updateUserById(profile.id, { password });
+        if (error) {
+          results.push({ first_name: profile.first_name, last_name: profile.last_name, username: profile.username, password: "", error: error.message });
+        } else {
+          results.push({ first_name: profile.first_name, last_name: profile.last_name, username: profile.username, password });
+        }
+      }
+
+      results.sort((a, b) => {
+        const cmp = a.last_name.localeCompare(b.last_name);
+        return cmp !== 0 ? cmp : a.first_name.localeCompare(b.first_name);
+      });
+
+      return new Response(JSON.stringify({ results }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "reset_single_user") {
+      if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
+      const { user_id } = body;
+      const password = generatePassword();
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, username")
+        .eq("id", user_id)
+        .single();
+      if (!profile) throw new Error("Utilizatorul nu a fost găsit");
+
+      const { error } = await supabase.auth.admin.updateUserById(user_id, { password });
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ results: [{ first_name: profile.first_name, last_name: profile.last_name, username: profile.username, password }] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "bulk_delete_students") {
       if (!isAdmin && !isServiceRole) throw new Error("Nu aveți permisiuni de administrator");
       const { exclude_usernames = [] } = body;
