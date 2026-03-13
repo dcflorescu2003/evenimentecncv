@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -397,7 +398,7 @@ export default function ProfEventsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Data *</Label>
-                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                <DateInput value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
               </div>
               <div className="space-y-2">
                 <Label>Ora început *</Label>
@@ -494,7 +495,7 @@ export default function ProfEventsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">De la - Data</Label>
-                  <Input type="date" value={form.booking_open_date} onChange={(e) => setForm({ ...form, booking_open_date: e.target.value })} />
+                  <DateInput value={form.booking_open_date} onChange={(v) => setForm({ ...form, booking_open_date: v })} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">De la - Ora</Label>
@@ -509,7 +510,7 @@ export default function ProfEventsPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Până la - Data</Label>
-                  <Input type="date" value={form.booking_close_date} onChange={(e) => setForm({ ...form, booking_close_date: e.target.value })} />
+                  <DateInput value={form.booking_close_date} onChange={(v) => setForm({ ...form, booking_close_date: v })} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Până la - Ora</Label>
