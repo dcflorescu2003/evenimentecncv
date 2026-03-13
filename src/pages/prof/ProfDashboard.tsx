@@ -119,7 +119,7 @@ export default function ProfDashboard() {
                           <p className="font-medium">{ev.title}</p>
                           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
-                              <CalendarDays className="h-3 w-3" /> {ev.date}
+                              <CalendarDays className="h-3 w-3" /> {formatDate(ev.date)}
                             </span>
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" /> {ev.start_time?.slice(0, 5)} – {ev.end_time?.slice(0, 5)}
@@ -162,7 +162,7 @@ export default function ProfDashboard() {
                         <p className="font-medium">{ev.title}</p>
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <CalendarDays className="h-3 w-3" /> {ev.date}
+                            <CalendarDays className="h-3 w-3" /> {formatDate(ev.date)}
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" /> {ev.start_time?.slice(0, 5)} – {ev.end_time?.slice(0, 5)}

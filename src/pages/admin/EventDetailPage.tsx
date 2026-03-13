@@ -350,7 +350,7 @@ export default function EventDetailPage() {
             <CalendarDays className="h-5 w-5 text-primary" />
             <div>
               <p className="text-xs text-muted-foreground">Data</p>
-              <p className="font-medium">{event.date}</p>
+              <p className="font-medium">{formatDate(event.date)}</p>
             </div>
           </CardContent>
         </Card>

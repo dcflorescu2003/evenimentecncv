@@ -250,7 +250,7 @@ export default function StudentEventDetailPage() {
       {/* Info chips */}
       <div className="flex flex-wrap gap-2">
         <Badge variant="outline" className="gap-1">
-          <CalendarDays className="h-3 w-3" /> {event.date}
+          <CalendarDays className="h-3 w-3" /> {formatDate(event.date)}
         </Badge>
         <Badge variant="outline" className="gap-1">
           <Clock className="h-3 w-3" /> {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)} ({event.counted_duration_hours}h)
@@ -375,7 +375,7 @@ export default function StudentEventDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmă rezervarea</AlertDialogTitle>
             <AlertDialogDescription>
-              Te înscrii la „{event.title}" pe {event.date}, {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)} ({event.counted_duration_hours}h).
+              Te înscrii la „{event.title}" pe {formatDate(event.date)}, {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)} ({event.counted_duration_hours}h).
               Se va genera un bilet cu cod QR.
             </AlertDialogDescription>
           </AlertDialogHeader>

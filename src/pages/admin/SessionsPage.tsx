@@ -184,7 +184,7 @@ export default function SessionsPage() {
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.name}</TableCell>
                   <TableCell>{s.academic_year}</TableCell>
-                  <TableCell>{s.start_date} — {s.end_date}</TableCell>
+                  <TableCell>{formatDate(s.start_date)} — {formatDate(s.end_date)}</TableCell>
                   <TableCell>
                     <Badge variant="secondary" className={statusColors[s.status as SessionStatus]}>
                       {statusLabels[s.status as SessionStatus]}

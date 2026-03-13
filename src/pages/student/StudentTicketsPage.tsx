@@ -198,7 +198,7 @@ function TicketCard({
             <p className="font-medium">{reservation.events?.title}</p>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <CalendarDays className="h-3 w-3" /> {reservation.events?.date}
+                <CalendarDays className="h-3 w-3" /> {formatDate(reservation.events?.date)}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" /> {reservation.events?.start_time?.slice(0, 5)} – {reservation.events?.end_time?.slice(0, 5)}

@@ -100,7 +100,7 @@ export default function StudentDashboard() {
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">{s.start_date} — {s.end_date}</p>
+                <p className="text-xs text-muted-foreground">{formatDate(s.start_date)} — {formatDate(s.end_date)}</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-3 gap-3 text-center">

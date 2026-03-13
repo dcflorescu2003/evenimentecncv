@@ -150,7 +150,7 @@ export default function AdminDashboard() {
               <CardContent className="space-y-1">
                 {stats.upcomingEvents.slice(0, 5).map(e => (
                   <p key={e.id} className="text-sm text-muted-foreground">
-                    {e.date} — {e.title}
+                    {formatDate(e.date)} — {e.title}
                   </p>
                 ))}
               </CardContent>

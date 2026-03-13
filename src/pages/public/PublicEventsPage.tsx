@@ -47,7 +47,7 @@ export default function PublicEventsPage() {
                       <h2 className="text-lg font-semibold">{e.title}</h2>
                       {e.description && <p className="text-sm text-muted-foreground line-clamp-2">{e.description}</p>}
                       <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" />{e.date}</span>
+                        <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" />{formatDate(e.date)}</span>
                         <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{e.start_time?.slice(0, 5)} – {e.end_time?.slice(0, 5)}</span>
                         {e.location && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{e.location}</span>}
                         <span className="flex items-center gap-1"><Users className="h-4 w-4" />{e.max_capacity} locuri</span>

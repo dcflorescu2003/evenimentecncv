@@ -142,7 +142,7 @@ export default function PublicEventBookingPage() {
             <h1 className="text-xl font-bold">{event.title}</h1>
             {event.description && <p className="text-sm text-muted-foreground">{event.description}</p>}
             <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" />{event.date}</span>
+              <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" />{formatDate(event.date)}</span>
               <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</span>
               {event.location && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{event.location}</span>}
               <span className="flex items-center gap-1"><Users className="h-4 w-4" />{event.max_capacity} locuri</span>

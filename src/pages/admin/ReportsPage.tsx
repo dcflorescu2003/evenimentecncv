@@ -244,7 +244,7 @@ function EventReport({ sessionId }: { sessionId: string }) {
                     {e.title}
                     {(e as any).is_public && <Badge variant="outline" className="ml-2 text-[10px]">Public</Badge>}
                   </TableCell>
-                  <TableCell>{e.date}</TableCell>
+                  <TableCell>{formatDate(e.date)}</TableCell>
                   <TableCell className="text-right">{e.reserved}</TableCell>
                   <TableCell className="text-right">{e.guests}</TableCell>
                   <TableCell className="text-right">{e.max_capacity}</TableCell>

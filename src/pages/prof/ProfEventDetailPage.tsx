@@ -269,7 +269,7 @@ export default function ProfEventDetailPage() {
       <div className="grid gap-4 sm:grid-cols-4">
         <Card><CardContent className="flex items-center gap-3 p-4">
           <CalendarDays className="h-5 w-5 text-primary" />
-          <div><p className="text-xs text-muted-foreground">Data</p><p className="font-medium">{event.date}</p></div>
+          <div><p className="text-xs text-muted-foreground">Data</p><p className="font-medium">{formatDate(event.date)}</p></div>
         </CardContent></Card>
         <Card><CardContent className="flex items-center gap-3 p-4">
           <Clock className="h-5 w-5 text-primary" />
