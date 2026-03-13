@@ -11,6 +11,7 @@ interface Profile {
   username: string;
   display_name: string;
   is_active: boolean;
+  must_change_password: boolean;
 }
 
 interface AuthContextType {
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [profileRes, rolesRes] = await Promise.all([
       supabase
         .from("profiles")
-        .select("id, first_name, last_name, username, display_name, is_active")
+        .select("id, first_name, last_name, username, display_name, is_active, must_change_password")
         .eq("id", userId)
         .single(),
       supabase

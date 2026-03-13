@@ -6,16 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function generatePassword(length = 10): string {
-  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#";
-  let result = "";
-  const array = new Uint8Array(length);
-  crypto.getRandomValues(array);
-  for (const byte of array) {
-    result += chars[byte % chars.length];
-  }
-  return result;
-}
+const DEFAULT_PASSWORD = "Cncv1234#";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -62,7 +53,7 @@ serve(async (req) => {
     if (action === "create_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
       const { first_name, last_name, username, role } = body;
-      const password = generatePassword();
+      const password = DEFAULT_PASSWORD;
       const email = `${username}@school.local`;
 
       const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
@@ -79,6 +70,7 @@ serve(async (req) => {
         first_name,
         last_name,
         username,
+        must_change_password: true,
       });
       if (profileError) throw profileError;
 
@@ -96,10 +88,12 @@ serve(async (req) => {
     if (action === "reset_password") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
       const { user_id } = body;
-      const password = generatePassword();
+      const password = DEFAULT_PASSWORD;
 
       const { error } = await supabase.auth.admin.updateUserById(user_id, { password });
       if (error) throw error;
+
+      await supabase.from("profiles").update({ must_change_password: true }).eq("id", user_id);
 
       return new Response(JSON.stringify({ password }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -151,7 +145,7 @@ serve(async (req) => {
 
       const results = [];
       for (const profile of (profiles || [])) {
-        const password = generatePassword();
+        const password = DEFAULT_PASSWORD;
         const { error } = await supabase.auth.admin.updateUserById(profile.id, { password });
         if (error) {
           results.push({
@@ -162,6 +156,7 @@ serve(async (req) => {
             error: error.message,
           });
         } else {
+          await supabase.from("profiles").update({ must_change_password: true }).eq("id", profile.id);
           results.push({
             first_name: profile.first_name,
             last_name: profile.last_name,
@@ -207,11 +202,12 @@ serve(async (req) => {
 
       const results = [];
       for (const profile of (profiles || [])) {
-        const password = generatePassword();
+        const password = DEFAULT_PASSWORD;
         const { error } = await supabase.auth.admin.updateUserById(profile.id, { password });
         if (error) {
           results.push({ first_name: profile.first_name, last_name: profile.last_name, username: profile.username, password: "", error: error.message });
         } else {
+          await supabase.from("profiles").update({ must_change_password: true }).eq("id", profile.id);
           results.push({ first_name: profile.first_name, last_name: profile.last_name, username: profile.username, password });
         }
       }
@@ -229,7 +225,7 @@ serve(async (req) => {
     if (action === "reset_single_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
       const { user_id } = body;
-      const password = generatePassword();
+      const password = DEFAULT_PASSWORD;
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -240,6 +236,8 @@ serve(async (req) => {
 
       const { error } = await supabase.auth.admin.updateUserById(user_id, { password });
       if (error) throw error;
+
+      await supabase.from("profiles").update({ must_change_password: true }).eq("id", user_id);
 
       return new Response(JSON.stringify({ results: [{ first_name: profile.first_name, last_name: profile.last_name, username: profile.username, password }] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

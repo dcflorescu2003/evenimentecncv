@@ -18,16 +18,7 @@ function generateUsername(firstName: string, lastName: string): string {
   return `${first[0]}.${first}.${last}`;
 }
 
-function generatePassword(length = 10): string {
-  const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#";
-  let result = "";
-  const array = new Uint8Array(length);
-  crypto.getRandomValues(array);
-  for (const byte of array) {
-    result += chars[byte % chars.length];
-  }
-  return result;
-}
+const DEFAULT_PASSWORD = "Cncv1234#";
 
 // Parse class_grade that could be numeric ("9", "10") or Roman ("IX", "X", "XI", "XII")
 function parseGrade(value: string): number {
@@ -128,7 +119,7 @@ serve(async (req) => {
         }
         usedUsernames.add(username);
 
-        const password = generatePassword();
+        const password = DEFAULT_PASSWORD;
         const email = `${username}@school.local`;
 
         // Create auth user
@@ -149,6 +140,7 @@ serve(async (req) => {
           username,
           student_identifier: row.student_identifier || null,
           email: row.email || null,
+          must_change_password: true,
         });
         if (profileError) throw profileError;
 
