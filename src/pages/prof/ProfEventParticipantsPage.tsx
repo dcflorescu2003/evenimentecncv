@@ -102,6 +102,7 @@ export default function ProfEventParticipantsPage() {
         lastName: profile?.last_name || "",
         identifier: profile?.student_identifier, status: ticket?.status || "reserved",
         ticketId: ticket?.id, checkinTimestamp: ticket?.checkin_timestamp, isPublic: false,
+        reservationId: p.id,
       };
     }),
     ...publicParticipants.flatMap((pr: any) =>
@@ -109,6 +110,7 @@ export default function ProfEventParticipantsPage() {
         id: `pub-${t.id}`, name: t.attendee_name, lastName: t.attendee_name || "",
         status: t.status || "reserved",
         ticketId: t.id, checkinTimestamp: t.checkin_timestamp, isPublic: true,
+        publicReservationId: pr.id,
       }))
     ),
   ].sort((a, b) => a.lastName.localeCompare(b.lastName));
