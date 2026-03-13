@@ -1,0 +1,1 @@
+ALTER TABLE public.public_reservations ADD COLUMN IF NOT EXISTS guest_phone text;

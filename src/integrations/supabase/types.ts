@@ -536,6 +536,7 @@ export type Database = {
           event_id: string
           guest_email: string | null
           guest_name: string
+          guest_phone: string | null
           id: string
           reservation_code: string
           status: string
@@ -545,6 +546,7 @@ export type Database = {
           event_id: string
           guest_email?: string | null
           guest_name: string
+          guest_phone?: string | null
           id?: string
           reservation_code?: string
           status?: string
@@ -554,6 +556,7 @@ export type Database = {
           event_id?: string
           guest_email?: string | null
           guest_name?: string
+          guest_phone?: string | null
           id?: string
           reservation_code?: string
           status?: string
