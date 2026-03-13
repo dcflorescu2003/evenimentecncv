@@ -79,6 +79,7 @@ export default function PublicEventBookingPage() {
           event_id: id,
           guest_name: guestName.trim(),
           guest_email: guestEmail.trim() || null,
+          guest_phone: guestPhone.trim() || null,
           attendees: attendeeNames.map((n) => ({ name: n.trim() })),
         },
       });
