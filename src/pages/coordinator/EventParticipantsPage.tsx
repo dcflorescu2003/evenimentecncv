@@ -106,6 +106,7 @@ export default function EventParticipantsPage() {
       return {
         id: `reg-${p.id}`,
         name: profile?.display_name || `${profile?.first_name} ${profile?.last_name}`,
+        lastName: profile?.last_name || "",
         identifier: profile?.student_identifier,
         status: ticket?.status || "reserved",
         ticketId: ticket?.id,
@@ -117,6 +118,7 @@ export default function EventParticipantsPage() {
       (pr.public_tickets || []).map((t: any) => ({
         id: `pub-${t.id}`,
         name: t.attendee_name,
+        lastName: t.attendee_name || "",
         identifier: undefined,
         status: t.status || "reserved",
         ticketId: t.id,
@@ -124,7 +126,7 @@ export default function EventParticipantsPage() {
         isPublic: true,
       }))
     ),
-  ];
+  ].sort((a, b) => a.lastName.localeCompare(b.lastName));
 
   const filtered = unified.filter((p) => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !(p.identifier || "").toLowerCase().includes(search.toLowerCase())) return false;

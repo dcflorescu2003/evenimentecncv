@@ -26,6 +26,7 @@ import { toast } from "sonner";
 interface StudentReport {
   id: string;
   name: string;
+  lastName: string;
   reservations: { eventTitle: string; date: string; hours: number; status: string }[];
   totalReservedHours: number;
   totalValidatedHours: number;
@@ -131,11 +132,12 @@ export default function TeacherDashboard() {
         return {
           id: p.id,
           name: p.display_name || `${p.first_name} ${p.last_name}`,
+          lastName: p.last_name,
           reservations: reservationDetails,
           totalReservedHours,
           totalValidatedHours,
         } as StudentReport;
-      }).sort((a, b) => a.name.localeCompare(b.name));
+      }).sort((a, b) => a.lastName.localeCompare(b.lastName));
     },
     enabled: !!sessionId && classIds.length > 0,
   });
