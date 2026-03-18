@@ -124,14 +124,18 @@ export default function StudentEventsPage() {
   const filtered = events.filter((e) => {
     // Always show events where student is already registered
     if (reservedEventIds.has(e.id)) {
-      // Still apply search/session filters
       if (filterSession !== "all" && e.session_id !== filterSession) return false;
       if (search && !e.title.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     }
 
-    // Hide events with expired booking window
-    if (e.booking_close_at && new Date(e.booking_close_at) < new Date()) {
+    // Show past events (they'll appear in "Desfășurate" section)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isPast = new Date(e.date) < today;
+
+    // For upcoming events, hide if booking window expired
+    if (!isPast && e.booking_close_at && new Date(e.booking_close_at) < new Date()) {
       return false;
     }
 
