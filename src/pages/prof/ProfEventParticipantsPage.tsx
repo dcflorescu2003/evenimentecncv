@@ -185,9 +185,23 @@ export default function ProfEventParticipantsPage() {
           <h1 className="font-display text-lg font-bold">{event?.title || "Participanți"}</h1>
           {event && <p className="text-xs text-muted-foreground">{formatDate(event.date)} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</p>}
         </div>
-        <Button size="sm" onClick={() => navigate(`/prof/scan/${eventId}`)}>
-          <ScanLine className="mr-2 h-4 w-4" /> Scanează
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => {
+            if (!event || unified.length === 0) return;
+            exportAttendancePdf(
+              event.title,
+              formatDate(event.date),
+              `${event.start_time?.slice(0, 5)} – ${event.end_time?.slice(0, 5)}`,
+              event.location,
+              unified,
+            );
+          }}>
+            <FileDown className="mr-2 h-4 w-4" /> Listă de prezență
+          </Button>
+          <Button size="sm" onClick={() => navigate(`/prof/scan/${eventId}`)}>
+            <ScanLine className="mr-2 h-4 w-4" /> Scanează
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-5 gap-2 text-center">
