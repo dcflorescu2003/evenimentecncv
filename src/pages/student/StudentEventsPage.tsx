@@ -344,10 +344,21 @@ export default function StudentEventsPage() {
           </CardContent>
         </Card>
       ) : (() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const upcoming = filtered.filter((ev) => new Date(ev.date) >= today);
-        const past = filtered.filter((ev) => new Date(ev.date) < today);
+        const now = new Date();
+        const isEventPast = (ev: Event) => {
+          const evDate = new Date(ev.date);
+          evDate.setHours(0, 0, 0, 0);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (evDate < today) return true;
+          if (evDate.getTime() === today.getTime() && ev.end_time) {
+            const [h, m] = ev.end_time.split(":").map(Number);
+            return now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m);
+          }
+          return false;
+        };
+        const upcoming = filtered.filter((ev) => !isEventPast(ev));
+        const past = filtered.filter((ev) => isEventPast(ev));
 
         return (
           <div className="space-y-6">
