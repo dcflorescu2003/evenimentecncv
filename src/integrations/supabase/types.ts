@@ -88,6 +88,7 @@ export type Database = {
           created_at: string
           enforcement_mode: string
           id: string
+          max_hours: number | null
           notes: string | null
           required_value: number
           requirement_type: string
@@ -99,6 +100,7 @@ export type Database = {
           created_at?: string
           enforcement_mode?: string
           id?: string
+          max_hours?: number | null
           notes?: string | null
           required_value: number
           requirement_type?: string
@@ -110,6 +112,7 @@ export type Database = {
           created_at?: string
           enforcement_mode?: string
           id?: string
+          max_hours?: number | null
           notes?: string | null
           required_value?: number
           requirement_type?: string
