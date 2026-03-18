@@ -38,7 +38,7 @@ type TicketStatus = "present" | "late" | "absent" | "excused";
 
 interface UnifiedParticipant {
   id: string; name: string; identifier?: string; status: string;
-  ticketId: string; checkinTimestamp?: string | null; isPublic: boolean;
+  ticketId?: string; checkinTimestamp?: string | null; isPublic: boolean;
   reservationId?: string; publicReservationId?: string;
 }
 
@@ -51,7 +51,7 @@ export default function ProfEventParticipantsPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmChange, setConfirmChange] = useState<{
-    ticketId: string; currentStatus: string; newStatus: TicketStatus; studentName: string; isPublic: boolean;
+    ticketId?: string; currentStatus: string; newStatus: TicketStatus; studentName: string; isPublic: boolean; reservationId?: string;
   } | null>(null);
   const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; reservationId?: string } | null>(null);
 
@@ -133,15 +133,30 @@ export default function ProfEventParticipantsPage() {
     excused: unified.filter((p) => p.status === "excused").length,
   };
 
-  async function updateStatus(ticketId: string, currentStatus: string, newStatus: TicketStatus, isPublic: boolean) {
+  async function ensureTicket(reservationId: string): Promise<string | null> {
+    const { data, error } = await supabase.from("tickets").insert({
+      reservation_id: reservationId,
+    }).select("id").single();
+    if (error) { toast.error("Nu s-a putut crea ticketul: " + error.message); return null; }
+    return data.id;
+  }
+
+  async function updateStatus(ticketId: string | undefined, currentStatus: string, newStatus: TicketStatus, isPublic: boolean, reservationId?: string) {
+    let resolvedTicketId = ticketId;
+    if (!resolvedTicketId && !isPublic && reservationId) {
+      resolvedTicketId = (await ensureTicket(reservationId)) ?? undefined;
+      if (!resolvedTicketId) return;
+    }
+    if (!resolvedTicketId) { toast.error("Ticketul nu a fost găsit"); return; }
+
     const table = isPublic ? "public_tickets" : "tickets";
     const { error } = await supabase.from(table).update({
       status: newStatus, checkin_timestamp: ["present", "late"].includes(newStatus) ? new Date().toISOString() : null,
-    } as any).eq("id", ticketId);
+    } as any).eq("id", resolvedTicketId);
     if (error) { toast.error(error.message); return; }
     if (!isPublic) {
       await supabase.from("attendance_log").insert({
-        ticket_id: ticketId, previous_status: currentStatus as any,
+        ticket_id: resolvedTicketId, previous_status: currentStatus as any,
         new_status: newStatus, changed_by: user!.id, notes: "Actualizat de profesor",
       });
     }
@@ -151,11 +166,11 @@ export default function ProfEventParticipantsPage() {
     setConfirmChange(null);
   }
 
-  function handleStatusClick(ticketId: string, currentStatus: string, newStatus: TicketStatus, studentName: string, isPublic: boolean) {
+  function handleStatusClick(ticketId: string | undefined, currentStatus: string, newStatus: TicketStatus, studentName: string, isPublic: boolean, reservationId?: string) {
     if (currentStatus !== "reserved") {
-      setConfirmChange({ ticketId, currentStatus, newStatus, studentName, isPublic });
+      setConfirmChange({ ticketId, currentStatus, newStatus, studentName, isPublic, reservationId });
     } else {
-      updateStatus(ticketId, currentStatus, newStatus, isPublic);
+      updateStatus(ticketId, currentStatus, newStatus, isPublic, reservationId);
     }
   }
 
@@ -221,27 +236,27 @@ export default function ProfEventParticipantsPage() {
                     <Badge variant="secondary" className={`text-xs shrink-0 ${statusColors[p.status]}`}>{statusLabels[p.status]}</Badge>
                     {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                   </div>
-                  {isExpanded && p.ticketId && (
+                  {isExpanded && (
                     <div className="border-t px-3 py-3 space-y-3 bg-muted/10">
                       {p.checkinTimestamp && <p className="text-xs text-muted-foreground">Check-in: {formatDateTime(p.checkinTimestamp)}</p>}
                       <div>
                         <p className="text-xs font-medium text-muted-foreground mb-2">Schimbă statusul:</p>
                         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                           <Button size="sm" variant={p.status === "present" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "present"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "present", p.name, p.isPublic); }}>
-                            <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Prezent
-                          </Button>
-                          <Button size="sm" variant={p.status === "late" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "late"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "late", p.name, p.isPublic); }}>
-                            <Clock className="mr-1 h-3.5 w-3.5" /> Întârziat
-                          </Button>
-                          <Button size="sm" variant={p.status === "absent" ? "destructive" : "outline"} className="h-9 text-xs" disabled={p.status === "absent"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "absent", p.name, p.isPublic); }}>
-                            <XCircle className="mr-1 h-3.5 w-3.5" /> Absent
-                          </Button>
-                          <Button size="sm" variant={p.status === "excused" ? "secondary" : "outline"} className="h-9 text-xs" disabled={p.status === "excused"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "excused", p.name, p.isPublic); }}>
-                            <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Motivat
+                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "present", p.name, p.isPublic, p.reservationId); }}>
+                             <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Prezent
+                           </Button>
+                           <Button size="sm" variant={p.status === "late" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "late"}
+                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "late", p.name, p.isPublic, p.reservationId); }}>
+                             <Clock className="mr-1 h-3.5 w-3.5" /> Întârziat
+                           </Button>
+                           <Button size="sm" variant={p.status === "absent" ? "destructive" : "outline"} className="h-9 text-xs" disabled={p.status === "absent"}
+                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "absent", p.name, p.isPublic, p.reservationId); }}>
+                             <XCircle className="mr-1 h-3.5 w-3.5" /> Absent
+                           </Button>
+                           <Button size="sm" variant={p.status === "excused" ? "secondary" : "outline"} className="h-9 text-xs" disabled={p.status === "excused"}
+                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "excused", p.name, p.isPublic, p.reservationId); }}>
+                             <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Motivat
                           </Button>
                         </div>
                       </div>
@@ -272,7 +287,7 @@ export default function ProfEventParticipantsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Anulează</AlertDialogCancel>
-            <AlertDialogAction onClick={() => confirmChange && updateStatus(confirmChange.ticketId, confirmChange.currentStatus, confirmChange.newStatus, confirmChange.isPublic)}>
+            <AlertDialogAction onClick={() => confirmChange && updateStatus(confirmChange.ticketId, confirmChange.currentStatus, confirmChange.newStatus, confirmChange.isPublic, confirmChange.reservationId)}>
               Confirmă
             </AlertDialogAction>
           </AlertDialogFooter>
