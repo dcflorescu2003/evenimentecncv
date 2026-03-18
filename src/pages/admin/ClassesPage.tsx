@@ -393,11 +393,16 @@ export default function ClassesPage() {
             <span className="text-muted-foreground text-sm">Nicio regulă</span>
           ) : (
             <div className="flex flex-wrap gap-1">
-              {classRules.map((r) => (
-                <Badge key={r.id} variant="outline" className="cursor-pointer hover:bg-accent" onClick={() => openRuleEdit(r)}>
-                  {getSessionName(r.session_id)}: {r.required_value === 0 ? "∞ (fără limită)" : `${r.required_value}h`}
-                </Badge>
-              ))}
+              {classRules.map((r) => {
+                const rMax = (r as any).max_hours as number | null;
+                const reqLabel = r.required_value === 0 ? "∞" : `${r.required_value}h`;
+                const maxLabel = rMax === null || rMax === undefined ? "∞" : `${rMax}h`;
+                return (
+                  <Badge key={r.id} variant="outline" className="cursor-pointer hover:bg-accent" onClick={() => openRuleEdit(r)}>
+                    {getSessionName(r.session_id)}: {reqLabel} necesar / max {maxLabel}
+                  </Badge>
+                );
+              })}
             </div>
           )}
         </TableCell>
