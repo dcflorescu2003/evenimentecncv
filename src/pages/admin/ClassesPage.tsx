@@ -266,13 +266,14 @@ export default function ClassesPage() {
 
   function openRuleCreate(classId?: string) {
     setEditingRuleId(null);
-    setRuleForm({ class_id: classId || "", session_id: sessions[0]?.id || "", required_value: 18, no_limit: false });
+    setRuleForm({ class_id: classId || "", session_id: sessions[0]?.id || "", required_value: 18, no_limit: false, max_hours: null, no_max_limit: true });
     setRuleDialog(true);
   }
 
   function openRuleEdit(r: Rule) {
     setEditingRuleId(r.id);
-    setRuleForm({ class_id: r.class_id, session_id: r.session_id, required_value: r.required_value, no_limit: r.required_value === 0 });
+    const ruleMaxHours = (r as any).max_hours as number | null;
+    setRuleForm({ class_id: r.class_id, session_id: r.session_id, required_value: r.required_value, no_limit: r.required_value === 0, max_hours: ruleMaxHours, no_max_limit: ruleMaxHours === null || ruleMaxHours === undefined });
     setRuleDialog(true);
   }
 
