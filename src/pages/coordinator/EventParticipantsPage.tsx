@@ -40,9 +40,10 @@ interface UnifiedParticipant {
   name: string;
   identifier?: string;
   status: string;
-  ticketId: string;
+  ticketId?: string;
   checkinTimestamp?: string | null;
   isPublic: boolean;
+  reservationId?: string;
 }
 
 export default function EventParticipantsPage() {
