@@ -38,7 +38,7 @@ type Profile = Tables<"profiles">;
 export default function ClassesPage() {
   const queryClient = useQueryClient();
   const [ruleDialog, setRuleDialog] = useState(false);
-  const [ruleForm, setRuleForm] = useState({ class_id: "", session_id: "", required_value: 18, no_limit: false });
+  const [ruleForm, setRuleForm] = useState({ class_id: "", session_id: "", required_value: 18, no_limit: false, max_hours: null as number | null, no_max_limit: true });
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<string>("all");
 
@@ -192,14 +192,20 @@ export default function ClassesPage() {
   // Rule mutations
   const saveRuleMutation = useMutation({
     mutationFn: async (values: typeof ruleForm) => {
+      const payload = {
+        required_value: values.required_value,
+        session_id: values.session_id,
+        class_id: values.class_id,
+        max_hours: values.no_max_limit ? null : (values.max_hours || null),
+      };
       if (editingRuleId) {
         const { error } = await supabase.from("class_participation_rules")
-          .update({ required_value: values.required_value, session_id: values.session_id, class_id: values.class_id })
+          .update(payload)
           .eq("id", editingRuleId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("class_participation_rules")
-          .insert({ class_id: values.class_id, session_id: values.session_id, required_value: values.required_value });
+          .insert(payload);
         if (error) throw error;
       }
     },
@@ -260,13 +266,14 @@ export default function ClassesPage() {
 
   function openRuleCreate(classId?: string) {
     setEditingRuleId(null);
-    setRuleForm({ class_id: classId || "", session_id: sessions[0]?.id || "", required_value: 18, no_limit: false });
+    setRuleForm({ class_id: classId || "", session_id: sessions[0]?.id || "", required_value: 18, no_limit: false, max_hours: null, no_max_limit: true });
     setRuleDialog(true);
   }
 
   function openRuleEdit(r: Rule) {
     setEditingRuleId(r.id);
-    setRuleForm({ class_id: r.class_id, session_id: r.session_id, required_value: r.required_value, no_limit: r.required_value === 0 });
+    const ruleMaxHours = (r as any).max_hours as number | null;
+    setRuleForm({ class_id: r.class_id, session_id: r.session_id, required_value: r.required_value, no_limit: r.required_value === 0, max_hours: ruleMaxHours, no_max_limit: ruleMaxHours === null || ruleMaxHours === undefined });
     setRuleDialog(true);
   }
 
@@ -386,11 +393,16 @@ export default function ClassesPage() {
             <span className="text-muted-foreground text-sm">Nicio regulă</span>
           ) : (
             <div className="flex flex-wrap gap-1">
-              {classRules.map((r) => (
-                <Badge key={r.id} variant="outline" className="cursor-pointer hover:bg-accent" onClick={() => openRuleEdit(r)}>
-                  {getSessionName(r.session_id)}: {r.required_value === 0 ? "∞ (fără limită)" : `${r.required_value}h`}
-                </Badge>
-              ))}
+              {classRules.map((r) => {
+                const rMax = (r as any).max_hours as number | null;
+                const reqLabel = r.required_value === 0 ? "∞" : `${r.required_value}h`;
+                const maxLabel = rMax === null || rMax === undefined ? "∞" : `${rMax}h`;
+                return (
+                  <Badge key={r.id} variant="outline" className="cursor-pointer hover:bg-accent" onClick={() => openRuleEdit(r)}>
+                    {getSessionName(r.session_id)}: {reqLabel} necesar / max {maxLabel}
+                  </Badge>
+                );
+              })}
             </div>
           )}
         </TableCell>
@@ -553,9 +565,24 @@ export default function ClassesPage() {
             </div>
             {!ruleForm.no_limit && (
               <div className="space-y-2">
-                <Label>Ore necesare *</Label>
+                <Label>Ore necesare (obiectiv) *</Label>
                 <Input type="number" min={1} max={100} value={ruleForm.required_value}
                   onChange={(e) => setRuleForm({ ...ruleForm, required_value: parseInt(e.target.value) || 0 })} />
+              </div>
+            )}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="no_max_limit"
+                checked={ruleForm.no_max_limit}
+                onCheckedChange={(checked) => setRuleForm({ ...ruleForm, no_max_limit: !!checked, max_hours: !!checked ? null : (ruleForm.max_hours || 24) })}
+              />
+              <Label htmlFor="no_max_limit">Fără limită maximă de ore (rezervare nelimitată)</Label>
+            </div>
+            {!ruleForm.no_max_limit && (
+              <div className="space-y-2">
+                <Label>Nr. maxim de ore (limită rezervare) *</Label>
+                <Input type="number" min={1} max={200} value={ruleForm.max_hours || ""}
+                  onChange={(e) => setRuleForm({ ...ruleForm, max_hours: parseInt(e.target.value) || null })} />
               </div>
             )}
             <DialogFooter>
