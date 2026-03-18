@@ -243,20 +243,20 @@ export default function ProfEventParticipantsPage() {
                         <p className="text-xs font-medium text-muted-foreground mb-2">Schimbă statusul:</p>
                         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                           <Button size="sm" variant={p.status === "present" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "present"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "present", p.name, p.isPublic); }}>
-                            <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Prezent
-                          </Button>
-                          <Button size="sm" variant={p.status === "late" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "late"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "late", p.name, p.isPublic); }}>
-                            <Clock className="mr-1 h-3.5 w-3.5" /> Întârziat
-                          </Button>
-                          <Button size="sm" variant={p.status === "absent" ? "destructive" : "outline"} className="h-9 text-xs" disabled={p.status === "absent"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "absent", p.name, p.isPublic); }}>
-                            <XCircle className="mr-1 h-3.5 w-3.5" /> Absent
-                          </Button>
-                          <Button size="sm" variant={p.status === "excused" ? "secondary" : "outline"} className="h-9 text-xs" disabled={p.status === "excused"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "excused", p.name, p.isPublic); }}>
-                            <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Motivat
+                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "present", p.name, p.isPublic, p.reservationId); }}>
+                             <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Prezent
+                           </Button>
+                           <Button size="sm" variant={p.status === "late" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "late"}
+                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "late", p.name, p.isPublic, p.reservationId); }}>
+                             <Clock className="mr-1 h-3.5 w-3.5" /> Întârziat
+                           </Button>
+                           <Button size="sm" variant={p.status === "absent" ? "destructive" : "outline"} className="h-9 text-xs" disabled={p.status === "absent"}
+                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "absent", p.name, p.isPublic, p.reservationId); }}>
+                             <XCircle className="mr-1 h-3.5 w-3.5" /> Absent
+                           </Button>
+                           <Button size="sm" variant={p.status === "excused" ? "secondary" : "outline"} className="h-9 text-xs" disabled={p.status === "excused"}
+                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "excused", p.name, p.isPublic, p.reservationId); }}>
+                             <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Motivat
                           </Button>
                         </div>
                       </div>
