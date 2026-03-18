@@ -35,7 +35,7 @@ export default function StudentDashboard() {
   const { data: progressMap = {} } = useQuery({
     queryKey: ["student_progress", user?.id, activeSessions.map((s) => s.id)],
     queryFn: async () => {
-      const results: Record<string, { reserved_hours: number; validated_hours: number; max_hours: number }> = {};
+      const results: Record<string, { reserved_hours: number; validated_hours: number; max_hours: number; required_hours: number; cap_hours: number | null }> = {};
       for (const s of activeSessions) {
         const { data, error } = await supabase.rpc("get_student_progress", {
           _student_id: user!.id,
