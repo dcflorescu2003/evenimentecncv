@@ -2,7 +2,7 @@ import { formatDate } from "@/lib/time";
 // Re-export coordinator scan page with prof-specific back navigation
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -11,16 +11,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialog, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, ScanLine, Keyboard, Search, CheckCircle2, XCircle, Clock, Camera, CameraOff,
 } from "lucide-react";
 import { toast } from "sonner";
+import { determineAutoStatus } from "@/lib/attendance";
 
 type TicketStatus = "present" | "late" | "absent" | "excused";
 
@@ -41,7 +39,7 @@ export default function ProfScanPage() {
   const [scanResult, setScanResult] = useState<{
     success: boolean; message: string; studentName?: string; ticketId?: string; isPublicTicket?: boolean;
   } | null>(null);
-  const [markStatus, setMarkStatus] = useState<TicketStatus>("present");
+  
   const [scannerActive, setScannerActive] = useState(false);
   const scannerRef = useRef<any>(null);
   const videoRef = useRef<HTMLDivElement>(null);
@@ -157,7 +155,13 @@ export default function ProfScanPage() {
         setScanResult({ success: false, message: `Deja procesat (${statusLabels[ticket.status]}).`, studentName: reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`, ticketId: ticket.id });
         return;
       }
-      setScanResult({ success: true, message: "Bilet valid!", studentName: reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`, ticketId: ticket.id });
+      const name = reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`;
+      if (event) {
+        const autoStatus = determineAutoStatus(event.date, event.start_time);
+        await autoMarkTicket(ticket.id, autoStatus, "reserved", false);
+        toast.success(`✓ ${name} — ${statusLabels[autoStatus]}`);
+        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+      }
       return;
     }
 
@@ -177,37 +181,42 @@ export default function ProfScanPage() {
         setScanResult({ success: false, message: `Deja procesat (${statusLabels[publicTicket.status]}).`, studentName: `${publicTicket.attendee_name} (Vizitator)`, ticketId: publicTicket.id, isPublicTicket: true });
         return;
       }
-      setScanResult({ success: true, message: "Bilet valid!", studentName: `${publicTicket.attendee_name} (Vizitator)`, ticketId: publicTicket.id, isPublicTicket: true });
+      if (event) {
+        const autoStatus = determineAutoStatus(event.date, event.start_time);
+        await autoMarkTicket(publicTicket.id, autoStatus, "reserved", true);
+        toast.success(`✓ ${publicTicket.attendee_name} (Vizitator) — ${statusLabels[autoStatus]}`);
+        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+      }
       return;
     }
 
     setScanResult({ success: false, message: "Bilet negăsit." });
   }
 
-  const markMutation = useMutation({
-    mutationFn: async ({ ticketId, status, isPublic }: { ticketId: string; status: TicketStatus; isPublic?: boolean }) => {
-      const table = isPublic ? "public_tickets" : "tickets";
-      const { data: current } = await supabase.from(table).select("status").eq("id", ticketId).single();
-      const { error } = await supabase.from(table).update({
-        status, checkin_timestamp: ["present", "late"].includes(status) ? new Date().toISOString() : null,
-      } as any).eq("id", ticketId);
-      if (error) throw new Error(error.message);
-      if (!isPublic) {
-        await supabase.from("attendance_log").insert({
-          ticket_id: ticketId, previous_status: (current?.status as any) || null,
-          new_status: status as any, changed_by: user!.id, notes: "Marcat de profesor",
-        });
-      }
-    },
-    onSuccess: () => {
-      toast.success(`Prezență marcată: ${statusLabels[markStatus]}`);
-      setScanResult(null);
-      queryClient.invalidateQueries({ queryKey: ["prof_search_participants"] });
-      queryClient.invalidateQueries({ queryKey: ["prof_search_public"] });
-      if (activeTab === "scan") setTimeout(() => startScanner(), 500);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  async function autoMarkTicket(ticketId: string, status: TicketStatus, previousStatus: string, isPublic: boolean) {
+    const table = isPublic ? "public_tickets" : "tickets";
+    const { error: updateError } = await supabase
+      .from(table)
+      .update({
+        status,
+        checkin_timestamp: new Date().toISOString(),
+      } as any)
+      .eq("id", ticketId);
+    if (updateError) { toast.error(updateError.message); return; }
+
+    if (!isPublic) {
+      await supabase.from("attendance_log").insert({
+        ticket_id: ticketId,
+        previous_status: previousStatus as any,
+        new_status: status as any,
+        changed_by: user!.id,
+        notes: "Scanare automată de profesor",
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ["prof_search_participants"] });
+    queryClient.invalidateQueries({ queryKey: ["prof_search_public"] });
+  }
+
 
   async function markFromSearch(ticketId: string, status: TicketStatus, currentStatus: string, isPublic?: boolean) {
     const table = isPublic ? "public_tickets" : "tickets";
@@ -308,36 +317,20 @@ export default function ProfScanPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Scan Result Dialog */}
+      {/* Scan Result Dialog — only for errors */}
       <AlertDialog open={!!scanResult} onOpenChange={(o) => { if (!o) { setScanResult(null); if (activeTab === "scan") setTimeout(startScanner, 300); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              {scanResult?.success ? <><CheckCircle2 className="h-5 w-5 text-green-600" /> Bilet valid</> : <><XCircle className="h-5 w-5 text-destructive" /> Eroare</>}
+              <XCircle className="h-5 w-5 text-destructive" /> Eroare
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>{scanResult?.message}</p>
               {scanResult?.studentName && <p className="font-medium text-foreground">{scanResult.studentName}</p>}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {scanResult?.success && scanResult?.ticketId && (
-            <Select value={markStatus} onValueChange={(v) => setMarkStatus(v as TicketStatus)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="present">Prezent</SelectItem>
-                <SelectItem value="late">Întârziat</SelectItem>
-                <SelectItem value="absent">Absent</SelectItem>
-                <SelectItem value="excused">Motivat</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Închide</AlertDialogCancel>
-            {scanResult?.success && scanResult?.ticketId && (
-              <AlertDialogAction onClick={() => markMutation.mutate({ ticketId: scanResult.ticketId!, status: markStatus, isPublic: scanResult.isPublicTicket })}>
-                Marchează {statusLabels[markStatus]}
-              </AlertDialogAction>
-            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

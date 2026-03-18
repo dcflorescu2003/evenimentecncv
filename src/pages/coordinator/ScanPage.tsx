@@ -1,25 +1,23 @@
 import { formatDate } from "@/lib/time";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialog, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, ScanLine, Keyboard, Search, CheckCircle2, XCircle, Clock, Camera, CameraOff,
 } from "lucide-react";
 import { toast } from "sonner";
+import { determineAutoStatus } from "@/lib/attendance";
 
 type TicketStatus = "present" | "late" | "absent" | "excused";
 
@@ -44,7 +42,7 @@ export default function ScanPage() {
     ticketId?: string;
     isPublicTicket?: boolean;
   } | null>(null);
-  const [markStatus, setMarkStatus] = useState<TicketStatus>("present");
+  
   const [scannerActive, setScannerActive] = useState(false);
   const scannerRef = useRef<any>(null);
   const videoRef = useRef<HTMLDivElement>(null);
@@ -190,8 +188,14 @@ export default function ScanPage() {
         return;
       }
 
+      // Auto-determine and mark status
       const name = reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`;
-      setScanResult({ success: true, message: "Bilet valid!", studentName: name, ticketId: ticket.id });
+      if (event) {
+        const autoStatus = determineAutoStatus(event.date, event.start_time);
+        await autoMarkTicket(ticket.id, autoStatus, "reserved", false);
+        toast.success(`✓ ${name} — ${statusLabels[autoStatus]}`);
+        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+      }
       return;
     }
 
@@ -220,57 +224,43 @@ export default function ScanPage() {
         return;
       }
 
-      setScanResult({
-        success: true,
-        message: "Bilet valid!",
-        studentName: `${publicTicket.attendee_name} (Vizitator)`,
-        ticketId: publicTicket.id,
-        isPublicTicket: true,
-      });
+      // Auto-determine and mark status
+      if (event) {
+        const autoStatus = determineAutoStatus(event.date, event.start_time);
+        await autoMarkTicket(publicTicket.id, autoStatus, "reserved", true);
+        toast.success(`✓ ${publicTicket.attendee_name} (Vizitator) — ${statusLabels[autoStatus]}`);
+        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+      }
       return;
     }
 
     setScanResult({ success: false, message: "Bilet negăsit. Verificați codul." });
   }
 
-  const markMutation = useMutation({
-    mutationFn: async ({ ticketId, status, isPublic }: { ticketId: string; status: TicketStatus; isPublic?: boolean }) => {
-      const table = isPublic ? "public_tickets" : "tickets";
+  async function autoMarkTicket(ticketId: string, status: TicketStatus, previousStatus: string, isPublic: boolean) {
+    const table = isPublic ? "public_tickets" : "tickets";
+    const { error: updateError } = await supabase
+      .from(table)
+      .update({
+        status,
+        checkin_timestamp: new Date().toISOString(),
+      } as any)
+      .eq("id", ticketId);
+    if (updateError) { toast.error(updateError.message); return; }
 
-      // Get current status
-      const { data: currentTicket } = await supabase.from(table).select("status").eq("id", ticketId).single();
+    if (!isPublic) {
+      await supabase.from("attendance_log").insert({
+        ticket_id: ticketId,
+        previous_status: previousStatus as any,
+        new_status: status as any,
+        changed_by: user!.id,
+        notes: "Scanare automată",
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ["search_participants"] });
+    queryClient.invalidateQueries({ queryKey: ["search_public_participants"] });
+  }
 
-      const { error: updateError } = await supabase
-        .from(table)
-        .update({
-          status,
-          checkin_timestamp: ["present", "late"].includes(status) ? new Date().toISOString() : null,
-        } as any)
-        .eq("id", ticketId);
-      if (updateError) throw new Error(updateError.message);
-
-      // Log attendance
-      if (!isPublic) {
-        await supabase.from("attendance_log").insert({
-          ticket_id: ticketId,
-          previous_status: (currentTicket?.status as any) || null,
-          new_status: status as any,
-          changed_by: user!.id,
-          notes: "Marcat de coordonator",
-        });
-      }
-    },
-    onSuccess: () => {
-      toast.success(`Prezență marcată: ${statusLabels[markStatus]}`);
-      setScanResult(null);
-      queryClient.invalidateQueries({ queryKey: ["search_participants"] });
-      queryClient.invalidateQueries({ queryKey: ["search_public_participants"] });
-      if (activeTab === "scan") {
-        setTimeout(() => startScanner(), 500);
-      }
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   async function markFromSearch(ticketId: string, status: TicketStatus, currentStatus: string, isPublic?: boolean) {
     const table = isPublic ? "public_tickets" : "tickets";
@@ -413,16 +403,12 @@ export default function ScanPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Scan Result Dialog */}
+      {/* Scan Result Dialog — only for errors */}
       <AlertDialog open={!!scanResult} onOpenChange={(o) => { if (!o) { setScanResult(null); if (activeTab === "scan") setTimeout(startScanner, 300); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              {scanResult?.success ? (
-                <><CheckCircle2 className="h-5 w-5 text-green-600" /> Bilet valid</>
-              ) : (
-                <><XCircle className="h-5 w-5 text-destructive" /> Eroare</>
-              )}
+              <XCircle className="h-5 w-5 text-destructive" /> Eroare
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>{scanResult?.message}</p>
@@ -431,29 +417,8 @@ export default function ScanPage() {
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {scanResult?.success && scanResult?.ticketId && (
-            <div className="space-y-2">
-              <Select value={markStatus} onValueChange={(v) => setMarkStatus(v as TicketStatus)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="present">Prezent</SelectItem>
-                  <SelectItem value="late">Întârziat</SelectItem>
-                  <SelectItem value="absent">Absent</SelectItem>
-                  <SelectItem value="excused">Motivat</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Închide</AlertDialogCancel>
-            {scanResult?.success && scanResult?.ticketId && (
-              <AlertDialogAction
-                onClick={() => markMutation.mutate({ ticketId: scanResult.ticketId!, status: markStatus, isPublic: scanResult.isPublicTicket })}
-                disabled={markMutation.isPending}
-              >
-                {markMutation.isPending ? "Se salvează…" : "Marchează"}
-              </AlertDialogAction>
-            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
