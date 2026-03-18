@@ -565,9 +565,24 @@ export default function ClassesPage() {
             </div>
             {!ruleForm.no_limit && (
               <div className="space-y-2">
-                <Label>Ore necesare *</Label>
+                <Label>Ore necesare (obiectiv) *</Label>
                 <Input type="number" min={1} max={100} value={ruleForm.required_value}
                   onChange={(e) => setRuleForm({ ...ruleForm, required_value: parseInt(e.target.value) || 0 })} />
+              </div>
+            )}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="no_max_limit"
+                checked={ruleForm.no_max_limit}
+                onCheckedChange={(checked) => setRuleForm({ ...ruleForm, no_max_limit: !!checked, max_hours: !!checked ? null : (ruleForm.max_hours || 24) })}
+              />
+              <Label htmlFor="no_max_limit">Fără limită maximă de ore (rezervare nelimitată)</Label>
+            </div>
+            {!ruleForm.no_max_limit && (
+              <div className="space-y-2">
+                <Label>Nr. maxim de ore (limită rezervare) *</Label>
+                <Input type="number" min={1} max={200} value={ruleForm.max_hours || ""}
+                  onChange={(e) => setRuleForm({ ...ruleForm, max_hours: parseInt(e.target.value) || null })} />
               </div>
             )}
             <DialogFooter>

@@ -125,11 +125,19 @@ export default function StudentDashboard() {
         </Card>
       ) : (
         activeSessions.map((s) => {
-          const p = progressMap[s.id] || { reserved_hours: 0, validated_hours: 0, max_hours: 0 };
-          const maxH = p.max_hours || 1;
-          const reservedPct = Math.min((p.reserved_hours / maxH) * 100, 100);
-          const validatedPct = Math.min((p.validated_hours / maxH) * 100, 100);
-          const isComplete = p.validated_hours >= p.max_hours && p.max_hours > 0;
+          const p = progressMap[s.id] || { reserved_hours: 0, validated_hours: 0, max_hours: 0, required_hours: 0, cap_hours: null };
+          const requiredH = p.required_hours || p.max_hours || 0;
+          const capH = p.cap_hours as number | null;
+          const hasCapLimit = capH !== null && capH !== undefined && capH > 0;
+          const isComplete = p.validated_hours >= requiredH && requiredH > 0;
+
+          // For progress bars, use cap_hours if set, otherwise required_hours
+          const barMax = hasCapLimit ? capH : (requiredH > 0 ? requiredH : null);
+          const reservedPct = barMax ? Math.min((p.reserved_hours / barMax) * 100, 100) : 0;
+          const validatedPct = barMax ? Math.min((p.validated_hours / barMax) * 100, 100) : 0;
+
+          // Remaining hours based on cap (if set), otherwise unlimited
+          const remaining = hasCapLimit ? Math.max(capH - p.reserved_hours, 0) : null;
 
           return (
             <Card key={s.id}>
@@ -158,21 +166,28 @@ export default function StudentDashboard() {
                   </div>
                   <div className="rounded-lg bg-muted p-3">
                     <Clock className="mx-auto mb-1 h-5 w-5 text-muted-foreground" />
-                    <p className="text-lg font-bold">{Math.max(p.max_hours - p.reserved_hours, 0)}</p>
+                    <p className="text-lg font-bold">{remaining !== null ? remaining : "∞"}</p>
                     <p className="text-xs text-muted-foreground">Ore rămase</p>
                   </div>
                 </div>
 
-                {p.max_hours > 0 && (
+                {/* Target info */}
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span>Obiectiv: {requiredH === 0 ? "∞ (fără limită)" : `${requiredH}h`}</span>
+                  <span>•</span>
+                  <span>Maxim: {hasCapLimit ? `${capH}h` : "Nelimitat"}</span>
+                </div>
+
+                {barMax && barMax > 0 && (
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Progres validat</span>
-                      <span>{p.validated_hours} / {p.max_hours}h</span>
+                      <span>{p.validated_hours} / {requiredH > 0 ? `${requiredH}h` : "∞"}</span>
                     </div>
                     <Progress value={validatedPct} className="h-2" />
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Progres rezervat</span>
-                      <span>{p.reserved_hours} / {p.max_hours}h</span>
+                      <span>{p.reserved_hours} / {hasCapLimit ? `${capH}h` : (requiredH > 0 ? `${requiredH}h` : "∞")}</span>
                     </div>
                     <Progress value={reservedPct} className="h-2" />
                   </div>
