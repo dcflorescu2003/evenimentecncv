@@ -38,7 +38,7 @@ type TicketStatus = "present" | "late" | "absent" | "excused";
 
 interface UnifiedParticipant {
   id: string; name: string; identifier?: string; status: string;
-  ticketId: string; checkinTimestamp?: string | null; isPublic: boolean;
+  ticketId?: string; checkinTimestamp?: string | null; isPublic: boolean;
   reservationId?: string; publicReservationId?: string;
 }
 
