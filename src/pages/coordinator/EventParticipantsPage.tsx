@@ -114,6 +114,7 @@ export default function EventParticipantsPage() {
         ticketId: ticket?.id,
         checkinTimestamp: ticket?.checkin_timestamp,
         isPublic: false,
+        reservationId: p.id,
       };
     }),
     ...publicParticipants.flatMap((pr: any) =>
