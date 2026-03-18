@@ -149,7 +149,22 @@ export default function EventParticipantsPage() {
     excused: unified.filter((p) => p.status === "excused").length,
   };
 
-  async function updateStatus(ticketId: string, currentStatus: string, newStatus: TicketStatus, isPublic: boolean) {
+  async function ensureTicket(reservationId: string): Promise<string | null> {
+    const { data, error } = await supabase.from("tickets").insert({
+      reservation_id: reservationId,
+    }).select("id").single();
+    if (error) { toast.error("Nu s-a putut crea ticketul: " + error.message); return null; }
+    return data.id;
+  }
+
+  async function updateStatus(ticketId: string | undefined, currentStatus: string, newStatus: TicketStatus, isPublic: boolean, reservationId?: string) {
+    let resolvedTicketId = ticketId;
+    if (!resolvedTicketId && !isPublic && reservationId) {
+      resolvedTicketId = (await ensureTicket(reservationId)) ?? undefined;
+      if (!resolvedTicketId) return;
+    }
+    if (!resolvedTicketId) { toast.error("Ticketul nu a fost găsit"); return; }
+
     const table = isPublic ? "public_tickets" : "tickets";
     const { error } = await supabase
       .from(table)
@@ -157,12 +172,12 @@ export default function EventParticipantsPage() {
         status: newStatus,
         checkin_timestamp: ["present", "late"].includes(newStatus) ? new Date().toISOString() : null,
       } as any)
-      .eq("id", ticketId);
+      .eq("id", resolvedTicketId);
     if (error) { toast.error(error.message); return; }
 
     if (!isPublic) {
       await supabase.from("attendance_log").insert({
-        ticket_id: ticketId,
+        ticket_id: resolvedTicketId,
         previous_status: currentStatus as any,
         new_status: newStatus,
         changed_by: user!.id,
@@ -176,11 +191,11 @@ export default function EventParticipantsPage() {
     setConfirmChange(null);
   }
 
-  function handleStatusClick(ticketId: string, currentStatus: string, newStatus: TicketStatus, studentName: string, isPublic: boolean) {
+  function handleStatusClick(ticketId: string | undefined, currentStatus: string, newStatus: TicketStatus, studentName: string, isPublic: boolean, reservationId?: string) {
     if (currentStatus !== "reserved") {
-      setConfirmChange({ ticketId, currentStatus, newStatus, studentName, isPublic });
+      setConfirmChange({ ticketId, currentStatus, newStatus, studentName, isPublic, reservationId });
     } else {
-      updateStatus(ticketId, currentStatus, newStatus, isPublic);
+      updateStatus(ticketId, currentStatus, newStatus, isPublic, reservationId);
     }
   }
 
