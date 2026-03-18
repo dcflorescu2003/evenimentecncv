@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatDate } from "@/lib/time";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CalendarDays, Clock, Ticket, CheckCircle2, ArrowRight } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { CalendarDays, Clock, Ticket, CheckCircle2, ArrowRight, HelpCircle, AlertTriangle } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Session = Tables<"program_sessions">;
@@ -15,6 +17,7 @@ type Session = Tables<"program_sessions">;
 export default function StudentDashboard() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const { data: activeSessions = [] } = useQuery({
     queryKey: ["active_sessions"],
@@ -65,14 +68,52 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">
-          Salut, {profile?.first_name || "Elev"}! 👋
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Urmărește-ți progresul și rezervările.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold">
+            Salut, {profile?.first_name || "Elev"}! 👋
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Urmărește-ți progresul și rezervările.
+          </p>
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => setInfoOpen(true)} className="text-muted-foreground">
+          <HelpCircle className="h-5 w-5" />
+        </Button>
       </div>
+
+      <Dialog open={infoOpen} onOpenChange={setInfoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Despre aplicație</DialogTitle>
+            <DialogDescription>
+              Platforma CNCV îți permite să explorezi și să rezervi locuri la evenimentele extracurriculare organizate de liceu.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div>
+              <p className="font-semibold mb-1">Cum funcționează?</p>
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                <li>Explorează evenimentele disponibile</li>
+                <li>Rezervă-ți un loc</li>
+                <li>Participă la eveniment</li>
+                <li>Orele tale sunt validate automat</li>
+              </ol>
+            </div>
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+              <div className="flex gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-destructive">Important!</p>
+                  <p className="text-muted-foreground mt-1">
+                    Nu poți participa la un eveniment în timpul orelor de curs fără acordul profesorului. Dacă ai făcut o rezervare și nu ai obținut acordul, trebuie să anulezi rezervarea din secțiunea „Biletele mele".
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Progress per session */}
       {activeSessions.length === 0 ? (
