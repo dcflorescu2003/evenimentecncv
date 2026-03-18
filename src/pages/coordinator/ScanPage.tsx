@@ -45,7 +45,7 @@ export default function ScanPage() {
     ticketId?: string;
     isPublicTicket?: boolean;
   } | null>(null);
-  const [markStatus, setMarkStatus] = useState<TicketStatus>("present");
+  
   const [scannerActive, setScannerActive] = useState(false);
   const scannerRef = useRef<any>(null);
   const videoRef = useRef<HTMLDivElement>(null);
