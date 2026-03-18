@@ -38,7 +38,7 @@ type Profile = Tables<"profiles">;
 export default function ClassesPage() {
   const queryClient = useQueryClient();
   const [ruleDialog, setRuleDialog] = useState(false);
-  const [ruleForm, setRuleForm] = useState({ class_id: "", session_id: "", required_value: 18, no_limit: false });
+  const [ruleForm, setRuleForm] = useState({ class_id: "", session_id: "", required_value: 18, no_limit: false, max_hours: null as number | null, no_max_limit: true });
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<string>("all");
 
