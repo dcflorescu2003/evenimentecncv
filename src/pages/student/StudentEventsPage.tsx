@@ -359,8 +359,14 @@ export default function StudentEventsPage() {
             )}
             {past.length > 0 && (
               <div className="space-y-3">
-                <h2 className="font-display text-lg font-semibold text-muted-foreground">Desfășurate ({past.length})</h2>
-                {past.map((ev) => renderEventCard(ev, true))}
+                <button
+                  onClick={() => setShowPast(!showPast)}
+                  className="flex items-center gap-1.5 font-display text-lg font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPast ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                  Desfășurate ({past.length})
+                </button>
+                {showPast && past.map((ev) => renderEventCard(ev, true))}
               </div>
             )}
           </div>
