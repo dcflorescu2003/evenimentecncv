@@ -20,6 +20,7 @@ import {
   ArrowLeft, ScanLine, Keyboard, Search, CheckCircle2, XCircle, Clock, Camera, CameraOff,
 } from "lucide-react";
 import { toast } from "sonner";
+import { determineAutoStatus } from "@/lib/attendance";
 
 type TicketStatus = "present" | "late" | "absent" | "excused";
 
