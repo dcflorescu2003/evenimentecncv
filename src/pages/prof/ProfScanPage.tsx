@@ -158,7 +158,13 @@ export default function ProfScanPage() {
         setScanResult({ success: false, message: `Deja procesat (${statusLabels[ticket.status]}).`, studentName: reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`, ticketId: ticket.id });
         return;
       }
-      setScanResult({ success: true, message: "Bilet valid!", studentName: reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`, ticketId: ticket.id });
+      const name = reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`;
+      if (event) {
+        const autoStatus = determineAutoStatus(event.date, event.start_time);
+        await autoMarkTicket(ticket.id, autoStatus, "reserved", false);
+        toast.success(`✓ ${name} — ${statusLabels[autoStatus]}`);
+        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+      }
       return;
     }
 
@@ -178,11 +184,40 @@ export default function ProfScanPage() {
         setScanResult({ success: false, message: `Deja procesat (${statusLabels[publicTicket.status]}).`, studentName: `${publicTicket.attendee_name} (Vizitator)`, ticketId: publicTicket.id, isPublicTicket: true });
         return;
       }
-      setScanResult({ success: true, message: "Bilet valid!", studentName: `${publicTicket.attendee_name} (Vizitator)`, ticketId: publicTicket.id, isPublicTicket: true });
+      if (event) {
+        const autoStatus = determineAutoStatus(event.date, event.start_time);
+        await autoMarkTicket(publicTicket.id, autoStatus, "reserved", true);
+        toast.success(`✓ ${publicTicket.attendee_name} (Vizitator) — ${statusLabels[autoStatus]}`);
+        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+      }
       return;
     }
 
     setScanResult({ success: false, message: "Bilet negăsit." });
+  }
+
+  async function autoMarkTicket(ticketId: string, status: TicketStatus, previousStatus: string, isPublic: boolean) {
+    const table = isPublic ? "public_tickets" : "tickets";
+    const { error: updateError } = await supabase
+      .from(table)
+      .update({
+        status,
+        checkin_timestamp: new Date().toISOString(),
+      } as any)
+      .eq("id", ticketId);
+    if (updateError) { toast.error(updateError.message); return; }
+
+    if (!isPublic) {
+      await supabase.from("attendance_log").insert({
+        ticket_id: ticketId,
+        previous_status: previousStatus as any,
+        new_status: status as any,
+        changed_by: user!.id,
+        notes: "Scanare automată de profesor",
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ["prof_search_participants"] });
+    queryClient.invalidateQueries({ queryKey: ["prof_search_public"] });
   }
 
   const markMutation = useMutation({

@@ -29,13 +29,60 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    console.log(`Closed ${closedEvents?.length ?? 0} past events`);
+    const closedIds = (closedEvents || []).map((e: any) => e.id);
+    let absentTicketsCount = 0;
+    let absentPublicCount = 0;
+
+    if (closedIds.length > 0) {
+      // Mark remaining reserved tickets as absent
+      for (const eventId of closedIds) {
+        // Regular tickets: get reservation IDs for this event
+        const { data: reservations } = await supabase
+          .from("reservations")
+          .select("id")
+          .eq("event_id", eventId)
+          .eq("status", "reserved");
+
+        if (reservations && reservations.length > 0) {
+          const resIds = reservations.map((r: any) => r.id);
+          const { data: updated } = await supabase
+            .from("tickets")
+            .update({ status: "absent" })
+            .in("reservation_id", resIds)
+            .eq("status", "reserved")
+            .select("id");
+          absentTicketsCount += updated?.length ?? 0;
+        }
+
+        // Public tickets: get public reservation IDs for this event
+        const { data: pubRes } = await supabase
+          .from("public_reservations")
+          .select("id")
+          .eq("event_id", eventId)
+          .eq("status", "reserved");
+
+        if (pubRes && pubRes.length > 0) {
+          const pubIds = pubRes.map((r: any) => r.id);
+          const { data: updated } = await supabase
+            .from("public_tickets")
+            .update({ status: "absent" })
+            .in("public_reservation_id", pubIds)
+            .eq("status", "reserved")
+            .select("id");
+          absentPublicCount += updated?.length ?? 0;
+        }
+      }
+    }
+
+    console.log(`Closed ${closedIds.length} past events, marked ${absentTicketsCount} tickets + ${absentPublicCount} public tickets as absent`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        closed_count: closedEvents?.length ?? 0,
+        closed_count: closedIds.length,
         closed_events: closedEvents,
+        absent_tickets: absentTicketsCount,
+        absent_public_tickets: absentPublicCount,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -191,8 +191,14 @@ export default function ScanPage() {
         return;
       }
 
+      // Auto-determine and mark status
       const name = reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`;
-      setScanResult({ success: true, message: "Bilet valid!", studentName: name, ticketId: ticket.id });
+      if (event) {
+        const autoStatus = determineAutoStatus(event.date, event.start_time);
+        await autoMarkTicket(ticket.id, autoStatus, "reserved", false);
+        toast.success(`✓ ${name} — ${statusLabels[autoStatus]}`);
+        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+      }
       return;
     }
 
@@ -221,17 +227,41 @@ export default function ScanPage() {
         return;
       }
 
-      setScanResult({
-        success: true,
-        message: "Bilet valid!",
-        studentName: `${publicTicket.attendee_name} (Vizitator)`,
-        ticketId: publicTicket.id,
-        isPublicTicket: true,
-      });
+      // Auto-determine and mark status
+      if (event) {
+        const autoStatus = determineAutoStatus(event.date, event.start_time);
+        await autoMarkTicket(publicTicket.id, autoStatus, "reserved", true);
+        toast.success(`✓ ${publicTicket.attendee_name} (Vizitator) — ${statusLabels[autoStatus]}`);
+        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+      }
       return;
     }
 
     setScanResult({ success: false, message: "Bilet negăsit. Verificați codul." });
+  }
+
+  async function autoMarkTicket(ticketId: string, status: TicketStatus, previousStatus: string, isPublic: boolean) {
+    const table = isPublic ? "public_tickets" : "tickets";
+    const { error: updateError } = await supabase
+      .from(table)
+      .update({
+        status,
+        checkin_timestamp: new Date().toISOString(),
+      } as any)
+      .eq("id", ticketId);
+    if (updateError) { toast.error(updateError.message); return; }
+
+    if (!isPublic) {
+      await supabase.from("attendance_log").insert({
+        ticket_id: ticketId,
+        previous_status: previousStatus as any,
+        new_status: status as any,
+        changed_by: user!.id,
+        notes: "Scanare automată",
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ["search_participants"] });
+    queryClient.invalidateQueries({ queryKey: ["search_public_participants"] });
   }
 
   const markMutation = useMutation({
