@@ -220,30 +220,6 @@ export default function ProfScanPage() {
     queryClient.invalidateQueries({ queryKey: ["prof_search_public"] });
   }
 
-  const markMutation = useMutation({
-    mutationFn: async ({ ticketId, status, isPublic }: { ticketId: string; status: TicketStatus; isPublic?: boolean }) => {
-      const table = isPublic ? "public_tickets" : "tickets";
-      const { data: current } = await supabase.from(table).select("status").eq("id", ticketId).single();
-      const { error } = await supabase.from(table).update({
-        status, checkin_timestamp: ["present", "late"].includes(status) ? new Date().toISOString() : null,
-      } as any).eq("id", ticketId);
-      if (error) throw new Error(error.message);
-      if (!isPublic) {
-        await supabase.from("attendance_log").insert({
-          ticket_id: ticketId, previous_status: (current?.status as any) || null,
-          new_status: status as any, changed_by: user!.id, notes: "Marcat de profesor",
-        });
-      }
-    },
-    onSuccess: () => {
-      toast.success(`Prezență marcată: ${statusLabels[markStatus]}`);
-      setScanResult(null);
-      queryClient.invalidateQueries({ queryKey: ["prof_search_participants"] });
-      queryClient.invalidateQueries({ queryKey: ["prof_search_public"] });
-      if (activeTab === "scan") setTimeout(() => startScanner(), 500);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   async function markFromSearch(ticketId: string, status: TicketStatus, currentStatus: string, isPublic?: boolean) {
     const table = isPublic ? "public_tickets" : "tickets";
