@@ -97,7 +97,8 @@ export default function StudentDashboard() {
                 <li>Explorează evenimentele disponibile</li>
                 <li>Rezervă-ți un loc</li>
                 <li>Participă la eveniment</li>
-                <li>Orele tale sunt validate automat</li>
+                <li>Prezența va fi validată la sosire</li>
+                <li>Dacă nu poți participa, este obligatoriu să anulezi rezervarea cu cel puțin 2 ore înainte</li>
               </ol>
             </div>
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
