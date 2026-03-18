@@ -406,16 +406,12 @@ export default function ScanPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Scan Result Dialog */}
+      {/* Scan Result Dialog — only for errors */}
       <AlertDialog open={!!scanResult} onOpenChange={(o) => { if (!o) { setScanResult(null); if (activeTab === "scan") setTimeout(startScanner, 300); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              {scanResult?.success ? (
-                <><CheckCircle2 className="h-5 w-5 text-green-600" /> Bilet valid</>
-              ) : (
-                <><XCircle className="h-5 w-5 text-destructive" /> Eroare</>
-              )}
+              <XCircle className="h-5 w-5 text-destructive" /> Eroare
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>{scanResult?.message}</p>
@@ -424,29 +420,8 @@ export default function ScanPage() {
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {scanResult?.success && scanResult?.ticketId && (
-            <div className="space-y-2">
-              <Select value={markStatus} onValueChange={(v) => setMarkStatus(v as TicketStatus)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="present">Prezent</SelectItem>
-                  <SelectItem value="late">Întârziat</SelectItem>
-                  <SelectItem value="absent">Absent</SelectItem>
-                  <SelectItem value="excused">Motivat</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Închide</AlertDialogCancel>
-            {scanResult?.success && scanResult?.ticketId && (
-              <AlertDialogAction
-                onClick={() => markMutation.mutate({ ticketId: scanResult.ticketId!, status: markStatus, isPublic: scanResult.isPublicTicket })}
-                disabled={markMutation.isPending}
-              >
-                {markMutation.isPending ? "Se salvează…" : "Marchează"}
-              </AlertDialogAction>
-            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
