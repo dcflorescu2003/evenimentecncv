@@ -55,11 +55,12 @@ export default function EventParticipantsPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmChange, setConfirmChange] = useState<{
-    ticketId: string;
+    ticketId?: string;
     currentStatus: string;
     newStatus: TicketStatus;
     studentName: string;
     isPublic: boolean;
+    reservationId?: string;
   } | null>(null);
 
   const { data: event } = useQuery({
