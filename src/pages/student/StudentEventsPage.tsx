@@ -264,6 +264,42 @@ export default function StudentEventsPage() {
 
   const getSessionName = (id: string) => sessions.find((s) => s.id === id)?.name || "";
 
+  const renderEventCard = (ev: Event, isPast = false) => {
+    const isReserved = reservedEventIds.has(ev.id);
+    return (
+      <Card key={ev.id} className={`overflow-hidden transition-colors hover:bg-muted/30 ${isPast ? "opacity-70" : ""}`}>
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1" onClick={() => navigate(`/student/events/${ev.id}`)} role="button">
+              <p className="font-medium">{ev.title}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{getSessionName(ev.session_id)}</p>
+            </div>
+            <Badge variant="secondary">{ev.counted_duration_hours}h</Badge>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" /> {formatDate(ev.date)}</span>
+            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {ev.start_time?.slice(0, 5)} – {ev.end_time?.slice(0, 5)}</span>
+            {ev.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {ev.location}</span>}
+            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {ev.max_capacity - (reservationCounts[ev.id] || 0)} / {ev.max_capacity} locuri libere</span>
+          </div>
+          {!isPast && (
+            <div className="flex items-center gap-2">
+              {isReserved ? (
+                <Button variant="secondary" size="sm" disabled className="w-full"><Ticket className="mr-2 h-4 w-4" /> Rezervat</Button>
+              ) : (
+                <Button size="sm" className="w-full" onClick={() => handleBookClick(ev.id)}><Ticket className="mr-2 h-4 w-4" /> Rezervă loc</Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => navigate(`/student/events/${ev.id}`)}>Detalii</Button>
+            </div>
+          )}
+          {isPast && (
+            <Button variant="outline" size="sm" className="w-full" onClick={() => navigate(`/student/events/${ev.id}`)}>Detalii</Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div>
