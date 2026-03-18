@@ -77,7 +77,17 @@ Deno.serve(async (req) => {
     // Check booking window
     const now = new Date();
     if (event.booking_open_at && now < new Date(event.booking_open_at)) {
-      return new Response(JSON.stringify({ error: "Înscrierile nu sunt deschise încă" }), {
+      const formatDt = (d: string) => {
+        const dt = new Date(d);
+        const day = String(dt.getDate()).padStart(2, '0');
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        const year = dt.getFullYear();
+        const hours = String(dt.getHours()).padStart(2, '0');
+        const minutes = String(dt.getMinutes()).padStart(2, '0');
+        return `${day}.${month}.${year} ${hours}:${minutes}`;
+      };
+      const closeStr = event.booking_close_at ? formatDt(event.booking_close_at) : 'nedefinit';
+      return new Response(JSON.stringify({ error: `Înscrierile nu sunt deschise încă. Perioada de rezervare: ${formatDt(event.booking_open_at)} – ${closeStr}` }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
