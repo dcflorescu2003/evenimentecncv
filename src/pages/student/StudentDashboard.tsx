@@ -17,6 +17,7 @@ type Session = Tables<"program_sessions">;
 export default function StudentDashboard() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const { data: activeSessions = [] } = useQuery({
     queryKey: ["active_sessions"],
