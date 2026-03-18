@@ -51,7 +51,7 @@ export default function ProfEventParticipantsPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmChange, setConfirmChange] = useState<{
-    ticketId: string; currentStatus: string; newStatus: TicketStatus; studentName: string; isPublic: boolean;
+    ticketId?: string; currentStatus: string; newStatus: TicketStatus; studentName: string; isPublic: boolean; reservationId?: string;
   } | null>(null);
   const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; reservationId?: string } | null>(null);
 
