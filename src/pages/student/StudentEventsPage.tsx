@@ -29,6 +29,7 @@ export default function StudentEventsPage() {
   const [filterSession, setFilterSession] = useState("all");
   const [bookingEventId, setBookingEventId] = useState<string | null>(null);
   const [eligibilityMsg, setEligibilityMsg] = useState<string | null>(null);
+  const [showPast, setShowPast] = useState(false);
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["active_sessions_student"],
