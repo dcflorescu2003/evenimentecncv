@@ -192,14 +192,20 @@ export default function ClassesPage() {
   // Rule mutations
   const saveRuleMutation = useMutation({
     mutationFn: async (values: typeof ruleForm) => {
+      const payload = {
+        required_value: values.required_value,
+        session_id: values.session_id,
+        class_id: values.class_id,
+        max_hours: values.no_max_limit ? null : (values.max_hours || null),
+      };
       if (editingRuleId) {
         const { error } = await supabase.from("class_participation_rules")
-          .update({ required_value: values.required_value, session_id: values.session_id, class_id: values.class_id })
+          .update(payload)
           .eq("id", editingRuleId);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("class_participation_rules")
-          .insert({ class_id: values.class_id, session_id: values.session_id, required_value: values.required_value });
+          .insert(payload);
         if (error) throw error;
       }
     },
