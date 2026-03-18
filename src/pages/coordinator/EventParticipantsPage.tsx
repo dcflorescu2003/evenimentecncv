@@ -289,7 +289,7 @@ export default function EventParticipantsPage() {
                     {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                   </div>
 
-                  {isExpanded && p.ticketId && (
+                  {isExpanded && (
                     <div className="border-t px-3 py-3 space-y-3 bg-muted/10">
                       {p.checkinTimestamp && (
                         <p className="text-xs text-muted-foreground">
