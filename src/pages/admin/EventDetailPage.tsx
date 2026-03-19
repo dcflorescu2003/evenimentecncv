@@ -1,4 +1,5 @@
 import { formatDate, formatDateTime } from "@/lib/time";
+import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
