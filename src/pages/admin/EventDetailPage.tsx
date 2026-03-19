@@ -217,6 +217,118 @@ export default function EventDetailPage() {
     }
   });
 
+  // Event student assistants
+  const { data: assistants = [] } = useQuery({
+    queryKey: ["event_student_assistants", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("*")
+        .eq("event_id", id!);
+      if (error) throw error;
+      // Fetch profiles for assistants
+      const studentIds = (data || []).map((a: any) => a.student_id);
+      if (studentIds.length === 0) return [];
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", studentIds);
+      if (pErr) throw pErr;
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+      return (data || []).map((a: any) => ({ ...a, profile: profileMap.get(a.student_id) }));
+    },
+    enabled: !!id,
+  });
+
+  // Fetch class assignments for assistants too
+  const assistantStudentIds = assistants.map((a: any) => a.student_id).filter(Boolean);
+  const allStudentIdsForClass = [...new Set([...studentIds, ...assistantStudentIds])];
+
+  // Update classAssignments query to include assistant student ids
+  // (already covers studentIds; we need to also add assistants)
+  // We'll fetch assistant class data separately
+  const { data: assistantClassAssignments = [] } = useQuery({
+    queryKey: ["assistant_class_assignments", id, assistantStudentIds],
+    queryFn: async () => {
+      if (assistantStudentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("student_class_assignments")
+        .select("student_id, classes(display_name)")
+        .in("student_id", assistantStudentIds);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: assistantStudentIds.length > 0,
+  });
+
+  // Add assistant class data to classMap
+  assistantClassAssignments.forEach((a: any) => {
+    const displayName = a.classes?.display_name || "";
+    if (displayName && !classMap.has(a.student_id)) {
+      classMap.set(a.student_id, displayName);
+    }
+  });
+
+  // Searchable students for assistant assignment dialog
+  const { data: allStudents = [] } = useQuery({
+    queryKey: ["all_students_for_assistant"],
+    queryFn: async () => {
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
+      if (roleError) throw roleError;
+      const ids = [...new Set((roleData || []).map((r) => r.user_id))];
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", ids)
+        .eq("is_active", true)
+        .order("last_name")
+        .order("first_name");
+      if (error) throw error;
+      return data as Profile[];
+    },
+    enabled: assistantDialogOpen,
+  });
+
+  // Exclude already-participants and already-assistants
+  const participantStudentIds = new Set(participants.map((p: any) => p.profiles?.id).filter(Boolean));
+  const assistantStudentIdsSet = new Set(assistants.map((a: any) => a.student_id));
+  const availableStudents = allStudents.filter(
+    (s) => !participantStudentIds.has(s.id) && !assistantStudentIdsSet.has(s.id)
+  );
+
+  const assignAssistantMutation = useMutation({
+    mutationFn: async (studentId: string) => {
+      const { error } = await supabase.from("event_student_assistants").insert({
+        event_id: id!,
+        student_id: studentId,
+        assigned_by: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["event_student_assistants", id] });
+      toast.success("Elev asistent adăugat");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeAssistantMutation = useMutation({
+    mutationFn: async (assistantId: string) => {
+      const { error } = await supabase.from("event_student_assistants").delete().eq("id", assistantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["event_student_assistants", id] });
+      toast.success("Elev asistent eliminat");
+      setRemoveAssistantId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   function handleDownloadAttendancePdf() {
     if (!event) return;
     const simplifiedStatusMap = (status: string): "Prezent" | "Absent motivat" | "Absent" => {
@@ -234,6 +346,18 @@ export default function EventDetailPage() {
         fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
         status: simplifiedStatusMap(ticketStatus),
       };
+    });
+
+    // Add assistants as "Prezent"
+    assistants.forEach((a: any) => {
+      const profile = a.profile;
+      if (profile) {
+        rows.push({
+          className: classMap.get(a.student_id) || "-",
+          fullName: `${profile.last_name || ""} ${profile.first_name || ""}`.trim(),
+          status: "Prezent" as const,
+        });
+      }
     });
 
     // Sort by class name, then by full name
