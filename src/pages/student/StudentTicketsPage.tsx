@@ -321,3 +321,70 @@ function TicketCard({
     </Card>
   );
 }
+
+function AssistantTicketCard({
+  assignment,
+  expanded,
+  onToggle,
+  onNavigate,
+  past,
+}: {
+  assignment: any;
+  expanded: boolean;
+  onToggle: () => void;
+  onNavigate: () => void;
+  past?: boolean;
+}) {
+  const event = assignment.events as Event | null;
+
+  return (
+    <Card className={`overflow-hidden transition-all ${past ? "opacity-70" : ""}`}>
+      <CardContent className="p-0">
+        <div
+          className="flex items-center gap-3 p-4 cursor-pointer"
+          onClick={onToggle}
+        >
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <p className="font-medium">{event?.title || "Eveniment nedisponibil"}</p>
+              <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px] shrink-0">
+                Asistent
+              </Badge>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <CalendarDays className="h-3 w-3" /> {formatDate(event?.date)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" /> {event?.start_time?.slice(0, 5)} – {event?.end_time?.slice(0, 5)}
+              </span>
+              {event?.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" /> {event.location}
+                </span>
+              )}
+            </div>
+          </div>
+          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+            Prezent
+          </Badge>
+        </div>
+
+        {expanded && (
+          <div className="border-t px-4 py-4 space-y-4">
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3 text-center">
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Ești asistent la acest eveniment. Prezența ta este confirmată automat.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="flex-1" onClick={onNavigate}>
+                Detalii eveniment
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
