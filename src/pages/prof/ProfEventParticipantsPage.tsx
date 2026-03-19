@@ -103,7 +103,83 @@ export default function ProfEventParticipantsPage() {
     enabled: !!eventId,
   });
 
-  const unified: UnifiedParticipant[] = [
+  // Event student assistants
+  const { data: assistants = [] } = useQuery({
+    queryKey: ["prof_event_assistants", eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("*")
+        .eq("event_id", eventId!);
+      if (error) throw error;
+      const sIds = (data || []).map((a: any) => a.student_id);
+      if (sIds.length === 0) return [];
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", sIds);
+      if (pErr) throw pErr;
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+      return (data || []).map((a: any) => ({ ...a, profile: profileMap.get(a.student_id) }));
+    },
+    enabled: !!eventId,
+  });
+
+  // Searchable students for assistant assignment
+  const { data: allStudents = [] } = useQuery({
+    queryKey: ["all_students_for_prof_assistant_page"],
+    queryFn: async () => {
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
+      if (roleError) throw roleError;
+      const ids = [...new Set((roleData || []).map((r) => r.user_id))];
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", ids)
+        .eq("is_active", true)
+        .order("last_name")
+        .order("first_name");
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: assistantDialogOpen,
+  });
+
+  const assistantIdsSet = new Set(assistants.map((a: any) => a.student_id));
+  const availableStudentsForAssistant = allStudents.filter((s: any) => !assistantIdsSet.has(s.id));
+
+  const assignAssistantMutation = useMutation({
+    mutationFn: async (studentId: string) => {
+      const { error } = await supabase.from("event_student_assistants").insert({
+        event_id: eventId!,
+        student_id: studentId,
+        assigned_by: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prof_event_assistants", eventId] });
+      toast.success("Elev asistent adăugat");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeAssistantMutation = useMutation({
+    mutationFn: async (assistantId: string) => {
+      const { error } = await supabase.from("event_student_assistants").delete().eq("id", assistantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prof_event_assistants", eventId] });
+      toast.success("Elev asistent eliminat");
+      setRemoveAssistantId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
     ...participants.map((p: any) => {
       const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
       const profile = p.profiles;
