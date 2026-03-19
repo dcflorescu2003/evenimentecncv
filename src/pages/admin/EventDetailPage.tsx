@@ -1108,23 +1108,28 @@ export default function EventDetailPage() {
               <CommandEmpty>Niciun elev găsit.</CommandEmpty>
               <CommandGroup>
                 {availableStudents
-                  .filter((s) => {
+                  .filter((s: any) => {
                     if (!assistantSearch) return true;
+                    const search = assistantSearch.toLowerCase();
                     const name = `${s.first_name} ${s.last_name}`.toLowerCase();
-                    return name.includes(assistantSearch.toLowerCase());
+                    const className = (s.class_name || "").toLowerCase();
+                    return name.includes(search) || className.includes(search);
                   })
                   .slice(0, 20)
-                  .map((s) => (
+                  .map((s: any) => (
                     <CommandItem
                       key={s.id}
-                      value={`${s.first_name} ${s.last_name}`}
+                      value={`${s.last_name} ${s.first_name} ${s.class_name || ""}`}
                       onSelect={() => {
                         assignAssistantMutation.mutate(s.id);
                       }}
                       className="cursor-pointer"
                     >
                       <UserPlus className="mr-2 h-4 w-4" />
-                      {s.last_name} {s.first_name}
+                      <span>{s.last_name} {s.first_name}</span>
+                      {s.class_name && (
+                        <Badge variant="outline" className="ml-2 text-xs">{s.class_name}</Badge>
+                      )}
                     </CommandItem>
                   ))}
               </CommandGroup>
