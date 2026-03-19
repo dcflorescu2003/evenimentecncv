@@ -178,7 +178,7 @@ export default function ScanPage() {
       }
 
       if (ticket.status !== "reserved") {
-        const name = reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`;
+        const name = reservation.profiles?.display_name || `${reservation.profiles?.last_name} ${reservation.profiles?.first_name}`;
         setScanResult({
           success: false,
           message: `Biletul a fost deja procesat (${statusLabels[ticket.status]}).`,
@@ -189,7 +189,7 @@ export default function ScanPage() {
       }
 
       // Auto-determine and mark status
-      const name = reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`;
+      const name = reservation.profiles?.display_name || `${reservation.profiles?.last_name} ${reservation.profiles?.first_name}`;
       if (event) {
         const autoStatus = determineAutoStatus(event.date, event.start_time);
         await autoMarkTicket(ticket.id, autoStatus, "reserved", false);
