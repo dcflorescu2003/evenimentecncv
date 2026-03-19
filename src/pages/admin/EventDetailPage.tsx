@@ -75,6 +75,7 @@ export default function EventDetailPage() {
   // Coordinator assignment state
   const [coordDialogOpen, setCoordDialogOpen] = useState(false);
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
+  const [coordSearch, setCoordSearch] = useState("");
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [removeCoordId, setRemoveCoordId] = useState<string | null>(null);
   const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; publicReservationId?: string } | null>(null);
@@ -293,11 +294,10 @@ export default function EventDetailPage() {
     enabled: assistantDialogOpen,
   });
 
-  // Exclude already-participants and already-assistants
-  const participantStudentIds = new Set(participants.map((p: any) => p.profiles?.id).filter(Boolean));
+  // Exclude already-assistants (allow all students, even if already participants)
   const assistantStudentIdsSet = new Set(assistants.map((a: any) => a.student_id));
   const availableStudents = allStudents.filter(
-    (s) => !participantStudentIds.has(s.id) && !assistantStudentIdsSet.has(s.id)
+    (s) => !assistantStudentIdsSet.has(s.id)
   );
 
   const assignAssistantMutation = useMutation({
@@ -701,8 +701,12 @@ export default function EventDetailPage() {
                       </TableRow>
                     );
                   })}
-                  {/* Regular student participants */}
-                  {participants.map((p: any) => {
+                  {/* Regular student participants - sorted by last name */}
+                  {[...participants].sort((a: any, b: any) => {
+                    const aLast = a.profiles?.last_name || "";
+                    const bLast = b.profiles?.last_name || "";
+                    return aLast.localeCompare(bLast, "ro") || (a.profiles?.first_name || "").localeCompare(b.profiles?.first_name || "", "ro");
+                  }).map((p: any) => {
                     const profile = p.profiles;
                     const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
                     const name = profile?.display_name || `${profile?.first_name} ${profile?.last_name}`;
@@ -856,7 +860,7 @@ export default function EventDetailPage() {
         <TabsContent value="coordinators" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Profesori coordonatori atribuiți acestui eveniment.</p>
-            <Button size="sm" onClick={() => setCoordDialogOpen(true)} disabled={availableTeachers.length === 0}>
+            <Button size="sm" onClick={() => { setCoordDialogOpen(true); setCoordSearch(""); }} disabled={availableTeachers.length === 0}>
               <UserPlus className="mr-2 h-4 w-4" /> Atribuie coordonator
             </Button>
           </div>
@@ -927,29 +931,43 @@ export default function EventDetailPage() {
       </Dialog>
 
       {/* Coordinator Assignment Dialog */}
-      <Dialog open={coordDialogOpen} onOpenChange={(o) => { if (!o) { setCoordDialogOpen(false); setSelectedTeacherId(""); } }}>
-        <DialogContent>
+      <Dialog open={coordDialogOpen} onOpenChange={(o) => { if (!o) { setCoordDialogOpen(false); setSelectedTeacherId(""); setCoordSearch(""); } }}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Atribuie coordonator</DialogTitle>
-            <DialogDescription>Selectați un profesor coordonator disponibil.</DialogDescription>
+            <DialogDescription>Caută și selectează un profesor coordonator disponibil.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
-              <SelectTrigger><SelectValue placeholder="Alegeți profesorul" /></SelectTrigger>
-              <SelectContent>
-                {availableTeachers.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.display_name || `${t.first_name} ${t.last_name}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Caută profesor după nume..." value={coordSearch} onValueChange={setCoordSearch} />
+            <CommandList>
+              <CommandEmpty>Niciun profesor găsit.</CommandEmpty>
+              <CommandGroup>
+                {availableTeachers
+                  .filter((t) => {
+                    if (!coordSearch) return true;
+                    const name = `${t.first_name} ${t.last_name}`.toLowerCase();
+                    return name.includes(coordSearch.toLowerCase());
+                  })
+                  .slice(0, 20)
+                  .map((t) => (
+                    <CommandItem
+                      key={t.id}
+                      value={`${t.last_name} ${t.first_name}`}
+                      onSelect={() => {
+                        assignCoordMutation.mutate(t.id);
+                        setCoordSearch("");
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {t.last_name} {t.first_name}
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCoordDialogOpen(false)}>Anulează</Button>
-            <Button onClick={() => selectedTeacherId && assignCoordMutation.mutate(selectedTeacherId)} disabled={!selectedTeacherId || assignCoordMutation.isPending}>
-              {assignCoordMutation.isPending ? "Se atribuie…" : "Atribuie"}
-            </Button>
+            <Button variant="outline" onClick={() => setCoordDialogOpen(false)}>Închide</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
