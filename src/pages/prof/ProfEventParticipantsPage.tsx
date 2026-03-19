@@ -354,34 +354,46 @@ export default function ProfEventParticipantsPage() {
                   </div>
                   {isExpanded && (
                     <div className="border-t px-3 py-3 space-y-3 bg-muted/10">
-                      {p.checkinTimestamp && <p className="text-xs text-muted-foreground">Check-in: {formatDateTime(p.checkinTimestamp)}</p>}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Schimbă statusul:</p>
-                        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                          <Button size="sm" variant={p.status === "present" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "present"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "present", p.name, p.isPublic, p.reservationId); }}>
-                             <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Prezent
-                           </Button>
-                           <Button size="sm" variant={p.status === "late" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "late"}
-                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "late", p.name, p.isPublic, p.reservationId); }}>
-                             <Clock className="mr-1 h-3.5 w-3.5" /> Întârziat
-                           </Button>
-                           <Button size="sm" variant={p.status === "absent" ? "destructive" : "outline"} className="h-9 text-xs" disabled={p.status === "absent"}
-                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "absent", p.name, p.isPublic, p.reservationId); }}>
-                             <XCircle className="mr-1 h-3.5 w-3.5" /> Absent
-                           </Button>
-                           <Button size="sm" variant={p.status === "excused" ? "secondary" : "outline"} className="h-9 text-xs" disabled={p.status === "excused"}
-                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "excused", p.name, p.isPublic, p.reservationId); }}>
-                             <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Motivat
+                      {p.isAssistant ? (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-2">Elevul este asistent la acest eveniment și este marcat automat ca prezent.</p>
+                          <Button size="sm" variant="outline" className="h-8 text-xs text-destructive hover:text-destructive"
+                            onClick={(e) => { e.stopPropagation(); setRemoveAssistantId(p.assistantRecordId!); }}>
+                            <Trash2 className="mr-1 h-3.5 w-3.5" /> Elimină asistent
                           </Button>
                         </div>
-                      </div>
-                      <div className="pt-2 border-t">
-                        <Button size="sm" variant="outline" className="h-8 text-xs text-destructive hover:text-destructive"
-                          onClick={(e) => { e.stopPropagation(); setCancelReservation({ id: p.isPublic ? p.ticketId : p.reservationId!, name: p.name, isPublic: p.isPublic, reservationId: p.reservationId }); }}>
-                          <Trash2 className="mr-1 h-3.5 w-3.5" /> Anulează rezervarea
-                        </Button>
-                      </div>
+                      ) : (
+                        <>
+                          {p.checkinTimestamp && <p className="text-xs text-muted-foreground">Check-in: {formatDateTime(p.checkinTimestamp)}</p>}
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Schimbă statusul:</p>
+                            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                              <Button size="sm" variant={p.status === "present" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "present"}
+                                onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "present", p.name, p.isPublic, p.reservationId); }}>
+                                 <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Prezent
+                               </Button>
+                               <Button size="sm" variant={p.status === "late" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "late"}
+                                 onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "late", p.name, p.isPublic, p.reservationId); }}>
+                                 <Clock className="mr-1 h-3.5 w-3.5" /> Întârziat
+                               </Button>
+                               <Button size="sm" variant={p.status === "absent" ? "destructive" : "outline"} className="h-9 text-xs" disabled={p.status === "absent"}
+                                 onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "absent", p.name, p.isPublic, p.reservationId); }}>
+                                 <XCircle className="mr-1 h-3.5 w-3.5" /> Absent
+                               </Button>
+                               <Button size="sm" variant={p.status === "excused" ? "secondary" : "outline"} className="h-9 text-xs" disabled={p.status === "excused"}
+                                 onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "excused", p.name, p.isPublic, p.reservationId); }}>
+                                 <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Motivat
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t">
+                            <Button size="sm" variant="outline" className="h-8 text-xs text-destructive hover:text-destructive"
+                              onClick={(e) => { e.stopPropagation(); setCancelReservation({ id: p.isPublic ? p.ticketId : p.reservationId!, name: p.name, isPublic: p.isPublic, reservationId: p.reservationId }); }}>
+                              <Trash2 className="mr-1 h-3.5 w-3.5" /> Anulează rezervarea
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </CardContent>
