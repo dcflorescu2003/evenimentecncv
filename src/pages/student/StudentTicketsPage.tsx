@@ -37,6 +37,19 @@ const ticketStatusColors: Record<string, string> = {
   excused: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
 };
 
+function isEventPast(event: Event): boolean {
+  if (!event) return false;
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  if (event.date < todayStr) return true;
+  if (event.date === todayStr && event.end_time) {
+    const [h, m] = event.end_time.split(":").map(Number);
+    const now = today.getHours() * 60 + today.getMinutes();
+    if (now > h * 60 + m) return true;
+  }
+  return false;
+}
+
 export default function StudentTicketsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -84,8 +97,14 @@ export default function StudentTicketsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const activeReservations = reservations.filter((r) => r.status === "reserved");
-  const pastReservations = reservations.filter((r) => r.status !== "reserved");
+  const activeReservations = reservations.filter((r) => {
+    const ticketStatus = r.tickets?.status || r.status;
+    return r.status === "reserved" && ticketStatus === "reserved" && !isEventPast(r.events);
+  });
+  const pastReservations = reservations.filter((r) => {
+    const ticketStatus = r.tickets?.status || r.status;
+    return !(r.status === "reserved" && ticketStatus === "reserved" && !isEventPast(r.events));
+  });
 
   return (
     <div className="space-y-5">
@@ -114,16 +133,19 @@ export default function StudentTicketsPage() {
           {activeReservations.length > 0 && (
             <div className="space-y-3">
               <h2 className="font-display text-lg font-semibold">Active ({activeReservations.length})</h2>
-              {activeReservations.map((r) => (
-                <TicketCard
-                  key={r.id}
-                  reservation={r}
-                  expanded={expandedId === r.id}
-                  onToggle={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                  onCancel={() => setCancelId(r.id)}
-                  onNavigate={() => navigate(`/student/events/${r.event_id}`)}
-                />
-              ))}
+              {activeReservations.map((r) => {
+                const past = isEventPast(r.events);
+                return (
+                  <TicketCard
+                    key={r.id}
+                    reservation={r}
+                    expanded={expandedId === r.id}
+                    onToggle={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                    onCancel={!past ? () => setCancelId(r.id) : undefined}
+                    onNavigate={() => navigate(`/student/events/${r.event_id}`)}
+                  />
+                );
+              })}
             </div>
           )}
 
