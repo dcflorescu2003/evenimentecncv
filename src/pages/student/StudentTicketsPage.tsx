@@ -71,6 +71,20 @@ export default function StudentTicketsPage() {
     enabled: !!user,
   });
 
+  // Fetch assistant assignments for this student
+  const { data: assistantAssignments = [] } = useQuery({
+    queryKey: ["my_assistant_assignments", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("*, events:event_id(*)")
+        .eq("student_id", user!.id);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!user,
+  });
+
   const cancelMutation = useMutation({
     mutationFn: async (reservationId: string) => {
       const { error: resError } = await supabase
@@ -97,6 +111,9 @@ export default function StudentTicketsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Build virtual tickets from assistant assignments
+  const assistantEventIds = new Set(assistantAssignments.map((a: any) => a.event_id));
+
   const activeReservations = reservations.filter((r) => {
     const ticketStatus = r.tickets?.status || r.status;
     return r.status === "reserved" && ticketStatus === "reserved" && !isEventPast(r.events);
@@ -105,6 +122,10 @@ export default function StudentTicketsPage() {
     const ticketStatus = r.tickets?.status || r.status;
     return !(r.status === "reserved" && ticketStatus === "reserved" && !isEventPast(r.events));
   });
+
+  // Assistant "virtual" tickets - active (future events)
+  const activeAssistantTickets = assistantAssignments.filter((a: any) => a.events && !isEventPast(a.events));
+  const pastAssistantTickets = assistantAssignments.filter((a: any) => !a.events || isEventPast(a.events));
 
   return (
     <div className="space-y-5">
@@ -130,9 +151,18 @@ export default function StudentTicketsPage() {
       ) : (
         <>
           {/* Active */}
-          {activeReservations.length > 0 && (
+          {(activeReservations.length > 0 || activeAssistantTickets.length > 0) && (
             <div className="space-y-3">
-              <h2 className="font-display text-lg font-semibold">Active ({activeReservations.length})</h2>
+              <h2 className="font-display text-lg font-semibold">Active ({activeReservations.length + activeAssistantTickets.length})</h2>
+              {activeAssistantTickets.map((a: any) => (
+                <AssistantTicketCard
+                  key={`assist-${a.id}`}
+                  assignment={a}
+                  expanded={expandedId === `assist-${a.id}`}
+                  onToggle={() => setExpandedId(expandedId === `assist-${a.id}` ? null : `assist-${a.id}`)}
+                  onNavigate={() => navigate(`/student/events/${a.event_id}`)}
+                />
+              ))}
               {activeReservations.map((r) => {
                 const past = isEventPast(r.events);
                 return (
@@ -150,9 +180,19 @@ export default function StudentTicketsPage() {
           )}
 
           {/* Past */}
-          {pastReservations.length > 0 && (
+          {(pastReservations.length > 0 || pastAssistantTickets.length > 0) && (
             <div className="space-y-3">
-              <h2 className="font-display text-lg font-semibold text-muted-foreground">Istoric ({pastReservations.length})</h2>
+              <h2 className="font-display text-lg font-semibold text-muted-foreground">Istoric ({pastReservations.length + pastAssistantTickets.length})</h2>
+              {pastAssistantTickets.map((a: any) => (
+                <AssistantTicketCard
+                  key={`assist-${a.id}`}
+                  assignment={a}
+                  expanded={expandedId === `assist-${a.id}`}
+                  onToggle={() => setExpandedId(expandedId === `assist-${a.id}` ? null : `assist-${a.id}`)}
+                  onNavigate={() => navigate(`/student/events/${a.event_id}`)}
+                  past
+                />
+              ))}
               {pastReservations.map((r) => (
                 <TicketCard
                   key={r.id}
@@ -274,6 +314,73 @@ function TicketCard({
                   <X className="mr-1 h-4 w-4" /> Anulează
                 </Button>
               )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AssistantTicketCard({
+  assignment,
+  expanded,
+  onToggle,
+  onNavigate,
+  past,
+}: {
+  assignment: any;
+  expanded: boolean;
+  onToggle: () => void;
+  onNavigate: () => void;
+  past?: boolean;
+}) {
+  const event = assignment.events as Event | null;
+
+  return (
+    <Card className={`overflow-hidden transition-all ${past ? "opacity-70" : ""}`}>
+      <CardContent className="p-0">
+        <div
+          className="flex items-center gap-3 p-4 cursor-pointer"
+          onClick={onToggle}
+        >
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <p className="font-medium">{event?.title || "Eveniment nedisponibil"}</p>
+              <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px] shrink-0">
+                Asistent
+              </Badge>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <CalendarDays className="h-3 w-3" /> {formatDate(event?.date)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" /> {event?.start_time?.slice(0, 5)} – {event?.end_time?.slice(0, 5)}
+              </span>
+              {event?.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" /> {event.location}
+                </span>
+              )}
+            </div>
+          </div>
+          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+            Prezent
+          </Badge>
+        </div>
+
+        {expanded && (
+          <div className="border-t px-4 py-4 space-y-4">
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-950 p-3 text-center">
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Ești asistent la acest eveniment. Prezența ta este confirmată automat.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="flex-1" onClick={onNavigate}>
+                Detalii eveniment
+              </Button>
             </div>
           </div>
         )}

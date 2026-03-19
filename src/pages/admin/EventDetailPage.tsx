@@ -710,13 +710,21 @@ export default function EventDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Student assistants */}
-                  {assistants.map((a: any) => {
+                  {/* Student assistants - sorted by last name */}
+                  {[...assistants].sort((a: any, b: any) => {
+                    const aLast = a.profile?.last_name || "";
+                    const bLast = b.profile?.last_name || "";
+                    return aLast.localeCompare(bLast, "ro") || (a.profile?.first_name || "").localeCompare(b.profile?.first_name || "", "ro");
+                  }).map((a: any) => {
                     const profile = a.profile;
-                    const name = profile?.display_name || `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim();
+                    const name = profile?.display_name || `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim();
+                    const className = classMap.get(a.student_id) || "";
                     return (
                       <TableRow key={`assistant-${a.id}`}>
-                        <TableCell className="font-medium">{name}</TableCell>
+                        <TableCell className="font-medium">
+                          {name}
+                          {className && <span className="ml-2 text-xs text-muted-foreground">({className})</span>}
+                        </TableCell>
                         <TableCell>
                           <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px]">
                             Asistent
@@ -746,13 +754,17 @@ export default function EventDetailPage() {
                     const profile = p.profiles;
                     const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
                     const name = profile?.display_name || `${profile?.first_name} ${profile?.last_name}`;
+                    const className = classMap.get(profile?.id) || "";
                     const ticketStatusLabels: Record<string, string> = {
                       reserved: "Rezervat", present: "Prezent", late: "Întârziat",
                       absent: "Absent", excused: "Motivat", cancelled: "Anulat",
                     };
                     return (
                       <TableRow key={p.id}>
-                        <TableCell className="font-medium">{name}</TableCell>
+                        <TableCell className="font-medium">
+                          {name}
+                          {className && <span className="ml-2 text-xs text-muted-foreground">({className})</span>}
+                        </TableCell>
                         <TableCell><Badge variant="outline" className="text-[10px]">Elev</Badge></TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-xs">

@@ -47,7 +47,7 @@ interface UnifiedParticipant {
   ticketId?: string; checkinTimestamp?: string | null; isPublic: boolean;
   reservationId?: string; publicReservationId?: string;
   isAssistant?: boolean; assistantRecordId?: string;
-  lastName?: string;
+  lastName?: string; className?: string;
 }
 
 export default function ProfEventParticipantsPage() {
@@ -127,6 +127,33 @@ export default function ProfEventParticipantsPage() {
     enabled: !!eventId,
   });
 
+  // Fetch class assignments for all participants + assistants
+  const allParticipantStudentIds = [
+    ...participants.map((p: any) => p.profiles?.id),
+    ...assistants.map((a: any) => a.student_id),
+  ].filter(Boolean);
+  const uniqueParticipantStudentIds = [...new Set(allParticipantStudentIds)];
+
+  const { data: participantClassAssignments = [] } = useQuery({
+    queryKey: ["prof_participant_classes", eventId, uniqueParticipantStudentIds],
+    queryFn: async () => {
+      if (uniqueParticipantStudentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("student_class_assignments")
+        .select("student_id, classes(display_name)")
+        .in("student_id", uniqueParticipantStudentIds);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: uniqueParticipantStudentIds.length > 0,
+  });
+
+  const classLookup = new Map<string, string>();
+  participantClassAssignments.forEach((a: any) => {
+    const dn = a.classes?.display_name || "";
+    if (dn && !classLookup.has(a.student_id)) classLookup.set(a.student_id, dn);
+  });
+
   // Searchable students for assistant assignment
   const { data: allStudents = [] } = useQuery({
     queryKey: ["all_students_for_prof_assistant_page"],
@@ -189,6 +216,7 @@ export default function ProfEventParticipantsPage() {
       return {
         id: `assist-${a.id}`, name: profile?.display_name || `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
         lastName: profile?.last_name || "",
+        className: classLookup.get(a.student_id) || "",
         status: "present", isPublic: false, isAssistant: true, assistantRecordId: a.id,
       } as UnifiedParticipant;
     }),
@@ -198,6 +226,7 @@ export default function ProfEventParticipantsPage() {
       return {
         id: `reg-${p.id}`, name: profile?.display_name || `${profile?.first_name} ${profile?.last_name}`,
         lastName: profile?.last_name || "",
+        className: classLookup.get(profile?.id) || "",
         identifier: profile?.student_identifier, status: ticket?.status || "reserved",
         ticketId: ticket?.id, checkinTimestamp: ticket?.checkin_timestamp, isPublic: false,
         reservationId: p.id,
@@ -206,12 +235,13 @@ export default function ProfEventParticipantsPage() {
     ...publicParticipants.flatMap((pr: any) =>
       (pr.public_tickets || []).filter((t: any) => t.status !== "cancelled").map((t: any) => ({
         id: `pub-${t.id}`, name: t.attendee_name, lastName: t.attendee_name || "",
+        className: "",
         status: t.status || "reserved",
         ticketId: t.id, checkinTimestamp: t.checkin_timestamp, isPublic: true,
         publicReservationId: pr.id,
       }))
     ),
-  ].sort((a, b) => a.lastName.localeCompare(b.lastName));
+  ].sort((a, b) => (a.lastName || "").localeCompare(b.lastName || "", "ro"));
 
   const filtered = unified.filter((p) => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -341,14 +371,15 @@ export default function ProfEventParticipantsPage() {
             return (
               <Card key={p.id} className="overflow-hidden">
                 <CardContent className="p-0">
-                  <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setExpandedId(isExpanded ? null : p.id)}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setExpandedId(isExpanded ? null : p.id)}>
+                     <div className="flex-1 min-w-0">
+                       <div className="flex items-center gap-2">
                          <p className="font-medium text-sm truncate">{p.name}</p>
+                         {p.className && <span className="text-xs text-muted-foreground shrink-0">({p.className})</span>}
                          {p.isPublic && <Badge variant="outline" className="text-[10px] shrink-0">Vizitator</Badge>}
                          {p.isAssistant && <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px] shrink-0">Asistent</Badge>}
                        </div>
-                    </div>
+                     </div>
                     <Badge variant="secondary" className={`text-xs shrink-0 ${statusColors[p.status]}`}>{statusLabels[p.status]}</Badge>
                     {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                   </div>

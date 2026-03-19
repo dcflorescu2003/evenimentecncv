@@ -89,6 +89,22 @@ export default function StudentEventDetailPage() {
     enabled: !!id && !!user,
   });
 
+  // Check if student is an assistant for this event
+  const { data: isAssistant } = useQuery({
+    queryKey: ["my_assistant_check", id, user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("id")
+        .eq("event_id", id!)
+        .eq("student_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!id && !!user,
+  });
+
   const { data: formTemplates = [] } = useQuery({
     queryKey: ["form_templates", id],
     queryFn: async () => {
@@ -292,7 +308,19 @@ export default function StudentEventDetailPage() {
       )}
 
       {/* Booking button */}
-      {myReservation ? (
+      {isAssistant ? (
+        <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+          <CardContent className="flex items-center gap-3 p-4">
+            <Ticket className="h-5 w-5 text-blue-700 dark:text-blue-300" />
+            <div>
+              <p className="font-medium text-blue-800 dark:text-blue-200">Ești asistent la acest eveniment</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                Prezența ta este confirmată automat.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : myReservation ? (
         <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
           <CardContent className="flex items-center gap-3 p-4">
             <Ticket className="h-5 w-5 text-green-700 dark:text-green-300" />
