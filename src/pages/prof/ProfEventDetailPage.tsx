@@ -11,15 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -48,6 +48,7 @@ export default function ProfEventDetailPage() {
 
   const [coordDialogOpen, setCoordDialogOpen] = useState(false);
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
+  const [coordSearch, setCoordSearch] = useState("");
   const [removeCoordId, setRemoveCoordId] = useState<string | null>(null);
 
   // File upload state
@@ -57,6 +58,11 @@ export default function ProfEventDetailPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
+
+  // Student assistant state
+  const [assistantDialogOpen, setAssistantDialogOpen] = useState(false);
+  const [assistantSearch, setAssistantSearch] = useState("");
+  const [removeAssistantId, setRemoveAssistantId] = useState<string | null>(null);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ["prof_event", id],
@@ -84,7 +90,6 @@ export default function ProfEventDetailPage() {
   const { data: availableTeachers = [] } = useQuery({
     queryKey: ["assignable_teachers"],
     queryFn: async () => {
-      // First get user_ids with teacher roles
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -92,7 +97,6 @@ export default function ProfEventDetailPage() {
       if (rolesError) throw rolesError;
       const userIds = [...new Set((roles || []).map((r) => r.user_id))];
       if (userIds.length === 0) return [];
-      // Then fetch their profiles
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, first_name, last_name, display_name")
@@ -146,6 +150,55 @@ export default function ProfEventDetailPage() {
     enabled: !!id,
   });
 
+  // Event student assistants
+  const { data: assistants = [] } = useQuery({
+    queryKey: ["prof_event_assistants", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("*")
+        .eq("event_id", id!);
+      if (error) throw error;
+      const studentIds = (data || []).map((a: any) => a.student_id);
+      if (studentIds.length === 0) return [];
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", studentIds);
+      if (pErr) throw pErr;
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+      return (data || []).map((a: any) => ({ ...a, profile: profileMap.get(a.student_id) }));
+    },
+    enabled: !!id,
+  });
+
+  // Searchable students for assistant assignment
+  const { data: allStudents = [] } = useQuery({
+    queryKey: ["all_students_for_prof_assistant"],
+    queryFn: async () => {
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
+      if (roleError) throw roleError;
+      const ids = [...new Set((roleData || []).map((r) => r.user_id))];
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", ids)
+        .eq("is_active", true)
+        .order("last_name")
+        .order("first_name");
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: assistantDialogOpen,
+  });
+
+  const assistantStudentIdsSet = new Set(assistants.map((a: any) => a.student_id));
+  const availableStudents = allStudents.filter((s: any) => !assistantStudentIdsSet.has(s.id));
+
   const assignedIds = coordinators.map((c: any) => c.teacher_id);
   const unassigned = availableTeachers.filter((t: any) => !assignedIds.includes(t.id));
 
@@ -164,6 +217,7 @@ export default function ProfEventDetailPage() {
       toast.success("Coordonator adăugat");
       setCoordDialogOpen(false);
       setSelectedTeacherId("");
+      setCoordSearch("");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -177,6 +231,35 @@ export default function ProfEventDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["prof_coordinators", id] });
       toast.success("Coordonator eliminat");
       setRemoveCoordId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const assignAssistantMutation = useMutation({
+    mutationFn: async (studentId: string) => {
+      const { error } = await supabase.from("event_student_assistants").insert({
+        event_id: id!,
+        student_id: studentId,
+        assigned_by: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prof_event_assistants", id] });
+      toast.success("Elev asistent adăugat");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeAssistantMutation = useMutation({
+    mutationFn: async (assistantId: string) => {
+      const { error } = await supabase.from("event_student_assistants").delete().eq("id", assistantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prof_event_assistants", id] });
+      toast.success("Elev asistent eliminat");
+      setRemoveAssistantId(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -248,6 +331,13 @@ export default function ProfEventDetailPage() {
     </div>
   );
 
+  // Sort participants by last name
+  const sortedParticipants = [...participants].sort((a: any, b: any) => {
+    const aLast = a.profiles?.last_name || "";
+    const bLast = b.profiles?.last_name || "";
+    return aLast.localeCompare(bLast, "ro") || (a.profiles?.first_name || "").localeCompare(b.profiles?.first_name || "", "ro");
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3">
@@ -288,7 +378,7 @@ export default function ProfEventDetailPage() {
       <Tabs defaultValue="coordinators" className="space-y-4">
         <TabsList>
           <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
-          <TabsTrigger value="participants">Participanți ({participants.length})</TabsTrigger>
+          <TabsTrigger value="participants">Participanți ({participants.length + assistants.length})</TabsTrigger>
           <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
           <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
         </TabsList>
@@ -296,7 +386,7 @@ export default function ProfEventDetailPage() {
         <TabsContent value="coordinators" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Profesorii care coordonează acest eveniment.</p>
-            <Button size="sm" onClick={() => setCoordDialogOpen(true)}>
+            <Button size="sm" onClick={() => { setCoordDialogOpen(true); setCoordSearch(""); }}>
               <UserPlus className="mr-2 h-4 w-4" /> Adaugă
             </Button>
           </div>
@@ -335,34 +425,73 @@ export default function ProfEventDetailPage() {
         <TabsContent value="participants" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Lista participanților înscriși.</p>
-            <Button size="sm" onClick={() => navigate(`/prof/event/${id}`)}>
-              <Users className="mr-2 h-4 w-4" /> Lista completă
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
+                <UserPlus className="mr-2 h-4 w-4" /> Adaugă elev asistent
+              </Button>
+              <Button size="sm" onClick={() => navigate(`/prof/event/${id}`)}>
+                <Users className="mr-2 h-4 w-4" /> Lista completă
+              </Button>
+            </div>
           </div>
           <div className="rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Elev</TableHead>
+                  <TableHead>Tip</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="w-16">Acțiuni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {participants.length === 0 ? (
-                  <TableRow><TableCell colSpan={2} className="py-6 text-center text-muted-foreground">Niciun participant.</TableCell></TableRow>
-                ) : participants.map((p: any) => {
-                  const profile = p.profiles;
-                  const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
-                  const name = profile?.display_name || `${profile?.first_name} ${profile?.last_name}`;
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-medium">{name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{statusLabels[ticket?.status || "reserved"]}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {participants.length === 0 && assistants.length === 0 ? (
+                  <TableRow><TableCell colSpan={4} className="py-6 text-center text-muted-foreground">Niciun participant.</TableCell></TableRow>
+                ) : (
+                  <>
+                    {/* Student assistants */}
+                    {assistants.map((a: any) => {
+                      const profile = a.profile;
+                      const name = profile?.display_name || `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim();
+                      return (
+                        <TableRow key={`assistant-${a.id}`}>
+                          <TableCell className="font-medium">{name}</TableCell>
+                          <TableCell>
+                            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px]">
+                              Asistent
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              Prezent
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setRemoveAssistantId(a.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {/* Regular participants sorted by last name */}
+                    {sortedParticipants.map((p: any) => {
+                      const profile = p.profiles;
+                      const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+                      const name = profile?.display_name || `${profile?.last_name} ${profile?.first_name}`;
+                      return (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-medium">{name}</TableCell>
+                          <TableCell><Badge variant="outline" className="text-[10px]">Elev</Badge></TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{statusLabels[ticket?.status || "reserved"]}</Badge>
+                          </TableCell>
+                          <TableCell />
+                        </TableRow>
+                      );
+                    })}
+                  </>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -461,29 +590,45 @@ export default function ProfEventDetailPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Add coordinator dialog */}
-      <Dialog open={coordDialogOpen} onOpenChange={(o) => !o && setCoordDialogOpen(false)}>
-        <DialogContent>
+      {/* Add coordinator dialog - searchable */}
+      <Dialog open={coordDialogOpen} onOpenChange={(o) => { if (!o) { setCoordDialogOpen(false); setSelectedTeacherId(""); setCoordSearch(""); } }}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Adaugă coordonator</DialogTitle>
-            <DialogDescription>Selectează un profesor pentru a-l adăuga ca coordonator.</DialogDescription>
+            <DialogDescription>Caută și selectează un profesor pentru a-l adăuga ca coordonator.</DialogDescription>
           </DialogHeader>
-          <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
-            <SelectTrigger><SelectValue placeholder="Selectează profesor" /></SelectTrigger>
-            <SelectContent>
-              {unassigned.map((t: any) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.display_name || `${t.first_name} ${t.last_name}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setCoordDialogOpen(false)}>Anulează</Button>
-            <Button disabled={!selectedTeacherId || assignMutation.isPending} onClick={() => assignMutation.mutate(selectedTeacherId)}>
-              Adaugă
-            </Button>
-          </div>
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Caută profesor după nume..." value={coordSearch} onValueChange={setCoordSearch} />
+            <CommandList>
+              <CommandEmpty>Niciun profesor găsit.</CommandEmpty>
+              <CommandGroup>
+                {unassigned
+                  .filter((t: any) => {
+                    if (!coordSearch) return true;
+                    const name = `${t.first_name} ${t.last_name}`.toLowerCase();
+                    return name.includes(coordSearch.toLowerCase());
+                  })
+                  .slice(0, 20)
+                  .map((t: any) => (
+                    <CommandItem
+                      key={t.id}
+                      value={`${t.last_name} ${t.first_name}`}
+                      onSelect={() => {
+                        assignMutation.mutate(t.id);
+                        setCoordSearch("");
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {t.last_name} {t.first_name}
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCoordDialogOpen(false)}>Închide</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -497,6 +642,66 @@ export default function ProfEventDetailPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Anulează</AlertDialogCancel>
             <AlertDialogAction onClick={() => removeCoordId && removeMutation.mutate(removeCoordId)}>Elimină</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add Student Assistant Dialog */}
+      <Dialog open={assistantDialogOpen} onOpenChange={(o) => { if (!o) { setAssistantDialogOpen(false); setAssistantSearch(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adaugă elev asistent</DialogTitle>
+            <DialogDescription>Caută și selectează un elev care va fi asistent la acest eveniment.</DialogDescription>
+          </DialogHeader>
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Caută elev după nume..." value={assistantSearch} onValueChange={setAssistantSearch} />
+            <CommandList>
+              <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+              <CommandGroup>
+                {availableStudents
+                  .filter((s: any) => {
+                    if (!assistantSearch) return true;
+                    const name = `${s.first_name} ${s.last_name}`.toLowerCase();
+                    return name.includes(assistantSearch.toLowerCase());
+                  })
+                  .slice(0, 20)
+                  .map((s: any) => (
+                    <CommandItem
+                      key={s.id}
+                      value={`${s.last_name} ${s.first_name}`}
+                      onSelect={() => {
+                        assignAssistantMutation.mutate(s.id);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {s.last_name} {s.first_name}
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssistantDialogOpen(false)}>Închide</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Assistant Confirmation */}
+      <AlertDialog open={!!removeAssistantId} onOpenChange={(o) => !o && setRemoveAssistantId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminați elevul asistent?</AlertDialogTitle>
+            <AlertDialogDescription>Elevul nu va mai apărea ca asistent la acest eveniment.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => removeAssistantId && removeAssistantMutation.mutate(removeAssistantId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimină
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

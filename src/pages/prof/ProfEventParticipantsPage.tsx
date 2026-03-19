@@ -1,8 +1,7 @@
 import { formatDate, formatDateTime } from "@/lib/time";
-// Wrapper around coordinator's EventParticipantsPage with prof-specific navigation
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,13 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, ShieldAlert, ChevronDown, ChevronUp, Trash2, FileDown,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+import {
+  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, ShieldAlert, ChevronDown, ChevronUp, Trash2, FileDown, UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportAttendancePdf } from "@/lib/attendance-pdf";
@@ -41,6 +46,8 @@ interface UnifiedParticipant {
   id: string; name: string; identifier?: string; status: string;
   ticketId?: string; checkinTimestamp?: string | null; isPublic: boolean;
   reservationId?: string; publicReservationId?: string;
+  isAssistant?: boolean; assistantRecordId?: string;
+  lastName?: string;
 }
 
 export default function ProfEventParticipantsPage() {
@@ -56,6 +63,10 @@ export default function ProfEventParticipantsPage() {
   } | null>(null);
   const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; reservationId?: string } | null>(null);
 
+  // Student assistant state
+  const [assistantDialogOpen, setAssistantDialogOpen] = useState(false);
+  const [assistantSearch, setAssistantSearch] = useState("");
+  const [removeAssistantId, setRemoveAssistantId] = useState<string | null>(null);
   const { data: event } = useQuery({
     queryKey: ["prof_part_event", eventId],
     queryFn: async () => {
@@ -94,7 +105,93 @@ export default function ProfEventParticipantsPage() {
     enabled: !!eventId,
   });
 
+  // Event student assistants
+  const { data: assistants = [] } = useQuery({
+    queryKey: ["prof_event_assistants", eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("*")
+        .eq("event_id", eventId!);
+      if (error) throw error;
+      const sIds = (data || []).map((a: any) => a.student_id);
+      if (sIds.length === 0) return [];
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", sIds);
+      if (pErr) throw pErr;
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+      return (data || []).map((a: any) => ({ ...a, profile: profileMap.get(a.student_id) }));
+    },
+    enabled: !!eventId,
+  });
+
+  // Searchable students for assistant assignment
+  const { data: allStudents = [] } = useQuery({
+    queryKey: ["all_students_for_prof_assistant_page"],
+    queryFn: async () => {
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
+      if (roleError) throw roleError;
+      const ids = [...new Set((roleData || []).map((r) => r.user_id))];
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", ids)
+        .eq("is_active", true)
+        .order("last_name")
+        .order("first_name");
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: assistantDialogOpen,
+  });
+
+  const assistantIdsSet = new Set(assistants.map((a: any) => a.student_id));
+  const availableStudentsForAssistant = allStudents.filter((s: any) => !assistantIdsSet.has(s.id));
+
+  const assignAssistantMutation = useMutation({
+    mutationFn: async (studentId: string) => {
+      const { error } = await supabase.from("event_student_assistants").insert({
+        event_id: eventId!,
+        student_id: studentId,
+        assigned_by: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prof_event_assistants", eventId] });
+      toast.success("Elev asistent adăugat");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeAssistantMutation = useMutation({
+    mutationFn: async (assistantId: string) => {
+      const { error } = await supabase.from("event_student_assistants").delete().eq("id", assistantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prof_event_assistants", eventId] });
+      toast.success("Elev asistent eliminat");
+      setRemoveAssistantId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const unified: UnifiedParticipant[] = [
+    // Assistants
+    ...assistants.map((a: any) => {
+      const profile = a.profile;
+      return {
+        id: `assist-${a.id}`, name: profile?.display_name || `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
+        lastName: profile?.last_name || "",
+        status: "present", isPublic: false, isAssistant: true, assistantRecordId: a.id,
+      } as UnifiedParticipant;
+    }),
     ...participants.map((p: any) => {
       const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
       const profile = p.profiles;
@@ -186,6 +283,9 @@ export default function ProfEventParticipantsPage() {
           {event && <p className="text-xs text-muted-foreground">{formatDate(event.date)} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</p>}
         </div>
         <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
+            <UserPlus className="mr-2 h-4 w-4" /> Elev asistent
+          </Button>
           <Button size="sm" variant="outline" onClick={() => {
             if (!event || unified.length === 0) return;
             exportAttendancePdf(
@@ -244,43 +344,56 @@ export default function ProfEventParticipantsPage() {
                   <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setExpandedId(isExpanded ? null : p.id)}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm truncate">{p.name}</p>
-                        {p.isPublic && <Badge variant="outline" className="text-[10px] shrink-0">Vizitator</Badge>}
-                      </div>
+                         <p className="font-medium text-sm truncate">{p.name}</p>
+                         {p.isPublic && <Badge variant="outline" className="text-[10px] shrink-0">Vizitator</Badge>}
+                         {p.isAssistant && <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px] shrink-0">Asistent</Badge>}
+                       </div>
                     </div>
                     <Badge variant="secondary" className={`text-xs shrink-0 ${statusColors[p.status]}`}>{statusLabels[p.status]}</Badge>
                     {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                   </div>
                   {isExpanded && (
                     <div className="border-t px-3 py-3 space-y-3 bg-muted/10">
-                      {p.checkinTimestamp && <p className="text-xs text-muted-foreground">Check-in: {formatDateTime(p.checkinTimestamp)}</p>}
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-2">Schimbă statusul:</p>
-                        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                          <Button size="sm" variant={p.status === "present" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "present"}
-                            onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "present", p.name, p.isPublic, p.reservationId); }}>
-                             <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Prezent
-                           </Button>
-                           <Button size="sm" variant={p.status === "late" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "late"}
-                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "late", p.name, p.isPublic, p.reservationId); }}>
-                             <Clock className="mr-1 h-3.5 w-3.5" /> Întârziat
-                           </Button>
-                           <Button size="sm" variant={p.status === "absent" ? "destructive" : "outline"} className="h-9 text-xs" disabled={p.status === "absent"}
-                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "absent", p.name, p.isPublic, p.reservationId); }}>
-                             <XCircle className="mr-1 h-3.5 w-3.5" /> Absent
-                           </Button>
-                           <Button size="sm" variant={p.status === "excused" ? "secondary" : "outline"} className="h-9 text-xs" disabled={p.status === "excused"}
-                             onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "excused", p.name, p.isPublic, p.reservationId); }}>
-                             <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Motivat
+                      {p.isAssistant ? (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-2">Elevul este asistent la acest eveniment și este marcat automat ca prezent.</p>
+                          <Button size="sm" variant="outline" className="h-8 text-xs text-destructive hover:text-destructive"
+                            onClick={(e) => { e.stopPropagation(); setRemoveAssistantId(p.assistantRecordId!); }}>
+                            <Trash2 className="mr-1 h-3.5 w-3.5" /> Elimină asistent
                           </Button>
                         </div>
-                      </div>
-                      <div className="pt-2 border-t">
-                        <Button size="sm" variant="outline" className="h-8 text-xs text-destructive hover:text-destructive"
-                          onClick={(e) => { e.stopPropagation(); setCancelReservation({ id: p.isPublic ? p.ticketId : p.reservationId!, name: p.name, isPublic: p.isPublic, reservationId: p.reservationId }); }}>
-                          <Trash2 className="mr-1 h-3.5 w-3.5" /> Anulează rezervarea
-                        </Button>
-                      </div>
+                      ) : (
+                        <>
+                          {p.checkinTimestamp && <p className="text-xs text-muted-foreground">Check-in: {formatDateTime(p.checkinTimestamp)}</p>}
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Schimbă statusul:</p>
+                            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                              <Button size="sm" variant={p.status === "present" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "present"}
+                                onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "present", p.name, p.isPublic, p.reservationId); }}>
+                                 <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Prezent
+                               </Button>
+                               <Button size="sm" variant={p.status === "late" ? "default" : "outline"} className="h-9 text-xs" disabled={p.status === "late"}
+                                 onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "late", p.name, p.isPublic, p.reservationId); }}>
+                                 <Clock className="mr-1 h-3.5 w-3.5" /> Întârziat
+                               </Button>
+                               <Button size="sm" variant={p.status === "absent" ? "destructive" : "outline"} className="h-9 text-xs" disabled={p.status === "absent"}
+                                 onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "absent", p.name, p.isPublic, p.reservationId); }}>
+                                 <XCircle className="mr-1 h-3.5 w-3.5" /> Absent
+                               </Button>
+                               <Button size="sm" variant={p.status === "excused" ? "secondary" : "outline"} className="h-9 text-xs" disabled={p.status === "excused"}
+                                 onClick={(e) => { e.stopPropagation(); handleStatusClick(p.ticketId, p.status, "excused", p.name, p.isPublic, p.reservationId); }}>
+                                 <ShieldAlert className="mr-1 h-3.5 w-3.5" /> Motivat
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t">
+                            <Button size="sm" variant="outline" className="h-8 text-xs text-destructive hover:text-destructive"
+                              onClick={(e) => { e.stopPropagation(); setCancelReservation({ id: p.isPublic ? p.ticketId : p.reservationId!, name: p.name, isPublic: p.isPublic, reservationId: p.reservationId }); }}>
+                              <Trash2 className="mr-1 h-3.5 w-3.5" /> Anulează rezervarea
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -343,6 +456,64 @@ export default function ProfEventParticipantsPage() {
               }}
             >
               Anulează rezervarea
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add Student Assistant Dialog */}
+      <Dialog open={assistantDialogOpen} onOpenChange={(o) => { if (!o) { setAssistantDialogOpen(false); setAssistantSearch(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adaugă elev asistent</DialogTitle>
+            <DialogDescription>Caută și selectează un elev care va fi asistent la acest eveniment.</DialogDescription>
+          </DialogHeader>
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Caută elev după nume..." value={assistantSearch} onValueChange={setAssistantSearch} />
+            <CommandList>
+              <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+              <CommandGroup>
+                {availableStudentsForAssistant
+                  .filter((s: any) => {
+                    if (!assistantSearch) return true;
+                    const name = `${s.first_name} ${s.last_name}`.toLowerCase();
+                    return name.includes(assistantSearch.toLowerCase());
+                  })
+                  .slice(0, 20)
+                  .map((s: any) => (
+                    <CommandItem
+                      key={s.id}
+                      value={`${s.last_name} ${s.first_name}`}
+                      onSelect={() => assignAssistantMutation.mutate(s.id)}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {s.last_name} {s.first_name}
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssistantDialogOpen(false)}>Închide</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Assistant Confirmation */}
+      <AlertDialog open={!!removeAssistantId} onOpenChange={(o) => !o && setRemoveAssistantId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminați elevul asistent?</AlertDialogTitle>
+            <AlertDialogDescription>Elevul nu va mai apărea ca asistent la acest eveniment.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => removeAssistantId && removeAssistantMutation.mutate(removeAssistantId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimină
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
