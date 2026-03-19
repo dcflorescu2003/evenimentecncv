@@ -219,7 +219,7 @@ function TicketCard({
           onClick={onToggle}
         >
           <div className="flex-1">
-            <p className="font-medium">{reservation.events?.title}</p>
+            <p className="font-medium">{reservation.events?.title || "Eveniment nedisponibil"}</p>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <CalendarDays className="h-3 w-3" /> {formatDate(reservation.events?.date)}
