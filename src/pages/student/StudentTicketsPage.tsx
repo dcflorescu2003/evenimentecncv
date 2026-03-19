@@ -71,6 +71,20 @@ export default function StudentTicketsPage() {
     enabled: !!user,
   });
 
+  // Fetch assistant assignments for this student
+  const { data: assistantAssignments = [] } = useQuery({
+    queryKey: ["my_assistant_assignments", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("*, events:event_id(*)")
+        .eq("student_id", user!.id);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!user,
+  });
+
   const cancelMutation = useMutation({
     mutationFn: async (reservationId: string) => {
       const { error: resError } = await supabase
@@ -97,6 +111,9 @@ export default function StudentTicketsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Build virtual tickets from assistant assignments
+  const assistantEventIds = new Set(assistantAssignments.map((a: any) => a.event_id));
+
   const activeReservations = reservations.filter((r) => {
     const ticketStatus = r.tickets?.status || r.status;
     return r.status === "reserved" && ticketStatus === "reserved" && !isEventPast(r.events);
@@ -105,6 +122,10 @@ export default function StudentTicketsPage() {
     const ticketStatus = r.tickets?.status || r.status;
     return !(r.status === "reserved" && ticketStatus === "reserved" && !isEventPast(r.events));
   });
+
+  // Assistant "virtual" tickets - active (future events)
+  const activeAssistantTickets = assistantAssignments.filter((a: any) => a.events && !isEventPast(a.events));
+  const pastAssistantTickets = assistantAssignments.filter((a: any) => !a.events || isEventPast(a.events));
 
   return (
     <div className="space-y-5">
