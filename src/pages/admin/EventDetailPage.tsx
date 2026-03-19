@@ -505,7 +505,15 @@ export default function EventDetailPage() {
 
         {/* Participants Tab - Admin Override */}
         <TabsContent value="participants" className="space-y-4">
-          <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
+            {participants.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleDownloadAttendancePdf}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Descarcă PDF prezență
+              </Button>
+            )}
+          </div>
           {participants.length === 0 && publicParticipants.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
