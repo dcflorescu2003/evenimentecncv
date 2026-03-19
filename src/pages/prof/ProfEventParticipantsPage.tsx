@@ -371,14 +371,15 @@ export default function ProfEventParticipantsPage() {
             return (
               <Card key={p.id} className="overflow-hidden">
                 <CardContent className="p-0">
-                  <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setExpandedId(isExpanded ? null : p.id)}>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setExpandedId(isExpanded ? null : p.id)}>
+                     <div className="flex-1 min-w-0">
+                       <div className="flex items-center gap-2">
                          <p className="font-medium text-sm truncate">{p.name}</p>
+                         {p.className && <span className="text-xs text-muted-foreground shrink-0">({p.className})</span>}
                          {p.isPublic && <Badge variant="outline" className="text-[10px] shrink-0">Vizitator</Badge>}
                          {p.isAssistant && <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px] shrink-0">Asistent</Badge>}
                        </div>
-                    </div>
+                     </div>
                     <Badge variant="secondary" className={`text-xs shrink-0 ${statusColors[p.status]}`}>{statusLabels[p.status]}</Badge>
                     {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                   </div>
