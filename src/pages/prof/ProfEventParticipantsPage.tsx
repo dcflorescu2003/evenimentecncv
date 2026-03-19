@@ -507,7 +507,7 @@ export default function ProfEventParticipantsPage() {
                 {availableStudentsForAssistant
                   .filter((s: any) => {
                     if (!assistantSearch) return true;
-                    const name = `${s.first_name} ${s.last_name}`.toLowerCase();
+                    const name = `${s.last_name} ${s.first_name}`.toLowerCase();
                     return name.includes(assistantSearch.toLowerCase());
                   })
                   .slice(0, 20)

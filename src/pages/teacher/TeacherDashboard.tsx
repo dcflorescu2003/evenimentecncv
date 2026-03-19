@@ -183,7 +183,7 @@ export default function TeacherDashboard() {
         <thead><tr><th>#</th><th>Nume</th><th>Utilizator</th><th>Parolă</th></tr></thead>
         <tbody>${successful.map((r: any, i: number) => `<tr>
           <td>${i + 1}</td>
-          <td>${r.first_name} ${r.last_name}</td>
+          <td>${r.last_name} ${r.first_name}</td>
           <td class="mono">${r.username}</td>
           <td class="mono">${r.password}</td>
         </tr>`).join("")}</tbody>
@@ -413,7 +413,7 @@ export default function TeacherDashboard() {
           <div className="space-y-2">
             {credentialResults?.map((r: any, i: number) => (
               <div key={i} className="flex items-center justify-between rounded-lg border px-3 py-2">
-                <span className="text-sm font-medium">{r.first_name} {r.last_name}</span>
+                <span className="text-sm font-medium">{r.last_name} {r.first_name}</span>
                 <code className="text-xs">{r.username}</code>
               </div>
             ))}
