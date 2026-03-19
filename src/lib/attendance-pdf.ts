@@ -3,10 +3,11 @@ import autoTable from "jspdf-autotable";
 
 function stripDiacritics(str: string): string {
   return str
-    .replace(/[ăâ]/g, "a").replace(/[ĂÂ]/g, "A")
-    .replace(/[îÎ]/g, "i")
-    .replace(/[șş]/g, "s").replace(/[ȘŞ]/g, "S")
-    .replace(/[țţ]/g, "t").replace(/[ȚŢ]/g, "T");
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u0163/g, "t").replace(/\u0162/g, "T")
+    .replace(/\u015f/g, "s").replace(/\u015e/g, "S")
+    .replace(/\u0111/g, "d").replace(/\u0110/g, "D");
 }
 
 interface ParticipantRow {
