@@ -25,8 +25,12 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, FileText, Upload, Trash2, Download,
-  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle, FileDown,
+  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle, FileDown, Search,
 } from "lucide-react";
 import {
   Select as StatusSelect, SelectContent as StatusSelectContent,
@@ -74,6 +78,11 @@ export default function EventDetailPage() {
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [removeCoordId, setRemoveCoordId] = useState<string | null>(null);
   const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; publicReservationId?: string } | null>(null);
+
+  // Student assistant state
+  const [assistantDialogOpen, setAssistantDialogOpen] = useState(false);
+  const [assistantSearch, setAssistantSearch] = useState("");
+  const [removeAssistantId, setRemoveAssistantId] = useState<string | null>(null);
 
   // Queries
   const { data: event, isLoading: eventLoading } = useQuery({
@@ -208,6 +217,118 @@ export default function EventDetailPage() {
     }
   });
 
+  // Event student assistants
+  const { data: assistants = [] } = useQuery({
+    queryKey: ["event_student_assistants", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("*")
+        .eq("event_id", id!);
+      if (error) throw error;
+      // Fetch profiles for assistants
+      const studentIds = (data || []).map((a: any) => a.student_id);
+      if (studentIds.length === 0) return [];
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", studentIds);
+      if (pErr) throw pErr;
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+      return (data || []).map((a: any) => ({ ...a, profile: profileMap.get(a.student_id) }));
+    },
+    enabled: !!id,
+  });
+
+  // Fetch class assignments for assistants too
+  const assistantStudentIds = assistants.map((a: any) => a.student_id).filter(Boolean);
+  const allStudentIdsForClass = [...new Set([...studentIds, ...assistantStudentIds])];
+
+  // Update classAssignments query to include assistant student ids
+  // (already covers studentIds; we need to also add assistants)
+  // We'll fetch assistant class data separately
+  const { data: assistantClassAssignments = [] } = useQuery({
+    queryKey: ["assistant_class_assignments", id, assistantStudentIds],
+    queryFn: async () => {
+      if (assistantStudentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("student_class_assignments")
+        .select("student_id, classes(display_name)")
+        .in("student_id", assistantStudentIds);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: assistantStudentIds.length > 0,
+  });
+
+  // Add assistant class data to classMap
+  assistantClassAssignments.forEach((a: any) => {
+    const displayName = a.classes?.display_name || "";
+    if (displayName && !classMap.has(a.student_id)) {
+      classMap.set(a.student_id, displayName);
+    }
+  });
+
+  // Searchable students for assistant assignment dialog
+  const { data: allStudents = [] } = useQuery({
+    queryKey: ["all_students_for_assistant"],
+    queryFn: async () => {
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
+      if (roleError) throw roleError;
+      const ids = [...new Set((roleData || []).map((r) => r.user_id))];
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", ids)
+        .eq("is_active", true)
+        .order("last_name")
+        .order("first_name");
+      if (error) throw error;
+      return data as Profile[];
+    },
+    enabled: assistantDialogOpen,
+  });
+
+  // Exclude already-participants and already-assistants
+  const participantStudentIds = new Set(participants.map((p: any) => p.profiles?.id).filter(Boolean));
+  const assistantStudentIdsSet = new Set(assistants.map((a: any) => a.student_id));
+  const availableStudents = allStudents.filter(
+    (s) => !participantStudentIds.has(s.id) && !assistantStudentIdsSet.has(s.id)
+  );
+
+  const assignAssistantMutation = useMutation({
+    mutationFn: async (studentId: string) => {
+      const { error } = await supabase.from("event_student_assistants").insert({
+        event_id: id!,
+        student_id: studentId,
+        assigned_by: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["event_student_assistants", id] });
+      toast.success("Elev asistent adăugat");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeAssistantMutation = useMutation({
+    mutationFn: async (assistantId: string) => {
+      const { error } = await supabase.from("event_student_assistants").delete().eq("id", assistantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["event_student_assistants", id] });
+      toast.success("Elev asistent eliminat");
+      setRemoveAssistantId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   function handleDownloadAttendancePdf() {
     if (!event) return;
     const simplifiedStatusMap = (status: string): "Prezent" | "Absent motivat" | "Absent" => {
@@ -225,6 +346,18 @@ export default function EventDetailPage() {
         fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
         status: simplifiedStatusMap(ticketStatus),
       };
+    });
+
+    // Add assistants as "Prezent"
+    assistants.forEach((a: any) => {
+      const profile = a.profile;
+      if (profile) {
+        rows.push({
+          className: classMap.get(a.student_id) || "-",
+          fullName: `${profile.last_name || ""} ${profile.first_name || ""}`.trim(),
+          status: "Prezent" as const,
+        });
+      }
     });
 
     // Sort by class name, then by full name
@@ -459,7 +592,7 @@ export default function EventDetailPage() {
       <Tabs defaultValue="info" className="space-y-4">
         <TabsList>
           <TabsTrigger value="info">Informații</TabsTrigger>
-          <TabsTrigger value="participants">Participanți ({participants.length + publicParticipants.reduce((sum: number, pr: any) => sum + (pr.public_tickets?.filter((t: any) => t.status !== 'cancelled')?.length || 0), 0)})</TabsTrigger>
+          <TabsTrigger value="participants">Participanți ({participants.length + assistants.length + publicParticipants.reduce((sum: number, pr: any) => sum + (pr.public_tickets?.filter((t: any) => t.status !== 'cancelled')?.length || 0), 0)})</TabsTrigger>
           <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
           <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
           <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
@@ -507,14 +640,20 @@ export default function EventDetailPage() {
         <TabsContent value="participants" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
-            {participants.length > 0 && (
-              <Button variant="outline" size="sm" onClick={handleDownloadAttendancePdf}>
-                <FileDown className="mr-2 h-4 w-4" />
-                Descarcă PDF prezență
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Adaugă elev asistent
               </Button>
-            )}
+              {(participants.length > 0 || assistants.length > 0) && (
+                <Button variant="outline" size="sm" onClick={handleDownloadAttendancePdf}>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Descarcă PDF prezență
+                </Button>
+              )}
+            </div>
           </div>
-          {participants.length === 0 && publicParticipants.length === 0 ? (
+          {participants.length === 0 && publicParticipants.length === 0 && assistants.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
                 <Users className="mx-auto mb-2 h-8 w-8" />
@@ -535,6 +674,34 @@ export default function EventDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {/* Student assistants */}
+                  {assistants.map((a: any) => {
+                    const profile = a.profile;
+                    const name = profile?.display_name || `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim();
+                    return (
+                      <TableRow key={`assistant-${a.id}`}>
+                        <TableCell className="font-medium">{name}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px]">
+                            Asistent
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Prezent
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setRemoveAssistantId(a.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {/* Regular student participants */}
                   {participants.map((p: any) => {
                     const profile = p.profiles;
                     const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
@@ -869,6 +1036,66 @@ export default function EventDetailPage() {
               }}
             >
               Anulează rezervarea
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add Student Assistant Dialog */}
+      <Dialog open={assistantDialogOpen} onOpenChange={(o) => { if (!o) { setAssistantDialogOpen(false); setAssistantSearch(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adaugă elev asistent</DialogTitle>
+            <DialogDescription>Caută și selectează un elev care va fi asistent la acest eveniment.</DialogDescription>
+          </DialogHeader>
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Caută elev după nume..." value={assistantSearch} onValueChange={setAssistantSearch} />
+            <CommandList>
+              <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+              <CommandGroup>
+                {availableStudents
+                  .filter((s) => {
+                    if (!assistantSearch) return true;
+                    const name = `${s.first_name} ${s.last_name}`.toLowerCase();
+                    return name.includes(assistantSearch.toLowerCase());
+                  })
+                  .slice(0, 20)
+                  .map((s) => (
+                    <CommandItem
+                      key={s.id}
+                      value={`${s.first_name} ${s.last_name}`}
+                      onSelect={() => {
+                        assignAssistantMutation.mutate(s.id);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {s.last_name} {s.first_name}
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssistantDialogOpen(false)}>Închide</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Assistant Confirmation */}
+      <AlertDialog open={!!removeAssistantId} onOpenChange={(o) => !o && setRemoveAssistantId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminați elevul asistent?</AlertDialogTitle>
+            <AlertDialogDescription>Elevul nu va mai apărea ca asistent la acest eveniment.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => removeAssistantId && removeAssistantMutation.mutate(removeAssistantId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimină
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
