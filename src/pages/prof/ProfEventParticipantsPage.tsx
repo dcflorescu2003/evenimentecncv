@@ -216,6 +216,7 @@ export default function ProfEventParticipantsPage() {
       return {
         id: `assist-${a.id}`, name: profile?.display_name || `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
         lastName: profile?.last_name || "",
+        className: classLookup.get(a.student_id) || "",
         status: "present", isPublic: false, isAssistant: true, assistantRecordId: a.id,
       } as UnifiedParticipant;
     }),
@@ -225,6 +226,7 @@ export default function ProfEventParticipantsPage() {
       return {
         id: `reg-${p.id}`, name: profile?.display_name || `${profile?.first_name} ${profile?.last_name}`,
         lastName: profile?.last_name || "",
+        className: classLookup.get(profile?.id) || "",
         identifier: profile?.student_identifier, status: ticket?.status || "reserved",
         ticketId: ticket?.id, checkinTimestamp: ticket?.checkin_timestamp, isPublic: false,
         reservationId: p.id,
@@ -233,12 +235,13 @@ export default function ProfEventParticipantsPage() {
     ...publicParticipants.flatMap((pr: any) =>
       (pr.public_tickets || []).filter((t: any) => t.status !== "cancelled").map((t: any) => ({
         id: `pub-${t.id}`, name: t.attendee_name, lastName: t.attendee_name || "",
+        className: "",
         status: t.status || "reserved",
         ticketId: t.id, checkinTimestamp: t.checkin_timestamp, isPublic: true,
         publicReservationId: pr.id,
       }))
     ),
-  ].sort((a, b) => a.lastName.localeCompare(b.lastName));
+  ].sort((a, b) => (a.lastName || "").localeCompare(b.lastName || "", "ro"));
 
   const filtered = unified.filter((p) => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
