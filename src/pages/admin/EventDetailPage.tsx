@@ -294,11 +294,10 @@ export default function EventDetailPage() {
     enabled: assistantDialogOpen,
   });
 
-  // Exclude already-participants and already-assistants
-  const participantStudentIds = new Set(participants.map((p: any) => p.profiles?.id).filter(Boolean));
+  // Exclude already-assistants (allow all students, even if already participants)
   const assistantStudentIdsSet = new Set(assistants.map((a: any) => a.student_id));
   const availableStudents = allStudents.filter(
-    (s) => !participantStudentIds.has(s.id) && !assistantStudentIdsSet.has(s.id)
+    (s) => !assistantStudentIdsSet.has(s.id)
   );
 
   const assignAssistantMutation = useMutation({
