@@ -61,6 +61,10 @@ export default function ProfEventParticipantsPage() {
   } | null>(null);
   const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; reservationId?: string } | null>(null);
 
+  // Student assistant state
+  const [assistantDialogOpen, setAssistantDialogOpen] = useState(false);
+  const [assistantSearch, setAssistantSearch] = useState("");
+  const [removeAssistantId, setRemoveAssistantId] = useState<string | null>(null);
   const { data: event } = useQuery({
     queryKey: ["prof_part_event", eventId],
     queryFn: async () => {
