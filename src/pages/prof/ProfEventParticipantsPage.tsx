@@ -283,6 +283,9 @@ export default function ProfEventParticipantsPage() {
           {event && <p className="text-xs text-muted-foreground">{formatDate(event.date)} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</p>}
         </div>
         <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
+            <UserPlus className="mr-2 h-4 w-4" /> Elev asistent
+          </Button>
           <Button size="sm" variant="outline" onClick={() => {
             if (!event || unified.length === 0) return;
             exportAttendancePdf(
