@@ -168,7 +168,7 @@ export default function EventDetailPage() {
     enabled: !!id,
   });
 
-  // Public ticket participants
+   // Public ticket participants
   const { data: publicParticipants = [] } = useQuery({
     queryKey: ["admin_event_public_participants", id],
     queryFn: async () => {
@@ -181,6 +181,22 @@ export default function EventDetailPage() {
       return data as any[];
     },
     enabled: !!id,
+  });
+
+  // Fetch class assignments for all student participants (for PDF export)
+  const studentIds = participants.map((p: any) => p.profiles?.id).filter(Boolean);
+  const { data: classAssignments = [] } = useQuery({
+    queryKey: ["student_class_assignments_for_event", id, studentIds],
+    queryFn: async () => {
+      if (studentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("student_class_assignments")
+        .select("student_id, classes(display_name)")
+        .in("student_id", studentIds);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: studentIds.length > 0,
   });
 
   // Admin attendance override
