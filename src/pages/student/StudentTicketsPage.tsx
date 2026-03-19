@@ -151,9 +151,18 @@ export default function StudentTicketsPage() {
       ) : (
         <>
           {/* Active */}
-          {activeReservations.length > 0 && (
+          {(activeReservations.length > 0 || activeAssistantTickets.length > 0) && (
             <div className="space-y-3">
-              <h2 className="font-display text-lg font-semibold">Active ({activeReservations.length})</h2>
+              <h2 className="font-display text-lg font-semibold">Active ({activeReservations.length + activeAssistantTickets.length})</h2>
+              {activeAssistantTickets.map((a: any) => (
+                <AssistantTicketCard
+                  key={`assist-${a.id}`}
+                  assignment={a}
+                  expanded={expandedId === `assist-${a.id}`}
+                  onToggle={() => setExpandedId(expandedId === `assist-${a.id}` ? null : `assist-${a.id}`)}
+                  onNavigate={() => navigate(`/student/events/${a.event_id}`)}
+                />
+              ))}
               {activeReservations.map((r) => {
                 const past = isEventPast(r.events);
                 return (
@@ -171,9 +180,19 @@ export default function StudentTicketsPage() {
           )}
 
           {/* Past */}
-          {pastReservations.length > 0 && (
+          {(pastReservations.length > 0 || pastAssistantTickets.length > 0) && (
             <div className="space-y-3">
-              <h2 className="font-display text-lg font-semibold text-muted-foreground">Istoric ({pastReservations.length})</h2>
+              <h2 className="font-display text-lg font-semibold text-muted-foreground">Istoric ({pastReservations.length + pastAssistantTickets.length})</h2>
+              {pastAssistantTickets.map((a: any) => (
+                <AssistantTicketCard
+                  key={`assist-${a.id}`}
+                  assignment={a}
+                  expanded={expandedId === `assist-${a.id}`}
+                  onToggle={() => setExpandedId(expandedId === `assist-${a.id}` ? null : `assist-${a.id}`)}
+                  onNavigate={() => navigate(`/student/events/${a.event_id}`)}
+                  past
+                />
+              ))}
               {pastReservations.map((r) => (
                 <TicketCard
                   key={r.id}
