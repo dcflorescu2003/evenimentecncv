@@ -931,29 +931,43 @@ export default function EventDetailPage() {
       </Dialog>
 
       {/* Coordinator Assignment Dialog */}
-      <Dialog open={coordDialogOpen} onOpenChange={(o) => { if (!o) { setCoordDialogOpen(false); setSelectedTeacherId(""); } }}>
-        <DialogContent>
+      <Dialog open={coordDialogOpen} onOpenChange={(o) => { if (!o) { setCoordDialogOpen(false); setSelectedTeacherId(""); setCoordSearch(""); } }}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Atribuie coordonator</DialogTitle>
-            <DialogDescription>Selectați un profesor coordonator disponibil.</DialogDescription>
+            <DialogDescription>Caută și selectează un profesor coordonator disponibil.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
-              <SelectTrigger><SelectValue placeholder="Alegeți profesorul" /></SelectTrigger>
-              <SelectContent>
-                {availableTeachers.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.display_name || `${t.first_name} ${t.last_name}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Caută profesor după nume..." value={coordSearch} onValueChange={setCoordSearch} />
+            <CommandList>
+              <CommandEmpty>Niciun profesor găsit.</CommandEmpty>
+              <CommandGroup>
+                {availableTeachers
+                  .filter((t) => {
+                    if (!coordSearch) return true;
+                    const name = `${t.first_name} ${t.last_name}`.toLowerCase();
+                    return name.includes(coordSearch.toLowerCase());
+                  })
+                  .slice(0, 20)
+                  .map((t) => (
+                    <CommandItem
+                      key={t.id}
+                      value={`${t.last_name} ${t.first_name}`}
+                      onSelect={() => {
+                        assignCoordMutation.mutate(t.id);
+                        setCoordSearch("");
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {t.last_name} {t.first_name}
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCoordDialogOpen(false)}>Anulează</Button>
-            <Button onClick={() => selectedTeacherId && assignCoordMutation.mutate(selectedTeacherId)} disabled={!selectedTeacherId || assignCoordMutation.isPending}>
-              {assignCoordMutation.isPending ? "Se atribuie…" : "Atribuie"}
-            </Button>
+            <Button variant="outline" onClick={() => setCoordDialogOpen(false)}>Închide</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
