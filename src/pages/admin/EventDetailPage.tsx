@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, FileText, Upload, Trash2, Download,
-  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle,
+  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle, FileDown,
 } from "lucide-react";
 import {
   Select as StatusSelect, SelectContent as StatusSelectContent,
