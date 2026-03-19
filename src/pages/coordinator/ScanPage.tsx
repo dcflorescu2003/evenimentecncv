@@ -72,7 +72,7 @@ export default function ScanPage() {
       return (data || []).filter((r: any) => {
         const p = r.profiles;
         if (!p) return false;
-        const name = `${p.first_name} ${p.last_name}`.toLowerCase();
+        const name = `${p.last_name} ${p.first_name}`.toLowerCase();
         const display = (p.display_name || "").toLowerCase();
         return name.includes(q) || display.includes(q);
       }) as any[];
@@ -349,7 +349,7 @@ export default function ScanPage() {
           {searchResults.map((r: any) => {
             const ticket = Array.isArray(r.tickets) ? r.tickets[0] : r.tickets;
             const p = r.profiles;
-            const name = p?.display_name || `${p?.first_name} ${p?.last_name}`;
+            const name = p?.display_name || `${p?.last_name} ${p?.first_name}`;
             return (
               <Card key={r.id}>
                 <CardContent className="p-3 space-y-2">

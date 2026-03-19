@@ -224,7 +224,7 @@ export default function ProfEventParticipantsPage() {
       const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
       const profile = p.profiles;
       return {
-        id: `reg-${p.id}`, name: profile?.display_name || `${profile?.first_name} ${profile?.last_name}`,
+        id: `reg-${p.id}`, name: profile?.display_name || `${profile?.last_name} ${profile?.first_name}`,
         lastName: profile?.last_name || "",
         className: classLookup.get(profile?.id) || "",
         identifier: profile?.student_identifier, status: ticket?.status || "reserved",

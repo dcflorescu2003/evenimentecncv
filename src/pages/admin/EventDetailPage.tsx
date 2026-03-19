@@ -753,7 +753,7 @@ export default function EventDetailPage() {
                   }).map((p: any) => {
                     const profile = p.profiles;
                     const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
-                    const name = profile?.display_name || `${profile?.first_name} ${profile?.last_name}`;
+                    const name = profile?.display_name || `${profile?.last_name} ${profile?.first_name}`;
                     const className = classMap.get(profile?.id) || "";
                     const ticketStatusLabels: Record<string, string> = {
                       reserved: "Rezervat", present: "Prezent", late: "Întârziat",
@@ -993,7 +993,7 @@ export default function EventDetailPage() {
                 {availableTeachers
                   .filter((t) => {
                     if (!coordSearch) return true;
-                    const name = `${t.first_name} ${t.last_name}`.toLowerCase();
+                    const name = `${t.last_name} ${t.first_name}`.toLowerCase();
                     return name.includes(coordSearch.toLowerCase());
                   })
                   .slice(0, 20)
@@ -1123,7 +1123,7 @@ export default function EventDetailPage() {
                   .filter((s: any) => {
                     if (!assistantSearch) return true;
                     const search = assistantSearch.toLowerCase();
-                    const name = `${s.first_name} ${s.last_name}`.toLowerCase();
+                    const name = `${s.last_name} ${s.first_name}`.toLowerCase();
                     const className = (s.class_name || "").toLowerCase();
                     return name.includes(search) || className.includes(search);
                   })

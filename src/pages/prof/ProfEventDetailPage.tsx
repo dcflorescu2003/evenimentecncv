@@ -639,7 +639,7 @@ export default function ProfEventDetailPage() {
                 {unassigned
                   .filter((t: any) => {
                     if (!coordSearch) return true;
-                    const name = `${t.first_name} ${t.last_name}`.toLowerCase();
+                    const name = `${t.last_name} ${t.first_name}`.toLowerCase();
                     return name.includes(coordSearch.toLowerCase());
                   })
                   .slice(0, 20)
