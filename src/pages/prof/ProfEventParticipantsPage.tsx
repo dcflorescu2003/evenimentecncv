@@ -180,6 +180,16 @@ export default function ProfEventParticipantsPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const unified: UnifiedParticipant[] = [
+    // Assistants
+    ...assistants.map((a: any) => {
+      const profile = a.profile;
+      return {
+        id: `assist-${a.id}`, name: profile?.display_name || `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
+        lastName: profile?.last_name || "",
+        status: "present", isPublic: false, isAssistant: true, assistantRecordId: a.id,
+      } as UnifiedParticipant;
+    }),
     ...participants.map((p: any) => {
       const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
       const profile = p.profiles;
