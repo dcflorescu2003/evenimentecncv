@@ -205,6 +205,22 @@ export default function ProfEventDetailPage() {
         if (error) throw error;
         if (data) allProfiles.push(...data);
       }
+      // Fetch class assignments
+      const classMap: Record<string, string> = {};
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const { data: scaData } = await supabase
+          .from("student_class_assignments")
+          .select("student_id, classes(display_name)")
+          .in("student_id", chunk);
+        if (scaData) {
+          for (const sca of scaData) {
+            const cls = sca.classes as any;
+            if (cls?.display_name) classMap[sca.student_id] = cls.display_name;
+          }
+        }
+      }
+      allProfiles = allProfiles.map((p) => ({ ...p, class_name: classMap[p.id] || null }));
       allProfiles.sort((a: any, b: any) => {
         const cmp = (a.last_name || "").localeCompare(b.last_name || "", "ro");
         return cmp !== 0 ? cmp : (a.first_name || "").localeCompare(b.first_name || "", "ro");
