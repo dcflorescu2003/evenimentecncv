@@ -176,22 +176,40 @@ export default function ProfEventDetailPage() {
   const { data: allStudents = [] } = useQuery({
     queryKey: ["all_students_for_prof_assistant"],
     queryFn: async () => {
-      const { data: roleData, error: roleError } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "student");
-      if (roleError) throw roleError;
-      const ids = [...new Set((roleData || []).map((r) => r.user_id))];
+      let allRoleIds: string[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      while (true) {
+        const { data: roleData, error: roleError } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "student")
+          .range(from, from + batchSize - 1);
+        if (roleError) throw roleError;
+        if (!roleData || roleData.length === 0) break;
+        allRoleIds.push(...roleData.map((r) => r.user_id));
+        if (roleData.length < batchSize) break;
+        from += batchSize;
+      }
+      const ids = [...new Set(allRoleIds)];
       if (ids.length === 0) return [];
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, display_name")
-        .in("id", ids)
-        .eq("is_active", true)
-        .order("last_name")
-        .order("first_name");
-      if (error) throw error;
-      return data as any[];
+      const chunkSize = 200;
+      let allProfiles: any[] = [];
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, display_name")
+          .in("id", chunk)
+          .eq("is_active", true);
+        if (error) throw error;
+        if (data) allProfiles.push(...data);
+      }
+      allProfiles.sort((a: any, b: any) => {
+        const cmp = (a.last_name || "").localeCompare(b.last_name || "", "ro");
+        return cmp !== 0 ? cmp : (a.first_name || "").localeCompare(b.first_name || "", "ro");
+      });
+      return allProfiles;
     },
     enabled: assistantDialogOpen,
   });
