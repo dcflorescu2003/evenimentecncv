@@ -640,14 +640,20 @@ export default function EventDetailPage() {
         <TabsContent value="participants" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
-            {participants.length > 0 && (
-              <Button variant="outline" size="sm" onClick={handleDownloadAttendancePdf}>
-                <FileDown className="mr-2 h-4 w-4" />
-                Descarcă PDF prezență
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Adaugă elev asistent
               </Button>
-            )}
+              {(participants.length > 0 || assistants.length > 0) && (
+                <Button variant="outline" size="sm" onClick={handleDownloadAttendancePdf}>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Descarcă PDF prezență
+                </Button>
+              )}
+            </div>
           </div>
-          {participants.length === 0 && publicParticipants.length === 0 ? (
+          {participants.length === 0 && publicParticipants.length === 0 && assistants.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
                 <Users className="mx-auto mb-2 h-8 w-8" />
@@ -668,6 +674,34 @@ export default function EventDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
+                  {/* Student assistants */}
+                  {assistants.map((a: any) => {
+                    const profile = a.profile;
+                    const name = profile?.display_name || `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim();
+                    return (
+                      <TableRow key={`assistant-${a.id}`}>
+                        <TableCell className="font-medium">{name}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px]">
+                            Asistent
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Prezent
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">—</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setRemoveAssistantId(a.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {/* Regular student participants */}
                   {participants.map((p: any) => {
                     const profile = p.profiles;
                     const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
