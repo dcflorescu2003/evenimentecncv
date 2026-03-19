@@ -1,8 +1,7 @@
 import { formatDate, formatDateTime } from "@/lib/time";
-// Wrapper around coordinator's EventParticipantsPage with prof-specific navigation
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -17,7 +16,13 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, ShieldAlert, ChevronDown, ChevronUp, Trash2, FileDown,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+import {
+  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, ShieldAlert, ChevronDown, ChevronUp, Trash2, FileDown, UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportAttendancePdf } from "@/lib/attendance-pdf";
