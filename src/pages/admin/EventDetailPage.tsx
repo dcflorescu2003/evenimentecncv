@@ -199,6 +199,46 @@ export default function EventDetailPage() {
     enabled: studentIds.length > 0,
   });
 
+  // Build class lookup map: student_id -> class display_name
+  const classMap = new Map<string, string>();
+  classAssignments.forEach((a: any) => {
+    const displayName = a.classes?.display_name || "";
+    if (displayName && !classMap.has(a.student_id)) {
+      classMap.set(a.student_id, displayName);
+    }
+  });
+
+  function handleDownloadAttendancePdf() {
+    if (!event) return;
+    const simplifiedStatusMap = (status: string): "Prezent" | "Absent motivat" | "Absent" => {
+      if (status === "present" || status === "late") return "Prezent";
+      if (status === "excused") return "Absent motivat";
+      return "Absent";
+    };
+
+    const rows = participants.map((p: any) => {
+      const profile = p.profiles;
+      const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+      const ticketStatus = ticket?.status || "absent";
+      return {
+        className: classMap.get(profile?.id) || "-",
+        fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
+        status: simplifiedStatusMap(ticketStatus),
+      };
+    });
+
+    // Sort by class name, then by full name
+    rows.sort((a, b) => a.className.localeCompare(b.className, "ro") || a.fullName.localeCompare(b.fullName, "ro"));
+
+    exportSimpleAttendancePdf(
+      event.title,
+      formatDate(event.date),
+      `${event.start_time?.slice(0, 5)} – ${event.end_time?.slice(0, 5)}`,
+      event.location,
+      rows,
+    );
+  }
+
   // Admin attendance override
   async function adminOverrideStatus(ticketId: string, currentStatus: string, newStatus: string) {
     const { error } = await supabase
