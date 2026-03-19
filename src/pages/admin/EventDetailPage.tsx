@@ -1,4 +1,5 @@
 import { formatDate, formatDateTime } from "@/lib/time";
+import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, FileText, Upload, Trash2, Download,
-  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle,
+  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle, FileDown,
 } from "lucide-react";
 import {
   Select as StatusSelect, SelectContent as StatusSelectContent,
@@ -167,7 +168,7 @@ export default function EventDetailPage() {
     enabled: !!id,
   });
 
-  // Public ticket participants
+   // Public ticket participants
   const { data: publicParticipants = [] } = useQuery({
     queryKey: ["admin_event_public_participants", id],
     queryFn: async () => {
@@ -181,6 +182,62 @@ export default function EventDetailPage() {
     },
     enabled: !!id,
   });
+
+  // Fetch class assignments for all student participants (for PDF export)
+  const studentIds = participants.map((p: any) => p.profiles?.id).filter(Boolean);
+  const { data: classAssignments = [] } = useQuery({
+    queryKey: ["student_class_assignments_for_event", id, studentIds],
+    queryFn: async () => {
+      if (studentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("student_class_assignments")
+        .select("student_id, classes(display_name)")
+        .in("student_id", studentIds);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: studentIds.length > 0,
+  });
+
+  // Build class lookup map: student_id -> class display_name
+  const classMap = new Map<string, string>();
+  classAssignments.forEach((a: any) => {
+    const displayName = a.classes?.display_name || "";
+    if (displayName && !classMap.has(a.student_id)) {
+      classMap.set(a.student_id, displayName);
+    }
+  });
+
+  function handleDownloadAttendancePdf() {
+    if (!event) return;
+    const simplifiedStatusMap = (status: string): "Prezent" | "Absent motivat" | "Absent" => {
+      if (status === "present" || status === "late") return "Prezent";
+      if (status === "excused") return "Absent motivat";
+      return "Absent";
+    };
+
+    const rows = participants.map((p: any) => {
+      const profile = p.profiles;
+      const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+      const ticketStatus = ticket?.status || "absent";
+      return {
+        className: classMap.get(profile?.id) || "-",
+        fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
+        status: simplifiedStatusMap(ticketStatus),
+      };
+    });
+
+    // Sort by class name, then by full name
+    rows.sort((a, b) => a.className.localeCompare(b.className, "ro") || a.fullName.localeCompare(b.fullName, "ro"));
+
+    exportSimpleAttendancePdf(
+      event.title,
+      formatDate(event.date),
+      `${event.start_time?.slice(0, 5)} – ${event.end_time?.slice(0, 5)}`,
+      event.location,
+      rows,
+    );
+  }
 
   // Admin attendance override
   async function adminOverrideStatus(ticketId: string, currentStatus: string, newStatus: string) {
@@ -448,7 +505,15 @@ export default function EventDetailPage() {
 
         {/* Participants Tab - Admin Override */}
         <TabsContent value="participants" className="space-y-4">
-          <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
+            {participants.length > 0 && (
+              <Button variant="outline" size="sm" onClick={handleDownloadAttendancePdf}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Descarcă PDF prezență
+              </Button>
+            )}
+          </div>
           {participants.length === 0 && publicParticipants.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
