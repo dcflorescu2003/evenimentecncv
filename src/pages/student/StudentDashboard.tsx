@@ -66,6 +66,20 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
+  // Fetch assistant assignments
+  const { data: assistantAssignments = [] } = useQuery({
+    queryKey: ["dashboard_assistant_assignments", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("*, events:event_id(*)")
+        .eq("student_id", user!.id);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!user,
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
