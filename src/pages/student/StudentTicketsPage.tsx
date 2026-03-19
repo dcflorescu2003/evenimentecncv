@@ -37,8 +37,8 @@ const ticketStatusColors: Record<string, string> = {
   excused: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
 };
 
-function isEventPast(event: Event): boolean {
-  if (!event) return false;
+function isEventPast(event: Event | null): boolean {
+  if (!event) return true;
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
   if (event.date < todayStr) return true;
@@ -66,7 +66,7 @@ export default function StudentTicketsPage() {
         .eq("student_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as unknown as (Reservation & { events: Event; tickets: TicketRow | null })[];
+      return data as unknown as (Reservation & { events: Event | null; tickets: TicketRow | null })[];
     },
     enabled: !!user,
   });
@@ -201,7 +201,7 @@ function TicketCard({
   onNavigate,
   past,
 }: {
-  reservation: Reservation & { events: Event; tickets: TicketRow | null };
+  reservation: Reservation & { events: Event | null; tickets: TicketRow | null };
   expanded: boolean;
   onToggle: () => void;
   onCancel?: () => void;
@@ -219,7 +219,7 @@ function TicketCard({
           onClick={onToggle}
         >
           <div className="flex-1">
-            <p className="font-medium">{reservation.events?.title}</p>
+            <p className="font-medium">{reservation.events?.title || "Eveniment nedisponibil"}</p>
             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <CalendarDays className="h-3 w-3" /> {formatDate(reservation.events?.date)}
