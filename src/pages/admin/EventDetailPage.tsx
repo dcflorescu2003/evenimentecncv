@@ -292,9 +292,9 @@ export default function EventDetailPage() {
       }
       const ids = [...new Set(allRoleIds)];
       if (ids.length === 0) return [];
-      // Batch profile fetches in chunks of 200 to avoid URL length limits
+      // Batch profile fetches in chunks of 200
       const chunkSize = 200;
-      let allProfiles: Profile[] = [];
+      let allProfiles: any[] = [];
       for (let i = 0; i < ids.length; i += chunkSize) {
         const chunk = ids.slice(i, i + chunkSize);
         const { data, error } = await supabase
@@ -303,9 +303,25 @@ export default function EventDetailPage() {
           .in("id", chunk)
           .eq("is_active", true);
         if (error) throw error;
-        if (data) allProfiles.push(...(data as Profile[]));
+        if (data) allProfiles.push(...data);
       }
-      allProfiles.sort((a, b) => {
+      // Fetch class assignments for all students
+      const classMap: Record<string, string> = {};
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        const chunk = ids.slice(i, i + chunkSize);
+        const { data: scaData } = await supabase
+          .from("student_class_assignments")
+          .select("student_id, classes(display_name)")
+          .in("student_id", chunk);
+        if (scaData) {
+          for (const sca of scaData) {
+            const cls = sca.classes as any;
+            if (cls?.display_name) classMap[sca.student_id] = cls.display_name;
+          }
+        }
+      }
+      allProfiles = allProfiles.map((p) => ({ ...p, class_name: classMap[p.id] || null }));
+      allProfiles.sort((a: any, b: any) => {
         const cmp = (a.last_name || "").localeCompare(b.last_name || "", "ro");
         return cmp !== 0 ? cmp : (a.first_name || "").localeCompare(b.first_name || "", "ro");
       });
@@ -1092,23 +1108,28 @@ export default function EventDetailPage() {
               <CommandEmpty>Niciun elev găsit.</CommandEmpty>
               <CommandGroup>
                 {availableStudents
-                  .filter((s) => {
+                  .filter((s: any) => {
                     if (!assistantSearch) return true;
+                    const search = assistantSearch.toLowerCase();
                     const name = `${s.first_name} ${s.last_name}`.toLowerCase();
-                    return name.includes(assistantSearch.toLowerCase());
+                    const className = (s.class_name || "").toLowerCase();
+                    return name.includes(search) || className.includes(search);
                   })
                   .slice(0, 20)
-                  .map((s) => (
+                  .map((s: any) => (
                     <CommandItem
                       key={s.id}
-                      value={`${s.first_name} ${s.last_name}`}
+                      value={`${s.last_name} ${s.first_name} ${s.class_name || ""}`}
                       onSelect={() => {
                         assignAssistantMutation.mutate(s.id);
                       }}
                       className="cursor-pointer"
                     >
                       <UserPlus className="mr-2 h-4 w-4" />
-                      {s.last_name} {s.first_name}
+                      <span>{s.last_name} {s.first_name}</span>
+                      {s.class_name && (
+                        <Badge variant="outline" className="ml-2 text-xs">{s.class_name}</Badge>
+                      )}
                     </CommandItem>
                   ))}
               </CommandGroup>
