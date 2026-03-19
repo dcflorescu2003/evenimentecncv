@@ -46,6 +46,8 @@ interface UnifiedParticipant {
   id: string; name: string; identifier?: string; status: string;
   ticketId?: string; checkinTimestamp?: string | null; isPublic: boolean;
   reservationId?: string; publicReservationId?: string;
+  isAssistant?: boolean; assistantRecordId?: string;
+  lastName?: string;
 }
 
 export default function ProfEventParticipantsPage() {
