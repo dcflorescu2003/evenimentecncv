@@ -224,7 +224,7 @@ export default function ProfEventParticipantsPage() {
       const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
       const profile = p.profiles;
       return {
-        id: `reg-${p.id}`, name: profile?.display_name || `${profile?.first_name} ${profile?.last_name}`,
+        id: `reg-${p.id}`, name: profile?.display_name || `${profile?.last_name} ${profile?.first_name}`,
         lastName: profile?.last_name || "",
         className: classLookup.get(profile?.id) || "",
         identifier: profile?.student_identifier, status: ticket?.status || "reserved",
@@ -507,7 +507,7 @@ export default function ProfEventParticipantsPage() {
                 {availableStudentsForAssistant
                   .filter((s: any) => {
                     if (!assistantSearch) return true;
-                    const name = `${s.first_name} ${s.last_name}`.toLowerCase();
+                    const name = `${s.last_name} ${s.first_name}`.toLowerCase();
                     return name.includes(assistantSearch.toLowerCase());
                   })
                   .slice(0, 20)

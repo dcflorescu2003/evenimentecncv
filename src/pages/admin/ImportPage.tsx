@@ -201,7 +201,7 @@ export default function ImportPage() {
         <thead><tr><th>#</th><th>Nume</th><th>Utilizator</th><th>Parolă</th><th>Rol</th></tr></thead>
         <tbody>${successful.map((r, i) => `<tr>
           <td>${i + 1}</td>
-          <td>${r.first_name} ${r.last_name}</td>
+          <td>${r.last_name} ${r.first_name}</td>
           <td class="mono">${r.username}</td>
           <td class="mono">${r.password}</td>
           <td>${roleLabels[r.role] || r.role}</td>
@@ -433,7 +433,7 @@ export default function ImportPage() {
               <TableBody>
                 {results.map((r, i) => (
                   <TableRow key={i} className={r.error ? "bg-destructive/10" : ""}>
-                    <TableCell>{r.first_name} {r.last_name}</TableCell>
+                    <TableCell>{r.last_name} {r.first_name}</TableCell>
                     <TableCell className="font-mono text-sm">{r.username}</TableCell>
                     <TableCell>
                       {r.error ? "—" : (

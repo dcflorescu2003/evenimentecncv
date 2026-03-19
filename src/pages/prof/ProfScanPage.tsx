@@ -68,7 +68,7 @@ export default function ProfScanPage() {
       return (data || []).filter((r: any) => {
         const p = r.profiles;
         if (!p) return false;
-        return `${p.first_name} ${p.last_name}`.toLowerCase().includes(q) || (p.display_name || "").toLowerCase().includes(q);
+        return `${p.last_name} ${p.first_name}`.toLowerCase().includes(q) || (p.display_name || "").toLowerCase().includes(q);
       }) as any[];
     },
     enabled: !!eventId && searchQuery.length >= 2,
@@ -152,10 +152,10 @@ export default function ProfScanPage() {
         return;
       }
       if (ticket.status !== "reserved") {
-        setScanResult({ success: false, message: `Deja procesat (${statusLabels[ticket.status]}).`, studentName: reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`, ticketId: ticket.id });
+        setScanResult({ success: false, message: `Deja procesat (${statusLabels[ticket.status]}).`, studentName: reservation.profiles?.display_name || `${reservation.profiles?.last_name} ${reservation.profiles?.first_name}`, ticketId: ticket.id });
         return;
       }
-      const name = reservation.profiles?.display_name || `${reservation.profiles?.first_name} ${reservation.profiles?.last_name}`;
+      const name = reservation.profiles?.display_name || `${reservation.profiles?.last_name} ${reservation.profiles?.first_name}`;
       if (event) {
         const autoStatus = determineAutoStatus(event.date, event.start_time);
         await autoMarkTicket(ticket.id, autoStatus, "reserved", false);
@@ -278,7 +278,7 @@ export default function ProfScanPage() {
           {searchResults.map((r: any) => {
             const ticket = Array.isArray(r.tickets) ? r.tickets[0] : r.tickets;
             const p = r.profiles;
-            const name = p?.display_name || `${p?.first_name} ${p?.last_name}`;
+            const name = p?.display_name || `${p?.last_name} ${p?.first_name}`;
             return (
               <Card key={r.id}><CardContent className="p-3 space-y-2">
                 <div className="flex items-center justify-between">

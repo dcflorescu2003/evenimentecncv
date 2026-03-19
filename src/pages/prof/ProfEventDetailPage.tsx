@@ -438,7 +438,7 @@ export default function ProfEventDetailPage() {
                   <TableRow><TableCell colSpan={3} className="py-6 text-center text-muted-foreground">Niciun coordonator.</TableCell></TableRow>
                 ) : coordinators.map((c: any) => {
                   const p = c.profiles;
-                  const name = p?.display_name || `${p?.first_name} ${p?.last_name}`;
+                  const name = p?.display_name || `${p?.last_name} ${p?.first_name}`;
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{name}</TableCell>
@@ -639,7 +639,7 @@ export default function ProfEventDetailPage() {
                 {unassigned
                   .filter((t: any) => {
                     if (!coordSearch) return true;
-                    const name = `${t.first_name} ${t.last_name}`.toLowerCase();
+                    const name = `${t.last_name} ${t.first_name}`.toLowerCase();
                     return name.includes(coordSearch.toLowerCase());
                   })
                   .slice(0, 20)
@@ -696,7 +696,7 @@ export default function ProfEventDetailPage() {
                   .filter((s: any) => {
                     if (!assistantSearch) return true;
                     const search = assistantSearch.toLowerCase();
-                    const name = `${s.first_name} ${s.last_name}`.toLowerCase();
+                    const name = `${s.last_name} ${s.first_name}`.toLowerCase();
                     const className = (s.class_name || "").toLowerCase();
                     return name.includes(search) || className.includes(search);
                   })
