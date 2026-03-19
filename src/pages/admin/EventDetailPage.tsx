@@ -701,8 +701,12 @@ export default function EventDetailPage() {
                       </TableRow>
                     );
                   })}
-                  {/* Regular student participants */}
-                  {participants.map((p: any) => {
+                  {/* Regular student participants - sorted by last name */}
+                  {[...participants].sort((a: any, b: any) => {
+                    const aLast = a.profiles?.last_name || "";
+                    const bLast = b.profiles?.last_name || "";
+                    return aLast.localeCompare(bLast, "ro") || (a.profiles?.first_name || "").localeCompare(b.profiles?.first_name || "", "ro");
+                  }).map((p: any) => {
                     const profile = p.profiles;
                     const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
                     const name = profile?.display_name || `${profile?.first_name} ${profile?.last_name}`;
