@@ -66,7 +66,7 @@ export default function StudentTicketsPage() {
         .eq("student_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as unknown as (Reservation & { events: Event; tickets: TicketRow | null })[];
+      return data as unknown as (Reservation & { events: Event | null; tickets: TicketRow | null })[];
     },
     enabled: !!user,
   });
