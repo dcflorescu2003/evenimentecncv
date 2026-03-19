@@ -220,7 +220,7 @@ export default function StudentDashboard() {
             Toate <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </div>
-        {upcomingTickets.length === 0 ? (
+        {upcomingTickets.length === 0 && assistantAssignments.length === 0 ? (
           <Card>
             <CardContent className="py-6 text-center text-muted-foreground">
               <Ticket className="mx-auto mb-2 h-8 w-8" />
@@ -231,23 +231,45 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
         ) : (
-          upcomingTickets.map((r) => (
-            <Card
-              key={r.id}
-              className="cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate(`/student/events/${r.event_id}`)}
-            >
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <p className="font-medium">{r.events?.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(r.events?.date)} • {r.events?.start_time?.slice(0, 5)} – {r.events?.end_time?.slice(0, 5)}
-                  </p>
-                </div>
-                <Badge variant="secondary">{r.events?.counted_duration_hours}h</Badge>
-              </CardContent>
-            </Card>
-          ))
+          <>
+            {assistantAssignments.map((a: any) => (
+              <Card
+                key={`assist-${a.id}`}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate(`/student/events/${a.event_id}`)}
+              >
+                <CardContent className="flex items-center justify-between p-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{a.events?.title}</p>
+                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px]">Asistent</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(a.events?.date)} • {a.events?.start_time?.slice(0, 5)} – {a.events?.end_time?.slice(0, 5)}
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Prezent</Badge>
+                </CardContent>
+              </Card>
+            ))}
+            {upcomingTickets.map((r) => (
+              <Card
+                key={r.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate(`/student/events/${r.event_id}`)}
+              >
+                <CardContent className="flex items-center justify-between p-4">
+                  <div>
+                    <p className="font-medium">{r.events?.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatDate(r.events?.date)} • {r.events?.start_time?.slice(0, 5)} – {r.events?.end_time?.slice(0, 5)}
+                    </p>
+                  </div>
+                  <Badge variant="secondary">{r.events?.counted_duration_hours}h</Badge>
+                </CardContent>
+              </Card>
+            ))}
+          </>
         )}
       </div>
 
