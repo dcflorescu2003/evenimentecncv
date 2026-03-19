@@ -89,6 +89,22 @@ export default function StudentEventDetailPage() {
     enabled: !!id && !!user,
   });
 
+  // Check if student is an assistant for this event
+  const { data: isAssistant } = useQuery({
+    queryKey: ["my_assistant_check", id, user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("id")
+        .eq("event_id", id!)
+        .eq("student_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!id && !!user,
+  });
+
   const { data: formTemplates = [] } = useQuery({
     queryKey: ["form_templates", id],
     queryFn: async () => {
