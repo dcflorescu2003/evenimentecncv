@@ -1,6 +1,6 @@
 import { formatDate, formatDateTime } from "@/lib/time";
 import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,8 +25,12 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, FileText, Upload, Trash2, Download,
-  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle, FileDown,
+  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle, FileDown, Search,
 } from "lucide-react";
 import {
   Select as StatusSelect, SelectContent as StatusSelectContent,
@@ -74,6 +78,11 @@ export default function EventDetailPage() {
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [removeCoordId, setRemoveCoordId] = useState<string | null>(null);
   const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; publicReservationId?: string } | null>(null);
+
+  // Student assistant state
+  const [assistantDialogOpen, setAssistantDialogOpen] = useState(false);
+  const [assistantSearch, setAssistantSearch] = useState("");
+  const [removeAssistantId, setRemoveAssistantId] = useState<string | null>(null);
 
   // Queries
   const { data: event, isLoading: eventLoading } = useQuery({
