@@ -82,3 +82,70 @@ export function exportAttendancePdf(
 
   doc.save(`prezenta-${safeTitle.replace(/\s+/g, "-").toLowerCase()}.pdf`);
 }
+
+// --- Simplified attendance PDF for admin (Nr., Clasa, Nume si Prenume, Status) ---
+
+interface SimpleAttendanceRow {
+  className: string;
+  fullName: string;
+  status: "Prezent" | "Absent motivat" | "Absent";
+}
+
+export function exportSimpleAttendancePdf(
+  eventTitle: string,
+  eventDate: string,
+  eventTime: string,
+  eventLocation: string | null,
+  rows: SimpleAttendanceRow[],
+) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const safeTitle = stripDiacritics(eventTitle);
+
+  // Header
+  doc.setFontSize(16);
+  doc.text(stripDiacritics("Lista de prezenta"), 105, 15, { align: "center" });
+  doc.setFontSize(11);
+  doc.text(safeTitle, 105, 23, { align: "center" });
+  doc.setFontSize(9);
+  doc.text(
+    `Data: ${eventDate}  |  Ora: ${eventTime}${eventLocation ? `  |  Locatie: ${stripDiacritics(eventLocation)}` : ""}`,
+    105, 30, { align: "center" },
+  );
+
+  // Stats
+  const total = rows.length;
+  const prezenti = rows.filter(r => r.status === "Prezent").length;
+  const absentMotivat = rows.filter(r => r.status === "Absent motivat").length;
+  const absenti = rows.filter(r => r.status === "Absent").length;
+
+  doc.setFontSize(8);
+  doc.text(
+    `Total: ${total}  |  Prezenti: ${prezenti}  |  Absent motivat: ${absentMotivat}  |  Absenti: ${absenti}`,
+    105, 36, { align: "center" },
+  );
+
+  // Table
+  const tableRows = rows.map((r, i) => [
+    String(i + 1),
+    stripDiacritics(r.className),
+    stripDiacritics(r.fullName),
+    r.status,
+  ]);
+
+  autoTable(doc, {
+    startY: 40,
+    head: [["Nr.", "Clasa", "Nume si Prenume", "Status"]],
+    body: tableRows,
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    headStyles: { fillColor: [41, 65, 122], textColor: 255, fontStyle: "bold" },
+    columnStyles: {
+      0: { cellWidth: 12, halign: "center" },
+      1: { cellWidth: 30 },
+      2: { cellWidth: 80 },
+      3: { cellWidth: 35, halign: "center" },
+    },
+    alternateRowStyles: { fillColor: [245, 247, 250] },
+  });
+
+  doc.save(`prezenta-${safeTitle.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+}
