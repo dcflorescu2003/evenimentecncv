@@ -37,8 +37,8 @@ const ticketStatusColors: Record<string, string> = {
   excused: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
 };
 
-function isEventPast(event: Event): boolean {
-  if (!event) return false;
+function isEventPast(event: Event | null): boolean {
+  if (!event) return true;
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
   if (event.date < todayStr) return true;
