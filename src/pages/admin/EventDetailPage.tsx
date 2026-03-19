@@ -860,7 +860,7 @@ export default function EventDetailPage() {
         <TabsContent value="coordinators" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Profesori coordonatori atribuiți acestui eveniment.</p>
-            <Button size="sm" onClick={() => setCoordDialogOpen(true)} disabled={availableTeachers.length === 0}>
+            <Button size="sm" onClick={() => { setCoordDialogOpen(true); setCoordSearch(""); }} disabled={availableTeachers.length === 0}>
               <UserPlus className="mr-2 h-4 w-4" /> Atribuie coordonator
             </Button>
           </div>
