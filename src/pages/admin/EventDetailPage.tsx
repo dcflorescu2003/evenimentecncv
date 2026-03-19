@@ -75,6 +75,7 @@ export default function EventDetailPage() {
   // Coordinator assignment state
   const [coordDialogOpen, setCoordDialogOpen] = useState(false);
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
+  const [coordSearch, setCoordSearch] = useState("");
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [removeCoordId, setRemoveCoordId] = useState<string | null>(null);
   const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; publicReservationId?: string } | null>(null);
