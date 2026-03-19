@@ -201,7 +201,7 @@ function TicketCard({
   onNavigate,
   past,
 }: {
-  reservation: Reservation & { events: Event; tickets: TicketRow | null };
+  reservation: Reservation & { events: Event | null; tickets: TicketRow | null };
   expanded: boolean;
   onToggle: () => void;
   onCancel?: () => void;
