@@ -269,6 +269,45 @@ export type Database = {
           },
         ]
       }
+      event_student_assistants: {
+        Row: {
+          assigned_by: string
+          created_at: string
+          event_id: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          assigned_by: string
+          created_at?: string
+          event_id: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          assigned_by?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_student_assistants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_student_assistants_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           booking_close_at: string | null
