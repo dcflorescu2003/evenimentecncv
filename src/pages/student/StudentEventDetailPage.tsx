@@ -159,12 +159,53 @@ export default function StudentEventDetailPage() {
       const result = eligibility as any;
       if (!result.allowed) throw new Error(result.reason);
 
+      // Check for existing cancelled reservation to reactivate
+      const { data: existing } = await supabase
+        .from("reservations")
+        .select("id")
+        .eq("student_id", user!.id)
+        .eq("event_id", id!)
+        .eq("status", "cancelled")
+        .maybeSingle();
+
+      if (existing) {
+        const { error: reactivateError } = await supabase
+          .from("reservations")
+          .update({ status: "reserved", cancelled_at: null })
+          .eq("id", existing.id);
+        if (reactivateError) throw new Error(reactivateError.message);
+
+        const { data: existingTicket } = await supabase
+          .from("tickets")
+          .select("id")
+          .eq("reservation_id", existing.id)
+          .maybeSingle();
+
+        if (existingTicket) {
+          await supabase
+            .from("tickets")
+            .update({ status: "reserved", qr_code_data: crypto.randomUUID() })
+            .eq("id", existingTicket.id);
+        } else {
+          const { error: ticketError } = await supabase
+            .from("tickets")
+            .insert({ reservation_id: existing.id });
+          if (ticketError) throw new Error(ticketError.message);
+        }
+        return;
+      }
+
       const { data: reservation, error: resError } = await supabase
         .from("reservations")
         .insert({ student_id: user!.id, event_id: id! })
         .select()
         .single();
-      if (resError) throw new Error(resError.message);
+      if (resError) {
+        if (resError.message.includes("duplicate key")) {
+          throw new Error("Ai deja o rezervare pentru acest eveniment.");
+        }
+        throw new Error(resError.message);
+      }
 
       const { error: ticketError } = await supabase
         .from("tickets")
@@ -174,8 +215,10 @@ export default function StudentEventDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my_reservation", id] });
       queryClient.invalidateQueries({ queryKey: ["reservation_count_student", id] });
+      queryClient.invalidateQueries({ queryKey: ["reservation_counts_all"] });
       queryClient.invalidateQueries({ queryKey: ["student_progress"] });
-      toast.success("Biletul a fost generat cu succes!");
+      queryClient.invalidateQueries({ queryKey: ["all_my_reservations"] });
+      toast.success("Rezervare confirmată! Biletul a fost generat.");
       setBookingConfirm(false);
     },
     onError: (e: Error) => {
