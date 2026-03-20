@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
-import PushNotificationPrompt from "@/components/PushNotificationPrompt";
+
 
 const navItems = [
   { title: "Panou principal", icon: LayoutDashboard, path: "/student" },
