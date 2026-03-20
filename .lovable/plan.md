@@ -1,45 +1,49 @@
 
 
-## Plan: Per-Event Student Assistants
+## Plan: Improve Push Notification Visibility + Include Assistants in Reminders
 
-### What it does
-Allows admins (and teachers) to assign students as "Asistenți" for a specific event. These students:
-- Are linked to the event temporarily (not a permanent role)
-- Appear in the participants list marked as "Asistent" with status "Prezent"
-- Appear in the attendance PDF as "Prezent"
+The edge function `send-event-reminders` already sends reminders to students with reservations. The issue is that it does NOT also include student assistants. Additionally, the notification prompt needs to be more visible.
 
-### Database Changes
+### 1. Fix Edge Function to Also Notify Student Assistants
 
-**New table: `event_student_assistants`**
-- `id` (uuid, PK)
-- `event_id` (uuid, NOT NULL)
-- `student_id` (uuid, NOT NULL)
-- `created_at` (timestamptz, default now())
-- `assigned_by` (uuid, NOT NULL)
-- Unique constraint on (event_id, student_id)
+**File:** `supabase/functions/send-event-reminders/index.ts`
 
-**RLS policies:**
-- Admins: full access
-- Teachers/homeroom teachers: manage for own events (using `is_event_creator`)
-- Coordinators: read for assigned events
-- Students: read own assignments
+- After fetching `reservations`, also query `event_student_assistants` for the same `eventIds`
+- Merge assistant student IDs into the `studentEvents` map (same structure)
+- Change the early return when `reservations` is empty: instead of returning, continue to check for assistants too
+- This ensures both regular ticket holders AND assistants receive in-app + push reminders
 
-### UI Changes
+### 2. Redesign Push Notification Prompt for Students
 
-**`src/pages/admin/EventDetailPage.tsx`**
-- Add a query to fetch `event_student_assistants` with joined profile data
-- In the Participants tab, show student assistants as additional rows with badge "Asistent" and status "Prezent"
-- Add a button "Adaugă elev asistent" that opens a dialog to search/select students
-- Include student assistants in the PDF export as "Prezent"
+**File:** `src/components/PushNotificationPrompt.tsx`
 
-**Dialog for adding student assistants:**
-- Search field to filter students by name
-- Query all students (profiles with student role) excluding those already participants or assistants
-- Select and assign
+Replace the small floating card with a prominent full-width gradient banner:
+- Gradient background with animated bell icon
+- Clear benefit text: "Primești remindere cu o zi înainte de evenimentele tale"
+- Large "Activează notificările" button + "Nu acum" dismiss
+- Same dismiss logic (7 days via localStorage)
 
-### How it works
-- Student assistants are separate from reservations — they don't consume capacity
-- In the participants table, they appear with a distinct "Asistent" badge
-- In the PDF, they appear as "Prezent" with their class info
-- Removing an assistant just deletes the row from `event_student_assistants`
+**File:** `src/pages/student/StudentDashboard.tsx`
+
+- Import and render the redesigned `PushNotificationPrompt` at the top of the dashboard content (before progress cards)
+
+**File:** `src/components/layouts/StudentLayout.tsx`
+
+- Remove `<PushNotificationPrompt />` from the layout (it moves into the dashboard page instead, no longer floating over bottom nav)
+
+### 3. Post-Booking Notification Prompt
+
+**File:** `src/pages/student/StudentEventsPage.tsx`
+
+- After a successful booking, if push notifications are not enabled, show a toast or inline card encouraging the student to activate notifications
+
+### Summary of changes
+
+| File | Change |
+|------|--------|
+| `send-event-reminders/index.ts` | Add `event_student_assistants` query, merge into student map |
+| `PushNotificationPrompt.tsx` | Redesign as prominent inline gradient banner |
+| `StudentDashboard.tsx` | Render prompt at top of page |
+| `StudentLayout.tsx` | Remove floating prompt |
+| `StudentEventsPage.tsx` | Post-booking notification prompt |
 
