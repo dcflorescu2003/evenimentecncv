@@ -31,6 +31,7 @@ export default function StudentEventsPage() {
   const [bookingEventId, setBookingEventId] = useState<string | null>(null);
   const [eligibilityMsg, setEligibilityMsg] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
+  const pushNotifications = usePushNotifications();
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["active_sessions_student"],
