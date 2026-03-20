@@ -46,7 +46,7 @@ export default function PushNotificationPrompt() {
       <div className="flex items-start gap-4">
         {/* Animated bell */}
         <div className="shrink-0 rounded-full bg-primary/15 p-3">
-          <BellRing className="h-7 w-7 text-primary animate-[wiggle_1s_ease-in-out_3]" />
+          <BellRing className="h-7 w-7 text-primary animate-wiggle" />
         </div>
 
         <div className="flex-1 space-y-3">
