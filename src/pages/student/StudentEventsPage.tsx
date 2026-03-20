@@ -243,6 +243,19 @@ export default function StudentEventsPage() {
       queryClient.invalidateQueries({ queryKey: ["all_my_reservations"] });
       toast.success("Rezervare confirmată! Biletul a fost generat.");
       setBookingEventId(null);
+
+      // Prompt for push notifications after successful booking
+      if (pushNotifications.isSupported && !pushNotifications.isSubscribed && pushNotifications.permission === "default") {
+        setTimeout(() => {
+          toast("🔔 Activează notificările ca să primești un reminder cu o zi înainte!", {
+            action: {
+              label: "Activează",
+              onClick: () => pushNotifications.subscribe(),
+            },
+            duration: 8000,
+          });
+        }, 1500);
+      }
     },
     onError: (e: Error) => {
       toast.error(e.message);
