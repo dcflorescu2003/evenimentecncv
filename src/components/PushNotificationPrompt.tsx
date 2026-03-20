@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { BellRing, X } from "lucide-react";
 
 const DISMISS_KEY = "push_prompt_dismissed_at";
@@ -18,7 +17,7 @@ export default function PushNotificationPrompt() {
       const diff = Date.now() - Number(dismissed);
       if (diff < DISMISS_DAYS * 86400000) return;
     }
-    const timer = setTimeout(() => setVisible(true), 1500);
+    const timer = setTimeout(() => setVisible(true), 800);
     return () => clearTimeout(timer);
   }, [isSupported, isSubscribed, permission]);
 
@@ -35,29 +34,45 @@ export default function PushNotificationPrompt() {
   };
 
   return (
-    <Card className="fixed bottom-16 left-3 right-3 z-40 border-primary/30 shadow-lg animate-in slide-in-from-bottom-4 duration-300">
-      <CardContent className="flex items-start gap-3 p-4">
-        <div className="rounded-full bg-primary/10 p-2 shrink-0">
-          <BellRing className="h-5 w-5 text-primary" />
+    <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-5 animate-in slide-in-from-top-4 duration-500">
+      {/* Dismiss button */}
+      <button
+        onClick={dismiss}
+        className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <X className="h-4 w-4" />
+      </button>
+
+      <div className="flex items-start gap-4">
+        {/* Animated bell */}
+        <div className="shrink-0 rounded-full bg-primary/15 p-3">
+          <BellRing className="h-7 w-7 text-primary animate-wiggle" />
         </div>
-        <div className="flex-1 space-y-2">
-          <p className="text-sm font-medium">Activează notificările</p>
-          <p className="text-xs text-muted-foreground">
-            Primește remindere pe telefon cu o zi înainte de evenimentele tale.
-          </p>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleActivate} disabled={loading}>
-              Activează
+
+        <div className="flex-1 space-y-3">
+          <div>
+            <p className="text-base font-semibold text-foreground">
+              🔔 Activează notificările
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Primești un reminder pe telefon cu <strong>o zi înainte</strong> de fiecare eveniment la care ești înscris. Nu vei rata niciun eveniment!
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button onClick={handleActivate} disabled={loading} size="sm" className="px-5">
+              <BellRing className="mr-2 h-4 w-4" />
+              {loading ? "Se activează…" : "Activează acum"}
             </Button>
-            <Button size="sm" variant="ghost" onClick={dismiss}>
+            <button
+              onClick={dismiss}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               Nu acum
-            </Button>
+            </button>
           </div>
         </div>
-        <button onClick={dismiss} className="shrink-0 text-muted-foreground hover:text-foreground">
-          <X className="h-4 w-4" />
-        </button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

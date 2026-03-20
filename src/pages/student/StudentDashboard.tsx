@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CalendarDays, Clock, Ticket, CheckCircle2, ArrowRight, HelpCircle, AlertTriangle } from "lucide-react";
+import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Session = Tables<"program_sessions">;
@@ -82,6 +83,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-6">
+      <PushNotificationPrompt />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold">

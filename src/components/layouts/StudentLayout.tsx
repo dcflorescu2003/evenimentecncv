@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
-import PushNotificationPrompt from "@/components/PushNotificationPrompt";
+
 
 const navItems = [
   { title: "Panou principal", icon: LayoutDashboard, path: "/student" },
@@ -36,7 +36,7 @@ export default function StudentLayout() {
       <main className="flex-1 overflow-auto p-4 pb-20">
         <Outlet />
       </main>
-      <PushNotificationPrompt />
+      
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t bg-card p-2">
         {navItems.map((item) => (
           <Button

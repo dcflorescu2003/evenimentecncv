@@ -1,4 +1,5 @@
 import { formatDate } from "@/lib/time";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +31,7 @@ export default function StudentEventsPage() {
   const [bookingEventId, setBookingEventId] = useState<string | null>(null);
   const [eligibilityMsg, setEligibilityMsg] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
+  const pushNotifications = usePushNotifications();
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["active_sessions_student"],
@@ -242,6 +244,19 @@ export default function StudentEventsPage() {
       queryClient.invalidateQueries({ queryKey: ["all_my_reservations"] });
       toast.success("Rezervare confirmată! Biletul a fost generat.");
       setBookingEventId(null);
+
+      // Prompt for push notifications after successful booking
+      if (pushNotifications.isSupported && !pushNotifications.isSubscribed && pushNotifications.permission === "default") {
+        setTimeout(() => {
+          toast("🔔 Activează notificările ca să primești un reminder cu o zi înainte!", {
+            action: {
+              label: "Activează",
+              onClick: () => pushNotifications.subscribe(),
+            },
+            duration: 8000,
+          });
+        }, 1500);
+      }
     },
     onError: (e: Error) => {
       toast.error(e.message);

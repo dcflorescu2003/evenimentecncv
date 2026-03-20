@@ -5,7 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Web Push helpers
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -15,27 +14,9 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 async function importPrivateKey(base64url: string) {
   const raw = urlBase64ToUint8Array(base64url);
-  return await crypto.subtle.importKey(
-    "raw",
-    raw,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
+  return await crypto.subtle.importKey("raw", raw, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
 }
 
-async function importPublicKey(base64url: string) {
-  const raw = urlBase64ToUint8Array(base64url);
-  return await crypto.subtle.importKey(
-    "raw",
-    raw,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["verify"]
-  );
-}
-
-// Create JWT for VAPID
 async function createVapidJwt(audience: string, subject: string, privateKey: CryptoKey): Promise<string> {
   const header = { typ: "JWT", alg: "ES256" };
   const now = Math.floor(Date.now() / 1000);
@@ -52,20 +33,14 @@ async function createVapidJwt(audience: string, subject: string, privateKey: Cry
   const payloadB64 = strToBase64Url(JSON.stringify(payload));
   const unsigned = `${headerB64}.${payloadB64}`;
 
-  const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    privateKey,
-    enc.encode(unsigned)
-  );
+  const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, privateKey, enc.encode(unsigned));
 
-  // Convert DER signature to raw r||s format
   const sigArray = new Uint8Array(signature);
   let r: Uint8Array, s: Uint8Array;
   if (sigArray.length === 64) {
     r = sigArray.slice(0, 32);
     s = sigArray.slice(32, 64);
   } else {
-    // DER format
     let offset = 2;
     const rLen = sigArray[offset + 1];
     offset += 2;
@@ -74,7 +49,6 @@ async function createVapidJwt(audience: string, subject: string, privateKey: Cry
     const sLen = sigArray[offset + 1];
     offset += 2;
     s = sigArray.slice(offset, offset + sLen);
-    // Pad/trim to 32 bytes
     if (r.length > 32) r = r.slice(r.length - 32);
     if (s.length > 32) s = s.slice(s.length - 32);
     if (r.length < 32) { const p = new Uint8Array(32); p.set(r, 32 - r.length); r = p; }
@@ -87,7 +61,6 @@ async function createVapidJwt(audience: string, subject: string, privateKey: Cry
   return `${unsigned}.${toBase64Url(rawSig.buffer)}`;
 }
 
-// Send a single push notification
 async function sendPushNotification(
   subscription: { endpoint: string; p256dh: string; auth_key: string },
   payload: string,
@@ -134,13 +107,12 @@ Deno.serve(async (req) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-    // Find events happening tomorrow with active reservations
+    // Find events happening tomorrow (published OR with assistants assigned)
     const { data: tomorrowEvents, error: evErr } = await supabase
       .from("events")
       .select("id, title, date, start_time, end_time, location")
       .eq("date", tomorrowStr)
-      .eq("status", "published")
-      .eq("published", true);
+      .in("status", ["published", "draft"]);
 
     if (evErr) throw evErr;
     if (!tomorrowEvents || tomorrowEvents.length === 0) {
@@ -150,6 +122,8 @@ Deno.serve(async (req) => {
     }
 
     const eventIds = tomorrowEvents.map((e: any) => e.id);
+    const eventMap: Record<string, any> = {};
+    for (const e of tomorrowEvents) eventMap[e.id] = e;
 
     // Get all active reservations for tomorrow's events
     const { data: reservations, error: resErr } = await supabase
@@ -159,24 +133,34 @@ Deno.serve(async (req) => {
       .eq("status", "reserved");
 
     if (resErr) throw resErr;
-    if (!reservations || reservations.length === 0) {
-      return new Response(JSON.stringify({ message: "No reservations for tomorrow" }), {
+
+    // Get all student assistants for tomorrow's events
+    const { data: assistants, error: assErr } = await supabase
+      .from("event_student_assistants")
+      .select("student_id, event_id")
+      .in("event_id", eventIds);
+
+    if (assErr) throw assErr;
+
+    // Merge both into studentEvents map
+    const studentEvents: Record<string, string[]> = {};
+    const addToMap = (studentId: string, eventId: string) => {
+      if (!studentEvents[studentId]) studentEvents[studentId] = [];
+      if (!studentEvents[studentId].includes(eventId)) {
+        studentEvents[studentId].push(eventId);
+      }
+    };
+
+    for (const r of (reservations || [])) addToMap(r.student_id, r.event_id);
+    for (const a of (assistants || [])) addToMap(a.student_id, a.event_id);
+
+    const studentIds = Object.keys(studentEvents);
+
+    if (studentIds.length === 0) {
+      return new Response(JSON.stringify({ message: "No reservations or assistants for tomorrow" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Build event map
-    const eventMap: Record<string, any> = {};
-    for (const e of tomorrowEvents) eventMap[e.id] = e;
-
-    // Group by student
-    const studentEvents: Record<string, string[]> = {};
-    for (const r of reservations) {
-      if (!studentEvents[r.student_id]) studentEvents[r.student_id] = [];
-      studentEvents[r.student_id].push(r.event_id);
-    }
-
-    const studentIds = Object.keys(studentEvents);
 
     // Check which notifications already exist (avoid duplicates)
     const { data: existingNotifs } = await supabase
