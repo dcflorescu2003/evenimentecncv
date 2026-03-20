@@ -419,9 +419,17 @@ export default function StudentEventDetailPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmă rezervarea</AlertDialogTitle>
-            <AlertDialogDescription>
-              Te înscrii la „{event.title}" pe {formatDate(event.date)}, {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)} ({event.counted_duration_hours}h).
-              Se va genera un bilet cu cod QR.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Te înscrii la „<span className="font-medium text-foreground">{event.title}</span>" pe{" "}
+                  {formatDate(event.date)}, {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)} ({event.counted_duration_hours}h).
+                  Se va genera un bilet cu cod QR.
+                </p>
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+                  <p className="text-sm font-medium">⚠️ Asigură-te până în ziua evenimentului că nu lipsești de la o oră de curs, fără acordul profesorului sau al dirigintelui!</p>
+                </div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
