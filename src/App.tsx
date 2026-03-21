@@ -44,6 +44,14 @@ import CoordinatorDashboard from "./pages/coordinator/CoordinatorDashboard";
 import ScanPage from "./pages/coordinator/ScanPage";
 import EventParticipantsPage from "./pages/coordinator/EventParticipantsPage";
 
+import ManagerLayout from "./components/layouts/ManagerLayout";
+import SessionReportPage from "./pages/manager/SessionReportPage";
+import EventReportPage from "./pages/manager/EventReportPage";
+import DayReportPage from "./pages/manager/DayReportPage";
+import ClassReportPage from "./pages/manager/ClassReportPage";
+import StudentReportPage from "./pages/manager/StudentReportPage";
+import TeacherReportPage from "./pages/manager/TeacherReportPage";
+
 import PublicEventsPage from "./pages/public/PublicEventsPage";
 import PublicEventBookingPage from "./pages/public/PublicEventBookingPage";
 import PublicTicketViewPage from "./pages/public/PublicTicketViewPage";
