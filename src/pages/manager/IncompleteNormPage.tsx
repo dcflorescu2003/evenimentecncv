@@ -198,11 +198,11 @@ export default function IncompleteNormPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">Nr.</TableHead>
+              <TableHead className="w-12">Nr.</TableHead>
                   <TableHead>Profesor</TableHead>
                   <TableHead>Nr. evenimente</TableHead>
                   <TableHead>Ore organizate</TableHead>
-                  <TableHead>Ore totale sesiune</TableHead>
+                  <TableHead>Norma</TableHead>
                   <TableHead>Ore rămase</TableHead>
                 </TableRow>
               </TableHeader>
@@ -215,8 +215,8 @@ export default function IncompleteNormPage() {
                     </TableCell>
                     <TableCell>{t.events}</TableCell>
                     <TableCell>{t.organizedHours}h</TableCell>
-                    <TableCell>{t.totalSessionHours}h</TableCell>
-                    <TableCell className="font-semibold text-destructive">{t.totalSessionHours - t.organizedHours}h</TableCell>
+                    <TableCell>{t.norm}h</TableCell>
+                    <TableCell className="font-semibold text-destructive">{t.remaining}h</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
