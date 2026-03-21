@@ -1,0 +1,12 @@
+CREATE POLICY "Manager read events" ON public.events FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read reservations" ON public.reservations FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read tickets" ON public.tickets FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read profiles" ON public.profiles FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read classes" ON public.classes FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read student_class_assignments" ON public.student_class_assignments FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read coordinator_assignments" ON public.coordinator_assignments FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read event_student_assistants" ON public.event_student_assistants FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read attendance_log" ON public.attendance_log FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read user_roles" ON public.user_roles FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read public_reservations" ON public.public_reservations FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
+CREATE POLICY "Manager read public_tickets" ON public.public_tickets FOR SELECT TO authenticated USING (has_role(auth.uid(), 'manager'::app_role));
