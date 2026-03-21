@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Download, Printer } from "lucide-react";
-import { exportToCSV } from "@/lib/csv-export";
+import { exportReportPdf } from "@/lib/report-pdf";
 import {
   ChartContainer,
   ChartTooltip,
@@ -107,10 +107,11 @@ function ClassReport({ sessionId }: { sessionId: string }) {
       <div className="flex justify-end print:hidden">
         <Button variant="outline" size="sm" onClick={() => {
           if (!data) return;
-          exportToCSV("raport-clase", ["Clasă", "Elevi", "Ore rezervate", "Ore validate"],
-            data.map(c => [c.display_name, String(c.students), String(c.reservedHours), String(c.validatedHours)]));
+          exportReportPdf({ title: "Raport pe clase", headers: ["Clasă", "Elevi", "Ore rezervate", "Ore validate"],
+            rows: data.map(c => [c.display_name, String(c.students), String(c.reservedHours), String(c.validatedHours)]),
+            filename: "raport-clase" });
         }}>
-          <Download className="mr-2 h-4 w-4" /> Export CSV
+          <Download className="mr-2 h-4 w-4" /> Export PDF
         </Button>
       </div>
       {data && data.length > 0 && (
@@ -213,10 +214,11 @@ function EventReport({ sessionId }: { sessionId: string }) {
       <div className="flex justify-end print:hidden">
         <Button variant="outline" size="sm" onClick={() => {
           if (!data) return;
-          exportToCSV("raport-evenimente", ["Eveniment", "Data", "Rezervări", "Vizitatori", "Capacitate", "% Ocupare", "Prezenți", "Întârziați", "Absenți"],
-            data.map(e => [e.title, formatDate(e.date), String(e.reserved), String(e.guests), String(e.max_capacity), `${e.fillRate}%`, String(e.present), String(e.late), String(e.absent)]));
+          exportReportPdf({ title: "Raport pe evenimente", headers: ["Eveniment", "Data", "Rezervări", "Vizitatori", "Capacitate", "% Ocupare", "Prezenți", "Întârziați", "Absenți"],
+            rows: data.map(e => [e.title, formatDate(e.date), String(e.reserved), String(e.guests), String(e.max_capacity), `${e.fillRate}%`, String(e.present), String(e.late), String(e.absent)]),
+            filename: "raport-evenimente", orientation: "landscape" });
         }}>
-          <Download className="mr-2 h-4 w-4" /> Export CSV
+          <Download className="mr-2 h-4 w-4" /> Export PDF
         </Button>
       </div>
       <Card className="print:shadow-none print:border-0">
@@ -334,10 +336,11 @@ function StudentReport({ sessionId }: { sessionId: string }) {
         </Select>
         <Button variant="outline" size="sm" onClick={() => {
           if (!data) return;
-          exportToCSV("raport-elevi", ["Elev", "Clasă", "Rezervări", "Ore rezervate", "Ore validate"],
-            data.map(s => [s.name, s.className, String(s.reservations), String(s.reservedHours), String(s.validatedHours)]));
+          exportReportPdf({ title: "Raport pe elevi", headers: ["Elev", "Clasă", "Rezervări", "Ore rezervate", "Ore validate"],
+            rows: data.map(s => [s.name, s.className, String(s.reservations), String(s.reservedHours), String(s.validatedHours)]),
+            filename: "raport-elevi" });
         }}>
-          <Download className="mr-2 h-4 w-4" /> Export CSV
+          <Download className="mr-2 h-4 w-4" /> Export PDF
         </Button>
       </div>
       <Card className="print:shadow-none print:border-0">
