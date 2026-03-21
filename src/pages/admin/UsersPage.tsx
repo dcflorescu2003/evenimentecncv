@@ -249,10 +249,29 @@ export default function UsersPage() {
                     <TableCell className="font-medium">{p.display_name || `${p.last_name} ${p.first_name}`}</TableCell>
                     <TableCell className="font-mono text-sm">{p.username}</TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1 items-center">
                         {userRoles.map((r) => (
                           <Badge key={r} variant="secondary">{roleLabels[r] || r}</Badge>
                         ))}
+                        {userRoles.some((r) => r === "teacher" || r === "homeroom_teacher") && (
+                          editNormId === p.id ? (
+                            <form className="flex items-center gap-1" onSubmit={(e) => {
+                              e.preventDefault();
+                              updateNormMutation.mutate({ id: p.id, norm: editNormValue ? Number(editNormValue) : null });
+                            }}>
+                              <Input type="number" min="0" className="h-6 w-16 text-xs" value={editNormValue} onChange={(e) => setEditNormValue(e.target.value)} autoFocus />
+                              <Button type="submit" variant="ghost" size="icon" className="h-6 w-6 text-xs">✓</Button>
+                            </form>
+                          ) : (
+                            <button
+                              className="text-xs text-muted-foreground hover:text-primary ml-1"
+                              onClick={() => { setEditNormId(p.id); setEditNormValue((p as any).teaching_norm?.toString() || ""); }}
+                              title="Editează norma"
+                            >
+                              {(p as any).teaching_norm ? `· ${(p as any).teaching_norm}h` : "· fără normă"}
+                            </button>
+                          )
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
