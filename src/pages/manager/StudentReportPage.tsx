@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileDown } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
 import { useSearchParams } from "react-router-dom";
+import { useManagerSession } from "@/components/layouts/ManagerLayout";
 
 const statusLabel = (s: string) => {
   if (s === "present" || s === "late") return "Prezent";
@@ -18,6 +19,7 @@ const statusLabel = (s: string) => {
 };
 
 export default function StudentReportPage() {
+  const { sessionId, sessionName } = useManagerSession();
   const [searchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState(searchParams.get("id") || "");
   const [search, setSearch] = useState("");
@@ -36,7 +38,6 @@ export default function StudentReportPage() {
         .select("id, first_name, last_name, display_name")
         .or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,display_name.ilike.%${search}%`)
         .limit(20);
-      // Filter to only students
       if (!data?.length) return [];
       const ids = data.map((p) => p.id);
       const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "student").in("user_id", ids);
@@ -46,28 +47,38 @@ export default function StudentReportPage() {
   });
 
   const { data: report, isLoading } = useQuery({
-    queryKey: ["mgr-student-detail", selectedId],
-    enabled: !!selectedId,
+    queryKey: ["mgr-student-detail", selectedId, sessionId],
+    enabled: !!selectedId && !!sessionId,
     queryFn: async () => {
       const [profileRes, classRes] = await Promise.all([
         supabase.from("profiles").select("id, first_name, last_name, display_name").eq("id", selectedId).single(),
         supabase.from("student_class_assignments").select("class_id, classes(display_name)").eq("student_id", selectedId).limit(1).single(),
       ]);
 
+      // Get reservations for this session only
       const { data: reservations } = await supabase
         .from("reservations")
         .select("id, event_id, status, events(title, date, start_time, end_time, counted_duration_hours, session_id)")
         .eq("student_id", selectedId)
         .eq("status", "reserved");
 
-      const resIds = (reservations || []).map((r) => r.id);
+      const sessionReservations = (reservations || []).filter((r) => (r.events as any)?.session_id === sessionId);
+
+      const resIds = sessionReservations.map((r) => r.id);
       const { data: tickets } = resIds.length
         ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds)
         : { data: [] };
-
       const ticketMap = Object.fromEntries((tickets || []).map((t) => [t.reservation_id, t.status]));
 
-      const eventList = (reservations || []).map((r) => {
+      // Get required hours
+      const classId = classRes.data?.class_id;
+      let requiredHours = 0;
+      if (classId) {
+        const { data: rules } = await supabase.from("class_participation_rules").select("required_value").eq("class_id", classId).eq("session_id", sessionId).limit(1);
+        requiredHours = rules?.[0]?.required_value || 0;
+      }
+
+      const eventList = sessionReservations.map((r) => {
         const e = r.events as any;
         const tStatus = ticketMap[r.id] || "reserved";
         return {
@@ -90,6 +101,8 @@ export default function StudentReportPage() {
         events: eventList,
         validatedHours,
         totalReservedHours,
+        requiredHours,
+        remainingHours: Math.max(0, requiredHours - validatedHours),
       };
     },
   });
@@ -99,7 +112,7 @@ export default function StudentReportPage() {
     const name = report.profile?.display_name || `${report.profile?.last_name} ${report.profile?.first_name}`;
     exportReportPdf({
       title: `Fișa elevului: ${name}`,
-      subtitle: `Clasă: ${report.className} | Ore validate: ${report.validatedHours} | Ore rezervate: ${report.totalReservedHours}`,
+      subtitle: `Clasă: ${report.className} | Sesiune: ${sessionName} | Ore validate: ${report.validatedHours} | Ore rezervate: ${report.totalReservedHours} | Ore rămase: ${report.remainingHours}`,
       headers: ["Nr.", "Data", "Eveniment", "Interval", "Ore", "Status"],
       rows: report.events.map((e, i) => [
         String(i + 1), e.date, e.title, `${e.startTime?.slice(0, 5)} - ${e.endTime?.slice(0, 5)}`,
@@ -108,6 +121,8 @@ export default function StudentReportPage() {
       filename: `fisa-elev-${name}`,
     });
   };
+
+  if (!sessionId) return <p className="text-muted-foreground">Selectează o sesiune din meniul lateral.</p>;
 
   return (
     <div className="space-y-6">
@@ -133,11 +148,12 @@ export default function StudentReportPage() {
 
       {report && (
         <>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Elev</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.profile?.display_name || `${report.profile?.last_name} ${report.profile?.first_name}`}</p></CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clasă</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.className}</p></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore validate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.validatedHours}h</p></CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore rezervate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.totalReservedHours}h</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore validate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.validatedHours}h</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore rămase</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.remainingHours}h</p></CardContent></Card>
           </div>
 
           <Table>

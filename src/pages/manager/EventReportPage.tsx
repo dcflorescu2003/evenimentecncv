@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileDown } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
 import { useNavigate } from "react-router-dom";
+import { useManagerSession } from "@/components/layouts/ManagerLayout";
 
 const statusLabel = (s: string) => {
   if (s === "present" || s === "late") return "Prezent";
@@ -16,17 +17,9 @@ const statusLabel = (s: string) => {
 };
 
 export default function EventReportPage() {
-  const [sessionId, setSessionId] = useState("");
+  const { sessionId } = useManagerSession();
   const [eventId, setEventId] = useState("");
   const navigate = useNavigate();
-
-  const { data: sessions } = useQuery({
-    queryKey: ["mgr-sessions"],
-    queryFn: async () => {
-      const { data } = await supabase.from("program_sessions").select("*").order("start_date", { ascending: false });
-      return data || [];
-    },
-  });
 
   const { data: events } = useQuery({
     queryKey: ["mgr-events", sessionId],
@@ -38,15 +31,11 @@ export default function EventReportPage() {
   });
 
   const { data: report, isLoading } = useQuery({
-    queryKey: ["mgr-event-report", eventId],
-    enabled: !!eventId,
+    queryKey: ["mgr-event-report", eventId, sessionId],
+    enabled: !!eventId && !!sessionId,
     queryFn: async () => {
-      // Get reservations with tickets
       const { data: reservations } = await supabase
-        .from("reservations")
-        .select("id, student_id, status")
-        .eq("event_id", eventId)
-        .eq("status", "reserved");
+        .from("reservations").select("id, student_id, status").eq("event_id", eventId).eq("status", "reserved");
 
       const resIds = (reservations || []).map((r) => r.id);
       const studentIds = (reservations || []).map((r) => r.student_id);
@@ -65,7 +54,6 @@ export default function EventReportPage() {
       const assistantIds = (assistantsRes.data || []).map((a) => a.student_id);
       const coordIds = (coordsRes.data || []).map((c) => c.teacher_id);
 
-      // Fetch class names and assistant/coord profiles
       const classIds = [...new Set(classAssign.map((ca) => ca.class_id))];
       const allExtraIds = [...new Set([...assistantIds, ...coordIds])];
 
@@ -80,16 +68,44 @@ export default function EventReportPage() {
       const studentClassMap = Object.fromEntries(classAssign.map((ca) => [ca.student_id, classMap[ca.class_id] || ""]));
       const ticketMap = Object.fromEntries(tickets.map((t) => [t.reservation_id, t.status]));
 
+      // Get student hours for this session
+      const allStudentIds = [...new Set([...studentIds, ...assistantIds])];
+      let studentHoursMap: Record<string, { reserved: number; validated: number; required: number }> = {};
+      if (allStudentIds.length) {
+        const { data: allRes } = await supabase.from("reservations").select("student_id, event_id, id").eq("status", "reserved").in("student_id", allStudentIds);
+        const allResEventIds = [...new Set((allRes || []).map((r) => r.event_id))];
+        const { data: allEvents } = allResEventIds.length ? await supabase.from("events").select("id, counted_duration_hours, session_id").in("id", allResEventIds).eq("session_id", sessionId) : { data: [] };
+        const eventHoursMap = Object.fromEntries((allEvents || []).map((e) => [e.id, e.counted_duration_hours]));
+        const sessionResIds = (allRes || []).filter((r) => eventHoursMap[r.event_id] !== undefined).map((r) => r.id);
+        const { data: allTickets } = sessionResIds.length ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", sessionResIds) : { data: [] };
+        const allTicketMap = Object.fromEntries((allTickets || []).map((t) => [t.reservation_id, t.status]));
+
+        // Get class rules for required hours
+        const { data: classRules } = await supabase.from("class_participation_rules").select("class_id, required_value").eq("session_id", sessionId);
+        const ruleMap = Object.fromEntries((classRules || []).map((r) => [r.class_id, r.required_value]));
+        const studentClassIdMap = Object.fromEntries(classAssign.map((ca) => [ca.student_id, ca.class_id]));
+
+        allStudentIds.forEach((sid) => {
+          const sRes = (allRes || []).filter((r) => r.student_id === sid && eventHoursMap[r.event_id] !== undefined);
+          const reserved = sRes.reduce((s, r) => s + (eventHoursMap[r.event_id] || 0), 0);
+          const validated = sRes.filter((r) => { const ts = allTicketMap[r.id]; return ts === "present" || ts === "late"; }).reduce((s, r) => s + (eventHoursMap[r.event_id] || 0), 0);
+          const classId = studentClassIdMap[sid];
+          const required = classId ? (ruleMap[classId] || 0) : 0;
+          studentHoursMap[sid] = { reserved, validated, required };
+        });
+      }
+
       const students = (reservations || []).map((r) => ({
         id: r.student_id,
         name: profileMap[r.student_id] || "",
         className: studentClassMap[r.student_id] || "",
         status: ticketMap[r.id] || "reserved",
+        ...(studentHoursMap[r.student_id] || { reserved: 0, validated: 0, required: 0 }),
       }));
 
       return {
         students: students.sort((a, b) => a.className.localeCompare(b.className) || a.name.localeCompare(b.name)),
-        assistants: assistantIds.map((id) => ({ id, name: profileMap[id] || "" })),
+        assistants: assistantIds.map((id) => ({ id, name: profileMap[id] || "", ...(studentHoursMap[id] || { reserved: 0, validated: 0, required: 0 }) })),
         coordinators: coordIds.map((id) => ({ id, name: profileMap[id] || "" })),
       };
     },
@@ -99,11 +115,13 @@ export default function EventReportPage() {
 
   const handleExport = () => {
     if (!report) return;
-    const rows = report.students.map((s, i) => [String(i + 1), s.className, s.name, statusLabel(s.status)]);
-    rows.push([], ["", "", "ASISTENȚI:", report.assistants.map((a) => a.name).join(", ")]);
-    rows.push(["", "", "COORDONATORI:", report.coordinators.map((c) => c.name).join(", ")]);
-    exportReportPdf({ title: "Lista de prezență", subtitle: eventTitle, headers: ["Nr.", "Clasă", "Nume", "Status"], rows, filename: `prezenta-${eventTitle}` });
+    const rows = report.students.map((s, i) => [String(i + 1), s.className, s.name, statusLabel(s.status), String(s.reserved) + "h", String(s.validated) + "h", String(Math.max(0, s.required - s.validated)) + "h"]);
+    rows.push([], ["", "", "ASISTENȚI:", report.assistants.map((a) => a.name).join(", "), "", "", ""]);
+    rows.push(["", "", "COORDONATORI:", report.coordinators.map((c) => c.name).join(", "), "", "", ""]);
+    exportReportPdf({ title: "Lista de prezență", subtitle: eventTitle, headers: ["Nr.", "Clasă", "Nume", "Status", "Ore rez.", "Ore val.", "Ore răm."], rows, filename: `prezenta-${eventTitle}`, orientation: "landscape" });
   };
+
+  if (!sessionId) return <p className="text-muted-foreground">Selectează o sesiune din meniul lateral.</p>;
 
   return (
     <div className="space-y-6">
@@ -112,16 +130,10 @@ export default function EventReportPage() {
         {report?.students.length ? <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
       </div>
 
-      <div className="flex gap-4">
-        <Select value={sessionId} onValueChange={(v) => { setSessionId(v); setEventId(""); }}>
-          <SelectTrigger className="w-64"><SelectValue placeholder="Selectează sesiunea" /></SelectTrigger>
-          <SelectContent>{sessions?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-        </Select>
-        <Select value={eventId} onValueChange={setEventId} disabled={!sessionId}>
-          <SelectTrigger className="w-80"><SelectValue placeholder="Selectează evenimentul" /></SelectTrigger>
-          <SelectContent>{events?.map((e) => <SelectItem key={e.id} value={e.id}>{e.date} — {e.title}</SelectItem>)}</SelectContent>
-        </Select>
-      </div>
+      <Select value={eventId} onValueChange={setEventId}>
+        <SelectTrigger className="w-80"><SelectValue placeholder="Selectează evenimentul" /></SelectTrigger>
+        <SelectContent>{events?.map((e) => <SelectItem key={e.id} value={e.id}>{e.date} — {e.title}</SelectItem>)}</SelectContent>
+      </Select>
 
       {isLoading && <p className="text-muted-foreground">Se încarcă...</p>}
 
@@ -134,6 +146,9 @@ export default function EventReportPage() {
                 <TableHead>Clasă</TableHead>
                 <TableHead>Nume elev</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Ore rezervate</TableHead>
+                <TableHead>Ore validate</TableHead>
+                <TableHead>Ore rămase</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -145,6 +160,9 @@ export default function EventReportPage() {
                     <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/students?id=${s.id}`)}>{s.name}</button>
                   </TableCell>
                   <TableCell><Badge variant={s.status === "present" || s.status === "late" ? "default" : "secondary"}>{statusLabel(s.status)}</Badge></TableCell>
+                  <TableCell>{s.reserved}h</TableCell>
+                  <TableCell>{s.validated}h</TableCell>
+                  <TableCell>{Math.max(0, s.required - s.validated)}h</TableCell>
                 </TableRow>
               ))}
             </TableBody>

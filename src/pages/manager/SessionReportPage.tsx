@@ -1,24 +1,15 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { FileDown } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
 import { useNavigate } from "react-router-dom";
+import { useManagerSession } from "@/components/layouts/ManagerLayout";
 
 export default function SessionReportPage() {
-  const [sessionId, setSessionId] = useState<string>("");
+  const { sessionId, sessionName } = useManagerSession();
   const navigate = useNavigate();
-
-  const { data: sessions } = useQuery({
-    queryKey: ["manager-sessions"],
-    queryFn: async () => {
-      const { data } = await supabase.from("program_sessions").select("*").order("start_date", { ascending: false });
-      return data || [];
-    },
-  });
 
   const { data: events, isLoading } = useQuery({
     queryKey: ["manager-session-events", sessionId],
@@ -33,16 +24,11 @@ export default function SessionReportPage() {
       if (!data) return [];
 
       const eventIds = data.map((e) => e.id);
-      const { data: coords } = await supabase
-        .from("coordinator_assignments")
-        .select("event_id, teacher_id")
-        .in("event_id", eventIds);
-
+      const { data: coords } = await supabase.from("coordinator_assignments").select("event_id, teacher_id").in("event_id", eventIds);
       const teacherIds = [...new Set((coords || []).map((c) => c.teacher_id))];
       const { data: profiles } = teacherIds.length
         ? await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", teacherIds)
         : { data: [] };
-
       const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p.display_name || `${p.last_name} ${p.first_name}`]));
 
       return data.map((e) => ({
@@ -59,39 +45,27 @@ export default function SessionReportPage() {
     return acc;
   }, {});
 
-  const sessionName = sessions?.find((s) => s.id === sessionId)?.name || "";
-
   const handleExport = () => {
     if (!events?.length) return;
     exportReportPdf({
-      title: "Raport sesiune",
-      subtitle: sessionName,
+      title: "Raport sesiune", subtitle: sessionName,
       headers: ["Data", "Interval orar", "Eveniment", "Durata (h)", "Status", "Profesori coordonatori"],
       rows: events.map((e) => [
         e.date, `${e.start_time?.slice(0, 5)} - ${e.end_time?.slice(0, 5)}`, e.title,
-        String(e.counted_duration_hours), e.status,
-        e.coordinators.map((c: any) => c.name).join(", "),
+        String(e.counted_duration_hours), e.status, e.coordinators.map((c: any) => c.name).join(", "),
       ]),
-      filename: `raport-sesiune-${sessionName}`,
-      orientation: "landscape",
+      filename: `raport-sesiune-${sessionName}`, orientation: "landscape",
     });
   };
+
+  if (!sessionId) return <p className="text-muted-foreground">Selectează o sesiune din meniul lateral.</p>;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Raport pe sesiune</h1>
-        {events?.length ? (
-          <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button>
-        ) : null}
+        {events?.length ? <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
       </div>
-
-      <Select value={sessionId} onValueChange={setSessionId}>
-        <SelectTrigger className="w-72"><SelectValue placeholder="Selectează sesiunea" /></SelectTrigger>
-        <SelectContent>
-          {sessions?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-        </SelectContent>
-      </Select>
 
       {isLoading && <p className="text-muted-foreground">Se încarcă...</p>}
 
