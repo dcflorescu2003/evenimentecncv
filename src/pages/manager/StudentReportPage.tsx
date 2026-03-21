@@ -1,0 +1,171 @@
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileDown } from "lucide-react";
+import { exportReportPdf } from "@/lib/report-pdf";
+import { useSearchParams } from "react-router-dom";
+
+const statusLabel = (s: string) => {
+  if (s === "present" || s === "late") return "Prezent";
+  if (s === "excused") return "Absent motivat";
+  if (s === "reserved") return "Rezervat";
+  return "Absent";
+};
+
+export default function StudentReportPage() {
+  const [searchParams] = useSearchParams();
+  const [selectedId, setSelectedId] = useState(searchParams.get("id") || "");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id) setSelectedId(id);
+  }, [searchParams]);
+
+  const { data: students } = useQuery({
+    queryKey: ["mgr-students-search", search],
+    enabled: search.length >= 2,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,display_name.ilike.%${search}%`)
+        .limit(20);
+      // Filter to only students
+      if (!data?.length) return [];
+      const ids = data.map((p) => p.id);
+      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "student").in("user_id", ids);
+      const studentIds = new Set((roles || []).map((r) => r.user_id));
+      return data.filter((p) => studentIds.has(p.id));
+    },
+  });
+
+  const { data: report, isLoading } = useQuery({
+    queryKey: ["mgr-student-detail", selectedId],
+    enabled: !!selectedId,
+    queryFn: async () => {
+      const [profileRes, classRes] = await Promise.all([
+        supabase.from("profiles").select("id, first_name, last_name, display_name").eq("id", selectedId).single(),
+        supabase.from("student_class_assignments").select("class_id, classes(display_name)").eq("student_id", selectedId).limit(1).single(),
+      ]);
+
+      const { data: reservations } = await supabase
+        .from("reservations")
+        .select("id, event_id, status, events(title, date, start_time, end_time, counted_duration_hours, session_id)")
+        .eq("student_id", selectedId)
+        .eq("status", "reserved");
+
+      const resIds = (reservations || []).map((r) => r.id);
+      const { data: tickets } = resIds.length
+        ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds)
+        : { data: [] };
+
+      const ticketMap = Object.fromEntries((tickets || []).map((t) => [t.reservation_id, t.status]));
+
+      const eventList = (reservations || []).map((r) => {
+        const e = r.events as any;
+        const tStatus = ticketMap[r.id] || "reserved";
+        return {
+          eventId: r.event_id,
+          title: e?.title || "",
+          date: e?.date || "",
+          startTime: e?.start_time || "",
+          endTime: e?.end_time || "",
+          hours: e?.counted_duration_hours || 0,
+          status: tStatus,
+        };
+      }).sort((a, b) => a.date.localeCompare(b.date));
+
+      const validatedHours = eventList.filter((e) => e.status === "present" || e.status === "late").reduce((s, e) => s + e.hours, 0);
+      const totalReservedHours = eventList.reduce((s, e) => s + e.hours, 0);
+
+      return {
+        profile: profileRes.data,
+        className: (classRes.data?.classes as any)?.display_name || "",
+        events: eventList,
+        validatedHours,
+        totalReservedHours,
+      };
+    },
+  });
+
+  const handleExport = () => {
+    if (!report) return;
+    const name = report.profile?.display_name || `${report.profile?.last_name} ${report.profile?.first_name}`;
+    exportReportPdf({
+      title: `Fișa elevului: ${name}`,
+      subtitle: `Clasă: ${report.className} | Ore validate: ${report.validatedHours} | Ore rezervate: ${report.totalReservedHours}`,
+      headers: ["Nr.", "Data", "Eveniment", "Interval", "Ore", "Status"],
+      rows: report.events.map((e, i) => [
+        String(i + 1), e.date, e.title, `${e.startTime?.slice(0, 5)} - ${e.endTime?.slice(0, 5)}`,
+        String(e.hours), statusLabel(e.status),
+      ]),
+      filename: `fisa-elev-${name}`,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Raport per elev</h1>
+        {report?.events.length ? <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
+      </div>
+
+      <div className="space-y-2">
+        <Input placeholder="Caută elev (min 2 caractere)..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-80" />
+        {students?.length ? (
+          <div className="flex flex-wrap gap-2">
+            {students.map((s) => (
+              <Button key={s.id} variant={selectedId === s.id ? "default" : "outline"} size="sm" onClick={() => setSelectedId(s.id)}>
+                {s.display_name || `${s.last_name} ${s.first_name}`}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {isLoading && <p className="text-muted-foreground">Se încarcă...</p>}
+
+      {report && (
+        <>
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Elev</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.profile?.display_name || `${report.profile?.last_name} ${report.profile?.first_name}`}</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clasă</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.className}</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore validate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.validatedHours}h</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore rezervate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.totalReservedHours}h</p></CardContent></Card>
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">Nr.</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Eveniment</TableHead>
+                <TableHead>Interval</TableHead>
+                <TableHead>Ore</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {report.events.map((e, i) => (
+                <TableRow key={e.eventId}>
+                  <TableCell>{i + 1}</TableCell>
+                  <TableCell>{e.date}</TableCell>
+                  <TableCell>{e.title}</TableCell>
+                  <TableCell>{e.startTime?.slice(0, 5)} - {e.endTime?.slice(0, 5)}</TableCell>
+                  <TableCell>{e.hours}h</TableCell>
+                  <TableCell><Badge variant={e.status === "present" || e.status === "late" ? "default" : "secondary"}>{statusLabel(e.status)}</Badge></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </>
+      )}
+    </div>
+  );
+}

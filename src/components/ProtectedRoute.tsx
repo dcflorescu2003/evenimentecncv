@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
-type AppRole = "admin" | "student" | "homeroom_teacher" | "coordinator_teacher" | "teacher";
+type AppRole = "admin" | "student" | "homeroom_teacher" | "coordinator_teacher" | "teacher" | "manager";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -34,6 +34,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     if (roles.includes("homeroom_teacher")) return <Navigate to="/prof" replace />;
     if (roles.includes("student")) return <Navigate to="/student" replace />;
     if (roles.includes("coordinator_teacher")) return <Navigate to="/coordinator" replace />;
+    if (roles.includes("manager")) return <Navigate to="/manager" replace />;
     return <Navigate to="/login" replace />;
   }
 
