@@ -107,10 +107,11 @@ function ClassReport({ sessionId }: { sessionId: string }) {
       <div className="flex justify-end print:hidden">
         <Button variant="outline" size="sm" onClick={() => {
           if (!data) return;
-          exportToCSV("raport-clase", ["Clasă", "Elevi", "Ore rezervate", "Ore validate"],
-            data.map(c => [c.display_name, String(c.students), String(c.reservedHours), String(c.validatedHours)]));
+          exportReportPdf({ title: "Raport pe clase", headers: ["Clasă", "Elevi", "Ore rezervate", "Ore validate"],
+            rows: data.map(c => [c.display_name, String(c.students), String(c.reservedHours), String(c.validatedHours)]),
+            filename: "raport-clase" });
         }}>
-          <Download className="mr-2 h-4 w-4" /> Export CSV
+          <Download className="mr-2 h-4 w-4" /> Export PDF
         </Button>
       </div>
       {data && data.length > 0 && (
