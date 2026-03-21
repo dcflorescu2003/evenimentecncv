@@ -174,6 +174,7 @@ export default function TeacherReportPage() {
               <TableHead>Profesor</TableHead>
               <TableHead>Nr. evenimente</TableHead>
               <TableHead>Ore organizate</TableHead>
+              {sessionHasRules && <TableHead>Norma</TableHead>}
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
@@ -184,6 +185,15 @@ export default function TeacherReportPage() {
                 <TableCell>{t.display_name || `${t.last_name} ${t.first_name}`}</TableCell>
                 <TableCell>{summary?.[t.id]?.events || 0}</TableCell>
                 <TableCell>{summary?.[t.id]?.hours || 0}h</TableCell>
+                {sessionHasRules && (
+                  <TableCell>
+                    {t.teaching_norm ? (
+                      <span className={summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : "text-destructive font-semibold"}>
+                        {summary?.[t.id]?.hours || 0}h / {t.teaching_norm}h
+                      </span>
+                    ) : "—"}
+                  </TableCell>
+                )}
                 <TableCell><Button variant="link" size="sm" onClick={() => setSelectedId(t.id)}>Detalii</Button></TableCell>
               </TableRow>
             ))}
