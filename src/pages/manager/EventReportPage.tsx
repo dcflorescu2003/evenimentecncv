@@ -139,6 +139,8 @@ export default function EventReportPage() {
 
       {isLoading && <p className="text-muted-foreground">Se încarcă...</p>}
 
+      {eventId && <EventDocumentsSection eventId={eventId} />}
+
       {report && (
         <>
           <Table>
