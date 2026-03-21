@@ -152,7 +152,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             >
-              <Route path="/manager" element={<SessionReportPage />} />
+              <Route path="/manager" element={<ManagerDashboard />} />
+              <Route path="/manager/sessions" element={<SessionReportPage />} />
               <Route path="/manager/events" element={<EventReportPage />} />
               <Route path="/manager/days" element={<DayReportPage />} />
               <Route path="/manager/classes" element={<ClassReportPage />} />
