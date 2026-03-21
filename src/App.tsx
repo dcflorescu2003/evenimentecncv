@@ -52,6 +52,7 @@ import DayReportPage from "./pages/manager/DayReportPage";
 import ClassReportPage from "./pages/manager/ClassReportPage";
 import StudentReportPage from "./pages/manager/StudentReportPage";
 import TeacherReportPage from "./pages/manager/TeacherReportPage";
+import IncompleteNormPage from "./pages/manager/IncompleteNormPage";
 
 import PublicEventsPage from "./pages/public/PublicEventsPage";
 import PublicEventBookingPage from "./pages/public/PublicEventBookingPage";
@@ -160,6 +161,7 @@ const App = () => (
               <Route path="/manager/classes" element={<ClassReportPage />} />
               <Route path="/manager/students" element={<StudentReportPage />} />
               <Route path="/manager/teachers" element={<TeacherReportPage />} />
+              <Route path="/manager/incomplete" element={<IncompleteNormPage />} />
             </Route>
 
             {/* Public routes (no auth) */}

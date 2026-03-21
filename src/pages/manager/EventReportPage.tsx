@@ -5,7 +5,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileDown } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, FileDown, FileText, Upload } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
 import { useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
@@ -15,6 +17,136 @@ const statusLabel = (s: string) => {
   if (s === "excused") return "Absent motivat";
   return "Absent";
 };
+
+const statusSubmissionLabel = (s: string) => {
+  if (s === "accepted") return "Acceptat";
+  if (s === "rejected") return "Respins";
+  if (s === "reviewed") return "Revizuit";
+  return "Încărcat";
+};
+
+function EventDocumentsSection({ eventId }: { eventId: string }) {
+  const [open, setOpen] = useState(true);
+
+  const { data: eventFiles } = useQuery({
+    queryKey: ["mgr-event-files", eventId],
+    enabled: !!eventId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("event_files").select("id, title, file_category, file_name, description").eq("event_id", eventId);
+      return data || [];
+    },
+  });
+
+  const { data: formSubmissions } = useQuery({
+    queryKey: ["mgr-form-submissions", eventId],
+    enabled: !!eventId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("form_submissions").select("id, form_title, student_id, status, file_name, uploaded_at").eq("event_id", eventId);
+      if (!data?.length) return [];
+      const studentIds = [...new Set(data.map((f) => f.student_id))];
+      const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", studentIds);
+      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p.display_name || `${p.last_name} ${p.first_name}`]));
+      return data.map((f) => ({ ...f, studentName: profileMap[f.student_id] || "" }));
+    },
+  });
+
+  const dossierFiles = (eventFiles || []).filter((f) => f.file_category === "event_dossier");
+  const templateFiles = (eventFiles || []).filter((f) => f.file_category === "form_template");
+
+  if (!eventFiles?.length && !formSubmissions?.length) return null;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <Button variant="ghost" className="flex items-center gap-2 text-base font-semibold p-0 h-auto hover:bg-transparent">
+          <ChevronDown className={`h-4 w-4 transition-transform ${open ? "" : "-rotate-90"}`} />
+          Documente eveniment
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-3 space-y-4">
+        {dossierFiles.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Dosar eveniment ({dossierFiles.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-1 text-sm">
+                {dossierFiles.map((f) => (
+                  <li key={f.id} className="flex items-center gap-2">
+                    <span className="font-medium">{f.title}</span>
+                    <span className="text-muted-foreground">— {f.file_name}</span>
+                    {f.description && <span className="text-muted-foreground text-xs">({f.description})</span>}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
+        {templateFiles.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Șabloane formulare ({templateFiles.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-1 text-sm">
+                {templateFiles.map((f) => (
+                  <li key={f.id} className="flex items-center gap-2">
+                    <span className="font-medium">{f.title}</span>
+                    <span className="text-muted-foreground">— {f.file_name}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
+        {formSubmissions && formSubmissions.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Upload className="h-4 w-4" /> Acorduri încărcate de elevi ({formSubmissions.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Elev</TableHead>
+                    <TableHead>Formular</TableHead>
+                    <TableHead>Fișier</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {formSubmissions.map((f) => (
+                    <TableRow key={f.id}>
+                      <TableCell>{f.studentName}</TableCell>
+                      <TableCell>{f.form_title}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{f.file_name}</TableCell>
+                      <TableCell>
+                        <Badge variant={f.status === "accepted" ? "default" : f.status === "rejected" ? "destructive" : "secondary"}>
+                          {statusSubmissionLabel(f.status)}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 
 export default function EventReportPage() {
   const { sessionId } = useManagerSession();
@@ -136,6 +268,8 @@ export default function EventReportPage() {
       </Select>
 
       {isLoading && <p className="text-muted-foreground">Se încarcă...</p>}
+
+      {eventId && <EventDocumentsSection eventId={eventId} />}
 
       {report && (
         <>
