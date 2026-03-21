@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Download, Printer } from "lucide-react";
-import { exportToCSV } from "@/lib/csv-export";
+import { exportReportPdf } from "@/lib/report-pdf";
 import {
   ChartContainer,
   ChartTooltip,
