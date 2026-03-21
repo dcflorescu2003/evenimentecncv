@@ -20,6 +20,7 @@ const menuItems = [
   { title: "Raport clase", icon: GraduationCap, path: "/manager/classes" },
   { title: "Raport elevi", icon: User, path: "/manager/students" },
   { title: "Raport profesori", icon: Users, path: "/manager/teachers" },
+  { title: "Normă incompletă", icon: AlertTriangle, path: "/manager/incomplete" },
 ];
 
 export type ManagerSessionContext = {

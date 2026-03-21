@@ -161,6 +161,7 @@ const App = () => (
               <Route path="/manager/classes" element={<ClassReportPage />} />
               <Route path="/manager/students" element={<StudentReportPage />} />
               <Route path="/manager/teachers" element={<TeacherReportPage />} />
+              <Route path="/manager/incomplete" element={<IncompleteNormPage />} />
             </Route>
 
             {/* Public routes (no auth) */}
