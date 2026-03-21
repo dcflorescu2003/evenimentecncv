@@ -1,49 +1,31 @@
 
 
-## Plan: Improve Push Notification Visibility + Include Assistants in Reminders
+## Plan: Inlocuire Export CSV cu Export PDF in Toate Rapoartele
 
-The edge function `send-event-reminders` already sends reminders to students with reservations. The issue is that it does NOT also include student assistants. Additionally, the notification prompt needs to be more visible.
+Exista 4 butoane "Export CSV" in aplicatie care trebuie inlocuite cu "Export PDF":
 
-### 1. Fix Edge Function to Also Notify Student Assistants
+1. **Admin ReportsPage — ClassReport** (raport pe clase)
+2. **Admin ReportsPage — EventReport** (raport pe evenimente)
+3. **Admin ReportsPage — StudentReport** (raport pe elevi)
+4. **TeacherReportsPage** (raport diriginte)
 
-**File:** `supabase/functions/send-event-reminders/index.ts`
+### Abordare
 
-- After fetching `reservations`, also query `event_student_assistants` for the same `eventIds`
-- Merge assistant student IDs into the `studentEvents` map (same structure)
-- Change the early return when `reservations` is empty: instead of returning, continue to check for assistants too
-- This ensures both regular ticket holders AND assistants receive in-app + push reminders
+Creez o functie generica de export PDF in `src/lib/report-pdf.ts` care genereaza un document tabelar cu header, titlu raport si tabel autoTable (similar cu `attendance-pdf.ts` existent). Functia va primi: titlu raport, coloane, randuri, si optional un subtitlu.
 
-### 2. Redesign Push Notification Prompt for Students
+### Modificari
 
-**File:** `src/components/PushNotificationPrompt.tsx`
+| Fisier | Ce se schimba |
+|--------|--------------|
+| `src/lib/report-pdf.ts` (nou) | Functie generica `exportReportPdf(title, headers, rows, subtitle?)` cu jsPDF + autoTable, stripDiacritics |
+| `src/pages/admin/ReportsPage.tsx` | Inlocuiesc cele 3 apeluri `exportToCSV` cu `exportReportPdf`, schimb textul butoanelor din "Export CSV" in "Export PDF" |
+| `src/pages/teacher/TeacherReportsPage.tsx` | Inlocuiesc apelul `exportToCSV` cu `exportReportPdf`, schimb textul butonului |
 
-Replace the small floating card with a prominent full-width gradient banner:
-- Gradient background with animated bell icon
-- Clear benefit text: "Primești remindere cu o zi înainte de evenimentele tale"
-- Large "Activează notificările" button + "Nu acum" dismiss
-- Same dismiss logic (7 days via localStorage)
+### Detalii tehnice
 
-**File:** `src/pages/student/StudentDashboard.tsx`
-
-- Import and render the redesigned `PushNotificationPrompt` at the top of the dashboard content (before progress cards)
-
-**File:** `src/components/layouts/StudentLayout.tsx`
-
-- Remove `<PushNotificationPrompt />` from the layout (it moves into the dashboard page instead, no longer floating over bottom nav)
-
-### 3. Post-Booking Notification Prompt
-
-**File:** `src/pages/student/StudentEventsPage.tsx`
-
-- After a successful booking, if push notifications are not enabled, show a toast or inline card encouraging the student to activate notifications
-
-### Summary of changes
-
-| File | Change |
-|------|--------|
-| `send-event-reminders/index.ts` | Add `event_student_assistants` query, merge into student map |
-| `PushNotificationPrompt.tsx` | Redesign as prominent inline gradient banner |
-| `StudentDashboard.tsx` | Render prompt at top of page |
-| `StudentLayout.tsx` | Remove floating prompt |
-| `StudentEventsPage.tsx` | Post-booking notification prompt |
+- Reutilizez `jsPDF` si `jspdf-autotable` (deja instalate in proiect)
+- Reutilizez functia `stripDiacritics` din `attendance-pdf.ts` (o export sau o duplic in noul fisier)
+- Formatul PDF: A4 landscape pentru rapoartele cu multe coloane (EventReport cu 9 coloane), portrait pentru restul
+- Header: titlu centrat, subtitlu optional (ex: numele sesiunii), data generarii
+- Tabel cu stiluri consistente cu cele din `attendance-pdf.ts` (headStyles albastru, alternate rows)
 
