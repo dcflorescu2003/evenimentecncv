@@ -28,8 +28,8 @@ export default function TeacherReportPage() {
       const { data: roles } = await supabase.from("user_roles").select("user_id").in("role", ["teacher", "homeroom_teacher", "coordinator_teacher"]);
       const ids = [...new Set((roles || []).map((r) => r.user_id))];
       if (!ids.length) return [];
-      const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", ids);
-      return (profiles || []).sort((a, b) => (a.display_name || a.last_name).localeCompare(b.display_name || b.last_name));
+      const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name, teaching_norm").in("id", ids);
+      return ((profiles as any[]) || []).sort((a, b) => (a.display_name || a.last_name).localeCompare(b.display_name || b.last_name));
     },
   });
 
