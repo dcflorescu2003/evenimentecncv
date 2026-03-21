@@ -144,6 +144,22 @@ const App = () => (
               <Route path="/coordinator/event/:eventId" element={<EventParticipantsPage />} />
             </Route>
 
+            {/* Manager routes */}
+            <Route
+              element={
+                <ProtectedRoute allowedRoles={["manager"]}>
+                  <ManagerLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/manager" element={<SessionReportPage />} />
+              <Route path="/manager/events" element={<EventReportPage />} />
+              <Route path="/manager/days" element={<DayReportPage />} />
+              <Route path="/manager/classes" element={<ClassReportPage />} />
+              <Route path="/manager/students" element={<StudentReportPage />} />
+              <Route path="/manager/teachers" element={<TeacherReportPage />} />
+            </Route>
+
             {/* Public routes (no auth) */}
             <Route path="/public/events" element={<PublicEventsPage />} />
             <Route path="/public/events/:id" element={<PublicEventBookingPage />} />
