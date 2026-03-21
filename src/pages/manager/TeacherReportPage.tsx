@@ -82,7 +82,7 @@ export default function TeacherReportPage() {
     queryKey: ["mgr-teacher-detail", selectedId, sessionId],
     enabled: !!selectedId && !!sessionId,
     queryFn: async () => {
-      const { data: profile } = await supabase.from("profiles").select("id, first_name, last_name, display_name").eq("id", selectedId).single();
+      const { data: profile } = await supabase.from("profiles").select("id, first_name, last_name, display_name, teaching_norm").eq("id", selectedId).single();
       const { data: coords } = await supabase.from("coordinator_assignments").select("event_id").eq("teacher_id", selectedId);
       const eventIds = (coords || []).map((c) => c.event_id);
       if (!eventIds.length) return { profile, events: [], totalHours: 0 };
