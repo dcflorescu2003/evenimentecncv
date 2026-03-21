@@ -182,7 +182,7 @@ export default function ImportPage() {
       return;
     }
     const roleLabels: Record<string, string> = {
-      student: "Elev", homeroom_teacher: "Diriginte", coordinator_teacher: "Asistent", teacher: "Profesor", admin: "Admin",
+      student: "Elev", homeroom_teacher: "Diriginte", coordinator_teacher: "Asistent", teacher: "Profesor", admin: "Admin", manager: "Manager",
     };
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Credențiale</title>
       <style>
