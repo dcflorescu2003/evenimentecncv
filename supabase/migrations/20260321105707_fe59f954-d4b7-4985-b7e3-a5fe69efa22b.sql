@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN teaching_norm integer DEFAULT NULL;
