@@ -115,15 +115,17 @@ export default function UsersPage() {
 
   const createUserMutation = useMutation({
     mutationFn: async (values: typeof createForm) => {
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: {
-          action: "create_user",
-          first_name: values.first_name,
-          last_name: values.last_name,
-          username: values.username,
-          role: values.role,
-        },
-      });
+      const bodyData: any = {
+        action: "create_user",
+        first_name: values.first_name,
+        last_name: values.last_name,
+        username: values.username,
+        role: values.role,
+      };
+      if ((values.role === "teacher" || values.role === "homeroom_teacher") && values.teaching_norm) {
+        bodyData.teaching_norm = Number(values.teaching_norm);
+      }
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", { body: bodyData });
       if (error) throw error;
       return data;
     },
@@ -131,8 +133,22 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user_roles"] });
       setCreateDialog(false);
+      setCreateForm({ first_name: "", last_name: "", username: "", role: "student", teaching_norm: "" });
       setNewPassword(data.password);
       toast.success("Utilizator creat");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateNormMutation = useMutation({
+    mutationFn: async ({ id, norm }: { id: string; norm: number | null }) => {
+      const { error } = await supabase.from("profiles").update({ teaching_norm: norm } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      setEditNormId(null);
+      toast.success("Norma actualizată");
     },
     onError: (e: Error) => toast.error(e.message),
   });
