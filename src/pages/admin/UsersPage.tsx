@@ -416,6 +416,12 @@ export default function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
+            {(createForm.role === "teacher" || createForm.role === "homeroom_teacher") && (
+              <div className="space-y-2">
+                <Label>Norma (ore)</Label>
+                <Input type="number" min="0" placeholder="ex: 12" value={createForm.teaching_norm} onChange={(e) => setCreateForm({ ...createForm, teaching_norm: e.target.value })} />
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateDialog(false)}>Anulează</Button>
               <Button type="submit" disabled={createUserMutation.isPending}>

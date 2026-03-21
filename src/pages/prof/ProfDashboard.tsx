@@ -140,6 +140,26 @@ export default function ProfDashboard() {
         </Card>
       </div>
 
+      {/* Norm progress */}
+      {normData && normData.map((nd, idx) => (
+        <Card key={idx}>
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Norma — {nd.sessionName}</p>
+              <Badge variant={nd.organized >= nd.norm ? "default" : "secondary"}>
+                {nd.organized}h / {nd.norm}h
+              </Badge>
+            </div>
+            <Progress value={Math.min(100, (nd.organized / nd.norm) * 100)} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              {nd.organized >= nd.norm
+                ? "✅ Norma îndeplinită"
+                : `Mai ai nevoie de ${nd.norm - nd.organized}h organizate`}
+            </p>
+          </CardContent>
+        </Card>
+      ))}
+
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Se încarcă…</div>
       ) : (
