@@ -51,7 +51,7 @@ serve(async (req) => {
 
     if (action === "create_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
-      const { first_name, last_name, username, role } = body;
+      const { first_name, last_name, username, role, teaching_norm } = body;
       const password = DEFAULT_PASSWORD;
       const email = `${username}@school.local`;
 
@@ -64,13 +64,18 @@ serve(async (req) => {
 
       const userId = authUser.user.id;
 
-      const { error: profileError } = await supabase.from("profiles").insert({
+      const profileData: any = {
         id: userId,
         first_name,
         last_name,
         username,
         must_change_password: true,
-      });
+      };
+      if (teaching_norm !== undefined && teaching_norm !== null && teaching_norm !== "") {
+        profileData.teaching_norm = Number(teaching_norm);
+      }
+
+      const { error: profileError } = await supabase.from("profiles").insert(profileData);
       if (profileError) throw profileError;
 
       const { error: roleError } = await supabase.from("user_roles").insert({

@@ -28,8 +28,8 @@ export default function TeacherReportPage() {
       const { data: roles } = await supabase.from("user_roles").select("user_id").in("role", ["teacher", "homeroom_teacher", "coordinator_teacher"]);
       const ids = [...new Set((roles || []).map((r) => r.user_id))];
       if (!ids.length) return [];
-      const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", ids);
-      return (profiles || []).sort((a, b) => (a.display_name || a.last_name).localeCompare(b.display_name || b.last_name));
+      const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name, teaching_norm").in("id", ids);
+      return ((profiles as any[]) || []).sort((a, b) => (a.display_name || a.last_name).localeCompare(b.display_name || b.last_name));
     },
   });
 
@@ -82,7 +82,7 @@ export default function TeacherReportPage() {
     queryKey: ["mgr-teacher-detail", selectedId, sessionId],
     enabled: !!selectedId && !!sessionId,
     queryFn: async () => {
-      const { data: profile } = await supabase.from("profiles").select("id, first_name, last_name, display_name").eq("id", selectedId).single();
+      const { data: profile } = await supabase.from("profiles").select("id, first_name, last_name, display_name, teaching_norm").eq("id", selectedId).single();
       const { data: coords } = await supabase.from("coordinator_assignments").select("event_id").eq("teacher_id", selectedId);
       const eventIds = (coords || []).map((c) => c.event_id);
       if (!eventIds.length) return { profile, events: [], totalHours: 0 };
@@ -104,15 +104,31 @@ export default function TeacherReportPage() {
     },
   });
 
+  // Check if session has participation rules (to show norm column)
+  const { data: sessionHasRules } = useQuery({
+    queryKey: ["mgr-session-has-rules", sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => {
+      const { data } = await supabase.from("class_participation_rules").select("id").eq("session_id", sessionId).limit(1);
+      return !!data?.length;
+    },
+  });
+
   const handleExportSummary = () => {
     if (!filteredTeachers.length || !summary) return;
+    const headers = ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate"];
+    if (sessionHasRules) headers.push("Norma");
     exportReportPdf({
       title: `Raport profesori — ${sessionName}`,
-      headers: ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate"],
-      rows: filteredTeachers.map((t, i) => [
-        String(i + 1), t.display_name || `${t.last_name} ${t.first_name}`,
-        String(summary[t.id]?.events || 0), String(summary[t.id]?.hours || 0) + "h",
-      ]),
+      headers,
+      rows: filteredTeachers.map((t, i) => {
+        const row = [
+          String(i + 1), t.display_name || `${t.last_name} ${t.first_name}`,
+          String(summary[t.id]?.events || 0), String(summary[t.id]?.hours || 0) + "h",
+        ];
+        if (sessionHasRules) row.push(t.teaching_norm ? `${t.teaching_norm}h` : "—");
+        return row;
+      }),
       filename: "raport-profesori",
     });
   };
@@ -158,6 +174,7 @@ export default function TeacherReportPage() {
               <TableHead>Profesor</TableHead>
               <TableHead>Nr. evenimente</TableHead>
               <TableHead>Ore organizate</TableHead>
+              {sessionHasRules && <TableHead>Norma</TableHead>}
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
@@ -168,6 +185,15 @@ export default function TeacherReportPage() {
                 <TableCell>{t.display_name || `${t.last_name} ${t.first_name}`}</TableCell>
                 <TableCell>{summary?.[t.id]?.events || 0}</TableCell>
                 <TableCell>{summary?.[t.id]?.hours || 0}h</TableCell>
+                {sessionHasRules && (
+                  <TableCell>
+                    {t.teaching_norm ? (
+                      <span className={summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : "text-destructive font-semibold"}>
+                        {summary?.[t.id]?.hours || 0}h / {t.teaching_norm}h
+                      </span>
+                    ) : "—"}
+                  </TableCell>
+                )}
                 <TableCell><Button variant="link" size="sm" onClick={() => setSelectedId(t.id)}>Detalii</Button></TableCell>
               </TableRow>
             ))}
@@ -181,7 +207,7 @@ export default function TeacherReportPage() {
               <div className="grid gap-4 md:grid-cols-3">
                 <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Profesor</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.profile?.display_name || `${detail.profile?.last_name} ${detail.profile?.first_name}`}</p></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Nr. evenimente</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.events.length}</p></CardContent></Card>
-                <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore organizate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.totalHours}h</p></CardContent></Card>
+                <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore organizate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.totalHours}h{sessionHasRules && (detail.profile as any)?.teaching_norm ? ` / ${(detail.profile as any).teaching_norm}h` : ""}</p></CardContent></Card>
               </div>
 
               <Table>

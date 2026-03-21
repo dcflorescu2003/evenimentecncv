@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { CalendarDays, Clock, MapPin, ScanLine, Users, Plus } from "lucide-react";
 
 export default function ProfDashboard() {
@@ -39,6 +40,47 @@ export default function ProfDashboard() {
       return data as any[];
     },
     enabled: !!user,
+  });
+
+  // Norm data: check if there's an active session with participation rules
+  const { data: normData } = useQuery({
+    queryKey: ["prof_norm", user?.id],
+    enabled: !!user && !!profile,
+    queryFn: async () => {
+      const teachingNorm = (profile as any)?.teaching_norm;
+      if (!teachingNorm || teachingNorm <= 0) return null;
+
+      // Find active sessions with class_participation_rules
+      const { data: sessions } = await supabase
+        .from("program_sessions").select("id, name").eq("status", "active");
+      if (!sessions?.length) return null;
+
+      // Check if any session has rules
+      const sessionIds = sessions.map((s) => s.id);
+      const { data: rules } = await supabase
+        .from("class_participation_rules").select("session_id").in("session_id", sessionIds).limit(1);
+      if (!rules?.length) return null;
+
+      // Get organized hours per session
+      const results = [];
+      for (const session of sessions) {
+        const hasRule = rules.some((r) => r.session_id === session.id);
+        if (!hasRule) {
+          const { data: allRules } = await supabase
+            .from("class_participation_rules").select("session_id").eq("session_id", session.id).limit(1);
+          if (!allRules?.length) continue;
+        }
+        const { data: coords } = await supabase
+          .from("coordinator_assignments").select("event_id").eq("teacher_id", user!.id);
+        const eventIds = (coords || []).map((c) => c.event_id);
+        if (!eventIds.length) { results.push({ sessionName: session.name, organized: 0, norm: teachingNorm }); continue; }
+        const { data: events } = await supabase
+          .from("events").select("counted_duration_hours").in("id", eventIds).eq("session_id", session.id);
+        const organized = (events || []).reduce((s, e) => s + (e.counted_duration_hours || 0), 0);
+        results.push({ sessionName: session.name, organized, norm: teachingNorm });
+      }
+      return results.length ? results : null;
+    },
   });
 
   // Calculate total hours from assigned events
@@ -97,6 +139,26 @@ export default function ProfDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Norm progress */}
+      {normData && normData.map((nd, idx) => (
+        <Card key={idx}>
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Norma — {nd.sessionName}</p>
+              <Badge variant={nd.organized >= nd.norm ? "default" : "secondary"}>
+                {nd.organized}h / {nd.norm}h
+              </Badge>
+            </div>
+            <Progress value={Math.min(100, (nd.organized / nd.norm) * 100)} className="h-2" />
+            <p className="text-xs text-muted-foreground">
+              {nd.organized >= nd.norm
+                ? "✅ Norma îndeplinită"
+                : `Mai ai nevoie de ${nd.norm - nd.organized}h organizate`}
+            </p>
+          </CardContent>
+        </Card>
+      ))}
 
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Se încarcă…</div>

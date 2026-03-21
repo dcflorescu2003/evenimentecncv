@@ -14,27 +14,34 @@ export default function IncompleteNormPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("teachers");
 
-  // ── Teachers with incomplete hours ──
+  // ── Teachers with incomplete hours (based on teaching_norm) ──
   const { data: teacherData, isLoading: teachersLoading } = useQuery({
     queryKey: ["mgr-incomplete-teachers", sessionId],
     enabled: !!sessionId,
     queryFn: async () => {
-      // Get all session events with their hours
+      // Check if session has participation rules
+      const { data: rules } = await supabase
+        .from("class_participation_rules").select("id").eq("session_id", sessionId).limit(1);
+      if (!rules?.length) return [];
+
+      // Get all session events
       const { data: sessionEvents } = await supabase
         .from("events").select("id, counted_duration_hours").eq("session_id", sessionId);
-      const totalSessionHours = (sessionEvents || []).reduce((s, e) => s + (e.counted_duration_hours || 0), 0);
-      if (!totalSessionHours) return [];
-
       const sessionEventIds = (sessionEvents || []).map((e) => e.id);
       const eventHoursMap = Object.fromEntries((sessionEvents || []).map((e) => [e.id, e.counted_duration_hours]));
 
       // Get all teacher roles
-      const { data: roles } = await supabase.from("user_roles").select("user_id").in("role", ["teacher", "homeroom_teacher", "coordinator_teacher"]);
-      const teacherIds = [...new Set((roles || []).map((r) => r.user_id))];
+      const { data: roleRows } = await supabase.from("user_roles").select("user_id").in("role", ["teacher", "homeroom_teacher", "coordinator_teacher"]);
+      const teacherIds = [...new Set((roleRows || []).map((r) => r.user_id))];
       if (!teacherIds.length) return [];
 
+      // Get profiles with teaching_norm
+      const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name, teaching_norm").in("id", teacherIds);
+      const teachersWithNorm = ((profiles as any[]) || []).filter((p) => p.teaching_norm && p.teaching_norm > 0);
+      if (!teachersWithNorm.length) return [];
+
       // Get coordinator assignments for session events
-      const { data: coords } = await supabase.from("coordinator_assignments").select("teacher_id, event_id").in("teacher_id", teacherIds);
+      const { data: coords } = await supabase.from("coordinator_assignments").select("teacher_id, event_id").in("teacher_id", teachersWithNorm.map((t) => t.id));
       
       const coordsByTeacher: Record<string, string[]> = {};
       (coords || []).forEach((c) => {
@@ -44,19 +51,18 @@ export default function IncompleteNormPage() {
         }
       });
 
-      // Get profiles
-      const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", teacherIds);
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p.display_name || `${p.last_name} ${p.first_name}`]));
-
-      // Teachers with 0 organized hours or less than total
-      return teacherIds
-        .map((id) => {
-          const evts = coordsByTeacher[id] || [];
+      return teachersWithNorm
+        .map((p) => {
+          const evts = coordsByTeacher[p.id] || [];
           const hours = evts.reduce((s, eid) => s + (eventHoursMap[eid] || 0), 0);
-          return { id, name: profileMap[id] || "", events: evts.length, organizedHours: hours, totalSessionHours };
+          const norm = p.teaching_norm;
+          if (hours >= norm) return null;
+          return { id: p.id, name: p.display_name || `${p.last_name} ${p.first_name}`, events: evts.length, organizedHours: hours, norm, remaining: norm - hours };
         })
-        .filter((t) => t.organizedHours < t.totalSessionHours)
-        .sort((a, b) => a.organizedHours - b.organizedHours);
+        .filter(Boolean)
+        .sort((a, b) => a!.organizedHours - b!.organizedHours) as Array<{
+          id: string; name: string; events: number; organizedHours: number; norm: number; remaining: number;
+        }>;
     },
   });
 
@@ -142,9 +148,9 @@ export default function IncompleteNormPage() {
     if (!teacherData?.length) return;
     exportReportPdf({
       title: `Normă incompletă — Profesori — ${sessionName}`,
-      headers: ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate", "Ore totale sesiune", "Ore rămase"],
+      headers: ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate", "Norma", "Ore rămase"],
       rows: teacherData.map((t, i) => [
-        String(i + 1), t.name, String(t.events), `${t.organizedHours}h`, `${t.totalSessionHours}h`, `${t.totalSessionHours - t.organizedHours}h`,
+        String(i + 1), t.name, String(t.events), `${t.organizedHours}h`, `${t.norm}h`, `${t.remaining}h`,
       ]),
       filename: "norma-incompleta-profesori",
     });
@@ -192,11 +198,11 @@ export default function IncompleteNormPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">Nr.</TableHead>
+              <TableHead className="w-12">Nr.</TableHead>
                   <TableHead>Profesor</TableHead>
                   <TableHead>Nr. evenimente</TableHead>
                   <TableHead>Ore organizate</TableHead>
-                  <TableHead>Ore totale sesiune</TableHead>
+                  <TableHead>Norma</TableHead>
                   <TableHead>Ore rămase</TableHead>
                 </TableRow>
               </TableHeader>
@@ -209,8 +215,8 @@ export default function IncompleteNormPage() {
                     </TableCell>
                     <TableCell>{t.events}</TableCell>
                     <TableCell>{t.organizedHours}h</TableCell>
-                    <TableCell>{t.totalSessionHours}h</TableCell>
-                    <TableCell className="font-semibold text-destructive">{t.totalSessionHours - t.organizedHours}h</TableCell>
+                    <TableCell>{t.norm}h</TableCell>
+                    <TableCell className="font-semibold text-destructive">{t.remaining}h</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

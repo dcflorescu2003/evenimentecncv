@@ -549,6 +549,7 @@ export type Database = {
           last_name: string
           must_change_password: boolean
           student_identifier: string | null
+          teaching_norm: number | null
           updated_at: string
           username: string
         }
@@ -562,6 +563,7 @@ export type Database = {
           last_name: string
           must_change_password?: boolean
           student_identifier?: string | null
+          teaching_norm?: number | null
           updated_at?: string
           username: string
         }
@@ -575,6 +577,7 @@ export type Database = {
           last_name?: string
           must_change_password?: boolean
           student_identifier?: string | null
+          teaching_norm?: number | null
           updated_at?: string
           username?: string
         }
