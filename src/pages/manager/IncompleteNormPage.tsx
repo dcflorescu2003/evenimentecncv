@@ -148,9 +148,9 @@ export default function IncompleteNormPage() {
     if (!teacherData?.length) return;
     exportReportPdf({
       title: `Normă incompletă — Profesori — ${sessionName}`,
-      headers: ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate", "Ore totale sesiune", "Ore rămase"],
+      headers: ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate", "Norma", "Ore rămase"],
       rows: teacherData.map((t, i) => [
-        String(i + 1), t.name, String(t.events), `${t.organizedHours}h`, `${t.totalSessionHours}h`, `${t.totalSessionHours - t.organizedHours}h`,
+        String(i + 1), t.name, String(t.events), `${t.organizedHours}h`, `${t.norm}h`, `${t.remaining}h`,
       ]),
       filename: "norma-incompleta-profesori",
     });
