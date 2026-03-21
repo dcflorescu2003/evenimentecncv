@@ -1,0 +1,184 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FileDown } from "lucide-react";
+import { exportReportPdf } from "@/lib/report-pdf";
+import { useNavigate } from "react-router-dom";
+
+const statusLabel = (s: string) => {
+  if (s === "present" || s === "late") return "Prezent";
+  if (s === "excused") return "Absent motivat";
+  return "Absent";
+};
+
+export default function EventReportPage() {
+  const [sessionId, setSessionId] = useState("");
+  const [eventId, setEventId] = useState("");
+  const navigate = useNavigate();
+
+  const { data: sessions } = useQuery({
+    queryKey: ["mgr-sessions"],
+    queryFn: async () => {
+      const { data } = await supabase.from("program_sessions").select("*").order("start_date", { ascending: false });
+      return data || [];
+    },
+  });
+
+  const { data: events } = useQuery({
+    queryKey: ["mgr-events", sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => {
+      const { data } = await supabase.from("events").select("id, title, date").eq("session_id", sessionId).order("date");
+      return data || [];
+    },
+  });
+
+  const { data: report, isLoading } = useQuery({
+    queryKey: ["mgr-event-report", eventId],
+    enabled: !!eventId,
+    queryFn: async () => {
+      // Get reservations with tickets
+      const { data: reservations } = await supabase
+        .from("reservations")
+        .select("id, student_id, status")
+        .eq("event_id", eventId)
+        .eq("status", "reserved");
+
+      const resIds = (reservations || []).map((r) => r.id);
+      const studentIds = (reservations || []).map((r) => r.student_id);
+
+      const [ticketsRes, profilesRes, classAssignRes, assistantsRes, coordsRes] = await Promise.all([
+        resIds.length ? supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds) : { data: [] },
+        studentIds.length ? supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", studentIds) : { data: [] },
+        studentIds.length ? supabase.from("student_class_assignments").select("student_id, class_id").in("student_id", studentIds) : { data: [] },
+        supabase.from("event_student_assistants").select("student_id").eq("event_id", eventId),
+        supabase.from("coordinator_assignments").select("teacher_id").eq("event_id", eventId),
+      ]);
+
+      const tickets = ticketsRes.data || [];
+      const profiles = profilesRes.data || [];
+      const classAssign = classAssignRes.data || [];
+      const assistantIds = (assistantsRes.data || []).map((a) => a.student_id);
+      const coordIds = (coordsRes.data || []).map((c) => c.teacher_id);
+
+      // Fetch class names and assistant/coord profiles
+      const classIds = [...new Set(classAssign.map((ca) => ca.class_id))];
+      const allExtraIds = [...new Set([...assistantIds, ...coordIds])];
+
+      const [classesRes, extraProfilesRes] = await Promise.all([
+        classIds.length ? supabase.from("classes").select("id, display_name").in("id", classIds) : { data: [] },
+        allExtraIds.length ? supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", allExtraIds) : { data: [] },
+      ]);
+
+      const classMap = Object.fromEntries((classesRes.data || []).map((c) => [c.id, c.display_name]));
+      const allProfiles = [...profiles, ...(extraProfilesRes.data || [])];
+      const profileMap = Object.fromEntries(allProfiles.map((p) => [p.id, p.display_name || `${p.last_name} ${p.first_name}`]));
+      const studentClassMap = Object.fromEntries(classAssign.map((ca) => [ca.student_id, classMap[ca.class_id] || ""]));
+      const ticketMap = Object.fromEntries(tickets.map((t) => [t.reservation_id, t.status]));
+
+      const students = (reservations || []).map((r) => ({
+        id: r.student_id,
+        name: profileMap[r.student_id] || "",
+        className: studentClassMap[r.student_id] || "",
+        status: ticketMap[r.id] || "reserved",
+      }));
+
+      return {
+        students: students.sort((a, b) => a.className.localeCompare(b.className) || a.name.localeCompare(b.name)),
+        assistants: assistantIds.map((id) => ({ id, name: profileMap[id] || "" })),
+        coordinators: coordIds.map((id) => ({ id, name: profileMap[id] || "" })),
+      };
+    },
+  });
+
+  const eventTitle = events?.find((e) => e.id === eventId)?.title || "";
+
+  const handleExport = () => {
+    if (!report) return;
+    const rows = report.students.map((s, i) => [String(i + 1), s.className, s.name, statusLabel(s.status)]);
+    rows.push([], ["", "", "ASISTENȚI:", report.assistants.map((a) => a.name).join(", ")]);
+    rows.push(["", "", "COORDONATORI:", report.coordinators.map((c) => c.name).join(", ")]);
+    exportReportPdf({ title: "Lista de prezență", subtitle: eventTitle, headers: ["Nr.", "Clasă", "Nume", "Status"], rows, filename: `prezenta-${eventTitle}` });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Raport pe eveniment</h1>
+        {report?.students.length ? <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
+      </div>
+
+      <div className="flex gap-4">
+        <Select value={sessionId} onValueChange={(v) => { setSessionId(v); setEventId(""); }}>
+          <SelectTrigger className="w-64"><SelectValue placeholder="Selectează sesiunea" /></SelectTrigger>
+          <SelectContent>{sessions?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+        </Select>
+        <Select value={eventId} onValueChange={setEventId} disabled={!sessionId}>
+          <SelectTrigger className="w-80"><SelectValue placeholder="Selectează evenimentul" /></SelectTrigger>
+          <SelectContent>{events?.map((e) => <SelectItem key={e.id} value={e.id}>{e.date} — {e.title}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+
+      {isLoading && <p className="text-muted-foreground">Se încarcă...</p>}
+
+      {report && (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">Nr.</TableHead>
+                <TableHead>Clasă</TableHead>
+                <TableHead>Nume elev</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {report.students.map((s, i) => (
+                <TableRow key={s.id}>
+                  <TableCell>{i + 1}</TableCell>
+                  <TableCell>{s.className}</TableCell>
+                  <TableCell>
+                    <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/students?id=${s.id}`)}>{s.name}</button>
+                  </TableCell>
+                  <TableCell><Badge variant={s.status === "present" || s.status === "late" ? "default" : "secondary"}>{statusLabel(s.status)}</Badge></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          {report.assistants.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-1">Asistenți elevi</h3>
+              <p className="text-sm text-muted-foreground">
+                {report.assistants.map((a, i) => (
+                  <span key={a.id}>
+                    <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/students?id=${a.id}`)}>{a.name}</button>
+                    {i < report.assistants.length - 1 ? ", " : ""}
+                  </span>
+                ))}
+              </p>
+            </div>
+          )}
+
+          {report.coordinators.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-1">Profesori coordonatori</h3>
+              <p className="text-sm text-muted-foreground">
+                {report.coordinators.map((c, i) => (
+                  <span key={c.id}>
+                    <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/teachers?id=${c.id}`)}>{c.name}</button>
+                    {i < report.coordinators.length - 1 ? ", " : ""}
+                  </span>
+                ))}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
