@@ -336,10 +336,11 @@ function StudentReport({ sessionId }: { sessionId: string }) {
         </Select>
         <Button variant="outline" size="sm" onClick={() => {
           if (!data) return;
-          exportToCSV("raport-elevi", ["Elev", "Clasă", "Rezervări", "Ore rezervate", "Ore validate"],
-            data.map(s => [s.name, s.className, String(s.reservations), String(s.reservedHours), String(s.validatedHours)]));
+          exportReportPdf({ title: "Raport pe elevi", headers: ["Elev", "Clasă", "Rezervări", "Ore rezervate", "Ore validate"],
+            rows: data.map(s => [s.name, s.className, String(s.reservations), String(s.reservedHours), String(s.validatedHours)]),
+            filename: "raport-elevi" });
         }}>
-          <Download className="mr-2 h-4 w-4" /> Export CSV
+          <Download className="mr-2 h-4 w-4" /> Export PDF
         </Button>
       </div>
       <Card className="print:shadow-none print:border-0">

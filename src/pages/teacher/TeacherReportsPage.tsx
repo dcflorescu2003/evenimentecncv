@@ -113,10 +113,11 @@ export default function TeacherReportsPage() {
           <div className="flex justify-end print:hidden">
             <Button variant="outline" size="sm" onClick={() => {
               if (!reportData) return;
-              exportToCSV("raport-clasa", ["Elev", "Clasă", "Rezervări", "Ore rezervate", "Ore validate"],
-                reportData.map(s => [s.name, s.className, String(s.reservations), String(s.reservedHours), String(s.validatedHours)]));
+              exportReportPdf({ title: "Raport clasă", headers: ["Elev", "Clasă", "Rezervări", "Ore rezervate", "Ore validate"],
+                rows: reportData.map(s => [s.name, s.className, String(s.reservations), String(s.reservedHours), String(s.validatedHours)]),
+                filename: "raport-clasa" });
             }}>
-              <Download className="mr-2 h-4 w-4" /> Export CSV
+              <Download className="mr-2 h-4 w-4" /> Export PDF
             </Button>
           </div>
 
