@@ -45,6 +45,7 @@ import ScanPage from "./pages/coordinator/ScanPage";
 import EventParticipantsPage from "./pages/coordinator/EventParticipantsPage";
 
 import ManagerLayout from "./components/layouts/ManagerLayout";
+import ManagerDashboard from "./pages/manager/ManagerDashboard";
 import SessionReportPage from "./pages/manager/SessionReportPage";
 import EventReportPage from "./pages/manager/EventReportPage";
 import DayReportPage from "./pages/manager/DayReportPage";
@@ -152,7 +153,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             >
-              <Route path="/manager" element={<SessionReportPage />} />
+              <Route path="/manager" element={<ManagerDashboard />} />
+              <Route path="/manager/sessions" element={<SessionReportPage />} />
               <Route path="/manager/events" element={<EventReportPage />} />
               <Route path="/manager/days" element={<DayReportPage />} />
               <Route path="/manager/classes" element={<ClassReportPage />} />

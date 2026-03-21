@@ -6,10 +6,11 @@ import {
   SidebarMenuItem, SidebarProvider, SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { BarChart3, CalendarDays, CalendarRange, GraduationCap, LogOut, User, Users } from "lucide-react";
+import { BarChart3, CalendarDays, CalendarRange, GraduationCap, LayoutDashboard, LogOut, User, Users } from "lucide-react";
 
 const menuItems = [
-  { title: "Raport sesiune", icon: CalendarRange, path: "/manager" },
+  { title: "Panou principal", icon: LayoutDashboard, path: "/manager" },
+  { title: "Raport sesiune", icon: CalendarRange, path: "/manager/sessions" },
   { title: "Raport eveniment", icon: CalendarDays, path: "/manager/events" },
   { title: "Raport pe zile", icon: BarChart3, path: "/manager/days" },
   { title: "Raport clase", icon: GraduationCap, path: "/manager/classes" },
