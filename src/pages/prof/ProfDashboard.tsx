@@ -42,6 +42,47 @@ export default function ProfDashboard() {
     enabled: !!user,
   });
 
+  // Norm data: check if there's an active session with participation rules
+  const { data: normData } = useQuery({
+    queryKey: ["prof_norm", user?.id],
+    enabled: !!user && !!profile,
+    queryFn: async () => {
+      const teachingNorm = (profile as any)?.teaching_norm;
+      if (!teachingNorm || teachingNorm <= 0) return null;
+
+      // Find active sessions with class_participation_rules
+      const { data: sessions } = await supabase
+        .from("program_sessions").select("id, name").eq("status", "active");
+      if (!sessions?.length) return null;
+
+      // Check if any session has rules
+      const sessionIds = sessions.map((s) => s.id);
+      const { data: rules } = await supabase
+        .from("class_participation_rules").select("session_id").in("session_id", sessionIds).limit(1);
+      if (!rules?.length) return null;
+
+      // Get organized hours per session
+      const results = [];
+      for (const session of sessions) {
+        const hasRule = rules.some((r) => r.session_id === session.id);
+        if (!hasRule) {
+          const { data: allRules } = await supabase
+            .from("class_participation_rules").select("session_id").eq("session_id", session.id).limit(1);
+          if (!allRules?.length) continue;
+        }
+        const { data: coords } = await supabase
+          .from("coordinator_assignments").select("event_id").eq("teacher_id", user!.id);
+        const eventIds = (coords || []).map((c) => c.event_id);
+        if (!eventIds.length) { results.push({ sessionName: session.name, organized: 0, norm: teachingNorm }); continue; }
+        const { data: events } = await supabase
+          .from("events").select("counted_duration_hours").in("id", eventIds).eq("session_id", session.id);
+        const organized = (events || []).reduce((s, e) => s + (e.counted_duration_hours || 0), 0);
+        results.push({ sessionName: session.name, organized, norm: teachingNorm });
+      }
+      return results.length ? results : null;
+    },
+  });
+
   // Calculate total hours from assigned events
   const totalHours = assignments.reduce((sum, a) => {
     return sum + (a.events?.counted_duration_hours || 0);
