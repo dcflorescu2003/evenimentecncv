@@ -1,10 +1,14 @@
-import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Outlet, useNavigate, useLocation, useOutletContext } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton,
   SidebarMenuItem, SidebarProvider, SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { BarChart3, CalendarDays, CalendarRange, GraduationCap, LayoutDashboard, LogOut, User, Users } from "lucide-react";
 
@@ -18,10 +22,50 @@ const menuItems = [
   { title: "Raport profesori", icon: Users, path: "/manager/teachers" },
 ];
 
+export type ManagerSessionContext = {
+  sessionId: string;
+  sessionName: string;
+  sessions: Array<{ id: string; name: string; status: string; start_date: string; end_date: string }>;
+};
+
+export function useManagerSession() {
+  return useOutletContext<ManagerSessionContext>();
+}
+
 export default function ManagerLayout() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { data: sessions } = useQuery({
+    queryKey: ["mgr-all-sessions"],
+    queryFn: async () => {
+      const { data } = await supabase.from("program_sessions").select("id, name, status, start_date, end_date").order("start_date", { ascending: false });
+      return data || [];
+    },
+  });
+
+  // Default to active session, or the most recent one
+  const [selectedSessionId, setSelectedSessionId] = useState<string>("");
+
+  const effectiveSessionId = selectedSessionId || (() => {
+    if (!sessions?.length) return "";
+    const active = sessions.find((s) => s.status === "active");
+    if (active) return active.id;
+    // Find session that contains current date
+    const today = new Date().toISOString().slice(0, 10);
+    const current = sessions.find((s) => s.start_date <= today && s.end_date >= today);
+    if (current) return current.id;
+    return sessions[0].id;
+  })();
+
+  const sessionName = sessions?.find((s) => s.id === effectiveSessionId)?.name || "";
+
+  const contextValue: ManagerSessionContext = {
+    sessionId: effectiveSessionId,
+    sessionName,
+    sessions: sessions || [],
+  };
 
   return (
     <SidebarProvider>
@@ -38,6 +82,25 @@ export default function ManagerLayout() {
           </div>
         </SidebarHeader>
         <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Sesiune</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <div className="px-2 pb-2">
+                <Select value={effectiveSessionId} onValueChange={setSelectedSessionId}>
+                  <SelectTrigger className="w-full text-xs h-8">
+                    <SelectValue placeholder="Selectează sesiunea" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sessions?.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name} {s.status === "active" ? "●" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
           <SidebarGroup>
             <SidebarGroupLabel>Rapoarte</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -72,9 +135,10 @@ export default function ManagerLayout() {
       <SidebarInset>
         <header className="flex h-14 items-center gap-2 border-b px-4">
           <SidebarTrigger />
+          <span className="text-sm text-muted-foreground">Sesiune: <span className="font-medium text-foreground">{sessionName || "—"}</span></span>
         </header>
         <main className="flex-1 overflow-auto p-6">
-          <Outlet />
+          <Outlet context={contextValue} />
         </main>
       </SidebarInset>
     </SidebarProvider>
