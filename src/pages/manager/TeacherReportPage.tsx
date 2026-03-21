@@ -104,15 +104,31 @@ export default function TeacherReportPage() {
     },
   });
 
+  // Check if session has participation rules (to show norm column)
+  const { data: sessionHasRules } = useQuery({
+    queryKey: ["mgr-session-has-rules", sessionId],
+    enabled: !!sessionId,
+    queryFn: async () => {
+      const { data } = await supabase.from("class_participation_rules").select("id").eq("session_id", sessionId).limit(1);
+      return !!data?.length;
+    },
+  });
+
   const handleExportSummary = () => {
     if (!filteredTeachers.length || !summary) return;
+    const headers = ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate"];
+    if (sessionHasRules) headers.push("Norma");
     exportReportPdf({
       title: `Raport profesori — ${sessionName}`,
-      headers: ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate"],
-      rows: filteredTeachers.map((t, i) => [
-        String(i + 1), t.display_name || `${t.last_name} ${t.first_name}`,
-        String(summary[t.id]?.events || 0), String(summary[t.id]?.hours || 0) + "h",
-      ]),
+      headers,
+      rows: filteredTeachers.map((t, i) => {
+        const row = [
+          String(i + 1), t.display_name || `${t.last_name} ${t.first_name}`,
+          String(summary[t.id]?.events || 0), String(summary[t.id]?.hours || 0) + "h",
+        ];
+        if (sessionHasRules) row.push(t.teaching_norm ? `${t.teaching_norm}h` : "—");
+        return row;
+      }),
       filename: "raport-profesori",
     });
   };
