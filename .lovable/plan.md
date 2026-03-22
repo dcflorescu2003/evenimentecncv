@@ -1,55 +1,27 @@
 
 
-## Plan: Camp "Norma" pentru Profesori
+## Plan: Pagina publică Politica de Confidențialitate
 
-### Ce se schimba
+### Ce se face
 
-Se adauga un camp numeric `teaching_norm` pe profilul profesorului care reprezinta orele minime de organizare. In sesiunile cu reguli de participare, profesorii trebuie sa organizeze cel putin atatea ore cat norma lor.
+O pagină statică la ruta `/privacy` cu textul politicii de confidențialitate, accesibilă fără autentificare, cu link în footer-ul paginilor publice.
 
-### 1. Migrare baza de date
+### Implementare
 
-Adaug coloana `teaching_norm` (integer, nullable, default null) pe tabela `profiles`. Cand e null/0 = fara norma.
+**1. Pagină nouă: `src/pages/public/PrivacyPolicyPage.tsx`**
+- Layout simplu, centrat, responsive
+- Titlu "Politica de Confidențialitate"
+- Secțiuni standard: date colectate, scopul prelucrării, drepturile utilizatorilor, contact, cookies
+- Adaptată contextului aplicației (sistem de gestionare evenimente/prezență pentru CNCV)
+- Buton "Înapoi" către pagina anterioară
 
-### 2. Formularul de creare utilizator (Admin)
+**2. Rutare: `src/App.tsx`**
+- Adaug ruta `/privacy` cu `PrivacyPolicyPage`
 
-**`src/pages/admin/UsersPage.tsx`**
-- In dialogul "Utilizator nou", cand rolul selectat e `teacher` sau `homeroom_teacher`, apare un camp numeric "Norma (ore)" optional
-- Campul se trimite catre edge function `admin-manage-users` care il salveaza in `profiles.teaching_norm`
-- In tabelul de utilizatori, afisez norma langa roluri pentru profesori (ex: "Profesor · 12h")
+### Fișiere
 
-**`supabase/functions/admin-manage-users/index.ts`**
-- La `create_user`, accept parametrul `teaching_norm` si il inserez in profil
-
-### 3. Editarea normei (Admin)
-
-- Adaug posibilitatea de a edita norma unui profesor existent din tabelul de utilizatori (click pe valoare sau buton edit) — update direct pe `profiles.teaching_norm`
-
-### 4. Dashboard profesor
-
-**`src/pages/prof/ProfDashboard.tsx`**
-- Verific daca exista sesiuni active cu `class_participation_rules`
-- Daca da si profesorul are `teaching_norm > 0`, afisez un card "Norma: X ore organizate / Y ore norma" cu progress bar
-- Orele organizate = sum(counted_duration_hours) din evenimentele din sesiunea activa unde profesorul e coordinator
-
-### 5. Rapoartele Manager
-
-**`src/pages/manager/TeacherReportPage.tsx`**
-- In tabelul cu profesori, adaug coloana "Norma" care arata teaching_norm
-- Afisez "Ore organizate / Norma" per sesiune
-
-**`src/pages/manager/IncompleteNormPage.tsx`**
-- Tab "Profesori": filtrez dupa `teaching_norm` al profesorului (nu dupa totalul sesiunii)
-- Un profesor are norma incompleta daca ore_organizate < teaching_norm
-- Afisez: Profesor, Norma, Ore organizate, Ore ramase
-
-### Fisiere afectate
-
-| Tip | Fisier |
+| Tip | Fișier |
 |-----|--------|
-| Migrare | SQL: adauga `teaching_norm` pe `profiles` |
-| Edge fn | `admin-manage-users/index.ts` — accept `teaching_norm` la create |
-| Editat | `UsersPage.tsx` — camp norma in dialog + editare + afisare |
-| Editat | `ProfDashboard.tsx` — card norma per sesiune activa |
-| Editat | `TeacherReportPage.tsx` — coloana norma in tabel |
-| Editat | `IncompleteNormPage.tsx` — filtru dupa teaching_norm |
+| Nou | `src/pages/public/PrivacyPolicyPage.tsx` |
+| Editat | `src/App.tsx` — adaug ruta `/privacy` |
 
