@@ -19,7 +19,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-xl font-semibold mb-2">1. Introducere</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Colegiul Național „Costache Negruzzi" Iași (CNCV) respectă confidențialitatea datelor dumneavoastră personale.
+              Colegiul Național „Cantemir Vodă" București (CNCV) respectă confidențialitatea datelor dumneavoastră personale.
               Această politică descrie modul în care colectăm, utilizăm și protejăm informațiile prin intermediul platformei
               de gestionare a evenimentelor și prezenței.
             </p>
