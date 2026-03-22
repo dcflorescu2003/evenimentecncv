@@ -96,8 +96,8 @@ export default function PrivacyPolicyPage() {
               Pentru orice întrebări sau solicitări privind datele dumneavoastră personale, ne puteți contacta la:
             </p>
             <p className="text-muted-foreground mt-2">
-              <strong>Colegiul Național „Costache Negruzzi" Iași</strong><br />
-              E-mail: <a href="mailto:secretariat@cfruntasu.ro" className="text-primary hover:underline">secretariat@cfruntasu.ro</a>
+              <strong>Colegiul Național „Cantemir Vodă" București</strong><br />
+              E-mail: <a href="mailto:lcantemirvoda@yahoo.com" className="text-primary hover:underline">lcantemirvoda@yahoo.com</a>
             </p>
           </section>
         </div>
