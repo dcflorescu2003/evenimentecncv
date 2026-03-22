@@ -57,6 +57,7 @@ import IncompleteNormPage from "./pages/manager/IncompleteNormPage";
 import PublicEventsPage from "./pages/public/PublicEventsPage";
 import PublicEventBookingPage from "./pages/public/PublicEventBookingPage";
 import PublicTicketViewPage from "./pages/public/PublicTicketViewPage";
+import PrivacyPolicyPage from "./pages/public/PrivacyPolicyPage";
 
 const queryClient = new QueryClient();
 
@@ -169,6 +170,7 @@ const App = () => (
             <Route path="/public/events/:id" element={<PublicEventBookingPage />} />
             <Route path="/public/tickets/:code" element={<PublicTicketViewPage />} />
             <Route path="/public/tickets" element={<PublicTicketViewPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
