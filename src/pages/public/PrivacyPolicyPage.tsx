@@ -19,7 +19,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-xl font-semibold mb-2">1. Introducere</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Colegiul Național „Costache Negruzzi" Iași (CNCV) respectă confidențialitatea datelor dumneavoastră personale.
+              Colegiul Național „Cantemir Vodă" București (CNCV) respectă confidențialitatea datelor dumneavoastră personale.
               Această politică descrie modul în care colectăm, utilizăm și protejăm informațiile prin intermediul platformei
               de gestionare a evenimentelor și prezenței.
             </p>
@@ -96,8 +96,8 @@ export default function PrivacyPolicyPage() {
               Pentru orice întrebări sau solicitări privind datele dumneavoastră personale, ne puteți contacta la:
             </p>
             <p className="text-muted-foreground mt-2">
-              <strong>Colegiul Național „Costache Negruzzi" Iași</strong><br />
-              E-mail: <a href="mailto:secretariat@cfruntasu.ro" className="text-primary hover:underline">secretariat@cfruntasu.ro</a>
+              <strong>Colegiul Național „Cantemir Vodă" București</strong><br />
+              E-mail: <a href="mailto:lcantemirvoda@yahoo.com" className="text-primary hover:underline">lcantemirvoda@yahoo.com</a>
             </p>
           </section>
         </div>
