@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
+import DeleteAccountPage from "./pages/DeleteAccountPage";
 import NotFound from "./pages/NotFound";
 
 import AdminLayout from "./components/layouts/AdminLayout";
