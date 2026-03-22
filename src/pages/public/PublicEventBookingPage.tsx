@@ -213,6 +213,10 @@ export default function PublicEventBookingPage() {
             </form>
           </CardContent>
         </Card>
+
+        <footer className="mt-8 pb-6 text-center text-xs text-muted-foreground">
+          <Link to="/privacy" className="hover:underline">Politica de Confidențialitate</Link>
+        </footer>
       </div>
     </div>
   );

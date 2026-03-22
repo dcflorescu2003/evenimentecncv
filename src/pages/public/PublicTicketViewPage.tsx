@@ -104,6 +104,10 @@ export default function PublicTicketViewPage() {
             </div>
           </div>
         )}
+
+        <footer className="mt-8 pb-6 text-center text-xs text-muted-foreground print:hidden">
+          <Link to="/privacy" className="hover:underline">Politica de Confidențialitate</Link>
+        </footer>
       </div>
     </div>
   );
