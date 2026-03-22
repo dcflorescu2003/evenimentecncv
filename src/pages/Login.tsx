@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -150,6 +150,10 @@ export default function Login() {
           </div>
         </section>
       )}
+
+      <footer className="mt-12 pb-6 text-center text-xs text-muted-foreground">
+        <Link to="/privacy" className="hover:underline">Politica de Confidențialitate</Link>
+      </footer>
       </div>
     </div>
   );

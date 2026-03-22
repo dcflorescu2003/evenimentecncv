@@ -1,6 +1,6 @@
 import { formatDate } from "@/lib/time";
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -104,6 +104,10 @@ export default function PublicTicketViewPage() {
             </div>
           </div>
         )}
+
+        <footer className="mt-8 pb-6 text-center text-xs text-muted-foreground print:hidden">
+          <Link to="/privacy" className="hover:underline">Politica de Confidențialitate</Link>
+        </footer>
       </div>
     </div>
   );

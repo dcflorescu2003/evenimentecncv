@@ -1,5 +1,6 @@
 import cncvLogo from "@/assets/cncv-logo.jpg";
 import { formatDate } from "@/lib/time";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -81,6 +82,10 @@ export default function PublicEventsPage() {
         <div className="mt-8 text-center">
           <Button variant="link" onClick={() => navigate("/login")}>Ai cont? Autentifică-te</Button>
         </div>
+
+        <footer className="mt-6 pb-6 text-center text-xs text-muted-foreground">
+          <Link to="/privacy" className="hover:underline">Politica de Confidențialitate</Link>
+        </footer>
       </div>
     </div>
   );
