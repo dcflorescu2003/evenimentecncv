@@ -1,5 +1,6 @@
 import cncvLogo from "@/assets/cncv-logo.jpg";
 import { formatDate } from "@/lib/time";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
