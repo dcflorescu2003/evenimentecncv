@@ -259,7 +259,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
     enabled: !!sessionId && classIds.length > 0,
   });
 
-  const statusIcon = (status: string) => {
+  const statusIcon = (status: string | undefined) => {
     switch (status) {
       case "present":
       case "late":
