@@ -195,6 +195,7 @@ export default function UsersPage() {
       last_name: p.last_name,
       username: p.username,
       teaching_norm: (p as any).teaching_norm?.toString() || "",
+      roles: getRoles(p.id),
     });
   }
 
