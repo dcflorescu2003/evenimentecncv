@@ -182,9 +182,26 @@ function EventReport({ sessionId }: { sessionId: string }) {
     queryKey: ["report-events", sessionId],
     queryFn: async () => {
       const { data: events } = await supabase.from("events").select("*").eq("session_id", sessionId).order("date");
-      const { data: reservations } = await supabase.from("reservations").select("id, event_id, status");
-      const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
-      const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
+
+      // Batch fetch reservations and tickets (can exceed 1000 rows)
+      const batchFetchAny = async (queryFn: (from: number, to: number) => any) => {
+        const batchSize = 1000;
+        let all: any[] = [];
+        let from = 0;
+        while (true) {
+          const { data, error } = await queryFn(from, from + batchSize - 1);
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          all.push(...data);
+          if (data.length < batchSize) break;
+          from += batchSize;
+        }
+        return all;
+      };
+
+      const reservations = await batchFetchAny((f, t) => supabase.from("reservations").select("id, event_id, status").range(f, t));
+      const tickets = await batchFetchAny((f, t) => supabase.from("tickets").select("id, reservation_id, status").range(f, t));
+      const ticketByRes = Object.fromEntries(tickets.map((t: any) => [t.reservation_id, t]));
 
       // Get public data
       const eventIds = (events ?? []).map(e => e.id);
