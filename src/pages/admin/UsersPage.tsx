@@ -92,6 +92,14 @@ export default function UsersPage() {
     return matchesSearch && matchesRole;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedProfiles = filteredProfiles.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset page when filters change
+  const handleSearch = (value: string) => { setSearch(value); setCurrentPage(1); };
+  const handleRoleFilter = (value: string) => { setRoleFilter(value); setCurrentPage(1); };
+
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase.from("profiles").update({ is_active }).eq("id", id);
