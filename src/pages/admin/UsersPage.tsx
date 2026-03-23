@@ -69,7 +69,8 @@ export default function UsersPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
-        .select("*");
+        .select("*")
+        .limit(10000);
       if (error) throw error;
       return data as UserRole[];
     },
