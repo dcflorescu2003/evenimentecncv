@@ -111,7 +111,7 @@ export default function EventParticipantsPage() {
       if (participantStudentIds.length === 0) return [];
       const { data } = await supabase
         .from("student_class_assignments")
-        .select("student_id, classes(display_name)")
+        .select("student_id, classes(display_name, grade_number, section)")
         .in("student_id", participantStudentIds);
       return data ?? [];
     },
@@ -119,9 +119,17 @@ export default function EventParticipantsPage() {
   });
 
   const classLookup = new Map<string, string>();
+  const classInfoLookup = new Map<string, { gradeNumber: number; section: string }>();
   participantClassAssignments.forEach((a: any) => {
-    const dn = a.classes?.display_name || "";
-    if (dn && !classLookup.has(a.student_id)) classLookup.set(a.student_id, dn);
+    const cls = a.classes;
+    const dn = cls?.display_name || "";
+    if (dn && !classLookup.has(a.student_id)) {
+      classLookup.set(a.student_id, dn);
+      classInfoLookup.set(a.student_id, {
+        gradeNumber: cls?.grade_number || 0,
+        section: cls?.section || "",
+      });
+    }
   });
 
   // Unify participants
