@@ -403,15 +403,13 @@ function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: 
           const ev = eventMap[eid];
           if (!ev) continue;
           const res = (reservations ?? []).find(r => r.student_id === p.id && r.event_id === eid && r.status === "reserved");
-          let status = "Neînscris";
-          if (res) {
-            const ticket = ticketByRes[res.id];
-            const ts = ticket?.status || "reserved";
-            if (ts === "present" || ts === "late") status = "Prezent";
-            else if (ts === "absent") status = "Absent";
-            else if (ts === "excused") status = "Absent motivat";
-            else status = "Rezervat";
-          }
+          if (!res) continue; // Skip students not enrolled
+          const ticket = ticketByRes[res.id];
+          const ts = ticket?.status || "reserved";
+          let status = "Rezervat";
+          if (ts === "present" || ts === "late") status = "Prezent";
+          else if (ts === "absent") status = "Absent";
+          else if (ts === "excused") status = "Absent motivat";
           rows.push({
             id: `${p.id}-${eid}`,
             name: `${p.last_name} ${p.first_name}`,
