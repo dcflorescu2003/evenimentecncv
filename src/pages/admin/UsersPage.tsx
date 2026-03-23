@@ -163,15 +163,25 @@ export default function UsersPage() {
         username: values.username,
         display_name: `${values.last_name} ${values.first_name}`,
       };
-      const userRoles = getRoles(id);
-      if (userRoles.includes("teacher") || userRoles.includes("homeroom_teacher")) {
+      if (values.roles.includes("teacher") || values.roles.includes("homeroom_teacher")) {
         updateData.teaching_norm = values.teaching_norm ? Number(values.teaching_norm) : null;
       }
       const { error } = await supabase.from("profiles").update(updateData).eq("id", id);
       if (error) throw error;
+
+      // Update roles via edge function
+      const currentRoles = getRoles(id);
+      const rolesChanged = values.roles.length !== currentRoles.length || values.roles.some(r => !currentRoles.includes(r));
+      if (rolesChanged) {
+        const { error: roleError } = await supabase.functions.invoke("admin-manage-users", {
+          body: { action: "update_roles", user_id: id, roles: values.roles },
+        });
+        if (roleError) throw roleError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["user_roles"] });
       setEditUser(null);
       toast.success("Utilizator actualizat");
     },
