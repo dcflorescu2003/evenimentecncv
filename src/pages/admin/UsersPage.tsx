@@ -48,7 +48,7 @@ export default function UsersPage() {
   const [editNormId, setEditNormId] = useState<string | null>(null);
   const [editNormValue, setEditNormValue] = useState("");
   const [editUser, setEditUser] = useState<Profile | null>(null);
-  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "" });
+  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "", roles: [] as string[] });
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["profiles"],
