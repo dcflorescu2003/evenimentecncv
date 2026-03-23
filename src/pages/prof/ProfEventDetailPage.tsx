@@ -305,6 +305,32 @@ export default function ProfEventDetailPage() {
     enabled: assistantDialogOpen,
   });
 
+  // Queries for edit form
+  const { data: sessions = [] } = useQuery({
+    queryKey: ["program_sessions"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("program_sessions").select("*").order("start_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: editDialogOpen,
+  });
+
+  const { data: editClasses = [] } = useQuery({
+    queryKey: ["active_classes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, display_name, grade_number, section")
+        .eq("is_active", true)
+        .order("grade_number")
+        .order("section");
+      if (error) throw error;
+      return data;
+    },
+    enabled: editDialogOpen,
+  });
+
   const assistantStudentIdsSet = new Set(assistants.map((a: any) => a.student_id));
   const availableStudents = allStudents.filter((s: any) => !assistantStudentIdsSet.has(s.id));
 
@@ -313,6 +339,12 @@ export default function ProfEventDetailPage() {
 
   const dossierFiles = files.filter((f) => f.file_category === "event_dossier");
   const templateFiles = files.filter((f) => f.file_category === "form_template");
+
+  const classesByGrade = editClasses.reduce((acc, c) => {
+    if (!acc[c.grade_number]) acc[c.grade_number] = [];
+    acc[c.grade_number].push(c);
+    return acc;
+  }, {} as Record<number, typeof editClasses>);
 
   const assignMutation = useMutation({
     mutationFn: async (teacherId: string) => {
