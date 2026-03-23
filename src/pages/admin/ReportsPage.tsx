@@ -29,6 +29,14 @@ export default function ReportsPage() {
     },
   });
 
+  // Auto-select active or most recent session
+  useEffect(() => {
+    if (sessions && sessions.length > 0 && !sessionId) {
+      const active = sessions.find(s => s.status === "active");
+      setSessionId((active || sessions[0]).id);
+    }
+  }, [sessions, sessionId]);
+
   return (
     <div className="space-y-6 print:space-y-4">
       <div className="flex items-center justify-between print:hidden">

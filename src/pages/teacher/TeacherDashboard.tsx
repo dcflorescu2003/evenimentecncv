@@ -68,6 +68,14 @@ export default function TeacherDashboard() {
     },
   });
 
+  // Auto-select active or most recent session
+  useEffect(() => {
+    if (sessions.length > 0 && !sessionId) {
+      const active = sessions.find(s => s.status === "active");
+      setSessionId((active || sessions[0]).id);
+    }
+  }, [sessions, sessionId]);
+
   const classIds = myClasses.map((c) => c.id);
 
   const { data: reportData = [], isLoading } = useQuery({
