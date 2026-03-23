@@ -228,7 +228,7 @@ export default function CredentialsPage() {
         const { data: roleUsers } = await supabase
           .from("user_roles")
           .select("user_id")
-          .eq("role", selectedRole);
+          .eq("role", selectedRole as any);
         if (roleUsers && roleUsers.length > 0) {
           const userIds = roleUsers.map((r) => r.user_id);
           const batchSize = 100;
