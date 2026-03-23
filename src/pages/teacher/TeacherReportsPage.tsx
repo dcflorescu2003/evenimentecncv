@@ -330,9 +330,9 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={(data?.events.length ?? 0) + 2} className="text-center">Se încarcă...</TableCell></TableRow>
-                ) : !data?.students.length ? (
-                  <TableRow><TableCell colSpan={(data?.events.length ?? 0) + 2} className="text-center text-muted-foreground">Nu există date.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={(data?.events?.length ?? 0) + 2} className="text-center">Se încarcă...</TableCell></TableRow>
+                ) : !data?.students?.length ? (
+                  <TableRow><TableCell colSpan={(data?.events?.length ?? 0) + 2} className="text-center text-muted-foreground">Nu există date.</TableCell></TableRow>
                 ) : data.students.map(st => (
                   <TableRow key={st.id}>
                     <TableCell className="sticky left-0 bg-background z-10 font-medium text-sm">{st.name}</TableCell>
