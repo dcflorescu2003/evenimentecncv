@@ -162,7 +162,6 @@ export default function UsersPage() {
         first_name: values.first_name,
         last_name: values.last_name,
         username: values.username,
-        display_name: `${values.last_name} ${values.first_name}`,
       };
       if (values.roles.includes("teacher") || values.roles.includes("homeroom_teacher")) {
         updateData.teaching_norm = values.teaching_norm ? Number(values.teaching_norm) : null;
