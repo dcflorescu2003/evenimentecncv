@@ -29,7 +29,7 @@ export default function SessionReportPage() {
       const { data: profiles } = teacherIds.length
         ? await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", teacherIds)
         : { data: [] };
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p.display_name || `${p.last_name} ${p.first_name}`]));
+      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p`${p.last_name} ${p.first_name}`]));
 
       return data.map((e) => ({
         ...e,

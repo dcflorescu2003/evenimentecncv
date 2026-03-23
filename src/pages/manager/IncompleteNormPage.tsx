@@ -57,7 +57,7 @@ export default function IncompleteNormPage() {
           const hours = evts.reduce((s, eid) => s + (eventHoursMap[eid] || 0), 0);
           const norm = p.teaching_norm;
           if (hours >= norm) return null;
-          return { id: p.id, name: p.display_name || `${p.last_name} ${p.first_name}`, events: evts.length, organizedHours: hours, norm, remaining: norm - hours };
+          return { id: p.id, name: p`${p.last_name} ${p.first_name}`, events: evts.length, organizedHours: hours, norm, remaining: norm - hours };
         })
         .filter(Boolean)
         .sort((a, b) => a!.organizedHours - b!.organizedHours) as Array<{
@@ -109,7 +109,7 @@ export default function IncompleteNormPage() {
 
       // Get profiles
       const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", studentIds);
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p.display_name || `${p.last_name} ${p.first_name}`]));
+      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p`${p.last_name} ${p.first_name}`]));
 
       // Calculate per student
       return studentIds

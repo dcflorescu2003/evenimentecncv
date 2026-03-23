@@ -717,7 +717,7 @@ export default function EventDetailPage() {
                     return aLast.localeCompare(bLast, "ro") || (a.profile?.first_name || "").localeCompare(b.profile?.first_name || "", "ro");
                   }).map((a: any) => {
                     const profile = a.profile;
-                    const name = profile?.display_name || `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim();
+                    const name = profile?`${profile?.last_name || ""} ${profile?.first_name || ""}`.trim();
                     const className = classMap.get(a.student_id) || "";
                     return (
                       <TableRow key={`assistant-${a.id}`}>
@@ -753,7 +753,7 @@ export default function EventDetailPage() {
                   }).map((p: any) => {
                     const profile = p.profiles;
                     const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
-                    const name = profile?.display_name || `${profile?.last_name} ${profile?.first_name}`;
+                    const name = profile?`${profile?.last_name} ${profile?.first_name}`;
                     const className = classMap.get(profile?.id) || "";
                     const ticketStatusLabels: Record<string, string> = {
                       reserved: "Rezervat", present: "Prezent", late: "Întârziat",
@@ -933,7 +933,7 @@ export default function EventDetailPage() {
                   {coordinators.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">
-                        {c.profiles?.display_name || `${c.profiles?.last_name} ${c.profiles?.first_name}`}
+                        {c.profiles?`${c.profiles?.last_name} ${c.profiles?.first_name}`}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatDateTime(c.created_at)}

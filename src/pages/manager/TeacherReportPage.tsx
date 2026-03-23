@@ -35,7 +35,7 @@ export default function TeacherReportPage() {
 
   const filteredTeachers = (teachers || []).filter((t) => {
     if (!search) return true;
-    const name = (t.display_name || `${t.last_name} ${t.first_name}`).toLowerCase();
+    const name = (t`${t.last_name} ${t.first_name}`).toLowerCase();
     return name.includes(search.toLowerCase());
   });
 
@@ -123,7 +123,7 @@ export default function TeacherReportPage() {
       headers,
       rows: filteredTeachers.map((t, i) => {
         const row = [
-          String(i + 1), t.display_name || `${t.last_name} ${t.first_name}`,
+          String(i + 1), t`${t.last_name} ${t.first_name}`,
           String(summary[t.id]?.events || 0), String(summary[t.id]?.hours || 0) + "h",
         ];
         if (sessionHasRules) row.push(t.teaching_norm ? `${t.teaching_norm}h` : "—");
@@ -135,7 +135,7 @@ export default function TeacherReportPage() {
 
   const handleExportDetail = () => {
     if (!detail?.events.length) return;
-    const name = detail.profile?.display_name || `${detail.profile?.last_name} ${detail.profile?.first_name}`;
+    const name = detail.profile?`${detail.profile?.last_name} ${detail.profile?.first_name}`;
     exportReportPdf({
       title: `Raport profesor: ${name}`,
       subtitle: `Sesiune: ${sessionName} | Ore organizate: ${detail.totalHours}h`,
@@ -182,7 +182,7 @@ export default function TeacherReportPage() {
             {filteredTeachers.map((t, i) => (
               <TableRow key={t.id}>
                 <TableCell>{i + 1}</TableCell>
-                <TableCell>{t.display_name || `${t.last_name} ${t.first_name}`}</TableCell>
+                <TableCell>{t`${t.last_name} ${t.first_name}`}</TableCell>
                 <TableCell>{summary?.[t.id]?.events || 0}</TableCell>
                 <TableCell>{summary?.[t.id]?.hours || 0}h</TableCell>
                 {sessionHasRules && (
@@ -205,7 +205,7 @@ export default function TeacherReportPage() {
           {detail && (
             <>
               <div className="grid gap-4 md:grid-cols-3">
-                <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Profesor</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.profile?.display_name || `${detail.profile?.last_name} ${detail.profile?.first_name}`}</p></CardContent></Card>
+                <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Profesor</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.profile?`${detail.profile?.last_name} ${detail.profile?.first_name}`}</p></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Nr. evenimente</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.events.length}</p></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore organizate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.totalHours}h{sessionHasRules && (detail.profile as any)?.teaching_norm ? ` / ${(detail.profile as any).teaching_norm}h` : ""}</p></CardContent></Card>
               </div>
