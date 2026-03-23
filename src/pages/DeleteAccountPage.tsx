@@ -81,7 +81,7 @@ export default function DeleteAccountPage() {
           <CardContent className="space-y-4">
             {profile && (
               <div className="rounded-md bg-muted p-3 text-sm">
-                <p><strong>Cont:</strong> {profile.display_name || `${profile.first_name} ${profile.last_name}`}</p>
+                <p><strong>Cont:</strong> {profile.display_name || `${profile.last_name} ${profile.first_name}`}</p>
                 <p><strong>Utilizator:</strong> {profile.username}</p>
               </div>
             )}

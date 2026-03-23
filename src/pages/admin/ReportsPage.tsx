@@ -73,22 +73,39 @@ function ClassReport({ sessionId }: { sessionId: string }) {
     queryKey: ["report-classes", sessionId],
     queryFn: async () => {
       const { data: classes } = await supabase.from("classes").select("id, display_name, grade_number").eq("is_active", true).order("grade_number");
-      const { data: assignments } = await supabase.from("student_class_assignments").select("student_id, class_id");
-      const { data: reservations } = await supabase.from("reservations").select("id, student_id, status, event_id");
+
+      // Batch fetch to handle >1000 rows
+      const batchFetch = async (query: () => ReturnType<typeof supabase.from>) => {
+        const batchSize = 1000;
+        let all: any[] = [];
+        let from = 0;
+        while (true) {
+          const { data, error } = await (query() as any).range(from, from + batchSize - 1);
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          all.push(...data);
+          if (data.length < batchSize) break;
+          from += batchSize;
+        }
+        return all;
+      };
+
+      const assignments = await batchFetch(() => supabase.from("student_class_assignments").select("student_id, class_id") as any);
+      const reservations = await batchFetch(() => supabase.from("reservations").select("id, student_id, status, event_id") as any);
       const { data: events } = await supabase.from("events").select("id, session_id, counted_duration_hours").eq("session_id", sessionId);
-      const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
+      const tickets = await batchFetch(() => supabase.from("tickets").select("id, reservation_id, status") as any);
 
       const eventIds = new Set((events ?? []).map(e => e.id));
-      const sessionReservations = (reservations ?? []).filter(r => eventIds.has(r.event_id));
+      const sessionReservations = reservations.filter((r: any) => eventIds.has(r.event_id));
 
       const eventMap = Object.fromEntries((events ?? []).map(e => [e.id, e]));
-      const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
+      const ticketByRes = Object.fromEntries(tickets.map((t: any) => [t.reservation_id, t]));
 
       return (classes ?? []).map(cls => {
-        const studentIds = (assignments ?? []).filter(a => a.class_id === cls.id).map(a => a.student_id);
-        const clsReservations = sessionReservations.filter(r => studentIds.includes(r.student_id) && r.status === "reserved");
-        const reservedHours = clsReservations.reduce((sum, r) => sum + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
-        const validatedHours = clsReservations.reduce((sum, r) => {
+        const studentIds = assignments.filter((a: any) => a.class_id === cls.id).map((a: any) => a.student_id);
+        const clsReservations = sessionReservations.filter((r: any) => studentIds.includes(r.student_id) && r.status === "reserved");
+        const reservedHours = clsReservations.reduce((sum: number, r: any) => sum + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
+        const validatedHours = clsReservations.reduce((sum: number, r: any) => {
           const t = ticketByRes[r.id];
           return sum + (t && (t.status === "present" || t.status === "late") ? (eventMap[r.event_id]?.counted_duration_hours ?? 0) : 0);
         }, 0);
@@ -165,9 +182,26 @@ function EventReport({ sessionId }: { sessionId: string }) {
     queryKey: ["report-events", sessionId],
     queryFn: async () => {
       const { data: events } = await supabase.from("events").select("*").eq("session_id", sessionId).order("date");
-      const { data: reservations } = await supabase.from("reservations").select("id, event_id, status");
-      const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
-      const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
+
+      // Batch fetch reservations and tickets (can exceed 1000 rows)
+      const batchFetchAny = async (queryFn: (from: number, to: number) => any) => {
+        const batchSize = 1000;
+        let all: any[] = [];
+        let from = 0;
+        while (true) {
+          const { data, error } = await queryFn(from, from + batchSize - 1);
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          all.push(...data);
+          if (data.length < batchSize) break;
+          from += batchSize;
+        }
+        return all;
+      };
+
+      const reservations = await batchFetchAny((f, t) => supabase.from("reservations").select("id, event_id, status").range(f, t));
+      const tickets = await batchFetchAny((f, t) => supabase.from("tickets").select("id, reservation_id, status").range(f, t));
+      const ticketByRes = Object.fromEntries(tickets.map((t: any) => [t.reservation_id, t]));
 
       // Get public data
       const eventIds = (events ?? []).map(e => e.id);
@@ -295,8 +329,19 @@ function StudentReport({ sessionId }: { sessionId: string }) {
       const eventMap = Object.fromEntries((events ?? []).map(e => [e.id, e]));
       
       const { data: reservations } = await supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", studentIds);
-      const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
-      const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
+      // Batch fetch tickets (can exceed 1000)
+      const batchSize = 1000;
+      let allTickets: any[] = [];
+      let tFrom = 0;
+      while (true) {
+        const { data: tData, error: tErr } = await supabase.from("tickets").select("id, reservation_id, status").range(tFrom, tFrom + batchSize - 1);
+        if (tErr) throw tErr;
+        if (!tData || tData.length === 0) break;
+        allTickets.push(...tData);
+        if (tData.length < batchSize) break;
+        tFrom += batchSize;
+      }
+      const ticketByRes = Object.fromEntries(allTickets.map((t: any) => [t.reservation_id, t]));
       const classMap = Object.fromEntries((assignments ?? []).map(a => [a.student_id, a.class_id]));
       const classNameMap = Object.fromEntries((classes ?? []).map(c => [c.id, c.display_name]));
 
