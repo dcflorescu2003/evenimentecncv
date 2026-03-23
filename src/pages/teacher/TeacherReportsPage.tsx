@@ -307,8 +307,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
           Legendă: <span className="text-green-600 font-bold">✓</span> Prezent &nbsp;
           <span className="text-destructive font-bold">✗</span> Absent &nbsp;
           <span className="text-amber-600 font-bold">M</span> Motivat &nbsp;
-          <span className="text-muted-foreground">○</span> Rezervat &nbsp;
-          <span className="text-muted-foreground/50">—</span> Neînscris
+          <span className="text-muted-foreground">○</span> Rezervat
         </p>
         <Button variant="outline" size="sm" onClick={handleExport}>
           <Download className="mr-2 h-4 w-4" /> Export PDF
