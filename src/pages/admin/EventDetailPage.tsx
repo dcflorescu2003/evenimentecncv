@@ -195,78 +195,35 @@ export default function EventDetailPage() {
 
   // Fetch class assignments for all student participants (for PDF export)
   const studentIds = participants.map((p: any) => p.profiles?.id).filter(Boolean);
-  const { data: classAssignments = [] } = useQuery({
-    queryKey: ["student_class_assignments_for_event", id, studentIds],
-    queryFn: async () => {
-      if (studentIds.length === 0) return [];
-      const { data, error } = await supabase
-        .from("student_class_assignments")
-        .select("student_id, classes(display_name)")
-        .in("student_id", studentIds);
-      if (error) throw error;
-      return data as any[];
-    },
-    enabled: studentIds.length > 0,
-  });
-
-  // Build class lookup map: student_id -> class display_name
-  const classMap = new Map<string, string>();
-  classAssignments.forEach((a: any) => {
-    const displayName = a.classes?.display_name || "";
-    if (displayName && !classMap.has(a.student_id)) {
-      classMap.set(a.student_id, displayName);
-    }
-  });
-
-  // Event student assistants
-  const { data: assistants = [] } = useQuery({
-    queryKey: ["event_student_assistants", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("event_student_assistants")
-        .select("*")
-        .eq("event_id", id!);
-      if (error) throw error;
-      // Fetch profiles for assistants
-      const studentIds = (data || []).map((a: any) => a.student_id);
-      if (studentIds.length === 0) return [];
-      const { data: profiles, error: pErr } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, display_name")
-        .in("id", studentIds);
-      if (pErr) throw pErr;
-      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
-      return (data || []).map((a: any) => ({ ...a, profile: profileMap.get(a.student_id) }));
-    },
-    enabled: !!id,
-  });
-
-  // Fetch class assignments for assistants too
   const assistantStudentIds = assistants.map((a: any) => a.student_id).filter(Boolean);
-  const allStudentIdsForClass = [...new Set([...studentIds, ...assistantStudentIds])];
+  const allEventStudentIds = [...new Set([...studentIds, ...assistantStudentIds])];
 
-  // Update classAssignments query to include assistant student ids
-  // (already covers studentIds; we need to also add assistants)
-  // We'll fetch assistant class data separately
-  const { data: assistantClassAssignments = [] } = useQuery({
-    queryKey: ["assistant_class_assignments", id, assistantStudentIds],
+  const { data: classAssignments = [] } = useQuery({
+    queryKey: ["student_class_assignments_for_event", id, allEventStudentIds],
     queryFn: async () => {
-      if (assistantStudentIds.length === 0) return [];
+      if (allEventStudentIds.length === 0) return [];
       const { data, error } = await supabase
         .from("student_class_assignments")
-        .select("student_id, classes(display_name)")
-        .in("student_id", assistantStudentIds);
+        .select("student_id, classes(display_name, grade_number, section)")
+        .in("student_id", allEventStudentIds);
       if (error) throw error;
       return data as any[];
     },
-    enabled: assistantStudentIds.length > 0,
+    enabled: allEventStudentIds.length > 0,
   });
 
-  // Add assistant class data to classMap
-  assistantClassAssignments.forEach((a: any) => {
-    const displayName = a.classes?.display_name || "";
+  // Build class lookup map: student_id -> class info
+  const classMap = new Map<string, string>();
+  const classInfoMap = new Map<string, { gradeNumber: number; section: string }>();
+  classAssignments.forEach((a: any) => {
+    const cls = a.classes;
+    const displayName = cls?.display_name || "";
     if (displayName && !classMap.has(a.student_id)) {
       classMap.set(a.student_id, displayName);
+      classInfoMap.set(a.student_id, {
+        gradeNumber: cls?.grade_number || 0,
+        section: cls?.section || "",
+      });
     }
   });
 
