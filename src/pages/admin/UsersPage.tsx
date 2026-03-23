@@ -56,13 +56,25 @@ export default function UsersPage() {
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("last_name")
-        .limit(10000);
-      if (error) throw error;
-      return data as Profile[];
+      const allData: Profile[] = [];
+      const batchSize = 1000;
+      let from = 0;
+
+      while (true) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .order("last_name")
+          .order("first_name")
+          .range(from, from + batchSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData.push(...(data as Profile[]));
+        if (data.length < batchSize) break;
+        from += batchSize;
+      }
+
+      return allData;
     },
   });
 
