@@ -46,6 +46,70 @@ const fileCategoryLabels: Record<string, string> = {
   form_template: "Șablon formular",
 };
 
+type EventStatus = "draft" | "published" | "closed" | "cancelled";
+
+const eventStatusLabels: Record<EventStatus, string> = {
+  draft: "Ciornă", published: "Publicat", closed: "Închis", cancelled: "Anulat",
+};
+
+interface EventForm {
+  session_id: string;
+  title: string;
+  description: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  room_details: string;
+  max_capacity: number;
+  status: EventStatus;
+  eligible_grades: number[];
+  eligible_classes: string[];
+  booking_open_date: string;
+  booking_open_time: string;
+  booking_close_date: string;
+  booking_close_time: string;
+  notes_for_teachers: string;
+  is_public: boolean;
+}
+
+const emptyForm: EventForm = {
+  session_id: "", title: "", description: "", date: "",
+  start_time: "08:00", end_time: "10:00", location: "", room_details: "",
+  max_capacity: 30, status: "draft", eligible_grades: [], eligible_classes: [],
+  booking_open_date: "", booking_open_time: "",
+  booking_close_date: "", booking_close_time: "",
+  notes_for_teachers: "", is_public: false,
+};
+
+function computeDuration(start: string, end: string) {
+  if (!start || !end) return { display: "", hours: 0 };
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const totalMin = (eh * 60 + em) - (sh * 60 + sm);
+  if (totalMin <= 0) return { display: "0h", hours: 0 };
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  const rounded = m >= 30 ? h + 1 : h;
+  return { display: `${h}h${m > 0 ? m + "m" : ""}`, hours: Math.max(rounded, 1) };
+}
+
+function splitDatetime(dt: string | null): { date: string; time: string } {
+  if (!dt) return { date: "", time: "" };
+  const d = new Date(dt);
+  if (isNaN(d.getTime())) return { date: "", time: "" };
+  return {
+    date: d.toISOString().slice(0, 10),
+    time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
+  };
+}
+
+function joinDatetime(date: string, time: string): string | null {
+  if (!date) return null;
+  const t = time || "00:00";
+  return `${date}T${t}:00`;
+}
+
 export default function ProfEventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
