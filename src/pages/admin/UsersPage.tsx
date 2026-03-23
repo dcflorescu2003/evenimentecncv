@@ -357,7 +357,7 @@ export default function UsersPage() {
                 const userRoles = getRoles(p.id);
                 return (
                   <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p`${p.last_name} ${p.first_name}`}</TableCell>
+                    <TableCell className="font-medium">{`${p.last_name} ${p.first_name}`}</TableCell>
                     <TableCell className="font-mono text-sm">{p.username}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1">

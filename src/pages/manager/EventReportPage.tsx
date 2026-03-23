@@ -47,7 +47,7 @@ function EventDocumentsSection({ eventId }: { eventId: string }) {
       if (!data?.length) return [];
       const studentIds = [...new Set(data.map((f) => f.student_id))];
       const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", studentIds);
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p`${p.last_name} ${p.first_name}`]));
+      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, `${p.last_name} ${p.first_name}`]));
       return data.map((f) => ({ ...f, studentName: profileMap[f.student_id] || "" }));
     },
   });
@@ -196,7 +196,7 @@ export default function EventReportPage() {
 
       const classMap = Object.fromEntries((classesRes.data || []).map((c) => [c.id, c.display_name]));
       const allProfiles = [...profiles, ...(extraProfilesRes.data || [])];
-      const profileMap = Object.fromEntries(allProfiles.map((p) => [p.id, p`${p.last_name} ${p.first_name}`]));
+      const profileMap = Object.fromEntries(allProfiles.map((p) => [p.id, `${p.last_name} ${p.first_name}`]));
       const studentClassMap = Object.fromEntries(classAssign.map((ca) => [ca.student_id, classMap[ca.class_id] || ""]));
       const ticketMap = Object.fromEntries(tickets.map((t) => [t.reservation_id, t.status]));
 

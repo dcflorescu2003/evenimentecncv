@@ -55,7 +55,7 @@ export default function AuditPage() {
       if (error) return {};
       const map: Record<string, string> = {};
       (data || []).forEach((p: any) => {
-        map[p.id] = p`${p.last_name} ${p.first_name}`;
+        map[p.id] = `${p.last_name} ${p.first_name}`;
       });
       return map;
     },

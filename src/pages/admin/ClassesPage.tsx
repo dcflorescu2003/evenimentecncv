@@ -182,7 +182,7 @@ export default function ClassesPage() {
   function getTeacherName(teacherId: string | null) {
     if (!teacherId) return "—";
     const p = teacherProfiles.find((t) => t.id === teacherId);
-    return p ? (p`${p.last_name} ${p.first_name}`) : "—";
+    return p ? (``${p.last_name} ${p.first_name}`) : "—";
   }
 
   function getStudentsForClass(classId: string) {
@@ -612,7 +612,7 @@ export default function ClassesPage() {
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between">
                 {selectedTeacherId && selectedTeacherId !== "none"
-                  ? (() => { const t = teachers.find(t => t.id === selectedTeacherId); return t ? (t`${t.last_name} ${t.first_name}`) : "Selectează diriginte"; })()
+                  ? (() => { const t = teachers.find(t => t.id === selectedTeacherId); return t ? (``${t.last_name} ${t.first_name}`) : "Selectează diriginte"; })()
                   : "Selectează diriginte"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
@@ -628,7 +628,7 @@ export default function ClassesPage() {
                       — Fără diriginte —
                     </CommandItem>
                     {teachers.map((t) => {
-                      const name = t`${t.last_name} ${t.first_name}`;
+                      const name = `${t.last_name} ${t.first_name}`;
                       return (
                         <CommandItem key={t.id} value={name} onSelect={() => setSelectedTeacherId(t.id)}>
                           <Check className={cn("mr-2 h-4 w-4", selectedTeacherId === t.id ? "opacity-100" : "opacity-0")} />
@@ -700,7 +700,7 @@ export default function ClassesPage() {
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between">
                 {selectedStudentId
-                  ? (() => { const s = students.find(s => s.id === selectedStudentId); return s ? (s`${s.last_name} ${s.first_name}`) : "Selectează elev"; })()
+                  ? (() => { const s = students.find(s => s.id === selectedStudentId); return s ? (``${s.last_name} ${s.first_name}`) : "Selectează elev"; })()
                   : "Selectează elev"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
@@ -714,7 +714,7 @@ export default function ClassesPage() {
                     {students
                       .filter((s) => !allAssignedStudentIds.includes(s.id))
                       .map((s) => {
-                        const name = s`${s.last_name} ${s.first_name}`;
+                        const name = `${s.last_name} ${s.first_name}`;
                         return (
                           <CommandItem key={s.id} value={name} onSelect={() => setSelectedStudentId(s.id)}>
                             <Check className={cn("mr-2 h-4 w-4", selectedStudentId === s.id ? "opacity-100" : "opacity-0")} />

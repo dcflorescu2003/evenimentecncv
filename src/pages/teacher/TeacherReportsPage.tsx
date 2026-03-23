@@ -68,7 +68,7 @@ export default function TeacherReportsPage() {
         }, 0);
         return {
           id: p.id,
-          name: p`${p.last_name} ${p.first_name}`,
+          name: `${p.last_name} ${p.first_name}`,
           lastName: p.last_name,
           className: classNameMap[classMap[p.id]] ?? "—",
           reservations: sRes.length,

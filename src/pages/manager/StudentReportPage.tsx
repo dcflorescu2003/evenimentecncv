@@ -137,7 +137,7 @@ export default function StudentReportPage() {
           <div className="flex flex-wrap gap-2">
             {students.map((s) => (
               <Button key={s.id} variant={selectedId === s.id ? "default" : "outline"} size="sm" onClick={() => setSelectedId(s.id)}>
-                {s`${s.last_name} ${s.first_name}`}
+                {`${s.last_name} ${s.first_name}`}
               </Button>
             ))}
           </div>

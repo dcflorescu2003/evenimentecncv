@@ -132,7 +132,7 @@ export default function TeacherDashboard() {
 
         return {
           id: p.id,
-          name: p`${p.last_name} ${p.first_name}`,
+          name: `${p.last_name} ${p.first_name}`,
           lastName: p.last_name,
           reservations: reservationDetails,
           totalReservedHours,

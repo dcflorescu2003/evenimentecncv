@@ -35,7 +35,7 @@ export default function TeacherReportPage() {
 
   const filteredTeachers = (teachers || []).filter((t) => {
     if (!search) return true;
-    const name = (t`${t.last_name} ${t.first_name}`).toLowerCase();
+    const name = (``${t.last_name} ${t.first_name}`).toLowerCase();
     return name.includes(search.toLowerCase());
   });
 
@@ -123,7 +123,7 @@ export default function TeacherReportPage() {
       headers,
       rows: filteredTeachers.map((t, i) => {
         const row = [
-          String(i + 1), t`${t.last_name} ${t.first_name}`,
+          String(i + 1), `${t.last_name} ${t.first_name}`,
           String(summary[t.id]?.events || 0), String(summary[t.id]?.hours || 0) + "h",
         ];
         if (sessionHasRules) row.push(t.teaching_norm ? `${t.teaching_norm}h` : "—");
@@ -182,7 +182,7 @@ export default function TeacherReportPage() {
             {filteredTeachers.map((t, i) => (
               <TableRow key={t.id}>
                 <TableCell>{i + 1}</TableCell>
-                <TableCell>{t`${t.last_name} ${t.first_name}`}</TableCell>
+                <TableCell>{`${t.last_name} ${t.first_name}`}</TableCell>
                 <TableCell>{summary?.[t.id]?.events || 0}</TableCell>
                 <TableCell>{summary?.[t.id]?.hours || 0}h</TableCell>
                 {sessionHasRules && (
