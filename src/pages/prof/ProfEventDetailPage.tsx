@@ -247,6 +247,38 @@ export default function ProfEventDetailPage() {
     enabled: !!id,
   });
 
+  // Fetch class assignments for participants + assistants
+  const participantStudentIds = participants.map((p: any) => p.profiles?.id).filter(Boolean);
+  const assistantStudentIds = assistants.map((a: any) => a.student_id).filter(Boolean);
+  const allEventStudentIds = [...new Set([...participantStudentIds, ...assistantStudentIds])];
+
+  const { data: eventClassAssignments = [] } = useQuery({
+    queryKey: ["prof_event_class_assignments", id, allEventStudentIds],
+    queryFn: async () => {
+      if (allEventStudentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("student_class_assignments")
+        .select("student_id, classes(display_name, grade_number, section)")
+        .in("student_id", allEventStudentIds);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: allEventStudentIds.length > 0,
+  });
+
+  const eventClassMap = new Map<string, { displayName: string; gradeNumber: number; section: string }>();
+  eventClassAssignments.forEach((a: any) => {
+    const cls = a.classes;
+    const dn = cls?.display_name || "";
+    if (dn && !eventClassMap.has(a.student_id)) {
+      eventClassMap.set(a.student_id, {
+        displayName: dn,
+        gradeNumber: cls?.grade_number || 0,
+        section: cls?.section || "",
+      });
+    }
+  });
+
   // Searchable students for assistant assignment
   const { data: allStudents = [] } = useQuery({
     queryKey: ["all_students_for_prof_assistant"],
