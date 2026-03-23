@@ -304,6 +304,24 @@ serve(async (req) => {
       });
     }
 
+    if (action === "update_roles") {
+      if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
+      const { user_id, roles } = body;
+      if (!user_id || !Array.isArray(roles) || roles.length === 0) throw new Error("user_id și roles sunt obligatorii");
+
+      // Delete existing roles
+      await supabase.from("user_roles").delete().eq("user_id", user_id);
+
+      // Insert new roles
+      const roleRows = roles.map((role: string) => ({ user_id, role }));
+      const { error: roleError } = await supabase.from("user_roles").insert(roleRows);
+      if (roleError) throw roleError;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "delete_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
       const { user_id } = body;
