@@ -225,15 +225,13 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
       const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
       const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
 
-      // Build matrix: student → event → status
+      // Build matrix: student → event → status (only for enrolled events)
       const students = (profiles ?? []).map(p => {
         const eventStatuses: Record<string, string> = {};
         let validatedHours = 0;
         for (const eid of eventIds) {
           const res = (reservations ?? []).find(r => r.student_id === p.id && r.event_id === eid && r.status === "reserved");
-          if (!res) {
-            eventStatuses[eid] = "none"; // not enrolled
-          } else {
+          if (res) {
             const ticket = ticketByRes[res.id];
             const status = ticket?.status || "reserved";
             eventStatuses[eid] = status;
@@ -251,12 +249,17 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
         };
       }).sort((a, b) => a.lastName.localeCompare(b.lastName));
 
-      return { students, events: events ?? [] };
+      // Filter events to only those with at least 1 enrolled student
+      const eventsWithEnrollments = (events ?? []).filter(e =>
+        students.some(st => st.eventStatuses[e.id] !== undefined)
+      );
+
+      return { students, events: eventsWithEnrollments };
     },
     enabled: !!sessionId && classIds.length > 0,
   });
 
-  const statusIcon = (status: string) => {
+  const statusIcon = (status: string | undefined) => {
     switch (status) {
       case "present":
       case "late":
@@ -304,8 +307,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
           Legendă: <span className="text-green-600 font-bold">✓</span> Prezent &nbsp;
           <span className="text-destructive font-bold">✗</span> Absent &nbsp;
           <span className="text-amber-600 font-bold">M</span> Motivat &nbsp;
-          <span className="text-muted-foreground">○</span> Rezervat &nbsp;
-          <span className="text-muted-foreground/50">—</span> Neînscris
+          <span className="text-muted-foreground">○</span> Rezervat
         </p>
         <Button variant="outline" size="sm" onClick={handleExport}>
           <Download className="mr-2 h-4 w-4" /> Export PDF
@@ -401,15 +403,13 @@ function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: 
           const ev = eventMap[eid];
           if (!ev) continue;
           const res = (reservations ?? []).find(r => r.student_id === p.id && r.event_id === eid && r.status === "reserved");
-          let status = "Neînscris";
-          if (res) {
-            const ticket = ticketByRes[res.id];
-            const ts = ticket?.status || "reserved";
-            if (ts === "present" || ts === "late") status = "Prezent";
-            else if (ts === "absent") status = "Absent";
-            else if (ts === "excused") status = "Absent motivat";
-            else status = "Rezervat";
-          }
+          if (!res) continue; // Skip students not enrolled
+          const ticket = ticketByRes[res.id];
+          const ts = ticket?.status || "reserved";
+          let status = "Rezervat";
+          if (ts === "present" || ts === "late") status = "Prezent";
+          else if (ts === "absent") status = "Absent";
+          else if (ts === "excused") status = "Absent motivat";
           rows.push({
             id: `${p.id}-${eid}`,
             name: `${p.last_name} ${p.first_name}`,
