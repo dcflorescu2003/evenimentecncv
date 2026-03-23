@@ -75,14 +75,12 @@ function ClassReport({ sessionId }: { sessionId: string }) {
       const { data: classes } = await supabase.from("classes").select("id, display_name, grade_number").eq("is_active", true).order("grade_number");
 
       // Batch fetch to handle >1000 rows
-      const fetchAll = async (table: string, select: string, filters?: (q: any) => any) => {
+      const batchFetch = async (query: () => ReturnType<typeof supabase.from>) => {
         const batchSize = 1000;
         let all: any[] = [];
         let from = 0;
         while (true) {
-          let q = supabase.from(table).select(select).range(from, from + batchSize - 1);
-          if (filters) q = filters(q);
-          const { data, error } = await q;
+          const { data, error } = await (query() as any).range(from, from + batchSize - 1);
           if (error) throw error;
           if (!data || data.length === 0) break;
           all.push(...data);
@@ -92,10 +90,10 @@ function ClassReport({ sessionId }: { sessionId: string }) {
         return all;
       };
 
-      const assignments = await fetchAll("student_class_assignments", "student_id, class_id");
-      const reservations = await fetchAll("reservations", "id, student_id, status, event_id");
+      const assignments = await batchFetch(() => supabase.from("student_class_assignments").select("student_id, class_id") as any);
+      const reservations = await batchFetch(() => supabase.from("reservations").select("id, student_id, status, event_id") as any);
       const { data: events } = await supabase.from("events").select("id, session_id, counted_duration_hours").eq("session_id", sessionId);
-      const tickets = await fetchAll("tickets", "id, reservation_id, status");
+      const tickets = await batchFetch(() => supabase.from("tickets").select("id, reservation_id, status") as any);
 
       const eventIds = new Set((events ?? []).map(e => e.id));
       const sessionReservations = (reservations ?? []).filter(r => eventIds.has(r.event_id));
