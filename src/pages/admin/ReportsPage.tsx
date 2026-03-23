@@ -329,8 +329,19 @@ function StudentReport({ sessionId }: { sessionId: string }) {
       const eventMap = Object.fromEntries((events ?? []).map(e => [e.id, e]));
       
       const { data: reservations } = await supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", studentIds);
-      const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
-      const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
+      // Batch fetch tickets (can exceed 1000)
+      const batchSize = 1000;
+      let allTickets: any[] = [];
+      let tFrom = 0;
+      while (true) {
+        const { data: tData, error: tErr } = await supabase.from("tickets").select("id, reservation_id, status").range(tFrom, tFrom + batchSize - 1);
+        if (tErr) throw tErr;
+        if (!tData || tData.length === 0) break;
+        allTickets.push(...tData);
+        if (tData.length < batchSize) break;
+        tFrom += batchSize;
+      }
+      const ticketByRes = Object.fromEntries(allTickets.map((t: any) => [t.reservation_id, t]));
       const classMap = Object.fromEntries((assignments ?? []).map(a => [a.student_id, a.class_id]));
       const classNameMap = Object.fromEntries((classes ?? []).map(c => [c.id, c.display_name]));
 
