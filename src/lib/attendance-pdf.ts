@@ -10,6 +10,38 @@ function stripDiacritics(str: string): string {
     .replace(/\u0111/g, "d").replace(/\u0110/g, "D");
 }
 
+const romanValues: Record<string, number> = {
+  I: 1, V: 5, X: 10, L: 50, C: 100,
+};
+
+function romanToInt(s: string): number {
+  let result = 0;
+  for (let i = 0; i < s.length; i++) {
+    const cur = romanValues[s[i]] || 0;
+    const next = romanValues[s[i + 1]] || 0;
+    result += cur < next ? -cur : cur;
+  }
+  return result;
+}
+
+/** Sort class names like "V A", "IX B", "XII C" by grade number then section */
+function compareClassName(a: string, b: string): number {
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+  // Extract roman numeral prefix and section suffix
+  const re = /^([IVXLC]+)\s*(.*)$/i;
+  const ma = a.match(re);
+  const mb = b.match(re);
+  if (!ma && !mb) return a.localeCompare(b, "ro");
+  if (!ma) return 1;
+  if (!mb) return -1;
+  const gradeA = romanToInt(ma[1].toUpperCase());
+  const gradeB = romanToInt(mb[1].toUpperCase());
+  if (gradeA !== gradeB) return gradeA - gradeB;
+  return (ma[2] || "").localeCompare(mb[2] || "", "ro");
+}
+
 interface ParticipantRow {
   name: string;
   className?: string;
