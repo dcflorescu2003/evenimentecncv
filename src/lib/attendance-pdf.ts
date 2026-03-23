@@ -146,7 +146,7 @@ export function exportSimpleAttendancePdf(
 
   // Sort by class then by name
   const sorted = [...rows].sort((a, b) => {
-    const classCmp = (a.className || "").localeCompare(b.className || "", "ro");
+    const classCmp = compareClassName(a.className || "", b.className || "");
     if (classCmp !== 0) return classCmp;
     return (a.fullName || "").localeCompare(b.fullName || "", "ro");
   });
