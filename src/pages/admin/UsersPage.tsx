@@ -17,7 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2 } from "lucide-react";
+import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import type { Tables } from "@/integrations/supabase/types";
@@ -47,6 +47,8 @@ export default function UsersPage() {
   });
   const [editNormId, setEditNormId] = useState<string | null>(null);
   const [editNormValue, setEditNormValue] = useState("");
+  const [editUser, setEditUser] = useState<Profile | null>(null);
+  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "" });
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["profiles"],
@@ -152,6 +154,39 @@ export default function UsersPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const editUserMutation = useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: typeof editForm }) => {
+      const updateData: any = {
+        first_name: values.first_name,
+        last_name: values.last_name,
+        username: values.username,
+        display_name: `${values.last_name} ${values.first_name}`,
+      };
+      const userRoles = getRoles(id);
+      if (userRoles.includes("teacher") || userRoles.includes("homeroom_teacher")) {
+        updateData.teaching_norm = values.teaching_norm ? Number(values.teaching_norm) : null;
+      }
+      const { error } = await supabase.from("profiles").update(updateData).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      setEditUser(null);
+      toast.success("Utilizator actualizat");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function openEditDialog(p: Profile) {
+    setEditUser(p);
+    setEditForm({
+      first_name: p.first_name,
+      last_name: p.last_name,
+      username: p.username,
+      teaching_norm: (p as any).teaching_norm?.toString() || "",
+    });
+  }
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -284,6 +319,14 @@ export default function UsersPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          title="Editează utilizator"
+                          onClick={() => openEditDialog(p)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           title="Resetează parola"
                           onClick={() => setResetUserId(p.id)}
                         >
@@ -380,6 +423,51 @@ export default function UsersPage() {
               <Copy className="h-4 w-4" />
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editează utilizator</DialogTitle>
+            <DialogDescription>Modificați detaliile utilizatorului.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (!editForm.first_name || !editForm.last_name || !editForm.username) {
+              toast.error("Completați toate câmpurile obligatorii");
+              return;
+            }
+            editUserMutation.mutate({ id: editUser!.id, values: editForm });
+          }} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Prenume *</Label>
+                <Input value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Nume *</Label>
+                <Input value={editForm.last_name} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Username *</Label>
+              <Input value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} />
+            </div>
+            {editUser && getRoles(editUser.id).some((r) => r === "teacher" || r === "homeroom_teacher") && (
+              <div className="space-y-2">
+                <Label>Norma (ore)</Label>
+                <Input type="number" min="0" placeholder="ex: 12" value={editForm.teaching_norm} onChange={(e) => setEditForm({ ...editForm, teaching_norm: e.target.value })} />
+              </div>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Anulează</Button>
+              <Button type="submit" disabled={editUserMutation.isPending}>
+                {editUserMutation.isPending ? "Se salvează…" : "Salvează"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
