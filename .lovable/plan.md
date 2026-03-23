@@ -1,27 +1,51 @@
 
 
-## Plan: Editare și ștergere evenimente din pagina de detalii
+## Plan: Auto-select session + New homeroom teacher reports
 
-### Situația actuală
+### 1. Auto-select the most recent/active session
 
-Profesorii și diriginții **pot deja** edita și șterge evenimentele din lista de evenimente (`/prof/events`) — butoanele Pencil și Trash2 există. RLS-ul permite UPDATE și DELETE pe evenimentele proprii.
+**Problem**: In `TeacherDashboard`, `TeacherReportsPage`, and `ReportsPage` (admin), `sessionId` starts as `""`, forcing users to manually pick a session every time.
 
-Ce **lipsește**: pe pagina de detalii a evenimentului (`/prof/events/:id`) nu există butoane de editare sau ștergere. Utilizatorul trebuie să se întoarcă la listă pentru aceste acțiuni.
+**Solution**: Add a `useEffect` that sets `sessionId` to the active session (or most recent) once `sessions` data loads. Apply to:
+- `src/pages/teacher/TeacherDashboard.tsx`
+- `src/pages/teacher/TeacherReportsPage.tsx`
+- `src/pages/admin/ReportsPage.tsx`
 
-### Ce se adaugă
+Logic: find session with `status === "active"`, fallback to first in list (already sorted by `start_date desc`).
 
-**`src/pages/prof/ProfEventDetailPage.tsx`**
-- Adaug butoane "Editează" și "Șterge" lângă butonul "Scanează" din header-ul paginii de detalii
-- Butonul "Editează" navighează înapoi la `/prof/events` și deschide dialogul de editare, SAU (mai simplu) redirecționează la lista de evenimente cu un query param care declanșează editarea
-- **Varianta mai bună**: adaug direct dialogul de editare în pagina de detalii (refolosind logica din `ProfEventsPage`) — dar asta ar duplica mult cod
-- **Varianta recomandată**: butoanele de Editează și Șterge direct pe pagina de detalii, cu:
-  - Dialog de confirmare pentru ștergere (cu redirect la `/prof/events` după succes)
-  - Dialog de editare cu formularul complet (extras ca și în ProfEventsPage)
-- Butonul "Șterge" deschide un AlertDialog de confirmare, apoi navighează la `/prof/events`
+---
 
-### Fișiere afectate
+### 2. Two new homeroom teacher report views
 
-| Tip | Fișier |
-|-----|--------|
-| Editat | `src/pages/prof/ProfEventDetailPage.tsx` — butoane Edit + Delete + dialoguri |
+Add two new report tabs/sections to the teacher reports page (`TeacherReportsPage.tsx`):
+
+**Report A — "Situație elevi" (Student overview)**
+A matrix/table showing each student with:
+- Columns: Student name | Event 1 | Event 2 | ... | Total ore validate
+- Cell values: ✓ (present/late), ✗ (absent), — (not enrolled)
+- Gives an "at a glance" view of who did what across all session events
+- Exportable to PDF
+
+**Report B — "Verificare prezență" (Attendance check)**
+- Filter by: a specific date OR a specific event
+- Shows only students from the homeroom class
+- Columns: Student name | Event title | Status (Prezent / Absent / Neînscris)
+- Quick way to check "who from my class was at event X" or "what happened on date Y"
+- Exportable to PDF
+
+**Implementation**: Use Tabs component within `TeacherReportsPage.tsx` with three tabs:
+1. "Sumar" (existing report)
+2. "Situație elevi" (new Report A)
+3. "Verificare prezență" (new Report B)
+
+### Files to modify
+- `src/pages/teacher/TeacherDashboard.tsx` — auto-select session
+- `src/pages/teacher/TeacherReportsPage.tsx` — auto-select session + add 2 new report tabs
+- `src/pages/admin/ReportsPage.tsx` — auto-select session
+
+### Technical notes
+- Report A queries: events for session → reservations for class students → tickets for status → build matrix
+- Report B queries: events filtered by date or single event → reservations + tickets for class students
+- Both use existing batch-fetch patterns for large datasets
+- PDF export via existing `exportReportPdf` utility
 
