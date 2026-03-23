@@ -99,6 +99,7 @@ export default function CredentialsPage() {
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingList, setLoadingList] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Fetch all profiles for single-user picker
