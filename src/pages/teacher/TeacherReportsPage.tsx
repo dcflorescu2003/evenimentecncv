@@ -225,15 +225,13 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
       const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
       const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
 
-      // Build matrix: student → event → status
+      // Build matrix: student → event → status (only for enrolled events)
       const students = (profiles ?? []).map(p => {
         const eventStatuses: Record<string, string> = {};
         let validatedHours = 0;
         for (const eid of eventIds) {
           const res = (reservations ?? []).find(r => r.student_id === p.id && r.event_id === eid && r.status === "reserved");
-          if (!res) {
-            eventStatuses[eid] = "none"; // not enrolled
-          } else {
+          if (res) {
             const ticket = ticketByRes[res.id];
             const status = ticket?.status || "reserved";
             eventStatuses[eid] = status;
@@ -251,7 +249,12 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
         };
       }).sort((a, b) => a.lastName.localeCompare(b.lastName));
 
-      return { students, events: events ?? [] };
+      // Filter events to only those with at least 1 enrolled student
+      const eventsWithEnrollments = (events ?? []).filter(e =>
+        students.some(st => st.eventStatuses[e.id] !== undefined)
+      );
+
+      return { students, events: eventsWithEnrollments };
     },
     enabled: !!sessionId && classIds.length > 0,
   });
