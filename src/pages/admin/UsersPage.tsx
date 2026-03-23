@@ -173,10 +173,11 @@ export default function UsersPage() {
       const currentRoles = getRoles(id);
       const rolesChanged = values.roles.length !== currentRoles.length || values.roles.some(r => !currentRoles.includes(r as any));
       if (rolesChanged) {
-        const { error: roleError } = await supabase.functions.invoke("admin-manage-users", {
+        const { data: roleData, error: roleError } = await supabase.functions.invoke("admin-manage-users", {
           body: { action: "update_roles", user_id: id, roles: values.roles },
         });
         if (roleError) throw roleError;
+        if (roleData?.error) throw new Error(roleData.error);
       }
     },
     onSuccess: () => {
