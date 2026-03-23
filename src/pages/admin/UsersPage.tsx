@@ -426,6 +426,51 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit User Dialog */}
+      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editează utilizator</DialogTitle>
+            <DialogDescription>Modificați detaliile utilizatorului.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (!editForm.first_name || !editForm.last_name || !editForm.username) {
+              toast.error("Completați toate câmpurile obligatorii");
+              return;
+            }
+            editUserMutation.mutate({ id: editUser!.id, values: editForm });
+          }} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Prenume *</Label>
+                <Input value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Nume *</Label>
+                <Input value={editForm.last_name} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Username *</Label>
+              <Input value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} />
+            </div>
+            {editUser && getRoles(editUser.id).some((r) => r === "teacher" || r === "homeroom_teacher") && (
+              <div className="space-y-2">
+                <Label>Norma (ore)</Label>
+                <Input type="number" min="0" placeholder="ex: 12" value={editForm.teaching_norm} onChange={(e) => setEditForm({ ...editForm, teaching_norm: e.target.value })} />
+              </div>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Anulează</Button>
+              <Button type="submit" disabled={editUserMutation.isPending}>
+                {editUserMutation.isPending ? "Se salvează…" : "Salvează"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Create User Dialog */}
       <Dialog open={createDialog} onOpenChange={setCreateDialog}>
         <DialogContent>
