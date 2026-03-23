@@ -319,6 +319,14 @@ export default function UsersPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          title="Editează utilizator"
+                          onClick={() => openEditDialog(p)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           title="Resetează parola"
                           onClick={() => setResetUserId(p.id)}
                         >
