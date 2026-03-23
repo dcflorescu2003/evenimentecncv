@@ -140,7 +140,7 @@ export default function ProfEventParticipantsPage() {
       if (uniqueParticipantStudentIds.length === 0) return [];
       const { data, error } = await supabase
         .from("student_class_assignments")
-        .select("student_id, classes(display_name)")
+        .select("student_id, classes(display_name, grade_number, section)")
         .in("student_id", uniqueParticipantStudentIds);
       if (error) throw error;
       return data as any[];
@@ -149,9 +149,17 @@ export default function ProfEventParticipantsPage() {
   });
 
   const classLookup = new Map<string, string>();
+  const classInfoLookup = new Map<string, { gradeNumber: number; section: string }>();
   participantClassAssignments.forEach((a: any) => {
-    const dn = a.classes?.display_name || "";
-    if (dn && !classLookup.has(a.student_id)) classLookup.set(a.student_id, dn);
+    const cls = a.classes;
+    const dn = cls?.display_name || "";
+    if (dn && !classLookup.has(a.student_id)) {
+      classLookup.set(a.student_id, dn);
+      classInfoLookup.set(a.student_id, {
+        gradeNumber: cls?.grade_number || 0,
+        section: cls?.section || "",
+      });
+    }
   });
 
   // Searchable students for assistant assignment

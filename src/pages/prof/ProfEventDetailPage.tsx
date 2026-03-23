@@ -247,6 +247,38 @@ export default function ProfEventDetailPage() {
     enabled: !!id,
   });
 
+  // Fetch class assignments for participants + assistants
+  const participantStudentIds = participants.map((p: any) => p.profiles?.id).filter(Boolean);
+  const assistantStudentIds = assistants.map((a: any) => a.student_id).filter(Boolean);
+  const allEventStudentIds = [...new Set([...participantStudentIds, ...assistantStudentIds])];
+
+  const { data: eventClassAssignments = [] } = useQuery({
+    queryKey: ["prof_event_class_assignments", id, allEventStudentIds],
+    queryFn: async () => {
+      if (allEventStudentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("student_class_assignments")
+        .select("student_id, classes(display_name, grade_number, section)")
+        .in("student_id", allEventStudentIds);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: allEventStudentIds.length > 0,
+  });
+
+  const eventClassMap = new Map<string, { displayName: string; gradeNumber: number; section: string }>();
+  eventClassAssignments.forEach((a: any) => {
+    const cls = a.classes;
+    const dn = cls?.display_name || "";
+    if (dn && !eventClassMap.has(a.student_id)) {
+      eventClassMap.set(a.student_id, {
+        displayName: dn,
+        gradeNumber: cls?.grade_number || 0,
+        section: cls?.section || "",
+      });
+    }
+  });
+
   // Searchable students for assistant assignment
   const { data: allStudents = [] } = useQuery({
     queryKey: ["all_students_for_prof_assistant"],
@@ -607,8 +639,17 @@ export default function ProfEventDetailPage() {
     </div>
   );
 
-  // Sort participants by last name
+  // Sort participants by class (grade number, section) then by last name
   const sortedParticipants = [...participants].sort((a: any, b: any) => {
+    const aClass = eventClassMap.get(a.profiles?.id);
+    const bClass = eventClassMap.get(b.profiles?.id);
+    const aGrade = aClass?.gradeNumber || 999;
+    const bGrade = bClass?.gradeNumber || 999;
+    if (aGrade !== bGrade) return aGrade - bGrade;
+    const aSec = aClass?.section || "";
+    const bSec = bClass?.section || "";
+    const secCmp = aSec.localeCompare(bSec, "ro");
+    if (secCmp !== 0) return secCmp;
     const aLast = a.profiles?.last_name || "";
     const bLast = b.profiles?.last_name || "";
     return aLast.localeCompare(bLast, "ro") || (a.profiles?.first_name || "").localeCompare(b.profiles?.first_name || "", "ro");
@@ -723,6 +764,7 @@ export default function ProfEventDetailPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Elev</TableHead>
+                  <TableHead>Clasa</TableHead>
                   <TableHead>Tip</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-16">Acțiuni</TableHead>
@@ -730,16 +772,18 @@ export default function ProfEventDetailPage() {
               </TableHeader>
               <TableBody>
                 {participants.length === 0 && assistants.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="py-6 text-center text-muted-foreground">Niciun participant.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="py-6 text-center text-muted-foreground">Niciun participant.</TableCell></TableRow>
                 ) : (
                   <>
                     {/* Student assistants */}
                     {assistants.map((a: any) => {
                       const profile = a.profile;
                       const name = `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim();
+                      const cls = eventClassMap.get(a.student_id);
                       return (
                         <TableRow key={`assistant-${a.id}`}>
                           <TableCell className="font-medium">{name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{cls?.displayName || "—"}</TableCell>
                           <TableCell>
                             <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px]">
                               Asistent
@@ -758,14 +802,16 @@ export default function ProfEventDetailPage() {
                         </TableRow>
                       );
                     })}
-                    {/* Regular participants sorted by last name */}
+                    {/* Regular participants sorted by class then name */}
                     {sortedParticipants.map((p: any) => {
                       const profile = p.profiles;
                       const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
                       const name = `${profile?.last_name} ${profile?.first_name}`;
+                      const cls = eventClassMap.get(profile?.id);
                       return (
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">{name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{cls?.displayName || "—"}</TableCell>
                           <TableCell><Badge variant="outline" className="text-[10px]">Elev</Badge></TableCell>
                           <TableCell>
                             <Badge variant="secondary">{statusLabels[ticket?.status || "reserved"]}</Badge>
