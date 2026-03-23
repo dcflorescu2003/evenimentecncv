@@ -31,9 +31,10 @@ import {
 } from "@/components/ui/table";
 import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, UserPlus, X, ScanLine,
-  Upload, Download, Trash2, FolderOpen, FileText, Pencil,
+  Upload, Download, Trash2, FolderOpen, FileText, Pencil, FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
 
 const statusLabels: Record<string, string> = {
   draft: "Ciornă", published: "Publicat", closed: "Închis", cancelled: "Anulat",
