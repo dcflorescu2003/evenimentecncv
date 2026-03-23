@@ -626,9 +626,17 @@ export default function ProfEventDetailPage() {
             <Badge variant="secondary">{statusLabels[event.status]}</Badge>
           </div>
         </div>
-        <Button size="sm" onClick={() => navigate(`/prof/scan/${event.id}`)}>
-          <ScanLine className="mr-2 h-4 w-4" /> Scanează
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={openEditDialog}>
+            <Pencil className="mr-2 h-4 w-4" /> Editează
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => setDeleteEventDialogOpen(true)}>
+            <Trash2 className="mr-2 h-4 w-4" /> Șterge
+          </Button>
+          <Button size="sm" onClick={() => navigate(`/prof/scan/${event.id}`)}>
+            <ScanLine className="mr-2 h-4 w-4" /> Scanează
+          </Button>
+        </div>
       </div>
 
       {/* Info Cards */}
