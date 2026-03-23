@@ -639,8 +639,17 @@ export default function ProfEventDetailPage() {
     </div>
   );
 
-  // Sort participants by last name
+  // Sort participants by class (grade number, section) then by last name
   const sortedParticipants = [...participants].sort((a: any, b: any) => {
+    const aClass = eventClassMap.get(a.profiles?.id);
+    const bClass = eventClassMap.get(b.profiles?.id);
+    const aGrade = aClass?.gradeNumber || 999;
+    const bGrade = bClass?.gradeNumber || 999;
+    if (aGrade !== bGrade) return aGrade - bGrade;
+    const aSec = aClass?.section || "";
+    const bSec = bClass?.section || "";
+    const secCmp = aSec.localeCompare(bSec, "ro");
+    if (secCmp !== 0) return secCmp;
     const aLast = a.profiles?.last_name || "";
     const bLast = b.profiles?.last_name || "";
     return aLast.localeCompare(bLast, "ro") || (a.profiles?.first_name || "").localeCompare(b.profiles?.first_name || "", "ro");
