@@ -299,7 +299,36 @@ export default function UsersPage() {
         </Select>
       </div>
 
-      <div className="rounded-lg border">
+      <div className="flex flex-col gap-3 rounded-lg border p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Afișare {pageStart}-{pageEnd} din {filteredProfiles.length} utilizatori
+          </p>
+          {hasPagination && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage <= 1}
+                onClick={goToPreviousPage}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" /> Înapoi
+              </Button>
+              <div className="rounded-md border px-3 py-1 text-sm text-muted-foreground">
+                Pagina {safePage} / {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage >= totalPages}
+                onClick={goToNextPage}
+              >
+                Înainte <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+
         <Table>
           <TableHeader>
             <TableRow>
@@ -313,13 +342,13 @@ export default function UsersPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                   Se încarcă…
                 </TableCell>
               </TableRow>
             ) : filteredProfiles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                   Niciun utilizator găsit
                 </TableCell>
               </TableRow>
@@ -331,7 +360,7 @@ export default function UsersPage() {
                     <TableCell className="font-medium">{p.display_name || `${p.last_name} ${p.first_name}`}</TableCell>
                     <TableCell className="font-mono text-sm">{p.username}</TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1 items-center">
+                      <div className="flex flex-wrap items-center gap-1">
                         {userRoles.map((r) => (
                           <Badge key={r} variant="secondary">{roleLabels[r] || r}</Badge>
                         ))}
@@ -346,7 +375,7 @@ export default function UsersPage() {
                             </form>
                           ) : (
                             <button
-                              className="text-xs text-muted-foreground hover:text-primary ml-1"
+                              className="ml-1 text-xs text-muted-foreground hover:text-primary"
                               onClick={() => { setEditNormId(p.id); setEditNormValue((p as any).teaching_norm?.toString() || ""); }}
                               title="Editează norma"
                             >
@@ -388,7 +417,7 @@ export default function UsersPage() {
                           {p.is_active ? (
                             <UserX className="h-4 w-4 text-destructive" />
                           ) : (
-                            <UserCheck className="h-4 w-4 text-green-600" />
+                            <UserCheck className="h-4 w-4 text-primary" />
                           )}
                         </Button>
                         <Button
@@ -407,34 +436,36 @@ export default function UsersPage() {
             )}
           </TableBody>
         </Table>
-      </div>
 
-      {/* Pagination */}
-      {filteredProfiles.length > PAGE_SIZE && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {filteredProfiles.length} utilizatori · Pagina {safePage} din {totalPages}
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage <= 1}
-              onClick={() => setCurrentPage(safePage - 1)}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" /> Înapoi
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={safePage >= totalPages}
-              onClick={() => setCurrentPage(safePage + 1)}
-            >
-              Înainte <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
+        {hasPagination && (
+          <div className="flex flex-col gap-3 border-t pt-3 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Afișare {pageStart}-{pageEnd} din {filteredProfiles.length} utilizatori
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage <= 1}
+                onClick={goToPreviousPage}
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" /> Înapoi
+              </Button>
+              <div className="rounded-md border px-3 py-1 text-sm text-muted-foreground">
+                Pagina {safePage} / {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage >= totalPages}
+                onClick={goToNextPage}
+              >
+                Înainte <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <AlertDialog open={!!resetUserId && !newPassword} onOpenChange={(o) => !o && setResetUserId(null)}>
         <AlertDialogContent>
