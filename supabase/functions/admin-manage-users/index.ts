@@ -304,16 +304,49 @@ serve(async (req) => {
       });
     }
 
+    if (action === "update_user") {
+      if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
+      const { user_id, first_name, last_name, username, teaching_norm, roles } = body;
+      if (!user_id || !first_name || !last_name || !username) {
+        throw new Error("user_id, first_name, last_name și username sunt obligatorii");
+      }
+      if (!Array.isArray(roles) || roles.length === 0) {
+        throw new Error("Selectați cel puțin un rol");
+      }
+
+      const profileUpdate: Record<string, string | number | null> = {
+        first_name,
+        last_name,
+        username,
+        teaching_norm: teaching_norm === "" || teaching_norm === undefined ? null : Number(teaching_norm),
+      };
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update(profileUpdate)
+        .eq("id", user_id);
+      if (profileError) throw profileError;
+
+      const { error: deleteError } = await supabase.from("user_roles").delete().eq("user_id", user_id);
+      if (deleteError) throw deleteError;
+
+      const roleRows = roles.map((role: string) => ({ user_id, role }));
+      const { error: roleError } = await supabase.from("user_roles").insert(roleRows);
+      if (roleError) throw roleError;
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "update_roles") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
       const { user_id, roles } = body;
       if (!user_id || !Array.isArray(roles) || roles.length === 0) throw new Error("user_id și roles sunt obligatorii");
 
-      // Delete existing roles
       const { error: deleteError } = await supabase.from("user_roles").delete().eq("user_id", user_id);
       if (deleteError) throw deleteError;
 
-      // Insert new roles
       const roleRows = roles.map((role: string) => ({ user_id, role }));
       const { error: roleError } = await supabase.from("user_roles").insert(roleRows);
       if (roleError) throw roleError;

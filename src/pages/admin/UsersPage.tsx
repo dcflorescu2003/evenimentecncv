@@ -158,27 +158,25 @@ export default function UsersPage() {
 
   const editUserMutation = useMutation({
     mutationFn: async ({ id, values }: { id: string; values: typeof editForm }) => {
-      const updateData: any = {
+      const bodyData: any = {
+        action: "update_user",
+        user_id: id,
         first_name: values.first_name,
         last_name: values.last_name,
         username: values.username,
+        roles: values.roles,
       };
-      if (values.roles.includes("teacher") || values.roles.includes("homeroom_teacher")) {
-        updateData.teaching_norm = values.teaching_norm ? Number(values.teaching_norm) : null;
-      }
-      const { error } = await supabase.from("profiles").update(updateData).eq("id", id);
-      if (error) throw error;
 
-      // Update roles via edge function
-      const currentRoles = getRoles(id);
-      const rolesChanged = values.roles.length !== currentRoles.length || values.roles.some(r => !currentRoles.includes(r as any));
-      if (rolesChanged) {
-        const { data: roleData, error: roleError } = await supabase.functions.invoke("admin-manage-users", {
-          body: { action: "update_roles", user_id: id, roles: values.roles },
-        });
-        if (roleError) throw roleError;
-        if (roleData?.error) throw new Error(roleData.error);
-      }
+      bodyData.teaching_norm = values.roles.includes("teacher") || values.roles.includes("homeroom_teacher")
+        ? (values.teaching_norm ? Number(values.teaching_norm) : null)
+        : null;
+
+      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
+        body: bodyData,
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
