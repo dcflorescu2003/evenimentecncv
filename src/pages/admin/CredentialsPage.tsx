@@ -185,7 +185,7 @@ export default function CredentialsPage() {
         return;
       }
 
-      generatePDF(results, getTitle());
+      generateCredentialsPDF(results, getTitle());
       toast.success(`PDF generat cu ${results.length} credențiale.`);
     } catch (err: any) {
       toast.error(err.message || "Eroare la generare");
