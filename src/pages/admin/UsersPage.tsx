@@ -451,6 +451,10 @@ export default function UsersPage() {
               toast.error("Completați toate câmpurile obligatorii");
               return;
             }
+            if (editForm.roles.length === 0) {
+              toast.error("Selectați cel puțin un rol");
+              return;
+            }
             editUserMutation.mutate({ id: editUser!.id, values: editForm });
           }} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
