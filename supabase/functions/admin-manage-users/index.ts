@@ -310,7 +310,8 @@ serve(async (req) => {
       if (!user_id || !Array.isArray(roles) || roles.length === 0) throw new Error("user_id și roles sunt obligatorii");
 
       // Delete existing roles
-      await supabase.from("user_roles").delete().eq("user_id", user_id);
+      const { error: deleteError } = await supabase.from("user_roles").delete().eq("user_id", user_id);
+      if (deleteError) throw deleteError;
 
       // Insert new roles
       const roleRows = roles.map((role: string) => ({ user_id, role }));
