@@ -362,18 +362,37 @@ export default function CredentialsPage() {
             </div>
           )}
 
-          <Button
-            onClick={() => setConfirmOpen(true)}
-            disabled={!canGenerate || loading}
-            className="w-full sm:w-auto"
-          >
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <FileDown className="mr-2 h-4 w-4" />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              onClick={() => setConfirmOpen(true)}
+              disabled={!canGenerate || loading || loadingList}
+              variant="destructive"
+              className="w-full sm:w-auto"
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileDown className="mr-2 h-4 w-4" />
+              )}
+              Resetează și generează PDF
+            </Button>
+
+            {mode !== "user" && (
+              <Button
+                onClick={handleGenerateUserList}
+                disabled={!canGenerate || loading || loadingList}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                {loadingList ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4" />
+                )}
+                Generează PDF utilizatori
+              </Button>
             )}
-            Generează PDF
-          </Button>
+          </div>
         </CardContent>
       </Card>
 
