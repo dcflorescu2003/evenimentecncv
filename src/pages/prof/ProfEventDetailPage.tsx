@@ -764,6 +764,7 @@ export default function ProfEventDetailPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Elev</TableHead>
+                  <TableHead>Clasa</TableHead>
                   <TableHead>Tip</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-16">Acțiuni</TableHead>
@@ -771,16 +772,18 @@ export default function ProfEventDetailPage() {
               </TableHeader>
               <TableBody>
                 {participants.length === 0 && assistants.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="py-6 text-center text-muted-foreground">Niciun participant.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="py-6 text-center text-muted-foreground">Niciun participant.</TableCell></TableRow>
                 ) : (
                   <>
                     {/* Student assistants */}
                     {assistants.map((a: any) => {
                       const profile = a.profile;
                       const name = `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim();
+                      const cls = eventClassMap.get(a.student_id);
                       return (
                         <TableRow key={`assistant-${a.id}`}>
                           <TableCell className="font-medium">{name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{cls?.displayName || "—"}</TableCell>
                           <TableCell>
                             <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px]">
                               Asistent
@@ -799,14 +802,16 @@ export default function ProfEventDetailPage() {
                         </TableRow>
                       );
                     })}
-                    {/* Regular participants sorted by last name */}
+                    {/* Regular participants sorted by class then name */}
                     {sortedParticipants.map((p: any) => {
                       const profile = p.profiles;
                       const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
                       const name = `${profile?.last_name} ${profile?.first_name}`;
+                      const cls = eventClassMap.get(profile?.id);
                       return (
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">{name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{cls?.displayName || "—"}</TableCell>
                           <TableCell><Badge variant="outline" className="text-[10px]">Elev</Badge></TableCell>
                           <TableCell>
                             <Badge variant="secondary">{statusLabels[ticket?.status || "reserved"]}</Badge>
