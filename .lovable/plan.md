@@ -1,27 +1,27 @@
 
 
-## Plan: Pagina publică Politica de Confidențialitate
+## Plan: Editare și ștergere evenimente din pagina de detalii
 
-### Ce se face
+### Situația actuală
 
-O pagină statică la ruta `/privacy` cu textul politicii de confidențialitate, accesibilă fără autentificare, cu link în footer-ul paginilor publice.
+Profesorii și diriginții **pot deja** edita și șterge evenimentele din lista de evenimente (`/prof/events`) — butoanele Pencil și Trash2 există. RLS-ul permite UPDATE și DELETE pe evenimentele proprii.
 
-### Implementare
+Ce **lipsește**: pe pagina de detalii a evenimentului (`/prof/events/:id`) nu există butoane de editare sau ștergere. Utilizatorul trebuie să se întoarcă la listă pentru aceste acțiuni.
 
-**1. Pagină nouă: `src/pages/public/PrivacyPolicyPage.tsx`**
-- Layout simplu, centrat, responsive
-- Titlu "Politica de Confidențialitate"
-- Secțiuni standard: date colectate, scopul prelucrării, drepturile utilizatorilor, contact, cookies
-- Adaptată contextului aplicației (sistem de gestionare evenimente/prezență pentru CNCV)
-- Buton "Înapoi" către pagina anterioară
+### Ce se adaugă
 
-**2. Rutare: `src/App.tsx`**
-- Adaug ruta `/privacy` cu `PrivacyPolicyPage`
+**`src/pages/prof/ProfEventDetailPage.tsx`**
+- Adaug butoane "Editează" și "Șterge" lângă butonul "Scanează" din header-ul paginii de detalii
+- Butonul "Editează" navighează înapoi la `/prof/events` și deschide dialogul de editare, SAU (mai simplu) redirecționează la lista de evenimente cu un query param care declanșează editarea
+- **Varianta mai bună**: adaug direct dialogul de editare în pagina de detalii (refolosind logica din `ProfEventsPage`) — dar asta ar duplica mult cod
+- **Varianta recomandată**: butoanele de Editează și Șterge direct pe pagina de detalii, cu:
+  - Dialog de confirmare pentru ștergere (cu redirect la `/prof/events` după succes)
+  - Dialog de editare cu formularul complet (extras ca și în ProfEventsPage)
+- Butonul "Șterge" deschide un AlertDialog de confirmare, apoi navighează la `/prof/events`
 
-### Fișiere
+### Fișiere afectate
 
 | Tip | Fișier |
 |-----|--------|
-| Nou | `src/pages/public/PrivacyPolicyPage.tsx` |
-| Editat | `src/App.tsx` — adaug ruta `/privacy` |
+| Editat | `src/pages/prof/ProfEventDetailPage.tsx` — butoane Edit + Delete + dialoguri |
 
