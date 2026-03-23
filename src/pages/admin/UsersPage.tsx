@@ -116,11 +116,15 @@ export default function UsersPage() {
 
   const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
+  const pageStart = filteredProfiles.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const pageEnd = Math.min(safePage * PAGE_SIZE, filteredProfiles.length);
+  const hasPagination = filteredProfiles.length > PAGE_SIZE;
   const paginatedProfiles = filteredProfiles.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  // Reset page when filters change
   const handleSearch = (value: string) => { setSearch(value); setCurrentPage(1); };
   const handleRoleFilter = (value: string) => { setRoleFilter(value); setCurrentPage(1); };
+  const goToPreviousPage = () => setCurrentPage((page) => Math.max(1, page - 1));
+  const goToNextPage = () => setCurrentPage((page) => Math.min(totalPages, page + 1));;
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
