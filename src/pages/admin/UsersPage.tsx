@@ -298,7 +298,7 @@ export default function UsersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProfiles.map((p) => {
+              paginatedProfiles.map((p) => {
                 const userRoles = getRoles(p.id);
                 return (
                   <TableRow key={p.id}>
