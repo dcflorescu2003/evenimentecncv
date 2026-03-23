@@ -96,16 +96,16 @@ function ClassReport({ sessionId }: { sessionId: string }) {
       const tickets = await batchFetch(() => supabase.from("tickets").select("id, reservation_id, status") as any);
 
       const eventIds = new Set((events ?? []).map(e => e.id));
-      const sessionReservations = (reservations ?? []).filter(r => eventIds.has(r.event_id));
+      const sessionReservations = reservations.filter((r: any) => eventIds.has(r.event_id));
 
       const eventMap = Object.fromEntries((events ?? []).map(e => [e.id, e]));
-      const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
+      const ticketByRes = Object.fromEntries(tickets.map((t: any) => [t.reservation_id, t]));
 
       return (classes ?? []).map(cls => {
-        const studentIds = (assignments ?? []).filter(a => a.class_id === cls.id).map(a => a.student_id);
-        const clsReservations = sessionReservations.filter(r => studentIds.includes(r.student_id) && r.status === "reserved");
-        const reservedHours = clsReservations.reduce((sum, r) => sum + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
-        const validatedHours = clsReservations.reduce((sum, r) => {
+        const studentIds = assignments.filter((a: any) => a.class_id === cls.id).map((a: any) => a.student_id);
+        const clsReservations = sessionReservations.filter((r: any) => studentIds.includes(r.student_id) && r.status === "reserved");
+        const reservedHours = clsReservations.reduce((sum: number, r: any) => sum + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
+        const validatedHours = clsReservations.reduce((sum: number, r: any) => {
           const t = ticketByRes[r.id];
           return sum + (t && (t.status === "present" || t.status === "late") ? (eventMap[r.event_id]?.counted_duration_hours ?? 0) : 0);
         }, 0);
