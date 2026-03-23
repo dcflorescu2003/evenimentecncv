@@ -17,7 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2 } from "lucide-react";
+import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import type { Tables } from "@/integrations/supabase/types";
