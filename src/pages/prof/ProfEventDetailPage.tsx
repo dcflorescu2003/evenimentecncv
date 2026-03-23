@@ -464,6 +464,141 @@ export default function ProfEventDetailPage() {
     window.open(data.signedUrl, "_blank");
   }
 
+  // Edit event mutations & helpers
+  const editSaveMutation = useMutation({
+    mutationFn: async (values: EventForm) => {
+      const dur = computeDuration(values.start_time, values.end_time);
+      const payload: any = {
+        session_id: values.session_id,
+        title: values.title,
+        description: values.description || null,
+        date: values.date,
+        start_time: values.start_time,
+        end_time: values.end_time,
+        computed_duration_display: dur.display,
+        counted_duration_hours: dur.hours,
+        location: values.location || null,
+        room_details: values.room_details || null,
+        max_capacity: values.max_capacity,
+        status: values.status,
+        eligible_grades: values.eligible_grades.length > 0 ? values.eligible_grades : null,
+        eligible_classes: values.eligible_classes.length > 0 ? values.eligible_classes : null,
+        booking_open_at: joinDatetime(values.booking_open_date, values.booking_open_time),
+        booking_close_at: joinDatetime(values.booking_close_date, values.booking_close_time),
+        notes_for_teachers: values.notes_for_teachers || null,
+        published: values.status === "published",
+        is_public: values.is_public,
+        created_by: user!.id,
+      };
+      const { error } = await supabase.from("events").update(payload).eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prof_event", id] });
+      queryClient.invalidateQueries({ queryKey: ["prof_events"] });
+      toast.success("Eveniment actualizat");
+      setEditDialogOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteEventMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("events").delete().eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prof_events"] });
+      toast.success("Eveniment șters");
+      navigate("/prof/events");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function openEditDialog() {
+    if (!event) return;
+    const openAt = splitDatetime(event.booking_open_at);
+    const closeAt = splitDatetime(event.booking_close_at);
+    setEditForm({
+      session_id: event.session_id,
+      title: event.title,
+      description: event.description || "",
+      date: event.date,
+      start_time: event.start_time?.slice(0, 5),
+      end_time: event.end_time?.slice(0, 5),
+      location: event.location || "",
+      room_details: event.room_details || "",
+      max_capacity: event.max_capacity,
+      status: event.status as EventStatus,
+      eligible_grades: (event.eligible_grades as number[]) || [],
+      eligible_classes: (event.eligible_classes as string[]) || [],
+      booking_open_date: openAt.date,
+      booking_open_time: openAt.time,
+      booking_close_date: closeAt.date,
+      booking_close_time: closeAt.time,
+      notes_for_teachers: event.notes_for_teachers || "",
+      is_public: event.is_public ?? false,
+    });
+    setEditDialogOpen(true);
+  }
+
+  function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editForm.title || !editForm.date || !editForm.start_time || !editForm.end_time) {
+      toast.error("Completați toate câmpurile obligatorii");
+      return;
+    }
+    if (!editForm.is_public && !editForm.session_id) {
+      toast.error("Selectați sesiunea sau marcați ca public");
+      return;
+    }
+    if (!isValidTime24h(editForm.start_time) || !isValidTime24h(editForm.end_time)) {
+      toast.error("Orele trebuie în format 24h HH:MM (00:00–23:59)");
+      return;
+    }
+    if (editForm.end_time <= editForm.start_time) {
+      toast.error("Ora de sfârșit trebuie să fie după ora de început");
+      return;
+    }
+    editSaveMutation.mutate(editForm);
+  }
+
+  function toggleGrade(grade: number) {
+    setEditForm((f) => {
+      const newGrades = f.eligible_grades.includes(grade)
+        ? f.eligible_grades.filter((g) => g !== grade)
+        : [...f.eligible_grades, grade].sort((a, b) => a - b);
+      const gradeClassIds = editClasses.filter((c) => c.grade_number === grade).map((c) => c.id);
+      let newClasses: string[];
+      if (newGrades.includes(grade)) {
+        newClasses = [...new Set([...f.eligible_classes, ...gradeClassIds])];
+      } else {
+        newClasses = f.eligible_classes.filter((cid) => !gradeClassIds.includes(cid));
+      }
+      return { ...f, eligible_grades: newGrades, eligible_classes: newClasses };
+    });
+  }
+
+  function toggleClass(classId: string, gradeNumber: number) {
+    setEditForm((f) => {
+      const newClasses = f.eligible_classes.includes(classId)
+        ? f.eligible_classes.filter((cid) => cid !== classId)
+        : [...f.eligible_classes, classId];
+      const gradeClassIds = editClasses.filter((c) => c.grade_number === gradeNumber).map((c) => c.id);
+      const allSelected = gradeClassIds.every((cid) => newClasses.includes(cid));
+      const noneSelected = gradeClassIds.every((cid) => !newClasses.includes(cid));
+      let newGrades = [...f.eligible_grades];
+      if (allSelected && !newGrades.includes(gradeNumber)) {
+        newGrades = [...newGrades, gradeNumber].sort((a, b) => a - b);
+      } else if (noneSelected) {
+        newGrades = newGrades.filter((g) => g !== gradeNumber);
+      }
+      return { ...f, eligible_classes: newClasses, eligible_grades: newGrades };
+    });
+  }
+
+  const editDur = computeDuration(editForm.start_time, editForm.end_time);
+
   if (isLoading) return <div className="py-8 text-center text-muted-foreground">Se încarcă…</div>;
   if (!event) return (
     <div className="space-y-4">
