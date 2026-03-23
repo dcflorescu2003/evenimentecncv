@@ -68,9 +68,7 @@ export function exportAttendancePdf(
 
   // Sort by class then by name
   const sorted = [...participants].sort((a, b) => {
-    const classA = a.className || "";
-    const classB = b.className || "";
-    const classCmp = classA.localeCompare(classB, "ro");
+    const classCmp = compareClassName(a.className || "", b.className || "");
     if (classCmp !== 0) return classCmp;
     return (a.name || "").localeCompare(b.name || "", "ro");
   });
