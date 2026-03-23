@@ -135,7 +135,7 @@ export default function TeacherReportPage() {
 
   const handleExportDetail = () => {
     if (!detail?.events.length) return;
-    const name = detail.`${detail.profile?.last_name} ${detail.profile?.first_name}`;
+    const name = `${detail.profile?.last_name || ""} ${detail.profile?.first_name || ""}`;
     exportReportPdf({
       title: `Raport profesor: ${name}`,
       subtitle: `Sesiune: ${sessionName} | Ore organizate: ${detail.totalHours}h`,
@@ -205,7 +205,7 @@ export default function TeacherReportPage() {
           {detail && (
             <>
               <div className="grid gap-4 md:grid-cols-3">
-                <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Profesor</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.`${detail.profile?.last_name} ${detail.profile?.first_name}`}</p></CardContent></Card>
+                <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Profesor</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{`${detail.profile?.last_name || ""} ${detail.profile?.first_name || ""}`}</p></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Nr. evenimente</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.events.length}</p></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore organizate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.totalHours}h{sessionHasRules && (detail.profile as any)?.teaching_norm ? ` / ${(detail.profile as any).teaching_norm}h` : ""}</p></CardContent></Card>
               </div>

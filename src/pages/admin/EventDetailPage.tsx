@@ -933,7 +933,7 @@ export default function EventDetailPage() {
                   {coordinators.map((c) => (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">
-                        {c.profile`${c.profiles?.last_name} ${c.profiles?.first_name}`}
+                        {`${c.profiles?.last_name || ""} ${c.profiles?.first_name || ""}`}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {formatDateTime(c.created_at)}

@@ -109,7 +109,7 @@ export default function StudentReportPage() {
 
   const handleExport = () => {
     if (!report) return;
-    const name = report.`${report.profile?.last_name} ${report.profile?.first_name}`;
+    const name = `${report.profile?.last_name || ""} ${report.profile?.first_name || ""}`;
     exportReportPdf({
       title: `Fișa elevului: ${name}`,
       subtitle: `Clasă: ${report.className} | Sesiune: ${sessionName} | Ore validate: ${report.validatedHours} | Ore rezervate: ${report.totalReservedHours} | Ore rămase: ${report.remainingHours}`,
@@ -149,7 +149,7 @@ export default function StudentReportPage() {
       {report && (
         <>
           <div className="grid gap-4 md:grid-cols-5">
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Elev</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.`${report.profile?.last_name} ${report.profile?.first_name}`}</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Elev</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{`${report.profile?.last_name || ""} ${report.profile?.first_name || ""}`}</p></CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clasă</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.className}</p></CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore rezervate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.totalReservedHours}h</p></CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore validate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.validatedHours}h</p></CardContent></Card>

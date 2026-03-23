@@ -152,10 +152,10 @@ export default function ProfScanPage() {
         return;
       }
       if (ticket.status !== "reserved") {
-        setScanResult({ success: false, message: `Deja procesat (${statusLabels[ticket.status]}).`, studentName: reservation.profile`${reservation.profiles?.last_name} ${reservation.profiles?.first_name}`, ticketId: ticket.id });
+        setScanResult({ success: false, message: `Deja procesat (${statusLabels[ticket.status]}).`, studentName: `${reservation.profiles?.last_name || ""} ${reservation.profiles?.first_name || ""}`, ticketId: ticket.id });
         return;
       }
-      const name = reservation.profile`${reservation.profiles?.last_name} ${reservation.profiles?.first_name}`;
+      const name = `${reservation.profiles?.last_name || ""} ${reservation.profiles?.first_name || ""}`;
       if (event) {
         const autoStatus = determineAutoStatus(event.date, event.start_time);
         await autoMarkTicket(ticket.id, autoStatus, "reserved", false);
