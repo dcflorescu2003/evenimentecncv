@@ -12,6 +12,7 @@ function stripDiacritics(str: string): string {
 
 interface ParticipantRow {
   name: string;
+  className?: string;
   identifier?: string;
   status: string;
   isPublic: boolean;
@@ -33,6 +34,15 @@ export function exportAttendancePdf(
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const safeTitle = stripDiacritics(eventTitle);
 
+  // Sort by class then by name
+  const sorted = [...participants].sort((a, b) => {
+    const classA = a.className || "";
+    const classB = b.className || "";
+    const classCmp = classA.localeCompare(classB, "ro");
+    if (classCmp !== 0) return classCmp;
+    return (a.name || "").localeCompare(b.name || "", "ro");
+  });
+
   // Header
   doc.setFontSize(16);
   doc.text(stripDiacritics("Lista de prezenta"), 105, 15, { align: "center" });
@@ -41,12 +51,12 @@ export function exportAttendancePdf(
   doc.setFontSize(9);
   doc.text(`Data: ${eventDate}  |  Ora: ${eventTime}${eventLocation ? `  |  Locatie: ${stripDiacritics(eventLocation)}` : ""}`, 105, 30, { align: "center" });
 
-  const totalP = participants.length;
-  const present = participants.filter(p => p.status === "present").length;
-  const late = participants.filter(p => p.status === "late").length;
-  const absent = participants.filter(p => p.status === "absent").length;
-  const excused = participants.filter(p => p.status === "excused").length;
-  const reserved = participants.filter(p => p.status === "reserved").length;
+  const totalP = sorted.length;
+  const present = sorted.filter(p => p.status === "present").length;
+  const late = sorted.filter(p => p.status === "late").length;
+  const absent = sorted.filter(p => p.status === "absent").length;
+  const excused = sorted.filter(p => p.status === "excused").length;
+  const reserved = sorted.filter(p => p.status === "reserved").length;
 
   doc.setFontSize(8);
   doc.text(
@@ -55,8 +65,9 @@ export function exportAttendancePdf(
   );
 
   // Table
-  const rows = participants.map((p, i) => [
+  const rows = sorted.map((p, i) => [
     String(i + 1),
+    stripDiacritics(p.className || "-"),
     stripDiacritics(p.name),
     p.identifier || "-",
     statusLabels[p.status] || p.status,
@@ -66,17 +77,18 @@ export function exportAttendancePdf(
 
   autoTable(doc, {
     startY: 40,
-    head: [["Nr.", "Nume", "Identificator", "Status", "Tip", "Check-in"]],
+    head: [["Nr.", "Clasa", "Nume", "Identificator", "Status", "Tip", "Check-in"]],
     body: rows,
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [41, 65, 122], textColor: 255, fontStyle: "bold" },
     columnStyles: {
-      0: { cellWidth: 12, halign: "center" },
-      1: { cellWidth: 55 },
-      2: { cellWidth: 30 },
-      3: { cellWidth: 25, halign: "center" },
+      0: { cellWidth: 10, halign: "center" },
+      1: { cellWidth: 20 },
+      2: { cellWidth: 50 },
+      3: { cellWidth: 25 },
       4: { cellWidth: 22, halign: "center" },
-      5: { cellWidth: 22, halign: "center" },
+      5: { cellWidth: 20, halign: "center" },
+      6: { cellWidth: 20, halign: "center" },
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
   });
@@ -102,6 +114,13 @@ export function exportSimpleAttendancePdf(
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const safeTitle = stripDiacritics(eventTitle);
 
+  // Sort by class then by name
+  const sorted = [...rows].sort((a, b) => {
+    const classCmp = (a.className || "").localeCompare(b.className || "", "ro");
+    if (classCmp !== 0) return classCmp;
+    return (a.fullName || "").localeCompare(b.fullName || "", "ro");
+  });
+
   // Header
   doc.setFontSize(16);
   doc.text(stripDiacritics("Lista de prezenta"), 105, 15, { align: "center" });
@@ -114,10 +133,10 @@ export function exportSimpleAttendancePdf(
   );
 
   // Stats
-  const total = rows.length;
-  const prezenti = rows.filter(r => r.status === "Prezent").length;
-  const absentMotivat = rows.filter(r => r.status === "Absent motivat").length;
-  const absenti = rows.filter(r => r.status === "Absent").length;
+  const total = sorted.length;
+  const prezenti = sorted.filter(r => r.status === "Prezent").length;
+  const absentMotivat = sorted.filter(r => r.status === "Absent motivat").length;
+  const absenti = sorted.filter(r => r.status === "Absent").length;
 
   doc.setFontSize(8);
   doc.text(
@@ -126,7 +145,7 @@ export function exportSimpleAttendancePdf(
   );
 
   // Table
-  const tableRows = rows.map((r, i) => [
+  const tableRows = sorted.map((r, i) => [
     String(i + 1),
     stripDiacritics(r.className),
     stripDiacritics(r.fullName),
