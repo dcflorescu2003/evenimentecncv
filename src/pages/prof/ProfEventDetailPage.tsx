@@ -1034,6 +1034,187 @@ export default function ProfEventDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete event confirmation */}
+      <AlertDialog open={deleteEventDialogOpen} onOpenChange={(o) => !o && setDeleteEventDialogOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Șterge evenimentul?</AlertDialogTitle>
+            <AlertDialogDescription>Această acțiune este ireversibilă. Toate datele asociate vor fi pierdute.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anulează</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteEventMutation.mutate()}>Șterge</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit event dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(o) => !o && setEditDialogOpen(false)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editare eveniment</DialogTitle>
+            <DialogDescription>Modificați detaliile evenimentului.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 space-y-2">
+                <Label>Titlu *</Label>
+                <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} placeholder="ex: Vizită la Muzeu" />
+              </div>
+              <div className="space-y-2">
+                <Label>Sesiune *</Label>
+                <Select value={editForm.session_id} onValueChange={(v) => setEditForm({ ...editForm, session_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Alege sesiunea" /></SelectTrigger>
+                  <SelectContent>
+                    {sessions.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic_year})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Data *</Label>
+                <DateInput value={editForm.date} onChange={(v) => setEditForm({ ...editForm, date: v })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Ora început *</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="HH:MM"
+                  value={editForm.start_time}
+                  onChange={(e) => setEditForm({ ...editForm, start_time: normalizeTimeInput(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Ora sfârșit *</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={5}
+                  placeholder="HH:MM"
+                  value={editForm.end_time}
+                  onChange={(e) => setEditForm({ ...editForm, end_time: normalizeTimeInput(e.target.value) })}
+                />
+              </div>
+            </div>
+            {editDur.hours > 0 && (
+              <p className="text-sm text-muted-foreground">Durată: {editDur.display} → <strong>{editDur.hours}h</strong></p>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Locație</Label>
+                <Input value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Capacitate maximă *</Label>
+                <Input type="number" min={1} value={editForm.max_capacity} onChange={(e) => setEditForm({ ...editForm, max_capacity: parseInt(e.target.value) || 1 })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={editForm.status} onValueChange={(v) => setEditForm({ ...editForm, status: v as EventStatus })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(eventStatusLabels).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Descriere</Label>
+              <Textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} rows={3} />
+            </div>
+            {!editForm.is_public && (
+              <div className="space-y-3">
+                <Label>Clase eligibile</Label>
+                <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-3">
+                  {Object.entries(classesByGrade).sort(([a], [b]) => Number(a) - Number(b)).map(([grade, gradeClasses]) => {
+                    const gradeNum = Number(grade);
+                    const allClassIds = gradeClasses.map((c) => c.id);
+                    const allSelected = allClassIds.every((cid) => editForm.eligible_classes.includes(cid));
+                    const someSelected = allClassIds.some((cid) => editForm.eligible_classes.includes(cid));
+                    return (
+                      <div key={grade}>
+                        <label className="flex items-center gap-1.5 text-sm font-medium cursor-pointer">
+                          <Checkbox
+                            checked={allSelected}
+                            onCheckedChange={() => toggleGrade(gradeNum)}
+                            className={someSelected && !allSelected ? "opacity-60" : ""}
+                          />
+                          Clasa {grade}
+                        </label>
+                        <div className="ml-6 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                          {gradeClasses.map((c) => (
+                            <label key={c.id} className="flex items-center gap-1 text-sm cursor-pointer">
+                              <Checkbox
+                                checked={editForm.eligible_classes.includes(c.id)}
+                                onCheckedChange={() => toggleClass(c.id, gradeNum)}
+                              />
+                              {c.display_name}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {editForm.eligible_classes.length === 0 && editForm.eligible_grades.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Nicio selecție = toate clasele sunt eligibile</p>
+                )}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Perioada de înscriere</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">De la - Data</Label>
+                  <DateInput value={editForm.booking_open_date} onChange={(v) => setEditForm({ ...editForm, booking_open_date: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">De la - Ora</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={5}
+                    placeholder="HH:MM"
+                    value={editForm.booking_open_time}
+                    onChange={(e) => setEditForm({ ...editForm, booking_open_time: normalizeTimeInput(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Până la - Data</Label>
+                  <DateInput value={editForm.booking_close_date} onChange={(v) => setEditForm({ ...editForm, booking_close_date: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Până la - Ora</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={5}
+                    placeholder="HH:MM"
+                    value={editForm.booking_close_time}
+                    onChange={(e) => setEditForm({ ...editForm, booking_close_time: normalizeTimeInput(e.target.value) })}
+                  />
+                </div>
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={editForm.is_public} onCheckedChange={(c) => setEditForm({ ...editForm, is_public: !!c })} />
+              Eveniment public (permite rezervări fără cont)
+            </label>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Anulează</Button>
+              <Button type="submit" disabled={editSaveMutation.isPending}>
+                {editSaveMutation.isPending ? "Se salvează…" : "Salvează"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
