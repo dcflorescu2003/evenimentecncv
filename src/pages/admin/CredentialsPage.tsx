@@ -13,7 +13,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
-import { FileDown, Loader2, User, Users, GraduationCap } from "lucide-react";
+import { FileDown, Loader2, User, Users, GraduationCap, FileText } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -40,7 +40,7 @@ function stripDiacritics(str: string): string {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\u0163/g, "t").replace(/\u0162/g, "T").replace(/\u015f/g, "s").replace(/\u015e/g, "S");
 }
 
-function generatePDF(results: CredentialResult[], title: string) {
+function generateCredentialsPDF(results: CredentialResult[], title: string) {
   const doc = new jsPDF();
   const cleanTitle = stripDiacritics(title);
 
@@ -67,12 +67,39 @@ function generatePDF(results: CredentialResult[], title: string) {
   doc.save(`credentiale_${cleanTitle.replace(/\s+/g, "_").toLowerCase()}.pdf`);
 }
 
+function generateUserListPDF(users: { first_name: string; last_name: string; username: string }[], title: string) {
+  const doc = new jsPDF();
+  const cleanTitle = stripDiacritics(`Utilizatori - ${title}`);
+
+  doc.setFontSize(16);
+  doc.text(cleanTitle, 14, 20);
+
+  doc.setFontSize(9);
+  doc.text(`Generat: ${new Date().toLocaleDateString("ro-RO")}`, 14, 28);
+
+  autoTable(doc, {
+    startY: 34,
+    head: [["Nr.", "Nume", "Prenume", "Utilizator"]],
+    body: users.map((u, i) => [
+      i + 1,
+      stripDiacritics(u.last_name),
+      stripDiacritics(u.first_name),
+      u.username,
+    ]),
+    styles: { fontSize: 10 },
+    headStyles: { fillColor: [41, 65, 122] },
+  });
+
+  doc.save(`utilizatori_${cleanTitle.replace(/\s+/g, "_").toLowerCase()}.pdf`);
+}
+
 export default function CredentialsPage() {
   const [mode, setMode] = useState<"user" | "class" | "role">("class");
   const [selectedUser, setSelectedUser] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingList, setLoadingList] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Fetch all profiles for single-user picker
@@ -158,12 +185,77 @@ export default function CredentialsPage() {
         return;
       }
 
-      generatePDF(results, getTitle());
+      generateCredentialsPDF(results, getTitle());
       toast.success(`PDF generat cu ${results.length} credențiale.`);
     } catch (err: any) {
       toast.error(err.message || "Eroare la generare");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateUserList = async () => {
+    setLoadingList(true);
+    try {
+      let users: { first_name: string; last_name: string; username: string }[] = [];
+
+      if (mode === "user") {
+        const p = profiles.find((p: any) => p.id === selectedUser);
+        if (p) users = [{ first_name: p.first_name, last_name: p.last_name, username: p.username }];
+      } else if (mode === "class") {
+        // Get students in class
+        const { data: assignments } = await supabase
+          .from("student_class_assignments")
+          .select("student_id")
+          .eq("class_id", selectedClass);
+        if (assignments && assignments.length > 0) {
+          const studentIds = assignments.map((a) => a.student_id);
+          // Fetch in batches of 100 for the IN filter
+          const batchSize = 100;
+          for (let i = 0; i < studentIds.length; i += batchSize) {
+            const batch = studentIds.slice(i, i + batchSize);
+            const { data: profs } = await supabase
+              .from("profiles")
+              .select("first_name, last_name, username")
+              .in("id", batch)
+              .order("last_name");
+            if (profs) users.push(...profs);
+          }
+          users.sort((a, b) => a.last_name.localeCompare(b.last_name, "ro") || a.first_name.localeCompare(b.first_name, "ro"));
+        }
+      } else if (mode === "role") {
+        // Get users with this role
+        const { data: roleUsers } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", selectedRole as any);
+        if (roleUsers && roleUsers.length > 0) {
+          const userIds = roleUsers.map((r) => r.user_id);
+          const batchSize = 100;
+          for (let i = 0; i < userIds.length; i += batchSize) {
+            const batch = userIds.slice(i, i + batchSize);
+            const { data: profs } = await supabase
+              .from("profiles")
+              .select("first_name, last_name, username")
+              .in("id", batch)
+              .order("last_name");
+            if (profs) users.push(...profs);
+          }
+          users.sort((a, b) => a.last_name.localeCompare(b.last_name, "ro") || a.first_name.localeCompare(b.first_name, "ro"));
+        }
+      }
+
+      if (users.length === 0) {
+        toast.warning("Nu s-au găsit utilizatori.");
+        return;
+      }
+
+      generateUserListPDF(users, getTitle());
+      toast.success(`PDF generat cu ${users.length} utilizatori.`);
+    } catch (err: any) {
+      toast.error(err.message || "Eroare la generare");
+    } finally {
+      setLoadingList(false);
     }
   };
 
@@ -270,18 +362,37 @@ export default function CredentialsPage() {
             </div>
           )}
 
-          <Button
-            onClick={() => setConfirmOpen(true)}
-            disabled={!canGenerate || loading}
-            className="w-full sm:w-auto"
-          >
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <FileDown className="mr-2 h-4 w-4" />
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              onClick={() => setConfirmOpen(true)}
+              disabled={!canGenerate || loading || loadingList}
+              variant="destructive"
+              className="w-full sm:w-auto"
+            >
+              {loading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileDown className="mr-2 h-4 w-4" />
+              )}
+              Resetează și generează PDF
+            </Button>
+
+            {mode !== "user" && (
+              <Button
+                onClick={handleGenerateUserList}
+                disabled={!canGenerate || loading || loadingList}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                {loadingList ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4" />
+                )}
+                Generează PDF utilizatori
+              </Button>
             )}
-            Generează PDF
-          </Button>
+          </div>
         </CardContent>
       </Card>
 
