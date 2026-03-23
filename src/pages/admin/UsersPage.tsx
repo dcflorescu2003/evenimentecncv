@@ -18,7 +18,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2, Pencil } from "lucide-react";
+import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import type { Tables } from "@/integrations/supabase/types";
@@ -39,6 +39,8 @@ export default function UsersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 100;
   const [resetUserId, setResetUserId] = useState<string | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<string | null>(null);
@@ -89,6 +91,14 @@ export default function UsersPage() {
     const matchesRole = roleFilter === "all" || getRoles(p.id).includes(roleFilter as any);
     return matchesSearch && matchesRole;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedProfiles = filteredProfiles.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset page when filters change
+  const handleSearch = (value: string) => { setSearch(value); setCurrentPage(1); };
+  const handleRoleFilter = (value: string) => { setRoleFilter(value); setCurrentPage(1); };
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
@@ -246,11 +256,11 @@ export default function UsersPage() {
           <Input
             placeholder="Căutare după nume sau username…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="pl-9"
           />
         </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
+        <Select value={roleFilter} onValueChange={handleRoleFilter}>
           <SelectTrigger className="w-48">
             <SelectValue />
           </SelectTrigger>
@@ -288,7 +298,7 @@ export default function UsersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredProfiles.map((p) => {
+              paginatedProfiles.map((p) => {
                 const userRoles = getRoles(p.id);
                 return (
                   <TableRow key={p.id}>
@@ -373,7 +383,33 @@ export default function UsersPage() {
         </Table>
       </div>
 
-      {/* Reset Password Confirm */}
+      {/* Pagination */}
+      {filteredProfiles.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {filteredProfiles.length} utilizatori · Pagina {safePage} din {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage <= 1}
+              onClick={() => setCurrentPage(safePage - 1)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" /> Înapoi
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages}
+              onClick={() => setCurrentPage(safePage + 1)}
+            >
+              Înainte <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       <AlertDialog open={!!resetUserId && !newPassword} onOpenChange={(o) => !o && setResetUserId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
