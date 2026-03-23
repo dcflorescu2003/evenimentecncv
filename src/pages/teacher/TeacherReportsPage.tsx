@@ -211,7 +211,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
   const { data, isLoading } = useQuery({
     queryKey: ["teacher-report-situatie", sessionId, classIds],
     queryFn: async () => {
-      if (!sessionId || classIds.length === 0) return null;
+      if (!sessionId || classIds.length === 0) return { students: [], events: [] };
 
       const { data: assignments } = await supabase.from("student_class_assignments").select("student_id, class_id").in("class_id", classIds);
       const studentIds = [...new Set((assignments ?? []).map(a => a.student_id))];
