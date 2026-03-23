@@ -1,5 +1,5 @@
 import { formatDate, formatDateTime } from "@/lib/time";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -67,6 +67,14 @@ export default function TeacherDashboard() {
       return data;
     },
   });
+
+  // Auto-select active or most recent session
+  useEffect(() => {
+    if (sessions.length > 0 && !sessionId) {
+      const active = sessions.find(s => s.status === "active");
+      setSessionId((active || sessions[0]).id);
+    }
+  }, [sessions, sessionId]);
 
   const classIds = myClasses.map((c) => c.id);
 

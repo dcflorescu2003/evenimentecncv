@@ -1,5 +1,5 @@
 import { formatDate } from "@/lib/time";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +28,14 @@ export default function ReportsPage() {
       return data ?? [];
     },
   });
+
+  // Auto-select active or most recent session
+  useEffect(() => {
+    if (sessions && sessions.length > 0 && !sessionId) {
+      const active = sessions.find(s => s.status === "active");
+      setSessionId((active || sessions[0]).id);
+    }
+  }, [sessions, sessionId]);
 
   return (
     <div className="space-y-6 print:space-y-4">
