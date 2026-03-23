@@ -25,7 +25,7 @@ import {
   ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, ShieldAlert, ChevronDown, ChevronUp, Trash2, FileDown, UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { exportAttendancePdf } from "@/lib/attendance-pdf";
+import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
 
 const statusLabels: Record<string, string> = {
   reserved: "Rezervat", present: "Prezent", late: "Întârziat",
