@@ -666,7 +666,7 @@ export default function ClassesPage() {
             ) : (
               currentClassStudents.map((a: any) => {
                 const p = a.profiles;
-                const name = p?`${p?.last_name} ${p?.first_name}`;
+                const name = `${p?.last_name} ${p?.first_name}`;
                 return (
                   <div key={a.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
                     <span className="text-sm font-medium">{name}</span>

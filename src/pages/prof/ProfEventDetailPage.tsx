@@ -688,7 +688,7 @@ export default function ProfEventDetailPage() {
                   <TableRow><TableCell colSpan={3} className="py-6 text-center text-muted-foreground">Niciun coordonator.</TableCell></TableRow>
                 ) : coordinators.map((c: any) => {
                   const p = c.profiles;
-                  const name = p?`${p?.last_name} ${p?.first_name}`;
+                  const name = `${p?.last_name} ${p?.first_name}`;
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{name}</TableCell>
@@ -736,7 +736,7 @@ export default function ProfEventDetailPage() {
                     {/* Student assistants */}
                     {assistants.map((a: any) => {
                       const profile = a.profile;
-                      const name = profile?`${profile?.last_name || ""} ${profile?.first_name || ""}`.trim();
+                      const name = `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim();
                       return (
                         <TableRow key={`assistant-${a.id}`}>
                           <TableCell className="font-medium">{name}</TableCell>
@@ -762,7 +762,7 @@ export default function ProfEventDetailPage() {
                     {sortedParticipants.map((p: any) => {
                       const profile = p.profiles;
                       const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
-                      const name = profile?`${profile?.last_name} ${profile?.first_name}`;
+                      const name = `${profile?.last_name} ${profile?.first_name}`;
                       return (
                         <TableRow key={p.id}>
                           <TableCell className="font-medium">{name}</TableCell>
