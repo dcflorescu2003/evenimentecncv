@@ -656,6 +656,46 @@ export default function ProfEventDetailPage() {
     return aLast.localeCompare(bLast, "ro") || (a.profiles?.first_name || "").localeCompare(b.profiles?.first_name || "", "ro");
   });
 
+  function handleDownloadAttendancePdf() {
+    if (!event) return;
+    const simplifiedStatusMap = (status: string): "Prezent" | "Absent motivat" | "Absent" => {
+      if (status === "present" || status === "late") return "Prezent";
+      if (status === "excused") return "Absent motivat";
+      return "Absent";
+    };
+
+    const rows = participants.map((p: any) => {
+      const profile = p.profiles;
+      const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+      const ticketStatus = ticket?.status || "absent";
+      return {
+        className: eventClassMap.get(profile?.id)?.displayName || "-",
+        fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
+        status: simplifiedStatusMap(ticketStatus),
+      };
+    });
+
+    // Add assistants as "Prezent"
+    assistants.forEach((a: any) => {
+      const profile = a.profile;
+      if (profile) {
+        rows.push({
+          className: eventClassMap.get(a.student_id)?.displayName || "-",
+          fullName: `${profile.last_name || ""} ${profile.first_name || ""}`.trim(),
+          status: "Prezent" as const,
+        });
+      }
+    });
+
+    exportSimpleAttendancePdf(
+      event.title,
+      formatDate(event.date),
+      `${event.start_time?.slice(0, 5)} – ${event.end_time?.slice(0, 5)}`,
+      event.location,
+      rows,
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-start gap-3">
@@ -669,6 +709,11 @@ export default function ProfEventDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {(participants.length > 0 || assistants.length > 0) && (
+            <Button size="sm" variant="outline" onClick={handleDownloadAttendancePdf}>
+              <FileDown className="mr-2 h-4 w-4" /> Listă de prezență
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={openEditDialog}>
             <Pencil className="mr-2 h-4 w-4" /> Editează
           </Button>
