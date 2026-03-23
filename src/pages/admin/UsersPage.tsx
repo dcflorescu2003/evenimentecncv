@@ -467,7 +467,28 @@ export default function UsersPage() {
               <Label>Username *</Label>
               <Input value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} />
             </div>
-            {editUser && getRoles(editUser.id).some((r) => r === "teacher" || r === "homeroom_teacher") && (
+            <div className="space-y-2">
+              <Label>Roluri *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(roleLabels).map(([k, v]) => (
+                  <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={editForm.roles.includes(k)}
+                      onCheckedChange={(checked) => {
+                        setEditForm(prev => ({
+                          ...prev,
+                          roles: checked
+                            ? [...prev.roles, k]
+                            : prev.roles.filter(r => r !== k),
+                        }));
+                      }}
+                    />
+                    {v}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {editForm.roles.some((r) => r === "teacher" || r === "homeroom_teacher") && (
               <div className="space-y-2">
                 <Label>Norma (ore)</Label>
                 <Input type="number" min="0" placeholder="ex: 12" value={editForm.teaching_norm} onChange={(e) => setEditForm({ ...editForm, teaching_norm: e.target.value })} />
