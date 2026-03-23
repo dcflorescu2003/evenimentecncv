@@ -383,7 +383,33 @@ export default function UsersPage() {
         </Table>
       </div>
 
-      {/* Reset Password Confirm */}
+      {/* Pagination */}
+      {filteredProfiles.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {filteredProfiles.length} utilizatori · Pagina {safePage} din {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage <= 1}
+              onClick={() => setCurrentPage(safePage - 1)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" /> Înapoi
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages}
+              onClick={() => setCurrentPage(safePage + 1)}
+            >
+              Înainte <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       <AlertDialog open={!!resetUserId && !newPassword} onOpenChange={(o) => !o && setResetUserId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
