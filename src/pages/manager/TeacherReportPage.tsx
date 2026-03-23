@@ -35,7 +35,7 @@ export default function TeacherReportPage() {
 
   const filteredTeachers = (teachers || []).filter((t) => {
     if (!search) return true;
-    const name = (``${t.last_name} ${t.first_name}`).toLowerCase();
+    const name = (`${t.last_name} ${t.first_name}`).toLowerCase();
     return name.includes(search.toLowerCase());
   });
 

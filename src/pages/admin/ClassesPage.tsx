@@ -182,7 +182,7 @@ export default function ClassesPage() {
   function getTeacherName(teacherId: string | null) {
     if (!teacherId) return "—";
     const p = teacherProfiles.find((t) => t.id === teacherId);
-    return p ? (``${p.last_name} ${p.first_name}`) : "—";
+    return p ? (`${p.last_name} ${p.first_name}`) : "—";
   }
 
   function getStudentsForClass(classId: string) {
@@ -612,7 +612,7 @@ export default function ClassesPage() {
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between">
                 {selectedTeacherId && selectedTeacherId !== "none"
-                  ? (() => { const t = teachers.find(t => t.id === selectedTeacherId); return t ? (``${t.last_name} ${t.first_name}`) : "Selectează diriginte"; })()
+                  ? (() => { const t = teachers.find(t => t.id === selectedTeacherId); return t ? (`${t.last_name} ${t.first_name}`) : "Selectează diriginte"; })()
                   : "Selectează diriginte"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
@@ -700,7 +700,7 @@ export default function ClassesPage() {
             <PopoverTrigger asChild>
               <Button variant="outline" role="combobox" className="w-full justify-between">
                 {selectedStudentId
-                  ? (() => { const s = students.find(s => s.id === selectedStudentId); return s ? (``${s.last_name} ${s.first_name}`) : "Selectează elev"; })()
+                  ? (() => { const s = students.find(s => s.id === selectedStudentId); return s ? (`${s.last_name} ${s.first_name}`) : "Selectează elev"; })()
                   : "Selectează elev"}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
