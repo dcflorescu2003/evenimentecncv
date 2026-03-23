@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -48,7 +49,7 @@ export default function UsersPage() {
   const [editNormId, setEditNormId] = useState<string | null>(null);
   const [editNormValue, setEditNormValue] = useState("");
   const [editUser, setEditUser] = useState<Profile | null>(null);
-  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "" });
+  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "", roles: [] as string[] });
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["profiles"],
@@ -163,15 +164,25 @@ export default function UsersPage() {
         username: values.username,
         display_name: `${values.last_name} ${values.first_name}`,
       };
-      const userRoles = getRoles(id);
-      if (userRoles.includes("teacher") || userRoles.includes("homeroom_teacher")) {
+      if (values.roles.includes("teacher") || values.roles.includes("homeroom_teacher")) {
         updateData.teaching_norm = values.teaching_norm ? Number(values.teaching_norm) : null;
       }
       const { error } = await supabase.from("profiles").update(updateData).eq("id", id);
       if (error) throw error;
+
+      // Update roles via edge function
+      const currentRoles = getRoles(id);
+      const rolesChanged = values.roles.length !== currentRoles.length || values.roles.some(r => !currentRoles.includes(r as any));
+      if (rolesChanged) {
+        const { error: roleError } = await supabase.functions.invoke("admin-manage-users", {
+          body: { action: "update_roles", user_id: id, roles: values.roles },
+        });
+        if (roleError) throw roleError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["user_roles"] });
       setEditUser(null);
       toast.success("Utilizator actualizat");
     },
@@ -185,6 +196,7 @@ export default function UsersPage() {
       last_name: p.last_name,
       username: p.username,
       teaching_norm: (p as any).teaching_norm?.toString() || "",
+      roles: getRoles(p.id),
     });
   }
 
@@ -439,6 +451,10 @@ export default function UsersPage() {
               toast.error("Completați toate câmpurile obligatorii");
               return;
             }
+            if (editForm.roles.length === 0) {
+              toast.error("Selectați cel puțin un rol");
+              return;
+            }
             editUserMutation.mutate({ id: editUser!.id, values: editForm });
           }} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -455,7 +471,28 @@ export default function UsersPage() {
               <Label>Username *</Label>
               <Input value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} />
             </div>
-            {editUser && getRoles(editUser.id).some((r) => r === "teacher" || r === "homeroom_teacher") && (
+            <div className="space-y-2">
+              <Label>Roluri *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(roleLabels).map(([k, v]) => (
+                  <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={editForm.roles.includes(k)}
+                      onCheckedChange={(checked) => {
+                        setEditForm(prev => ({
+                          ...prev,
+                          roles: checked
+                            ? [...prev.roles, k]
+                            : prev.roles.filter(r => r !== k),
+                        }));
+                      }}
+                    />
+                    {v}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {editForm.roles.some((r) => r === "teacher" || r === "homeroom_teacher") && (
               <div className="space-y-2">
                 <Label>Norma (ore)</Label>
                 <Input type="number" min="0" placeholder="ex: 12" value={editForm.teaching_norm} onChange={(e) => setEditForm({ ...editForm, teaching_norm: e.target.value })} />
