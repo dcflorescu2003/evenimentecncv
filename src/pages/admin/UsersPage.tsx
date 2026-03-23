@@ -256,11 +256,11 @@ export default function UsersPage() {
           <Input
             placeholder="Căutare după nume sau username…"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="pl-9"
           />
         </div>
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
+        <Select value={roleFilter} onValueChange={handleRoleFilter}>
           <SelectTrigger className="w-48">
             <SelectValue />
           </SelectTrigger>
