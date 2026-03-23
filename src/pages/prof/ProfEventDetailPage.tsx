@@ -1,4 +1,4 @@
-import { formatDate, formatDateTime } from "@/lib/time";
+import { formatDate, formatDateTime, isValidTime24h, normalizeTimeInput } from "@/lib/time";
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { DateInput } from "@/components/ui/date-input";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -18,6 +21,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import {
@@ -25,7 +31,7 @@ import {
 } from "@/components/ui/table";
 import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, UserPlus, X, ScanLine,
-  Upload, Download, Trash2, FolderOpen, FileText,
+  Upload, Download, Trash2, FolderOpen, FileText, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 
