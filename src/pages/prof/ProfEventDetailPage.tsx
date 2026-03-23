@@ -134,6 +134,11 @@ export default function ProfEventDetailPage() {
   const [assistantSearch, setAssistantSearch] = useState("");
   const [removeAssistantId, setRemoveAssistantId] = useState<string | null>(null);
 
+  // Edit/Delete event state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteEventDialogOpen, setDeleteEventDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState<EventForm>(emptyForm);
+
   const { data: event, isLoading } = useQuery({
     queryKey: ["prof_event", id],
     queryFn: async () => {
