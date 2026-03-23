@@ -103,6 +103,26 @@ export default function EventParticipantsPage() {
     },
     enabled: !!eventId,
   });
+  // Fetch class assignments for participants
+  const participantStudentIds = participants.map((p: any) => p.profiles?.id).filter(Boolean);
+  const { data: participantClassAssignments = [] } = useQuery({
+    queryKey: ["coord_participant_classes", participantStudentIds],
+    queryFn: async () => {
+      if (participantStudentIds.length === 0) return [];
+      const { data } = await supabase
+        .from("student_class_assignments")
+        .select("student_id, classes(display_name)")
+        .in("student_id", participantStudentIds);
+      return data ?? [];
+    },
+    enabled: participantStudentIds.length > 0,
+  });
+
+  const classLookup = new Map<string, string>();
+  participantClassAssignments.forEach((a: any) => {
+    const dn = a.classes?.display_name || "";
+    if (dn && !classLookup.has(a.student_id)) classLookup.set(a.student_id, dn);
+  });
 
   // Unify participants
   const unified: UnifiedParticipant[] = [
@@ -113,6 +133,7 @@ export default function EventParticipantsPage() {
         id: `reg-${p.id}`,
         name: `${profile?.last_name} ${profile?.first_name}`,
         lastName: profile?.last_name || "",
+        className: classLookup.get(profile?.id) || "",
         identifier: profile?.student_identifier,
         status: ticket?.status || "reserved",
         ticketId: ticket?.id,
@@ -126,6 +147,7 @@ export default function EventParticipantsPage() {
         id: `pub-${t.id}`,
         name: t.attendee_name,
         lastName: t.attendee_name || "",
+        className: "",
         identifier: undefined,
         status: t.status || "reserved",
         ticketId: t.id,
@@ -133,7 +155,7 @@ export default function EventParticipantsPage() {
         isPublic: true,
       }))
     ),
-  ].sort((a, b) => a.lastName.localeCompare(b.lastName));
+  ].sort((a, b) => (a.lastName || "").localeCompare(b.lastName || ""));
 
   const filtered = unified.filter((p) => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !(p.identifier || "").toLowerCase().includes(search.toLowerCase())) return false;
