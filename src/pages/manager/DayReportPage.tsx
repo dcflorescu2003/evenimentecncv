@@ -36,7 +36,7 @@ export default function DayReportPage() {
       const { data: profiles } = teacherIds.length
         ? await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", teacherIds)
         : { data: [] };
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, p.display_name || `${p.last_name} ${p.first_name}`]));
+      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, `${p.last_name} ${p.first_name}`]));
 
       // Get teacher hours for session
       const { data: allCoords } = await supabase.from("coordinator_assignments").select("teacher_id, event_id").in("teacher_id", teacherIds);

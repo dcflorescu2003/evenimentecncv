@@ -109,7 +109,7 @@ export default function EventParticipantsPage() {
       const profile = p.profiles;
       return {
         id: `reg-${p.id}`,
-        name: profile?.display_name || `${profile?.last_name} ${profile?.first_name}`,
+        name: `${profile?.last_name} ${profile?.first_name}`,
         lastName: profile?.last_name || "",
         identifier: profile?.student_identifier,
         status: ticket?.status || "reserved",

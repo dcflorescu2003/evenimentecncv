@@ -234,7 +234,7 @@ export default function ProfEventParticipantsPage() {
     ...assistants.map((a: any) => {
       const profile = a.profile;
       return {
-        id: `assist-${a.id}`, name: profile?.display_name || `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
+        id: `assist-${a.id}`, name: `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
         lastName: profile?.last_name || "",
         className: classLookup.get(a.student_id) || "",
         status: "present", isPublic: false, isAssistant: true, assistantRecordId: a.id,
@@ -244,7 +244,7 @@ export default function ProfEventParticipantsPage() {
       const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
       const profile = p.profiles;
       return {
-        id: `reg-${p.id}`, name: profile?.display_name || `${profile?.last_name} ${profile?.first_name}`,
+        id: `reg-${p.id}`, name: `${profile?.last_name} ${profile?.first_name}`,
         lastName: profile?.last_name || "",
         className: classLookup.get(profile?.id) || "",
         identifier: profile?.student_identifier, status: ticket?.status || "reserved",
