@@ -194,6 +194,71 @@ export default function CredentialsPage() {
     }
   };
 
+  const handleGenerateUserList = async () => {
+    setLoadingList(true);
+    try {
+      let users: { first_name: string; last_name: string; username: string }[] = [];
+
+      if (mode === "user") {
+        const p = profiles.find((p: any) => p.id === selectedUser);
+        if (p) users = [{ first_name: p.first_name, last_name: p.last_name, username: p.username }];
+      } else if (mode === "class") {
+        // Get students in class
+        const { data: assignments } = await supabase
+          .from("student_class_assignments")
+          .select("student_id")
+          .eq("class_id", selectedClass);
+        if (assignments && assignments.length > 0) {
+          const studentIds = assignments.map((a) => a.student_id);
+          // Fetch in batches of 100 for the IN filter
+          const batchSize = 100;
+          for (let i = 0; i < studentIds.length; i += batchSize) {
+            const batch = studentIds.slice(i, i + batchSize);
+            const { data: profs } = await supabase
+              .from("profiles")
+              .select("first_name, last_name, username")
+              .in("id", batch)
+              .order("last_name");
+            if (profs) users.push(...profs);
+          }
+          users.sort((a, b) => a.last_name.localeCompare(b.last_name, "ro") || a.first_name.localeCompare(b.first_name, "ro"));
+        }
+      } else if (mode === "role") {
+        // Get users with this role
+        const { data: roleUsers } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", selectedRole);
+        if (roleUsers && roleUsers.length > 0) {
+          const userIds = roleUsers.map((r) => r.user_id);
+          const batchSize = 100;
+          for (let i = 0; i < userIds.length; i += batchSize) {
+            const batch = userIds.slice(i, i + batchSize);
+            const { data: profs } = await supabase
+              .from("profiles")
+              .select("first_name, last_name, username")
+              .in("id", batch)
+              .order("last_name");
+            if (profs) users.push(...profs);
+          }
+          users.sort((a, b) => a.last_name.localeCompare(b.last_name, "ro") || a.first_name.localeCompare(b.first_name, "ro"));
+        }
+      }
+
+      if (users.length === 0) {
+        toast.warning("Nu s-au găsit utilizatori.");
+        return;
+      }
+
+      generateUserListPDF(users, getTitle());
+      toast.success(`PDF generat cu ${users.length} utilizatori.`);
+    } catch (err: any) {
+      toast.error(err.message || "Eroare la generare");
+    } finally {
+      setLoadingList(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
