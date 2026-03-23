@@ -346,12 +346,17 @@ export default function ProfEventParticipantsPage() {
           </Button>
           <Button size="sm" variant="outline" onClick={() => {
             if (!event || unified.length === 0) return;
-            exportAttendancePdf(
+            const rows = unified.map((p) => ({
+              className: p.className || "-",
+              fullName: p.name,
+              status: (p.status === "present" || p.status === "late" ? "Prezent" : p.status === "excused" ? "Absent motivat" : p.status === "absent" ? "Absent" : "Rezervat") as "Prezent" | "Absent motivat" | "Absent",
+            }));
+            exportSimpleAttendancePdf(
               event.title,
               formatDate(event.date),
               `${event.start_time?.slice(0, 5)} – ${event.end_time?.slice(0, 5)}`,
               event.location,
-              unified,
+              rows,
             );
           }}>
             <FileDown className="mr-2 h-4 w-4" /> Listă de prezență
