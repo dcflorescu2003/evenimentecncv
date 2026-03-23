@@ -155,6 +155,39 @@ export default function UsersPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const editUserMutation = useMutation({
+    mutationFn: async ({ id, values }: { id: string; values: typeof editForm }) => {
+      const updateData: any = {
+        first_name: values.first_name,
+        last_name: values.last_name,
+        username: values.username,
+        display_name: `${values.last_name} ${values.first_name}`,
+      };
+      const userRoles = getRoles(id);
+      if (userRoles.includes("teacher") || userRoles.includes("homeroom_teacher")) {
+        updateData.teaching_norm = values.teaching_norm ? Number(values.teaching_norm) : null;
+      }
+      const { error } = await supabase.from("profiles").update(updateData).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profiles"] });
+      setEditUser(null);
+      toast.success("Utilizator actualizat");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function openEditDialog(p: Profile) {
+    setEditUser(p);
+    setEditForm({
+      first_name: p.first_name,
+      last_name: p.last_name,
+      username: p.username,
+      teaching_norm: (p as any).teaching_norm?.toString() || "",
+    });
+  }
+
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       const { data, error } = await supabase.functions.invoke("admin-manage-users", {
