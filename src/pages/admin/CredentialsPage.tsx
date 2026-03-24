@@ -17,6 +17,7 @@ import { FileDown, Loader2, User, Users, GraduationCap, FileText } from "lucide-
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { downloadFileMobileSafe } from "@/lib/download";
 
 const roleLabels: Record<string, string> = {
   admin: "Administratori",
@@ -40,7 +41,7 @@ function stripDiacritics(str: string): string {
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\u0163/g, "t").replace(/\u0162/g, "T").replace(/\u015f/g, "s").replace(/\u015e/g, "S");
 }
 
-function generateCredentialsPDF(results: CredentialResult[], title: string) {
+async function generateCredentialsPDF(results: CredentialResult[], title: string) {
   const doc = new jsPDF();
   const cleanTitle = stripDiacritics(title);
 
@@ -64,10 +65,13 @@ function generateCredentialsPDF(results: CredentialResult[], title: string) {
     headStyles: { fillColor: [41, 65, 122] },
   });
 
-  doc.save(`credentiale_${cleanTitle.replace(/\s+/g, "_").toLowerCase()}.pdf`);
+  const filename = `credentiale_${cleanTitle.replace(/\s+/g, "_").toLowerCase()}.pdf`;
+  const pdfOutput = doc.output("datauristring");
+  const base64Data = pdfOutput.split(",")[1];
+  await downloadFileMobileSafe(filename, base64Data, "application/pdf");
 }
 
-function generateUserListPDF(users: { first_name: string; last_name: string; username: string }[], title: string) {
+async function generateUserListPDF(users: { first_name: string; last_name: string; username: string }[], title: string) {
   const doc = new jsPDF();
   const cleanTitle = stripDiacritics(`Utilizatori - ${title}`);
 
@@ -90,7 +94,10 @@ function generateUserListPDF(users: { first_name: string; last_name: string; use
     headStyles: { fillColor: [41, 65, 122] },
   });
 
-  doc.save(`utilizatori_${cleanTitle.replace(/\s+/g, "_").toLowerCase()}.pdf`);
+  const filename = `utilizatori_${cleanTitle.replace(/\s+/g, "_").toLowerCase()}.pdf`;
+  const pdfOutput = doc.output("datauristring");
+  const base64Data = pdfOutput.split(",")[1];
+  await downloadFileMobileSafe(filename, base64Data, "application/pdf");
 }
 
 export default function CredentialsPage() {
@@ -185,7 +192,7 @@ export default function CredentialsPage() {
         return;
       }
 
-      generateCredentialsPDF(results, getTitle());
+      await generateCredentialsPDF(results, getTitle());
       toast.success(`PDF generat cu ${results.length} credențiale.`);
     } catch (err: any) {
       toast.error(err.message || "Eroare la generare");
@@ -250,7 +257,7 @@ export default function CredentialsPage() {
         return;
       }
 
-      generateUserListPDF(users, getTitle());
+      await generateUserListPDF(users, getTitle());
       toast.success(`PDF generat cu ${users.length} utilizatori.`);
     } catch (err: any) {
       toast.error(err.message || "Eroare la generare");

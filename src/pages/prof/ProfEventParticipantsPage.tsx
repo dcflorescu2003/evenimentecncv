@@ -340,18 +340,18 @@ export default function ProfEventParticipantsPage() {
           <h1 className="font-display text-lg font-bold">{event?.title || "Participanți"}</h1>
           {event && <p className="text-xs text-muted-foreground">{formatDate(event.date)} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
             <UserPlus className="mr-2 h-4 w-4" /> Elev asistent
           </Button>
-          <Button size="sm" variant="outline" onClick={() => {
+          <Button size="sm" variant="outline" onClick={async () => {
             if (!event || unified.length === 0) return;
             const rows = unified.map((p) => ({
               className: p.className || "-",
               fullName: p.name,
               status: (p.status === "present" || p.status === "late" ? "Prezent" : p.status === "excused" ? "Absent motivat" : p.status === "absent" ? "Absent" : "Rezervat") as "Prezent" | "Absent motivat" | "Absent",
             }));
-            exportSimpleAttendancePdf(
+            await exportSimpleAttendancePdf(
               event.title,
               formatDate(event.date),
               `${event.start_time?.slice(0, 5)} – ${event.end_time?.slice(0, 5)}`,

@@ -9,12 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
+import { Camera as CameraIcon, CameraOff } from "lucide-react";
+import { Camera } from "@capacitor/camera";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, ScanLine, Keyboard, Search, CheckCircle2, XCircle, Clock, Camera, CameraOff,
+  ArrowLeft, ScanLine, Keyboard, Search, CheckCircle2, XCircle, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { determineAutoStatus } from "@/lib/attendance";
@@ -44,8 +50,38 @@ export default function ScanPage() {
   } | null>(null);
   
   const [scannerActive, setScannerActive] = useState(false);
+  const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("auto");
+  const [zoom, setZoom] = useState([1]);
+  const [hasZoom, setHasZoom] = useState(false);
+  const [isCamsInitialized, setIsCamsInitialized] = useState(false);
   const scannerRef = useRef<any>(null);
   const videoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function initCams() {
+      try {
+        try {
+          let status = await Camera.checkPermissions();
+          if (status.camera !== 'granted') status = await Camera.requestPermissions();
+          if (status.camera !== 'granted') {
+             setIsCamsInitialized(true);
+             return;
+          }
+        } catch(e) {}
+
+        const { Html5Qrcode } = await import("html5-qrcode");
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          setCameras(devices);
+        }
+      } catch (err) {
+        // ignore
+      }
+      setIsCamsInitialized(true);
+    }
+    initCams();
+  }, []);
 
   const { data: event } = useQuery({
     queryKey: ["coord_event", eventId],
@@ -107,14 +143,25 @@ export default function ScanPage() {
   });
 
   // QR Scanner
-  const startScanner = useCallback(async () => {
-    if (scannerRef.current || !videoRef.current) return;
+  const startScanner = useCallback(async (cameraIdOverride?: string) => {
+    if (scannerRef.current) return;
     try {
+      try {
+        let status = await Camera.checkPermissions();
+        if (status.camera !== 'granted') status = await Camera.requestPermissions();
+        if (status.camera !== 'granted') {
+          toast.error("Permisiune cameră refuzată!");
+          return;
+        }
+      } catch(e) {}
+
       const { Html5Qrcode } = await import("html5-qrcode");
       const scanner = new Html5Qrcode("qr-reader");
       scannerRef.current = scanner;
+      const cId = cameraIdOverride || selectedCameraId;
+      const config = (cId && cId !== "auto") ? cId : { facingMode: "environment" };
       await scanner.start(
-        { facingMode: "environment" },
+        config,
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
           handleQrResult(decodedText);
@@ -122,15 +169,29 @@ export default function ScanPage() {
         () => {}
       );
       setScannerActive(true);
+      setTimeout(async () => {
+        try {
+          if (scannerRef.current) {
+             await scannerRef.current.applyVideoConstraints({ advanced: [{ zoom: zoom[0] } as any] });
+             setHasZoom(true);
+          }
+        } catch {
+          setHasZoom(false);
+        }
+      }, 500);
     } catch (err: any) {
-      toast.error("Nu s-a putut porni camera: " + (err.message || err));
+      toast.error("Eroare cameră: " + (err?.message || err));
+      scannerRef.current = null;
+      setScannerActive(false);
     }
-  }, []);
+  }, [selectedCameraId, zoom]);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
       try {
-        await scannerRef.current.stop();
+        if (scannerRef.current.isScanning) {
+          await scannerRef.current.stop();
+        }
         scannerRef.current.clear();
       } catch {}
       scannerRef.current = null;
@@ -143,13 +204,16 @@ export default function ScanPage() {
   }, [stopScanner]);
 
   useEffect(() => {
-    if (activeTab === "scan") {
-      const t = setTimeout(() => startScanner(), 300);
+    if (activeTab === "scan" && isCamsInitialized) {
+      const t = setTimeout(() => {
+        if (!scannerRef.current) startScanner();
+      }, 500);
       return () => clearTimeout(t);
     } else {
       stopScanner();
     }
-  }, [activeTab, startScanner, stopScanner]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, isCamsInitialized]);
 
   async function handleQrResult(qrData: string) {
     await stopScanner();
@@ -319,8 +383,29 @@ export default function ScanPage() {
 
         <TabsContent value="scan" className="space-y-4">
           <div id="qr-reader" ref={videoRef} className="mx-auto w-full max-w-sm overflow-hidden rounded-lg border bg-muted" style={{ minHeight: 300 }} />
+          {cameras.length > 0 && (
+            <Select value={selectedCameraId} onValueChange={(val) => {
+              setSelectedCameraId(val);
+              if (scannerActive) { stopScanner().then(() => startScanner(val)); }
+            }}>
+              <SelectTrigger><SelectValue placeholder="Alege camera" /></SelectTrigger>
+              <SelectContent>
+                 <SelectItem value="auto">Automată (Spate)</SelectItem>
+                {cameras.map(c => <SelectItem key={c.id} value={c.id}>{c.label || "Cameră " + c.id}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          {hasZoom && (
+            <div className="flex items-center gap-3 px-2 py-1 border rounded bg-background">
+              <span className="text-sm text-muted-foreground w-12">Zoom</span>
+              <Slider value={zoom} min={1} max={5} step={0.1} onValueChange={(v) => {
+                setZoom(v);
+                if (scannerRef.current) scannerRef.current.applyVideoConstraints({ advanced: [{ zoom: v[0] } as any] }).catch(()=>{});
+              }} />
+            </div>
+          )}
           {!scannerActive && (
-            <Button className="w-full" onClick={startScanner}><Camera className="mr-2 h-4 w-4" /> Pornește camera</Button>
+            <Button className="w-full" onClick={() => startScanner()}><CameraIcon className="mr-2 h-4 w-4" /> Pornește camera</Button>
           )}
           {scannerActive && (
             <Button variant="outline" className="w-full" onClick={stopScanner}><CameraOff className="mr-2 h-4 w-4" /> Oprește camera</Button>

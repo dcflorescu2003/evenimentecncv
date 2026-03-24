@@ -68,11 +68,10 @@ export default function TeacherDashboard() {
     },
   });
 
-  // Auto-select active or most recent session
+  // Auto-select most recent session
   useEffect(() => {
     if (sessions.length > 0 && !sessionId) {
-      const active = sessions.find(s => s.status === "active");
-      setSessionId((active || sessions[0]).id);
+      setSessionId(sessions[0].id);
     }
   }, [sessions, sessionId]);
 
@@ -215,7 +214,7 @@ export default function TeacherDashboard() {
 
   return (
     <div className="space-y-6 print:space-y-4">
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="font-display text-2xl font-bold">Clasa mea</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -224,7 +223,7 @@ export default function TeacherDashboard() {
               : "Nu ai nicio clasă asignată."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {myClasses.length > 0 && (
             <Button variant="outline" size="sm" onClick={() => setShowResetConfirm(true)}>
               <KeyRound className="mr-2 h-4 w-4" /> Printează credențiale
@@ -294,8 +293,8 @@ export default function TeacherDashboard() {
           </div>
 
           {/* Filters & Export */}
-          <div className="flex items-center gap-3 print:hidden">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-wrap items-center gap-3 print:hidden">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Caută elev…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>

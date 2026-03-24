@@ -656,7 +656,7 @@ export default function ProfEventDetailPage() {
     return aLast.localeCompare(bLast, "ro") || (a.profiles?.first_name || "").localeCompare(b.profiles?.first_name || "", "ro");
   });
 
-  function handleDownloadAttendancePdf() {
+  async function handleDownloadAttendancePdf() {
     if (!event) return;
     const simplifiedStatusMap = (status: string): "Prezent" | "Absent motivat" | "Absent" => {
       if (status === "present" || status === "late") return "Prezent";
@@ -687,7 +687,7 @@ export default function ProfEventDetailPage() {
       }
     });
 
-    exportSimpleAttendancePdf(
+    await exportSimpleAttendancePdf(
       event.title,
       formatDate(event.date),
       `${event.start_time?.slice(0, 5)} – ${event.end_time?.slice(0, 5)}`,
@@ -708,7 +708,7 @@ export default function ProfEventDetailPage() {
             <Badge variant="secondary">{statusLabels[event.status]}</Badge>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(participants.length > 0 || assistants.length > 0) && (
             <Button size="sm" variant="outline" onClick={handleDownloadAttendancePdf}>
               <FileDown className="mr-2 h-4 w-4" /> Listă de prezență
@@ -747,7 +747,7 @@ export default function ProfEventDetailPage() {
       </div>
 
       <Tabs defaultValue="coordinators" className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full flex-wrap h-auto justify-start">
           <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
           <TabsTrigger value="participants">Participanți ({participants.length + assistants.length})</TabsTrigger>
           <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>

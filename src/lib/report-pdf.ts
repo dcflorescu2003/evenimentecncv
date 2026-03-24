@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { downloadFileMobileSafe } from "./download";
 
 function stripDiacritics(str: string): string {
   return str
@@ -19,7 +20,7 @@ interface ExportReportOptions {
   orientation?: "portrait" | "landscape";
 }
 
-export function exportReportPdf({
+export async function exportReportPdf({
   title,
   subtitle,
   headers,
@@ -60,5 +61,7 @@ export function exportReportPdf({
     alternateRowStyles: { fillColor: [245, 247, 250] },
   });
 
-  doc.save(`${filename}.pdf`);
+  const pdfOutput = doc.output("datauristring");
+  const base64Data = pdfOutput.split(",")[1];
+  await downloadFileMobileSafe(`${filename}.pdf`, base64Data, "application/pdf");
 }

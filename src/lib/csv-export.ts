@@ -1,4 +1,6 @@
-export function exportToCSV(filename: string, headers: string[], rows: string[][]) {
+import { downloadFileMobileSafe } from "./download";
+
+export async function exportToCSV(filename: string, headers: string[], rows: string[][]) {
   const csvContent = [
     headers.join(","),
     ...rows.map(row =>
@@ -9,11 +11,10 @@ export function exportToCSV(filename: string, headers: string[], rows: string[][
     ),
   ].join("\n");
 
-  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${filename}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+  const textContent = "\uFEFF" + csvContent;
+  const bytes = new TextEncoder().encode(textContent);
+  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
+  const b64 = btoa(binString);
+
+  await downloadFileMobileSafe(`${filename}.csv`, b64, "text/csv;charset=utf-8");
 }

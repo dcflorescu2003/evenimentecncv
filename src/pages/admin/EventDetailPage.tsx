@@ -344,7 +344,7 @@ export default function EventDetailPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function handleDownloadAttendancePdf() {
+  async function handleDownloadAttendancePdf() {
     if (!event) return;
     const simplifiedStatusMap = (status: string): "Prezent" | "Absent motivat" | "Absent" => {
       if (status === "present" || status === "late") return "Prezent";
@@ -378,7 +378,7 @@ export default function EventDetailPage() {
     // Sort by class name, then by full name
     rows.sort((a, b) => a.className.localeCompare(b.className, "ro") || a.fullName.localeCompare(b.fullName, "ro"));
 
-    exportSimpleAttendancePdf(
+    await exportSimpleAttendancePdf(
       event.title,
       formatDate(event.date),
       `${event.start_time?.slice(0, 5)} – ${event.end_time?.slice(0, 5)}`,
@@ -605,7 +605,7 @@ export default function EventDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="info" className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full flex-wrap h-auto justify-start">
           <TabsTrigger value="info">Informații</TabsTrigger>
           <TabsTrigger value="participants">Participanți ({participants.length + assistants.length + publicParticipants.reduce((sum: number, pr: any) => sum + (pr.public_tickets?.filter((t: any) => t.status !== 'cancelled')?.length || 0), 0)})</TabsTrigger>
           <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
@@ -655,7 +655,7 @@ export default function EventDetailPage() {
         <TabsContent value="participants" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Adaugă elev asistent

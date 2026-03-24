@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { downloadFileMobileSafe } from "./download";
 
 function stripDiacritics(str: string): string {
   return str
@@ -56,7 +57,7 @@ const statusLabels: Record<string, string> = {
   absent: "Absent", excused: "Motivat", cancelled: "Anulat",
 };
 
-export function exportAttendancePdf(
+export async function exportAttendancePdf(
   eventTitle: string,
   eventDate: string,
   eventTime: string,
@@ -123,7 +124,10 @@ export function exportAttendancePdf(
     alternateRowStyles: { fillColor: [245, 247, 250] },
   });
 
-  doc.save(`prezenta-${safeTitle.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+  const filename = `prezenta-${safeTitle.replace(/\s+/g, "-").toLowerCase()}.pdf`;
+  const pdfOutput = doc.output("datauristring");
+  const base64Data = pdfOutput.split(",")[1];
+  await downloadFileMobileSafe(filename, base64Data, "application/pdf");
 }
 
 // --- Simplified attendance PDF for admin (Nr., Clasa, Nume si Prenume, Status) ---
@@ -134,7 +138,7 @@ interface SimpleAttendanceRow {
   status: "Prezent" | "Absent motivat" | "Absent";
 }
 
-export function exportSimpleAttendancePdf(
+export async function exportSimpleAttendancePdf(
   eventTitle: string,
   eventDate: string,
   eventTime: string,
@@ -197,5 +201,8 @@ export function exportSimpleAttendancePdf(
     alternateRowStyles: { fillColor: [245, 247, 250] },
   });
 
-  doc.save(`prezenta-${safeTitle.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+  const filename = `prezenta-${safeTitle.replace(/\s+/g, "-").toLowerCase()}.pdf`;
+  const pdfOutput = doc.output("datauristring");
+  const base64Data = pdfOutput.split(",")[1];
+  await downloadFileMobileSafe(filename, base64Data, "application/pdf");
 }

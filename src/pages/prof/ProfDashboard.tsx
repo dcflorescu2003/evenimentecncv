@@ -95,7 +95,7 @@ export default function ProfDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold">
             Bună, {profile?.first_name || "Profesor"}! 👋
@@ -195,7 +195,7 @@ export default function ProfDashboard() {
                         </div>
                         <Badge variant="secondary">{ev.counted_duration_hours}h</Badge>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap sm:flex-nowrap gap-2">
                         <Button size="sm" className="flex-1" onClick={() => navigate(`/prof/scan/${ev.id}`)}>
                           <ScanLine className="mr-2 h-4 w-4" /> Scanează QR
                         </Button>
