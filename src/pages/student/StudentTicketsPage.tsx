@@ -335,6 +335,7 @@ function AssistantTicketCard({
   onNavigate: () => void;
   past?: boolean;
 }) {
+  const navigate = useNavigate();
   const event = assignment.events as Event | null;
 
   return (
