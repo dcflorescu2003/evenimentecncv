@@ -28,6 +28,7 @@ import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentEventsPage from "./pages/student/StudentEventsPage";
 import StudentEventDetailPage from "./pages/student/StudentEventDetailPage";
 import StudentTicketsPage from "./pages/student/StudentTicketsPage";
+import StudentScanPage from "./pages/student/StudentScanPage";
 
 import TeacherLayout from "./components/layouts/TeacherLayout";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
@@ -107,6 +108,7 @@ const App = () => (
               <Route path="/student/events" element={<StudentEventsPage />} />
               <Route path="/student/events/:id" element={<StudentEventDetailPage />} />
               <Route path="/student/tickets" element={<StudentTicketsPage />} />
+              <Route path="/student/scan/:eventId" element={<StudentScanPage />} />
             </Route>
 
             {/* Teacher (profesor) routes */}
