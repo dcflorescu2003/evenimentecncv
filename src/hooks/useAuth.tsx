@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,7 +9,7 @@ interface Profile {
   first_name: string;
   last_name: string;
   username: string;
-  display_name: string;
+  display_name: string | null;
   is_active: boolean;
   must_change_password: boolean;
 }
@@ -33,58 +33,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const authRequestRef = useRef(0);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    let isMounted = true;
 
-        if (session?.user) {
-          // Defer profile/role fetch to avoid deadlock with auth state change
-          setTimeout(async () => {
-            await fetchProfileAndRoles(session.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-          setRoles([]);
+    const applySignedOutState = () => {
+      authRequestRef.current += 1;
+      if (!isMounted) return;
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setRoles([]);
+      setLoading(false);
+    };
+
+    const loadUserState = async (nextSession: Session) => {
+      const requestId = ++authRequestRef.current;
+
+      if (!isMounted) return;
+      setSession(nextSession);
+      setUser(nextSession.user);
+      setLoading(true);
+
+      try {
+        const [profileRes, rolesRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("id, first_name, last_name, username, display_name, is_active, must_change_password")
+            .eq("id", nextSession.user.id)
+            .maybeSingle(),
+          supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", nextSession.user.id),
+        ]);
+
+        if (!isMounted || authRequestRef.current !== requestId) return;
+
+        if (profileRes.error && profileRes.error.code !== "PGRST116") {
+          console.error("Failed to load profile", profileRes.error);
+        }
+        if (rolesRes.error) {
+          console.error("Failed to load roles", rolesRes.error);
+        }
+
+        setProfile((profileRes.data as Profile | null) ?? null);
+        setRoles((rolesRes.data ?? []).map((r: { role: string }) => r.role as AppRole));
+      } finally {
+        if (isMounted && authRequestRef.current === requestId) {
+          setLoading(false);
         }
       }
-    );
+    };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfileAndRoles(session.user.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
+    const handleSessionChange = (nextSession: Session | null) => {
+      if (!nextSession?.user) {
+        applySignedOutState();
+        return;
       }
+
+      void loadUserState(nextSession);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      handleSessionChange(nextSession);
     });
 
-    return () => subscription.unsubscribe();
+    supabase.auth.getSession()
+      .then(({ data: { session: initialSession } }) => {
+        handleSessionChange(initialSession);
+      })
+      .catch(() => {
+        applySignedOutState();
+      });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
-
-  async function fetchProfileAndRoles(userId: string) {
-    const [profileRes, rolesRes] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, first_name, last_name, username, display_name, is_active, must_change_password")
-        .eq("id", userId)
-        .single(),
-      supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId),
-    ]);
-
-    if (profileRes.data) {
-      setProfile(profileRes.data as Profile);
-    }
-    if (rolesRes.data) {
-      setRoles(rolesRes.data.map((r: { role: string }) => r.role as AppRole));
-    }
-  }
 
   async function signIn(username: string, password: string) {
     // We use email field to store username@school.local
