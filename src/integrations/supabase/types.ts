@@ -886,6 +886,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_assistant_for_event: {
+        Args: { _event_id: string; _student_id: string }
+        Returns: boolean
+      }
       is_coordinator_for_event: {
         Args: { _event_id: string; _user_id: string }
         Returns: boolean
