@@ -250,7 +250,16 @@ export default function StudentDashboard() {
                       {formatDate(a.events?.date)} • {a.events?.start_time?.slice(0, 5)} – {a.events?.end_time?.slice(0, 5)}
                     </p>
                   </div>
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Prezent</Badge>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/student/scan/${a.event_id}`); }}
+                    >
+                      <ScanLine className="mr-1 h-3 w-3" /> Scanează
+                    </Button>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Prezent</Badge>
+                  </div>
                 </CardContent>
               </Card>
             ))}

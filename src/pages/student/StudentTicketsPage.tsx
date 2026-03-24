@@ -11,7 +11,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CalendarDays, Clock, MapPin, Ticket, X } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Ticket, X, ScanLine } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
