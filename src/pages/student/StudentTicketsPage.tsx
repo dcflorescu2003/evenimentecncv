@@ -382,6 +382,11 @@ function AssistantTicketCard({
               <Button variant="outline" size="sm" className="flex-1" onClick={onNavigate}>
                 Detalii eveniment
               </Button>
+              {!past && (
+                <Button size="sm" className="flex-1" onClick={() => navigate(`/student/scan/${assignment.event_id}`)}>
+                  <ScanLine className="mr-1 h-4 w-4" /> Scanează bilete
+                </Button>
+              )}
             </div>
           </div>
         )}
