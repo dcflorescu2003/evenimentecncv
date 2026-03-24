@@ -1,51 +1,48 @@
 
 
-## Plan: Auto-select session + New homeroom teacher reports
+# Plan: Scanare QR pentru Elevii Asistenți
 
-### 1. Auto-select the most recent/active session
+## Rezumat
+Elevii asignați ca asistenți la un eveniment vor putea scana biletele participanților, similar cu profesorii și coordonatorii. Se va crea o pagină de scanare dedicată accesibilă din dashboard-ul/biletele elevului, vizibilă doar pentru evenimentele unde este asistent.
 
-**Problem**: In `TeacherDashboard`, `TeacherReportsPage`, and `ReportsPage` (admin), `sessionId` starts as `""`, forcing users to manually pick a session every time.
+## Modificări necesare
 
-**Solution**: Add a `useEffect` that sets `sessionId` to the active session (or most recent) once `sessions` data loads. Apply to:
-- `src/pages/teacher/TeacherDashboard.tsx`
-- `src/pages/teacher/TeacherReportsPage.tsx`
-- `src/pages/admin/ReportsPage.tsx`
+### 1. Pagină nouă: `src/pages/student/StudentScanPage.tsx`
+- Copiază logica din `ProfScanPage.tsx` (scanare QR, cod manual, căutare participanți)
+- Navigarea înapoi duce la `/student` sau `/student/tickets`
+- Restricție: pagina verifică că elevul curent este asistent la evenimentul respectiv (`event_student_assistants`)
 
-Logic: find session with `status === "active"`, fallback to first in list (already sorted by `start_date desc`).
+### 2. Rută nouă în `App.tsx`
+- Adaugă `/student/scan/:eventId` în rutele student (sub `ProtectedRoute` cu rol `student`)
 
----
+### 3. Buton de scanare în interfața elevului
+- În `StudentDashboard.tsx` sau `StudentTicketsPage.tsx`: pentru biletele de tip asistent, afișează un buton „Scanează bilete" care navighează la `/student/scan/:eventId`
 
-### 2. Two new homeroom teacher report views
+### 4. Politici RLS (migrare SQL)
+- Elevii asistenți trebuie să poată **citi** rezervările și biletele evenimentului unde sunt asistenți (pentru căutare participanți)
+- Elevii asistenți trebuie să poată **actualiza** biletele (status, checkin_timestamp) pentru evenimentul lor
+- Elevii asistenți trebuie să poată **insera** în `attendance_log`
+- Elevii asistenți trebuie să poată citi `public_reservations` și actualiza `public_tickets` pentru evenimentul lor
+- Trebuie să poată citi `student_class_assignments` pentru participanții la eveniment (pentru afișarea clasei)
+- Se va folosi o funcție `SECURITY DEFINER` (`is_assistant_for_event`) pentru a evita recursivitatea RLS
 
-Add two new report tabs/sections to the teacher reports page (`TeacherReportsPage.tsx`):
+### 5. Funcție SQL nouă
+```sql
+CREATE FUNCTION is_assistant_for_event(_student_id uuid, _event_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM event_student_assistants
+    WHERE student_id = _student_id AND event_id = _event_id
+  )
+$$;
+```
 
-**Report A — "Situație elevi" (Student overview)**
-A matrix/table showing each student with:
-- Columns: Student name | Event 1 | Event 2 | ... | Total ore validate
-- Cell values: ✓ (present/late), ✗ (absent), — (not enrolled)
-- Gives an "at a glance" view of who did what across all session events
-- Exportable to PDF
-
-**Report B — "Verificare prezență" (Attendance check)**
-- Filter by: a specific date OR a specific event
-- Shows only students from the homeroom class
-- Columns: Student name | Event title | Status (Prezent / Absent / Neînscris)
-- Quick way to check "who from my class was at event X" or "what happened on date Y"
-- Exportable to PDF
-
-**Implementation**: Use Tabs component within `TeacherReportsPage.tsx` with three tabs:
-1. "Sumar" (existing report)
-2. "Situație elevi" (new Report A)
-3. "Verificare prezență" (new Report B)
-
-### Files to modify
-- `src/pages/teacher/TeacherDashboard.tsx` — auto-select session
-- `src/pages/teacher/TeacherReportsPage.tsx` — auto-select session + add 2 new report tabs
-- `src/pages/admin/ReportsPage.tsx` — auto-select session
-
-### Technical notes
-- Report A queries: events for session → reservations for class students → tickets for status → build matrix
-- Report B queries: events filtered by date or single event → reservations + tickets for class students
-- Both use existing batch-fetch patterns for large datasets
-- PDF export via existing `exportReportPdf` utility
+### Tabele afectate de noi politici RLS
+- `reservations` — SELECT pentru asistenți
+- `tickets` — SELECT + UPDATE pentru asistenți  
+- `public_reservations` — SELECT pentru asistenți
+- `public_tickets` — SELECT + UPDATE pentru asistenți
+- `attendance_log` — INSERT pentru asistenți
+- `student_class_assignments` — SELECT pentru asistenți (prin funcție security definer)
+- `profiles` — SELECT pentru asistenți (participanții la eveniment)
 

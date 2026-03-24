@@ -11,7 +11,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CalendarDays, Clock, MapPin, Ticket, X } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Ticket, X, ScanLine } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
@@ -335,6 +335,7 @@ function AssistantTicketCard({
   onNavigate: () => void;
   past?: boolean;
 }) {
+  const navigate = useNavigate();
   const event = assignment.events as Event | null;
 
   return (
@@ -381,6 +382,11 @@ function AssistantTicketCard({
               <Button variant="outline" size="sm" className="flex-1" onClick={onNavigate}>
                 Detalii eveniment
               </Button>
+              {!past && (
+                <Button size="sm" className="flex-1" onClick={() => navigate(`/student/scan/${assignment.event_id}`)}>
+                  <ScanLine className="mr-1 h-4 w-4" /> Scanează bilete
+                </Button>
+              )}
             </div>
           </div>
         )}

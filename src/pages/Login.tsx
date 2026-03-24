@@ -48,7 +48,9 @@ export default function Login() {
     enabled: publicEvents.length > 0,
   });
 
-  if (authLoading) {
+  const isAuthResolving = authLoading || (!!session && !profile && roles.length === 0);
+
+  if (isAuthResolving) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -56,9 +58,8 @@ export default function Login() {
     );
   }
 
-  if (session && profile) {
-    // Force password change if needed
-    if (profile.must_change_password) {
+  if (session) {
+    if (profile?.must_change_password) {
       return <Navigate to="/change-password" replace />;
     }
     if (roles.includes("admin")) return <Navigate to="/admin" replace />;

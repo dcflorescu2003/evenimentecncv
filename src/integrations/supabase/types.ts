@@ -871,6 +871,10 @@ export type Database = {
         Args: { _event_id: string; _student_id: string }
         Returns: Json
       }
+      get_assistant_event_student_ids: {
+        Args: { _assistant_id: string }
+        Returns: string[]
+      }
       get_events_reserved_counts: {
         Args: { _event_ids: string[] }
         Returns: Json
@@ -884,6 +888,18 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_assistant_for_event: {
+        Args: { _event_id: string; _student_id: string }
+        Returns: boolean
+      }
+      is_assistant_for_public_reservation: {
+        Args: { _public_reservation_id: string; _student_id: string }
+        Returns: boolean
+      }
+      is_assistant_for_reservation_event: {
+        Args: { _reservation_id: string; _student_id: string }
         Returns: boolean
       }
       is_coordinator_for_event: {
