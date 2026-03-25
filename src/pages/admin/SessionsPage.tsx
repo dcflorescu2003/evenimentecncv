@@ -48,6 +48,7 @@ const emptyForm = {
   start_date: "",
   end_date: "",
   status: "draft" as SessionStatus,
+  min_participants: "" as string,
 };
 
 export default function SessionsPage() {
@@ -70,7 +71,7 @@ export default function SessionsPage() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (values: typeof form) => {
+    mutationFn: async (values: any) => {
       if (editingId) {
         const { error } = await supabase
           .from("program_sessions")
@@ -119,6 +120,7 @@ export default function SessionsPage() {
       start_date: s.start_date,
       end_date: s.end_date,
       status: s.status as SessionStatus,
+      min_participants: (s as any).min_participants != null ? String((s as any).min_participants) : "",
     });
     setDialogOpen(true);
   }
@@ -139,7 +141,12 @@ export default function SessionsPage() {
       toast.error("Data de sfârșit trebuie să fie după data de început");
       return;
     }
-    saveMutation.mutate(form);
+    const { min_participants, ...rest } = form;
+    const payload = {
+      ...rest,
+      min_participants: min_participants && min_participants.trim() !== "" ? parseInt(min_participants, 10) : null,
+    };
+    saveMutation.mutate(payload as any);
   }
 
   return (
@@ -253,6 +260,20 @@ export default function SessionsPage() {
                   onChange={(v) => setForm({ ...form, end_date: v })}
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="min_participants">Nr. minim participanți (opțional)</Label>
+              <Input
+                id="min_participants"
+                type="number"
+                min={0}
+                value={form.min_participants}
+                onChange={(e) => setForm({ ...form, min_participants: e.target.value })}
+                placeholder="ex: 5 (lăsați gol pentru fără restricție)"
+              />
+              <p className="text-xs text-muted-foreground">
+                Dacă este setat, un eveniment este considerat desfășurat doar dacă are cel puțin acest număr de participanți scanați.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Status</Label>

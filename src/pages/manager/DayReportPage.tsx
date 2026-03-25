@@ -8,6 +8,7 @@ import { FileDown } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
 import { useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
+import { getHeldEventIds } from "@/lib/held-events";
 
 export default function DayReportPage() {
   const { sessionId } = useManagerSession();
@@ -20,17 +21,35 @@ export default function DayReportPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("events")
-        .select("id, title, start_time, end_time, counted_duration_hours, max_capacity, status")
+        .select("id, title, start_time, end_time, counted_duration_hours, max_capacity, status, date")
         .eq("date", date)
         .eq("session_id", sessionId)
         .order("start_time");
       if (!data?.length) return [];
 
+      // Get session min_participants
+      const { data: sessionData } = await supabase.from("program_sessions").select("min_participants").eq("id", sessionId).single();
+      const minParticipants = (sessionData as any)?.min_participants;
+
       const eventIds = data.map((e) => e.id);
       const [coordsRes, reservationsRes] = await Promise.all([
         supabase.from("coordinator_assignments").select("event_id, teacher_id").in("event_id", eventIds),
-        supabase.from("reservations").select("event_id").eq("status", "reserved").in("event_id", eventIds),
+        supabase.from("reservations").select("id, event_id, status").in("event_id", eventIds),
       ]);
+
+      // Get scanned ticket counts for held-event calculation
+      const allResIds = (reservationsRes.data || []).filter(r => r.status === "reserved").map(r => r.id);
+      const { data: allTickets } = allResIds.length
+        ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", allResIds)
+        : { data: [] };
+      const resEventMap = Object.fromEntries((reservationsRes.data || []).filter(r => r.status === "reserved").map(r => [r.id, r.event_id]));
+      const ticketsByEvent: Record<string, number> = {};
+      (allTickets || []).forEach(t => {
+        if (t.status === "present" || t.status === "late") {
+          const eid = resEventMap[t.reservation_id];
+          if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
+        }
+      });
 
       const teacherIds = [...new Set((coordsRes.data || []).map((c) => c.teacher_id))];
       const { data: profiles } = teacherIds.length
@@ -38,21 +57,41 @@ export default function DayReportPage() {
         : { data: [] };
       const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, `${p.last_name} ${p.first_name}`]));
 
-      // Get teacher hours for session
+      // Get teacher hours for session — only from held events
       const { data: allCoords } = await supabase.from("coordinator_assignments").select("teacher_id, event_id").in("teacher_id", teacherIds);
-      const allEventIds = [...new Set((allCoords || []).map((c) => c.event_id))];
-      const { data: allEvents } = allEventIds.length ? await supabase.from("events").select("id, counted_duration_hours").in("id", allEventIds).eq("session_id", sessionId) : { data: [] };
+      const allCoordEventIds = [...new Set((allCoords || []).map((c) => c.event_id))];
+      const { data: allEvents } = allCoordEventIds.length ? await supabase.from("events").select("id, counted_duration_hours, date").in("id", allCoordEventIds).eq("session_id", sessionId) : { data: [] };
+      
+      // Get tickets for all session events to determine held status
+      const allSessionEventIds = (allEvents || []).map(e => e.id);
+      const { data: allSessionRes } = allSessionEventIds.length
+        ? await supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", allSessionEventIds)
+        : { data: [] };
+      const allSessionResIds = (allSessionRes || []).map(r => r.id);
+      const { data: allSessionTickets } = allSessionResIds.length
+        ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", allSessionResIds)
+        : { data: [] };
+      const sessionResEventMap = Object.fromEntries((allSessionRes || []).map(r => [r.id, r.event_id]));
+      const sessionTicketsByEvent: Record<string, number> = {};
+      (allSessionTickets || []).forEach(t => {
+        if (t.status === "present" || t.status === "late") {
+          const eid = sessionResEventMap[t.reservation_id];
+          if (eid) sessionTicketsByEvent[eid] = (sessionTicketsByEvent[eid] || 0) + 1;
+        }
+      });
+
+      const heldSessionIds = getHeldEventIds(allEvents || [], sessionTicketsByEvent, minParticipants);
       const eventHoursMap = Object.fromEntries((allEvents || []).map((e) => [e.id, e.counted_duration_hours]));
       
       const teacherHoursMap: Record<string, number> = {};
       (allCoords || []).forEach((c) => {
-        if (eventHoursMap[c.event_id] !== undefined) {
+        if (heldSessionIds.has(c.event_id)) {
           teacherHoursMap[c.teacher_id] = (teacherHoursMap[c.teacher_id] || 0) + (eventHoursMap[c.event_id] || 0);
         }
       });
 
       const reservedCounts: Record<string, number> = {};
-      (reservationsRes.data || []).forEach((r) => { reservedCounts[r.event_id] = (reservedCounts[r.event_id] || 0) + 1; });
+      (reservationsRes.data || []).filter(r => r.status === "reserved").forEach((r) => { reservedCounts[r.event_id] = (reservedCounts[r.event_id] || 0) + 1; });
 
       return data.map((e) => ({
         ...e,

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileDown } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 
 const statusLabel = (s: string) => {
@@ -23,6 +23,8 @@ export default function StudentReportPage() {
   const [searchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState(searchParams.get("id") || "");
   const [search, setSearch] = useState("");
+  const navigate = useNavigate();
+  const fromPage = searchParams.get("from");
 
   useEffect(() => {
     const id = searchParams.get("id");
@@ -151,6 +153,9 @@ export default function StudentReportPage() {
       </div>
 
       <div className="space-y-2">
+        {fromPage === "incomplete" && (
+          <Button variant="ghost" onClick={() => navigate("/manager/incomplete")} className="mb-2">← Înapoi la normă incompletă</Button>
+        )}
         <Input placeholder="Caută elev (min 2 caractere)..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-80" />
         {students?.length ? (
           <div className="flex flex-wrap gap-2">

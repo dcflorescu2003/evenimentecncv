@@ -8,6 +8,7 @@ import { FileDown } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
 import { useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
+import { getHeldEventIds } from "@/lib/held-events";
 
 export default function IncompleteNormPage() {
   const { sessionId, sessionName } = useManagerSession();
@@ -24,11 +25,34 @@ export default function IncompleteNormPage() {
         .from("class_participation_rules").select("id").eq("session_id", sessionId).limit(1);
       if (!rules?.length) return [];
 
+      // Get session min_participants
+      const { data: sessionData } = await supabase.from("program_sessions").select("min_participants").eq("id", sessionId).single();
+      const minParticipants = (sessionData as any)?.min_participants;
+
       // Get all session events
       const { data: sessionEvents } = await supabase
-        .from("events").select("id, counted_duration_hours").eq("session_id", sessionId);
+        .from("events").select("id, counted_duration_hours, date").eq("session_id", sessionId);
       const sessionEventIds = (sessionEvents || []).map((e) => e.id);
       const eventHoursMap = Object.fromEntries((sessionEvents || []).map((e) => [e.id, e.counted_duration_hours]));
+
+      // Get scanned ticket counts per event
+      const { data: reservations } = sessionEventIds.length
+        ? await supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds)
+        : { data: [] };
+      const resIds = (reservations || []).map((r) => r.id);
+      const { data: tickets } = resIds.length
+        ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds)
+        : { data: [] };
+      const resEventMap = Object.fromEntries((reservations || []).map((r) => [r.id, r.event_id]));
+      const ticketsByEvent: Record<string, number> = {};
+      (tickets || []).forEach((t) => {
+        if (t.status === "present" || t.status === "late") {
+          const eid = resEventMap[t.reservation_id];
+          if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
+        }
+      });
+
+      const heldIds = getHeldEventIds(sessionEvents || [], ticketsByEvent, minParticipants);
 
       // Get all teacher roles
       const { data: roleRows } = await supabase.from("user_roles").select("user_id").in("role", ["teacher", "homeroom_teacher", "coordinator_teacher"]);
@@ -45,7 +69,7 @@ export default function IncompleteNormPage() {
       
       const coordsByTeacher: Record<string, string[]> = {};
       (coords || []).forEach((c) => {
-        if (sessionEventIds.includes(c.event_id)) {
+        if (heldIds.has(c.event_id)) {
           if (!coordsByTeacher[c.teacher_id]) coordsByTeacher[c.teacher_id] = [];
           coordsByTeacher[c.teacher_id].push(c.event_id);
         }
@@ -60,7 +84,7 @@ export default function IncompleteNormPage() {
           return { id: p.id, name: `${p.last_name} ${p.first_name}`, events: evts.length, organizedHours: hours, norm, remaining: norm - hours };
         })
         .filter(Boolean)
-        .sort((a, b) => a!.organizedHours - b!.organizedHours) as Array<{
+        .sort((a, b) => a!.name.localeCompare(b!.name)) as Array<{
           id: string; name: string; events: number; organizedHours: number; norm: number; remaining: number;
         }>;
     },
@@ -91,10 +115,10 @@ export default function IncompleteNormPage() {
       const studentIds = assignments.map((a) => a.student_id);
 
       // Get reservations for these students in this session
-      const { data: reservations } = await supabase
+      const { data: reservationsData } = await supabase
         .from("reservations").select("id, student_id, event_id").eq("status", "reserved").in("student_id", studentIds);
       
-      const resEventIds = [...new Set((reservations || []).map((r) => r.event_id))];
+      const resEventIds = [...new Set((reservationsData || []).map((r) => r.event_id))];
       const { data: events } = resEventIds.length
         ? await supabase.from("events").select("id, counted_duration_hours").eq("session_id", sessionId).in("id", resEventIds)
         : { data: [] };
@@ -106,11 +130,11 @@ export default function IncompleteNormPage() {
       const allSessionEventHoursMap = Object.fromEntries((allSessionEvents || []).map(e => [e.id, e.counted_duration_hours]));
 
       // Get tickets for validated hours
-      const resIds = (reservations || []).filter((r) => eventHoursMap[r.event_id] !== undefined).map((r) => r.id);
-      const { data: tickets } = resIds.length
+      const resIds = (reservationsData || []).filter((r) => eventHoursMap[r.event_id] !== undefined).map((r) => r.id);
+      const { data: ticketsData } = resIds.length
         ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds)
         : { data: [] };
-      const ticketMap = Object.fromEntries((tickets || []).map((t) => [t.reservation_id, t.status]));
+      const ticketMap = Object.fromEntries((ticketsData || []).map((t) => [t.reservation_id, t.status]));
 
       // Fetch assistant assignments
       const { data: assistantAssignments } = await supabase
@@ -134,7 +158,7 @@ export default function IncompleteNormPage() {
           const required = ruleMap[classId] || 0;
           if (!required) return null;
 
-          const sRes = (reservations || []).filter((r) => r.student_id === sid && eventHoursMap[r.event_id] !== undefined);
+          const sRes = (reservationsData || []).filter((r) => r.student_id === sid && eventHoursMap[r.event_id] !== undefined);
           const reserved = sRes.reduce((s, r) => s + (eventHoursMap[r.event_id] || 0), 0);
           
           // Validated = ticket present/late + assistant events in session
@@ -227,19 +251,19 @@ export default function IncompleteNormPage() {
                   <TableHead>Ore organizate</TableHead>
                   <TableHead>Norma</TableHead>
                   <TableHead>Ore rămase</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {teacherData.map((t, i) => (
                   <TableRow key={t.id}>
                     <TableCell>{i + 1}</TableCell>
-                    <TableCell>
-                      <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/teachers?id=${t.id}`)}>{t.name}</button>
-                    </TableCell>
+                    <TableCell>{t.name}</TableCell>
                     <TableCell>{t.events}</TableCell>
                     <TableCell>{t.organizedHours}h</TableCell>
                     <TableCell>{t.norm}h</TableCell>
                     <TableCell className="font-semibold text-destructive">{t.remaining}h</TableCell>
+                    <TableCell><Button variant="link" size="sm" onClick={() => navigate(`/manager/teachers?id=${t.id}&from=incomplete`)}>Detalii</Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -261,6 +285,7 @@ export default function IncompleteNormPage() {
                   <TableHead>Ore validate</TableHead>
                   <TableHead>Ore necesare</TableHead>
                   <TableHead>Ore rămase</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -268,13 +293,12 @@ export default function IncompleteNormPage() {
                   <TableRow key={s.id}>
                     <TableCell>{i + 1}</TableCell>
                     <TableCell>{s.className}</TableCell>
-                    <TableCell>
-                      <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/students?id=${s.id}`)}>{s.name}</button>
-                    </TableCell>
+                    <TableCell>{s.name}</TableCell>
                     <TableCell>{s.reserved}h</TableCell>
                     <TableCell>{s.validated}h</TableCell>
                     <TableCell>{s.required}h</TableCell>
                     <TableCell className="font-semibold text-destructive">{s.remaining}h</TableCell>
+                    <TableCell><Button variant="link" size="sm" onClick={() => navigate(`/manager/students?id=${s.id}&from=incomplete`)}>Detalii</Button></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

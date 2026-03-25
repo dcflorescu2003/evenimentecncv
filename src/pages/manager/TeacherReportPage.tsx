@@ -9,6 +9,7 @@ import { FileDown } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
+import { getHeldEventIds } from "@/lib/held-events";
 
 export default function TeacherReportPage() {
   const { sessionId, sessionName } = useManagerSession();
@@ -16,6 +17,7 @@ export default function TeacherReportPage() {
   const [selectedId, setSelectedId] = useState(searchParams.get("id") || "");
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
+  const fromPage = searchParams.get("from");
 
   useEffect(() => {
     const id = searchParams.get("id");
@@ -39,7 +41,7 @@ export default function TeacherReportPage() {
     return name.includes(search.toLowerCase());
   });
 
-  // Summary scoped to session
+  // Summary scoped to session — only held events count
   const { data: summary } = useQuery({
     queryKey: ["mgr-teacher-summary", sessionId],
     enabled: !!teachers?.length && !!sessionId,
@@ -48,21 +50,40 @@ export default function TeacherReportPage() {
       const { data: coords } = await supabase.from("coordinator_assignments").select("teacher_id, event_id").in("teacher_id", teacherIds);
       const allEventIds = [...new Set((coords || []).map((c) => c.event_id))];
       const { data: events } = allEventIds.length
-        ? await supabase.from("events").select("id, counted_duration_hours, session_id").in("id", allEventIds)
+        ? await supabase.from("events").select("id, counted_duration_hours, session_id, date").in("id", allEventIds)
         : { data: [] };
       
-      // Only count events from selected session
       const sessionEvents = (events || []).filter((e) => e.session_id === sessionId);
-      const sessionEventIds = new Set(sessionEvents.map((e) => e.id));
-      const eventHoursMap = Object.fromEntries(sessionEvents.map((e) => [e.id, e.counted_duration_hours]));
+      const sessionEventIds = sessionEvents.map((e) => e.id);
 
-      // Total session hours for "remaining"
-      const { data: allSessionEvents } = await supabase.from("events").select("counted_duration_hours").eq("session_id", sessionId);
-      const totalSessionHours = (allSessionEvents || []).reduce((s, e) => s + (e.counted_duration_hours || 0), 0);
+      // Get session min_participants
+      const { data: sessionData } = await supabase.from("program_sessions").select("min_participants").eq("id", sessionId).single();
+      const minParticipants = (sessionData as any)?.min_participants;
+
+      // Get scanned ticket counts per event
+      const { data: reservations } = sessionEventIds.length
+        ? await supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds)
+        : { data: [] };
+      const resIds = (reservations || []).map((r) => r.id);
+      const { data: tickets } = resIds.length
+        ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds)
+        : { data: [] };
+      
+      const ticketsByEvent: Record<string, number> = {};
+      const resEventMap = Object.fromEntries((reservations || []).map((r) => [r.id, r.event_id]));
+      (tickets || []).forEach((t) => {
+        if (t.status === "present" || t.status === "late") {
+          const eid = resEventMap[t.reservation_id];
+          if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
+        }
+      });
+
+      const heldIds = getHeldEventIds(sessionEvents, ticketsByEvent, minParticipants);
+      const eventHoursMap = Object.fromEntries(sessionEvents.map((e) => [e.id, e.counted_duration_hours]));
 
       const coordsByTeacher: Record<string, string[]> = {};
       (coords || []).forEach((c) => {
-        if (sessionEventIds.has(c.event_id)) {
+        if (heldIds.has(c.event_id)) {
           if (!coordsByTeacher[c.teacher_id]) coordsByTeacher[c.teacher_id] = [];
           coordsByTeacher[c.teacher_id].push(c.event_id);
         }
@@ -90,15 +111,34 @@ export default function TeacherReportPage() {
       const { data: events } = await supabase.from("events").select("id, title, date, start_time, end_time, counted_duration_hours, status, session_id").in("id", eventIds).eq("session_id", sessionId).order("date");
 
       const sessionEventIds = (events || []).map((e) => e.id);
-      const { data: reservations } = sessionEventIds.length ? await supabase.from("reservations").select("event_id").eq("status", "reserved").in("event_id", sessionEventIds) : { data: [] };
+
+      // Get session min_participants
+      const { data: sessionData } = await supabase.from("program_sessions").select("min_participants").eq("id", sessionId).single();
+      const minParticipants = (sessionData as any)?.min_participants;
+
+      // Get scanned ticket counts
+      const { data: reservations } = sessionEventIds.length ? await supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds) : { data: [] };
+      const resIds = (reservations || []).map((r) => r.id);
+      const { data: tickets } = resIds.length ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds) : { data: [] };
+
+      const resEventMap = Object.fromEntries((reservations || []).map((r) => [r.id, r.event_id]));
+      const ticketsByEvent: Record<string, number> = {};
       const countMap: Record<string, number> = {};
       (reservations || []).forEach((r) => { countMap[r.event_id] = (countMap[r.event_id] || 0) + 1; });
+      (tickets || []).forEach((t) => {
+        if (t.status === "present" || t.status === "late") {
+          const eid = resEventMap[t.reservation_id];
+          if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
+        }
+      });
 
-      const totalHours = (events || []).reduce((s, e) => s + e.counted_duration_hours, 0);
+      const heldIds = getHeldEventIds(events || [], ticketsByEvent, minParticipants);
+
+      const totalHours = (events || []).filter(e => heldIds.has(e.id)).reduce((s, e) => s + e.counted_duration_hours, 0);
 
       return {
         profile,
-        events: (events || []).map((e) => ({ ...e, participants: countMap[e.id] || 0 })),
+        events: (events || []).map((e) => ({ ...e, participants: countMap[e.id] || 0, isHeld: heldIds.has(e.id) })),
         totalHours,
       };
     },
@@ -139,14 +179,22 @@ export default function TeacherReportPage() {
     exportReportPdf({
       title: `Raport profesor: ${name}`,
       subtitle: `Sesiune: ${sessionName} | Ore organizate: ${detail.totalHours}h`,
-      headers: ["Nr.", "Data", "Eveniment", "Interval", "Ore", "Participanți", "Status"],
+      headers: ["Nr.", "Data", "Eveniment", "Interval", "Ore", "Participanți", "Status", "Desfășurat"],
       rows: detail.events.map((e, i) => [
         String(i + 1), e.date, e.title, `${e.start_time?.slice(0, 5)} - ${e.end_time?.slice(0, 5)}`,
-        String(e.counted_duration_hours), String(e.participants), e.status,
+        String(e.counted_duration_hours), String(e.participants), e.status, e.isHeld ? "Da" : "Nu",
       ]),
       filename: `raport-profesor-${name}`,
       orientation: "landscape",
     });
+  };
+
+  const handleBack = () => {
+    if (fromPage === "incomplete") {
+      navigate("/manager/incomplete");
+    } else {
+      setSelectedId("");
+    }
   };
 
   if (!sessionId) return <p className="text-muted-foreground">Selectează o sesiune din meniul lateral.</p>;
@@ -163,7 +211,7 @@ export default function TeacherReportPage() {
 
       <div className="flex gap-4">
         <Input placeholder="Caută profesor..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-80" />
-        {selectedId && <Button variant="ghost" onClick={() => setSelectedId("")}>← Înapoi la listă</Button>}
+        {selectedId && <Button variant="ghost" onClick={handleBack}>← Înapoi la {fromPage === "incomplete" ? "normă incompletă" : "listă"}</Button>}
       </div>
 
       {!selectedId ? (
@@ -206,7 +254,7 @@ export default function TeacherReportPage() {
             <>
               <div className="grid gap-4 md:grid-cols-3">
                 <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Profesor</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{`${detail.profile?.last_name || ""} ${detail.profile?.first_name || ""}`}</p></CardContent></Card>
-                <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Nr. evenimente</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.events.length}</p></CardContent></Card>
+                <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Nr. evenimente desfășurate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.events.filter(e => e.isHeld).length}</p></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore organizate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.totalHours}h{sessionHasRules && (detail.profile as any)?.teaching_norm ? ` / ${(detail.profile as any).teaching_norm}h` : ""}</p></CardContent></Card>
               </div>
 
@@ -220,11 +268,12 @@ export default function TeacherReportPage() {
                     <TableHead>Ore</TableHead>
                     <TableHead>Participanți</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Desfășurat</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {detail.events.map((e, i) => (
-                    <TableRow key={e.id}>
+                    <TableRow key={e.id} className={!e.isHeld ? "opacity-50" : ""}>
                       <TableCell>{i + 1}</TableCell>
                       <TableCell>{e.date}</TableCell>
                       <TableCell>{e.title}</TableCell>
@@ -232,6 +281,7 @@ export default function TeacherReportPage() {
                       <TableCell>{e.counted_duration_hours}h</TableCell>
                       <TableCell>{e.participants}</TableCell>
                       <TableCell>{e.status}</TableCell>
+                      <TableCell>{e.isHeld ? "✓" : "—"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

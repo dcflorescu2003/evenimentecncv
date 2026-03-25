@@ -589,6 +589,7 @@ export type Database = {
           created_at: string
           end_date: string
           id: string
+          min_participants: number | null
           name: string
           start_date: string
           status: Database["public"]["Enums"]["session_status"]
@@ -599,6 +600,7 @@ export type Database = {
           created_at?: string
           end_date: string
           id?: string
+          min_participants?: number | null
           name: string
           start_date: string
           status?: Database["public"]["Enums"]["session_status"]
@@ -609,6 +611,7 @@ export type Database = {
           created_at?: string
           end_date?: string
           id?: string
+          min_participants?: number | null
           name?: string
           start_date?: string
           status?: Database["public"]["Enums"]["session_status"]
