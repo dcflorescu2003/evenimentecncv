@@ -96,9 +96,15 @@ export default function ClassReportPage() {
     const rows: string[][] = [];
     displayedClasses.forEach(c => {
       rows.push([c.className, "", "", "", String(c.studentCount) + " elevi total"]);
-      c.events.forEach(e => {
-        rows.push(["", e.date, e.title, `${e.start_time?.slice(0, 5)} - ${e.end_time?.slice(0, 5)}`, String(e.studentCount) + " elevi"]);
-      });
+      if (c.events.length === 0) {
+        rows.push(["", "", "0 evenimente", "", `0/${c.studentCount}`]);
+      } else {
+        c.events.forEach(e => {
+          rows.push(["", e.date, e.title, `${e.start_time?.slice(0, 5)} - ${e.end_time?.slice(0, 5)}`, String(e.studentCount) + " elevi"]);
+        });
+        const totalInscrisi = c.events.reduce((sum, e) => sum + e.studentCount, 0);
+        rows.push(["", "", "", "TOTAL", `${totalInscrisi}/${c.studentCount}`]);
+      }
     });
     exportReportPdf({
       title: classId
