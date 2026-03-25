@@ -346,11 +346,26 @@ export default function ProfEventParticipantsPage() {
           </Button>
           <Button size="sm" variant="outline" onClick={async () => {
             if (!event || unified.length === 0) return;
-            const rows = unified.map((p) => ({
-              className: p.className || "-",
-              fullName: p.name,
-              status: (p.status === "present" || p.status === "late" ? "Prezent" : "Absent") as "Prezent" | "Absent",
-            }));
+            // Deduplicate: assistants who also have reservations appear once as *asistent
+            const assistantStudentIdSet = new Set(assistants.map((a: any) => a.student_id));
+            const seen = new Set<string>();
+            const rows: { className: string; fullName: string; status: "Prezent" | "Absent" | "*asistent" }[] = [];
+            unified.forEach((p) => {
+              if (p.isAssistant) {
+                rows.push({ className: p.className || "-", fullName: p.name, status: "*asistent" });
+                // Track that this assistant name is added
+              } else {
+                // Check if this participant's student is also an assistant (by matching reservation student_id)
+                const reservation = participants.find((r: any) => `reg-${r.id}` === p.id);
+                const studentId = reservation?.profiles?.id;
+                if (studentId && assistantStudentIdSet.has(studentId)) return; // skip, already added as *asistent
+                rows.push({
+                  className: p.className || "-",
+                  fullName: p.name,
+                  status: (p.status === "present" || p.status === "late" ? "Prezent" : "Absent") as "Prezent" | "Absent",
+                });
+              }
+            });
             await exportSimpleAttendancePdf(
               event.title,
               formatDate(event.date),
