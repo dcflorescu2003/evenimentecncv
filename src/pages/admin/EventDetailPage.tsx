@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime } from "@/lib/time";
 import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
+import { buildAttendancePdfRows } from "@/lib/attendance-rows";
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -346,43 +347,25 @@ export default function EventDetailPage() {
 
   async function handleDownloadAttendancePdf() {
     if (!event) return;
-    const assistantStudentIdSet = new Set(assistants.map((a: any) => a.student_id));
+    const rows = buildAttendancePdfRows({
+      regularRows: participants.map((p: any) => {
+        const profile = p.profiles;
+        const studentId = profile?.id;
+        const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
 
-    const simplifiedStatusMap = (status: string): "Prezent" | "Absent" => {
-      if (status === "present" || status === "late") return "Prezent";
-      return "Absent";
-    };
-
-    const rows: { className: string; fullName: string; status: "Prezent" | "Absent" | "*asistent" }[] = [];
-
-    participants.forEach((p: any) => {
-      const profile = p.profiles;
-      const studentId = profile?.id;
-      // If student is also an assistant, skip here — will be added as *asistent
-      if (assistantStudentIdSet.has(studentId)) return;
-      const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
-      const ticketStatus = ticket?.status || "absent";
-      rows.push({
-        className: classMap.get(studentId) || "-",
-        fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
-        status: simplifiedStatusMap(ticketStatus),
-      });
+        return {
+          key: studentId ? `student:${studentId}` : `reservation:${p.id}`,
+          className: classMap.get(studentId) || "-",
+          fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`,
+          status: ticket?.status || "absent",
+        };
+      }),
+      assistantRows: assistants.map((a: any) => ({
+        key: `student:${a.student_id}`,
+        className: classMap.get(a.student_id) || "-",
+        fullName: `${a.profile?.last_name || ""} ${a.profile?.first_name || ""}`,
+      })),
     });
-
-    // Add assistants as "*asistent"
-    assistants.forEach((a: any) => {
-      const profile = a.profile;
-      if (profile) {
-        rows.push({
-          className: classMap.get(a.student_id) || "-",
-          fullName: `${profile.last_name || ""} ${profile.first_name || ""}`.trim(),
-          status: "*asistent" as const,
-        });
-      }
-    });
-
-    // Sort by class name, then by full name
-    rows.sort((a, b) => a.className.localeCompare(b.className, "ro") || a.fullName.localeCompare(b.fullName, "ro"));
 
     await exportSimpleAttendancePdf(
       event.title,

@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
+import { buildAttendancePdfRows } from "@/lib/attendance-rows";
 
 const statusLabels: Record<string, string> = {
   draft: "Ciornă", published: "Publicat", closed: "Închis", cancelled: "Anulat",
@@ -658,38 +659,24 @@ export default function ProfEventDetailPage() {
 
   async function handleDownloadAttendancePdf() {
     if (!event) return;
-    const assistantStudentIdSet = new Set(assistants.map((a: any) => a.student_id));
+    const rows = buildAttendancePdfRows({
+      regularRows: participants.map((p: any) => {
+        const profile = p.profiles;
+        const studentId = profile?.id;
+        const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
 
-    const simplifiedStatusMap = (status: string): "Prezent" | "Absent" => {
-      if (status === "present" || status === "late") return "Prezent";
-      return "Absent";
-    };
-
-    const rows: { className: string; fullName: string; status: "Prezent" | "Absent" | "*asistent" }[] = [];
-
-    participants.forEach((p: any) => {
-      const profile = p.profiles;
-      const studentId = profile?.id;
-      if (assistantStudentIdSet.has(studentId)) return;
-      const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
-      const ticketStatus = ticket?.status || "absent";
-      rows.push({
-        className: eventClassMap.get(studentId)?.displayName || "-",
-        fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
-        status: simplifiedStatusMap(ticketStatus),
-      });
-    });
-
-    // Add assistants as "*asistent"
-    assistants.forEach((a: any) => {
-      const profile = a.profile;
-      if (profile) {
-        rows.push({
-          className: eventClassMap.get(a.student_id)?.displayName || "-",
-          fullName: `${profile.last_name || ""} ${profile.first_name || ""}`.trim(),
-          status: "*asistent" as const,
-        });
-      }
+        return {
+          key: studentId ? `student:${studentId}` : `reservation:${p.id}`,
+          className: eventClassMap.get(studentId)?.displayName || "-",
+          fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`,
+          status: ticket?.status || "absent",
+        };
+      }),
+      assistantRows: assistants.map((a: any) => ({
+        key: `student:${a.student_id}`,
+        className: eventClassMap.get(a.student_id)?.displayName || "-",
+        fullName: `${a.profile?.last_name || ""} ${a.profile?.first_name || ""}`,
+      })),
     });
 
     await exportSimpleAttendancePdf(

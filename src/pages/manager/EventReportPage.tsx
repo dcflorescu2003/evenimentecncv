@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, FileDown, FileText, Upload } from "lucide-react";
-import { exportReportPdf } from "@/lib/report-pdf";
+import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
+import { buildAttendancePdfRows } from "@/lib/attendance-rows";
+import { formatDate } from "@/lib/time";
 import { useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 
@@ -157,7 +159,7 @@ export default function EventReportPage() {
     queryKey: ["mgr-events", sessionId],
     enabled: !!sessionId,
     queryFn: async () => {
-      const { data } = await supabase.from("events").select("id, title, date").eq("session_id", sessionId).order("date");
+      const { data } = await supabase.from("events").select("id, title, date, start_time, end_time, location").eq("session_id", sessionId).order("date");
       return data || [];
     },
   });
@@ -237,20 +239,39 @@ export default function EventReportPage() {
 
       return {
         students: students.sort((a, b) => a.className.localeCompare(b.className) || a.name.localeCompare(b.name)),
-        assistants: assistantIds.map((id) => ({ id, name: profileMap[id] || "", ...(studentHoursMap[id] || { reserved: 0, validated: 0, required: 0 }) })),
+        assistants: assistantIds.map((id) => ({ id, name: profileMap[id] || "", className: studentClassMap[id] || "", ...(studentHoursMap[id] || { reserved: 0, validated: 0, required: 0 }) })),
         coordinators: coordIds.map((id) => ({ id, name: profileMap[id] || "" })),
       };
     },
   });
 
-  const eventTitle = events?.find((e) => e.id === eventId)?.title || "";
+  const selectedEvent = events?.find((e) => e.id === eventId);
+  const eventTitle = selectedEvent?.title || "";
 
-  const handleExport = () => {
-    if (!report) return;
-    const rows = report.students.map((s, i) => [String(i + 1), s.className, s.name, statusLabel(s.status), String(s.reserved) + "h", String(s.validated) + "h", String(Math.max(0, s.required - s.validated)) + "h"]);
-    rows.push([], ["", "", "ASISTENȚI:", report.assistants.map((a) => a.name).join(", "), "", "", ""]);
-    rows.push(["", "", "COORDONATORI:", report.coordinators.map((c) => c.name).join(", "), "", "", ""]);
-    exportReportPdf({ title: "Lista de prezență", subtitle: eventTitle, headers: ["Nr.", "Clasă", "Nume", "Status", "Ore rez.", "Ore val.", "Ore răm."], rows, filename: `prezenta-${eventTitle}`, orientation: "landscape" });
+  const handleExport = async () => {
+    if (!report || !selectedEvent) return;
+
+    const rows = buildAttendancePdfRows({
+      regularRows: report.students.map((student) => ({
+        key: `student:${student.id}`,
+        className: student.className || "-",
+        fullName: student.name,
+        status: student.status,
+      })),
+      assistantRows: report.assistants.map((assistant) => ({
+        key: `student:${assistant.id}`,
+        className: assistant.className || "-",
+        fullName: assistant.name,
+      })),
+    });
+
+    await exportSimpleAttendancePdf(
+      selectedEvent.title,
+      formatDate(selectedEvent.date),
+      `${selectedEvent.start_time?.slice(0, 5) || ""} – ${selectedEvent.end_time?.slice(0, 5) || ""}`,
+      selectedEvent.location,
+      rows,
+    );
   };
 
   if (!sessionId) return <p className="text-muted-foreground">Selectează o sesiune din meniul lateral.</p>;

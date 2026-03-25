@@ -144,11 +144,11 @@ export async function exportAttendancePdf(
 interface SimpleAttendanceRow {
   className: string;
   fullName: string;
-  status: "Prezent" | "Absent motivat" | "Absent" | "*asistent";
+  status: "Prezent" | "Absent" | "*Asistent" | "*asistent";
 }
 
 function isAbsentStatus(status: string): boolean {
-  return status === "Absent" || status === "Absent motivat";
+  return status === "Absent";
 }
 
 export async function exportSimpleAttendancePdf(
@@ -181,13 +181,13 @@ export async function exportSimpleAttendancePdf(
 
   // Stats
   const total = sorted.length;
-  const prezenti = sorted.filter(r => r.status === "Prezent" || r.status === "*asistent").length;
-  const absentMotivat = sorted.filter(r => r.status === "Absent motivat").length;
+  const prezenti = sorted.filter(r => r.status === "Prezent").length;
+  const asistenti = sorted.filter(r => r.status === "*Asistent" || r.status === "*asistent").length;
   const absenti = sorted.filter(r => r.status === "Absent").length;
 
   doc.setFontSize(8);
   doc.text(
-    `Total: ${total}  |  Prezenti: ${prezenti}  |  Absent motivat: ${absentMotivat}  |  Absenti: ${absenti}`,
+    `Total: ${total}  |  Prezenti: ${prezenti}  |  Asistenti: ${asistenti}  |  Absenti: ${absenti}`,
     105, 36, { align: "center" },
   );
 
