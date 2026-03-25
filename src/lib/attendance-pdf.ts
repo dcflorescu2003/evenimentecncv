@@ -122,6 +122,15 @@ export async function exportAttendancePdf(
       6: { cellWidth: 20, halign: "center" },
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
+    didParseCell: (data) => {
+      if (data.section === "body") {
+        const rowIndex = data.row.index;
+        const status = sorted[rowIndex]?.status;
+        if (status === "absent") {
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    },
   });
 
   const filename = `prezenta-${safeTitle.replace(/\s+/g, "-").toLowerCase()}.pdf`;
@@ -136,6 +145,10 @@ interface SimpleAttendanceRow {
   className: string;
   fullName: string;
   status: "Prezent" | "Absent motivat" | "Absent";
+}
+
+function isAbsentStatus(status: string): boolean {
+  return status === "Absent" || status === "Absent motivat";
 }
 
 export async function exportSimpleAttendancePdf(
@@ -199,6 +212,15 @@ export async function exportSimpleAttendancePdf(
       3: { cellWidth: 35, halign: "center" },
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
+    didParseCell: (data) => {
+      if (data.section === "body") {
+        const rowIndex = data.row.index;
+        const status = sorted[rowIndex]?.status;
+        if (status && isAbsentStatus(status)) {
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    },
   });
 
   const filename = `prezenta-${safeTitle.replace(/\s+/g, "-").toLowerCase()}.pdf`;

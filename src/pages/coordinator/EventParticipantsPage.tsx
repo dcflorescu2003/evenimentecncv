@@ -249,7 +249,7 @@ export default function EventParticipantsPage() {
             const rows = unified.map((p) => ({
               className: p.className || "-",
               fullName: p.name,
-              status: (p.status === "present" || p.status === "late" ? "Prezent" : p.status === "excused" ? "Absent motivat" : p.status === "absent" ? "Absent" : "Rezervat") as "Prezent" | "Absent motivat" | "Absent",
+              status: (p.status === "present" || p.status === "late" ? "Prezent" : "Absent") as "Prezent" | "Absent",
             }));
             await exportSimpleAttendancePdf(
               event.title,
