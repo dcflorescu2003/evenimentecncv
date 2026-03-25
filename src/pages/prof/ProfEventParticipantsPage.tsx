@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
+import { buildAttendancePdfRows } from "@/lib/attendance-rows";
 
 const statusLabels: Record<string, string> = {
   reserved: "Rezervat", present: "Prezent", late: "Întârziat",
@@ -346,26 +347,38 @@ export default function ProfEventParticipantsPage() {
           </Button>
           <Button size="sm" variant="outline" onClick={async () => {
             if (!event || unified.length === 0) return;
-            // Deduplicate: assistants who also have reservations appear once as *asistent
-            const assistantStudentIdSet = new Set(assistants.map((a: any) => a.student_id));
-            const seen = new Set<string>();
-            const rows: { className: string; fullName: string; status: "Prezent" | "Absent" | "*asistent" }[] = [];
-            unified.forEach((p) => {
-              if (p.isAssistant) {
-                rows.push({ className: p.className || "-", fullName: p.name, status: "*asistent" });
-                // Track that this assistant name is added
-              } else {
-                // Check if this participant's student is also an assistant (by matching reservation student_id)
-                const reservation = participants.find((r: any) => `reg-${r.id}` === p.id);
-                const studentId = reservation?.profiles?.id;
-                if (studentId && assistantStudentIdSet.has(studentId)) return; // skip, already added as *asistent
-                rows.push({
-                  className: p.className || "-",
-                  fullName: p.name,
-                  status: (p.status === "present" || p.status === "late" ? "Prezent" : "Absent") as "Prezent" | "Absent",
-                });
-              }
+            const rows = buildAttendancePdfRows({
+              regularRows: [
+                ...participants.map((p: any) => {
+                  const profile = p.profiles;
+                  const studentId = profile?.id;
+                  const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
+
+                  return {
+                    key: studentId ? `student:${studentId}` : `reservation:${p.id}`,
+                    className: classLookup.get(studentId) || "-",
+                    fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`,
+                    status: ticket?.status || "reserved",
+                  };
+                }),
+                ...publicParticipants.map((p: any) => {
+                  const ticket = Array.isArray(p.public_tickets) ? p.public_tickets[0] : p.public_tickets;
+
+                  return {
+                    key: `public:${p.id}`,
+                    className: "-",
+                    fullName: p.guest_name || "",
+                    status: ticket?.status || "reserved",
+                  };
+                }),
+              ],
+              assistantRows: assistants.map((a: any) => ({
+                key: `student:${a.student_id}`,
+                className: classLookup.get(a.student_id) || "-",
+                fullName: `${a.profile?.last_name || ""} ${a.profile?.first_name || ""}`,
+              })),
             });
+
             await exportSimpleAttendancePdf(
               event.title,
               formatDate(event.date),
