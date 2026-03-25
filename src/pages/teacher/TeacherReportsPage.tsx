@@ -116,13 +116,29 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
       const classMap = Object.fromEntries((assignments ?? []).map(a => [a.student_id, a.class_id]));
       const classNameMap = Object.fromEntries((myClasses ?? []).map(c => [c.id, c.display_name]));
 
+      // Fetch assistant assignments
+      const { data: assistantAssignments } = await supabase
+        .from("event_student_assistants").select("student_id, event_id").in("student_id", studentIds);
+      const assistantByStudent = new Map<string, Set<string>>();
+      (assistantAssignments || []).forEach(a => {
+        if (eventIds.includes(a.event_id)) {
+          if (!assistantByStudent.has(a.student_id)) assistantByStudent.set(a.student_id, new Set());
+          assistantByStudent.get(a.student_id)!.add(a.event_id);
+        }
+      });
+
       return (profiles ?? []).map(p => {
         const sRes = (reservations ?? []).filter(r => r.student_id === p.id && r.status === "reserved" && eventIds.includes(r.event_id));
         const reservedHours = sRes.reduce((s, r) => s + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
-        const validatedHours = sRes.reduce((s, r) => {
+        const studentAssistantEvents = assistantByStudent.get(p.id) || new Set();
+        // Validated = ticket present/late + assistant events
+        const validatedEventIds = new Set<string>();
+        sRes.forEach(r => {
           const t = ticketByRes[r.id];
-          return s + (t && (t.status === "present" || t.status === "late") ? (eventMap[r.event_id]?.counted_duration_hours ?? 0) : 0);
-        }, 0);
+          if (t && (t.status === "present" || t.status === "late")) validatedEventIds.add(r.event_id);
+        });
+        studentAssistantEvents.forEach(eid => validatedEventIds.add(eid));
+        const validatedHours = [...validatedEventIds].reduce((s, eid) => s + (eventMap[eid]?.counted_duration_hours ?? 0), 0);
         return {
           id: p.id,
           name: `${p.last_name} ${p.first_name}`,
@@ -225,19 +241,42 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
       const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
       const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
 
-      // Build matrix: student → event → status (only for enrolled events)
+      // Fetch assistant assignments
+      const { data: assistantAssignments } = await supabase
+        .from("event_student_assistants").select("student_id, event_id").in("student_id", studentIds);
+      const assistantByStudent = new Map<string, Set<string>>();
+      (assistantAssignments || []).forEach(a => {
+        if (eventIds.includes(a.event_id)) {
+          if (!assistantByStudent.has(a.student_id)) assistantByStudent.set(a.student_id, new Set());
+          assistantByStudent.get(a.student_id)!.add(a.event_id);
+        }
+      });
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      // Build matrix: student → event → status
       const students = (profiles ?? []).map(p => {
         const eventStatuses: Record<string, string> = {};
         let validatedHours = 0;
+        const studentAssistantEvents = assistantByStudent.get(p.id) || new Set();
         for (const eid of eventIds) {
+          const ev = (events ?? []).find(e => e.id === eid);
           const res = (reservations ?? []).find(r => r.student_id === p.id && r.event_id === eid && r.status === "reserved");
           if (res) {
             const ticket = ticketByRes[res.id];
-            const status = ticket?.status || "reserved";
+            let status = ticket?.status || "reserved";
+            // Assistant → present
+            if (studentAssistantEvents.has(eid)) status = "present";
+            // Past reserved → absent
+            else if (status === "reserved" && ev?.date && ev.date < today) status = "absent";
             eventStatuses[eid] = status;
             if (status === "present" || status === "late") {
-              validatedHours += (events ?? []).find(e => e.id === eid)?.counted_duration_hours ?? 0;
+              validatedHours += ev?.counted_duration_hours ?? 0;
             }
+          } else if (studentAssistantEvents.has(eid)) {
+            // Assistant-only (no reservation)
+            eventStatuses[eid] = "present";
+            validatedHours += ev?.counted_duration_hours ?? 0;
           }
         }
         return {
@@ -394,24 +433,42 @@ function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: 
       const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
       const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
 
+      // Fetch assistant assignments
+      const { data: assistantAssignments } = await supabase
+        .from("event_student_assistants").select("student_id, event_id")
+        .in("student_id", studentIds).in("event_id", filteredEventIds);
+      const assistantSet = new Set((assistantAssignments || []).map(a => `${a.student_id}:${a.event_id}`));
+
       const eventMap = Object.fromEntries((sessionEvents ?? []).filter(e => filteredEventIds.includes(e.id)).map(e => [e.id, e]));
+      const today = new Date().toISOString().slice(0, 10);
 
       const rows: { id: string; name: string; lastName: string; eventTitle: string; eventDate: string; status: string }[] = [];
+      const seen = new Set<string>();
 
       for (const p of (profiles ?? [])) {
         for (const eid of filteredEventIds) {
           const ev = eventMap[eid];
           if (!ev) continue;
+          const isAssistant = assistantSet.has(`${p.id}:${eid}`);
           const res = (reservations ?? []).find(r => r.student_id === p.id && r.event_id === eid && r.status === "reserved");
-          if (!res) continue; // Skip students not enrolled
-          const ticket = ticketByRes[res.id];
-          const ts = ticket?.status || "reserved";
-          let status = "Rezervat";
-          if (ts === "present" || ts === "late") status = "Prezent";
-          else if (ts === "absent") status = "Absent";
-          else if (ts === "excused") status = "Absent motivat";
+          if (!res && !isAssistant) continue;
+          const rowKey = `${p.id}-${eid}`;
+          if (seen.has(rowKey)) continue;
+          seen.add(rowKey);
+
+          let status = "Absent";
+          if (isAssistant) {
+            status = "Prezent";
+          } else if (res) {
+            const ticket = ticketByRes[res.id];
+            const ts = ticket?.status || "reserved";
+            if (ts === "present" || ts === "late") status = "Prezent";
+            else if (ts === "reserved" && ev.date < today) status = "Absent";
+            else if (ts === "reserved") status = "Rezervat";
+            else status = "Absent";
+          }
           rows.push({
-            id: `${p.id}-${eid}`,
+            id: rowKey,
             name: `${p.last_name} ${p.first_name}`,
             lastName: p.last_name,
             eventTitle: ev.title,
