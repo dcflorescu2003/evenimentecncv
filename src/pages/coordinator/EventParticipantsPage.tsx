@@ -272,11 +272,38 @@ export default function EventParticipantsPage() {
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={async () => {
             if (!event || unified.length === 0) return;
-            const rows = unified.map((p) => ({
-              className: p.className || "-",
-              fullName: p.name,
-              status: (p.status === "present" || p.status === "late" ? "Prezent" : "Absent") as "Prezent" | "Absent",
-            }));
+            const assistantStudentIdSet = new Set(assistants.map((a: any) => a.student_id));
+            const rows: { className: string; fullName: string; status: "Prezent" | "Absent" | "*asistent" }[] = [];
+            // Add assistants first
+            assistants.forEach((a: any) => {
+              const profile = a.profile;
+              if (profile) {
+                rows.push({
+                  className: classLookup.get(a.student_id) || "-",
+                  fullName: `${profile.last_name || ""} ${profile.first_name || ""}`.trim(),
+                  status: "*asistent" as const,
+                });
+              }
+            });
+            // Add regular participants, skip if already assistant
+            unified.forEach((p) => {
+              const reservation = participants.find((r: any) => `reg-${r.id}` === p.id);
+              const studentId = reservation?.profiles?.id;
+              if (studentId && assistantStudentIdSet.has(studentId)) return;
+              if (p.isPublic || !studentId) {
+                rows.push({
+                  className: p.className || "-",
+                  fullName: p.name,
+                  status: (p.status === "present" || p.status === "late" ? "Prezent" : "Absent") as "Prezent" | "Absent",
+                });
+              } else {
+                rows.push({
+                  className: p.className || "-",
+                  fullName: p.name,
+                  status: (p.status === "present" || p.status === "late" ? "Prezent" : "Absent") as "Prezent" | "Absent",
+                });
+              }
+            });
             await exportSimpleAttendancePdf(
               event.title,
               formatDate(event.date),
