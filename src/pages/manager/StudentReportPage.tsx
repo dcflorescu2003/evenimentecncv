@@ -58,7 +58,7 @@ export default function StudentReportPage() {
       // Get reservations for this session only
       const { data: reservations } = await supabase
         .from("reservations")
-        .select("id, event_id, status, events(title, date, start_time, end_time, counted_duration_hours, session_id)")
+        .select("id, event_id, status, events(id, title, date, start_time, end_time, counted_duration_hours, session_id)")
         .eq("student_id", selectedId)
         .eq("status", "reserved");
 
@@ -70,6 +70,22 @@ export default function StudentReportPage() {
         : { data: [] };
       const ticketMap = Object.fromEntries((tickets || []).map((t) => [t.reservation_id, t.status]));
 
+      // Fetch assistant assignments for this student
+      const { data: assistantData } = await supabase
+        .from("event_student_assistants").select("event_id").eq("student_id", selectedId);
+      const assistantEventIds = new Set((assistantData || []).map(a => a.event_id));
+
+      // Get assistant-only events not in reservations, for this session
+      const existingEventIds = new Set(sessionReservations.map(r => r.event_id));
+      const newAssistantEventIds = [...assistantEventIds].filter(eid => !existingEventIds.has(eid));
+      let assistantOnlyEvents: any[] = [];
+      if (newAssistantEventIds.length) {
+        const { data: aEvents } = await supabase
+          .from("events").select("id, title, date, start_time, end_time, counted_duration_hours, session_id")
+          .in("id", newAssistantEventIds).eq("session_id", sessionId);
+        assistantOnlyEvents = aEvents || [];
+      }
+
       // Get required hours
       const classId = classRes.data?.class_id;
       let requiredHours = 0;
@@ -78,19 +94,22 @@ export default function StudentReportPage() {
         requiredHours = rules?.[0]?.required_value || 0;
       }
 
-      const eventList = sessionReservations.map((r) => {
-        const e = r.events as any;
-        const tStatus = ticketMap[r.id] || "reserved";
-        return {
-          eventId: r.event_id,
-          title: e?.title || "",
-          date: e?.date || "",
-          startTime: e?.start_time || "",
-          endTime: e?.end_time || "",
-          hours: e?.counted_duration_hours || 0,
-          status: tStatus,
-        };
-      }).sort((a, b) => a.date.localeCompare(b.date));
+      const eventList = [
+        ...sessionReservations.map((r) => {
+          const e = r.events as any;
+          const tStatus = assistantEventIds.has(r.event_id) ? "present" : (ticketMap[r.id] || "reserved");
+          return {
+            eventId: r.event_id, title: e?.title || "", date: e?.date || "",
+            startTime: e?.start_time || "", endTime: e?.end_time || "",
+            hours: e?.counted_duration_hours || 0, status: tStatus,
+          };
+        }),
+        ...assistantOnlyEvents.map((e) => ({
+          eventId: e.id, title: e.title || "", date: e.date || "",
+          startTime: e.start_time || "", endTime: e.end_time || "",
+          hours: e.counted_duration_hours || 0, status: "present" as string,
+        })),
+      ].sort((a, b) => a.date.localeCompare(b.date));
 
       const validatedHours = eventList.filter((e) => e.status === "present" || e.status === "late").reduce((s, e) => s + e.hours, 0);
       const totalReservedHours = eventList.reduce((s, e) => s + e.hours, 0);

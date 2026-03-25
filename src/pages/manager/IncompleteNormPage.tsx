@@ -100,12 +100,28 @@ export default function IncompleteNormPage() {
         : { data: [] };
       const eventHoursMap = Object.fromEntries((events || []).map((e) => [e.id, e.counted_duration_hours]));
 
+      // Get all session events for assistant hours
+      const { data: allSessionEvents } = await supabase
+        .from("events").select("id, counted_duration_hours").eq("session_id", sessionId);
+      const allSessionEventHoursMap = Object.fromEntries((allSessionEvents || []).map(e => [e.id, e.counted_duration_hours]));
+
       // Get tickets for validated hours
       const resIds = (reservations || []).filter((r) => eventHoursMap[r.event_id] !== undefined).map((r) => r.id);
       const { data: tickets } = resIds.length
         ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds)
         : { data: [] };
       const ticketMap = Object.fromEntries((tickets || []).map((t) => [t.reservation_id, t.status]));
+
+      // Fetch assistant assignments
+      const { data: assistantAssignments } = await supabase
+        .from("event_student_assistants").select("student_id, event_id").in("student_id", studentIds);
+      const assistantByStudent = new Map<string, Set<string>>();
+      (assistantAssignments || []).forEach(a => {
+        if (allSessionEventHoursMap[a.event_id] !== undefined) {
+          if (!assistantByStudent.has(a.student_id)) assistantByStudent.set(a.student_id, new Set());
+          assistantByStudent.get(a.student_id)!.add(a.event_id);
+        }
+      });
 
       // Get profiles
       const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", studentIds);
@@ -120,9 +136,16 @@ export default function IncompleteNormPage() {
 
           const sRes = (reservations || []).filter((r) => r.student_id === sid && eventHoursMap[r.event_id] !== undefined);
           const reserved = sRes.reduce((s, r) => s + (eventHoursMap[r.event_id] || 0), 0);
-          const validated = sRes
-            .filter((r) => { const ts = ticketMap[r.id]; return ts === "present" || ts === "late"; })
-            .reduce((s, r) => s + (eventHoursMap[r.event_id] || 0), 0);
+          
+          // Validated = ticket present/late + assistant events in session
+          const validatedEventIds = new Set<string>();
+          sRes.forEach(r => {
+            const ts = ticketMap[r.id];
+            if (ts === "present" || ts === "late") validatedEventIds.add(r.event_id);
+          });
+          const studentAssistantEvents = assistantByStudent.get(sid) || new Set();
+          studentAssistantEvents.forEach(eid => validatedEventIds.add(eid));
+          const validated = [...validatedEventIds].reduce((s, eid) => s + (allSessionEventHoursMap[eid] || eventHoursMap[eid] || 0), 0);
           const remaining = Math.max(0, required - validated);
 
           if (remaining <= 0) return null; // norm complete

@@ -247,6 +247,7 @@ export default function EventReportPage() {
 
   const selectedEvent = events?.find((e) => e.id === eventId);
   const eventTitle = selectedEvent?.title || "";
+  const assistantIdSet = new Set(report?.assistants?.map(a => a.id) || []);
 
   const handleExport = async () => {
     if (!report || !selectedEvent) return;
@@ -314,7 +315,7 @@ export default function EventReportPage() {
                   <TableCell>
                     <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/students?id=${s.id}`)}>{s.name}</button>
                   </TableCell>
-                  <TableCell><Badge variant={s.status === "present" || s.status === "late" ? "default" : "secondary"}>{statusLabel(s.status)}</Badge></TableCell>
+                  <TableCell><Badge variant={assistantIdSet.has(s.id) || s.status === "present" || s.status === "late" ? "default" : "secondary"}>{assistantIdSet.has(s.id) ? "Prezent" : statusLabel(s.status)}</Badge></TableCell>
                   <TableCell>{s.reserved}h</TableCell>
                   <TableCell>{s.validated}h</TableCell>
                   <TableCell>{Math.max(0, s.required - s.validated)}h</TableCell>

@@ -117,23 +117,56 @@ export default function TeacherDashboard() {
         .select("id, reservation_id, status");
       const ticketByRes = Object.fromEntries((tickets ?? []).map((t) => [t.reservation_id, t]));
 
+      // Fetch assistant assignments for session events
+      const { data: assistantAssignments } = await supabase
+        .from("event_student_assistants").select("student_id, event_id").in("student_id", studentIds);
+      const assistantByStudent = new Map<string, Set<string>>();
+      (assistantAssignments || []).forEach(a => {
+        if (eventIds.includes(a.event_id)) {
+          if (!assistantByStudent.has(a.student_id)) assistantByStudent.set(a.student_id, new Set());
+          assistantByStudent.get(a.student_id)!.add(a.event_id);
+        }
+      });
+
+      const today = new Date().toISOString().slice(0, 10);
+
       // Build report
       return (profiles ?? []).map((p) => {
+        const studentAssistantEvents = assistantByStudent.get(p.id) || new Set();
         const studentRes = (reservations ?? []).filter(
           (r) => r.student_id === p.id && eventIds.includes(r.event_id)
         );
         const reservationDetails = studentRes.map((r) => {
           const ev = eventMap[r.event_id];
           const ticket = ticketByRes[r.id];
+          let status = ticket?.status || "reserved";
+          // Assistant events → present
+          if (studentAssistantEvents.has(r.event_id)) status = "present";
+          // Past events with reserved status → absent
+          else if (status === "reserved" && ev?.date && ev.date < today) status = "absent";
           return {
             eventTitle: ev?.title || "—",
             date: ev?.date || "—",
             hours: ev?.counted_duration_hours || 0,
-            status: ticket?.status || "reserved",
+            status,
           };
         });
-        const totalReservedHours = reservationDetails.reduce((s, r) => s + r.hours, 0);
-        const totalValidatedHours = reservationDetails
+        // Add assistant-only events (no reservation)
+        const reservedEventIds = new Set(studentRes.map(r => r.event_id));
+        const assistantOnlyDetails = [...studentAssistantEvents]
+          .filter(eid => !reservedEventIds.has(eid))
+          .map(eid => {
+            const ev = eventMap[eid];
+            return {
+              eventTitle: ev?.title || "—",
+              date: ev?.date || "—",
+              hours: ev?.counted_duration_hours || 0,
+              status: "present" as string,
+            };
+          });
+        const allDetails = [...reservationDetails, ...assistantOnlyDetails];
+        const totalReservedHours = allDetails.reduce((s, r) => s + r.hours, 0);
+        const totalValidatedHours = allDetails
           .filter((r) => r.status === "present" || r.status === "late")
           .reduce((s, r) => s + r.hours, 0);
 
@@ -141,7 +174,7 @@ export default function TeacherDashboard() {
           id: p.id,
           name: `${p.last_name} ${p.first_name}`,
           lastName: p.last_name,
-          reservations: reservationDetails,
+          reservations: allDetails,
           totalReservedHours,
           totalValidatedHours,
         } as StudentReport;

@@ -53,6 +53,20 @@ export default function ClassReportPage() {
       const { data: tickets } = resIds.length ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds) : { data: [] };
       const ticketMap = Object.fromEntries((tickets || []).map((t) => [t.reservation_id, t.status]));
 
+      // Fetch assistant assignments and all session events for assistant hours
+      const { data: assistantAssignments } = await supabase
+        .from("event_student_assistants").select("student_id, event_id").in("student_id", studentIds);
+      const { data: allSessionEventsData } = await supabase
+        .from("events").select("id, counted_duration_hours").eq("session_id", sessionId);
+      const allSessionEventHoursMap = Object.fromEntries((allSessionEventsData || []).map(e => [e.id, e.counted_duration_hours]));
+      const assistantByStudent = new Map<string, Set<string>>();
+      (assistantAssignments || []).forEach(a => {
+        if (allSessionEventHoursMap[a.event_id] !== undefined) {
+          if (!assistantByStudent.has(a.student_id)) assistantByStudent.set(a.student_id, new Set());
+          assistantByStudent.get(a.student_id)!.add(a.event_id);
+        }
+      });
+
       // Get class rule for required hours
       const { data: rules } = await supabase.from("class_participation_rules").select("required_value").eq("class_id", classId).eq("session_id", sessionId).limit(1);
       const requiredHours = rules?.[0]?.required_value || 0;
@@ -60,11 +74,20 @@ export default function ClassReportPage() {
       const students = studentIds.map((id) => {
         const sRes = sessionReservations.filter((r) => r.student_id === id);
         const reserved = sRes.reduce((s, r) => s + (eventHoursMap[r.event_id] || 0), 0);
-        const validated = sRes.filter((r) => { const ts = ticketMap[r.id]; return ts === "present" || ts === "late"; }).reduce((s, r) => s + (eventHoursMap[r.event_id] || 0), 0);
+        // Validated = ticket present/late + assistant events
+        const validatedEventIds = new Set<string>();
+        sRes.forEach(r => {
+          const ts = ticketMap[r.id];
+          if (ts === "present" || ts === "late") validatedEventIds.add(r.event_id);
+        });
+        const studentAssistantEvents = assistantByStudent.get(id) || new Set();
+        studentAssistantEvents.forEach(eid => validatedEventIds.add(eid));
+        const validated = [...validatedEventIds].reduce((s, eid) => s + (allSessionEventHoursMap[eid] || eventHoursMap[eid] || 0), 0);
+        const enrolled = sRes.length > 0 || studentAssistantEvents.size > 0;
         return {
           id,
           name: profileMap[id] || "",
-          enrolled: sRes.length > 0,
+          enrolled,
           enrolledCount: sRes.length,
           reserved,
           validated,
