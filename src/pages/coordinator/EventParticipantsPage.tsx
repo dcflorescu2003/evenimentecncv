@@ -103,19 +103,45 @@ export default function EventParticipantsPage() {
     },
     enabled: !!eventId,
   });
-  // Fetch class assignments for participants
-  const participantStudentIds = participants.map((p: any) => p.profiles?.id).filter(Boolean);
-  const { data: participantClassAssignments = [] } = useQuery({
-    queryKey: ["coord_participant_classes", participantStudentIds],
+
+  // Event student assistants
+  const { data: assistants = [] } = useQuery({
+    queryKey: ["coord_event_assistants", eventId],
     queryFn: async () => {
-      if (participantStudentIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("*")
+        .eq("event_id", eventId!);
+      if (error) throw error;
+      const sIds = (data || []).map((a: any) => a.student_id);
+      if (sIds.length === 0) return [];
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", sIds);
+      if (pErr) throw pErr;
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+      return (data || []).map((a: any) => ({ ...a, profile: profileMap.get(a.student_id) }));
+    },
+    enabled: !!eventId,
+  });
+
+  // Include assistant student IDs in class lookups
+  const assistantStudentIds = assistants.map((a: any) => a.student_id).filter(Boolean);
+  
+  const participantStudentIds = participants.map((p: any) => p.profiles?.id).filter(Boolean);
+  const allCoordStudentIds = [...new Set([...participantStudentIds, ...assistantStudentIds])];
+  const { data: participantClassAssignments = [] } = useQuery({
+    queryKey: ["coord_participant_classes", allCoordStudentIds],
+    queryFn: async () => {
+      if (allCoordStudentIds.length === 0) return [];
       const { data } = await supabase
         .from("student_class_assignments")
         .select("student_id, classes(display_name, grade_number, section)")
-        .in("student_id", participantStudentIds);
+        .in("student_id", allCoordStudentIds);
       return data ?? [];
     },
-    enabled: participantStudentIds.length > 0,
+    enabled: allCoordStudentIds.length > 0,
   });
 
   const classLookup = new Map<string, string>();
@@ -246,11 +272,38 @@ export default function EventParticipantsPage() {
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={async () => {
             if (!event || unified.length === 0) return;
-            const rows = unified.map((p) => ({
-              className: p.className || "-",
-              fullName: p.name,
-              status: (p.status === "present" || p.status === "late" ? "Prezent" : "Absent") as "Prezent" | "Absent",
-            }));
+            const assistantStudentIdSet = new Set(assistants.map((a: any) => a.student_id));
+            const rows: { className: string; fullName: string; status: "Prezent" | "Absent" | "*asistent" }[] = [];
+            // Add assistants first
+            assistants.forEach((a: any) => {
+              const profile = a.profile;
+              if (profile) {
+                rows.push({
+                  className: classLookup.get(a.student_id) || "-",
+                  fullName: `${profile.last_name || ""} ${profile.first_name || ""}`.trim(),
+                  status: "*asistent" as const,
+                });
+              }
+            });
+            // Add regular participants, skip if already assistant
+            unified.forEach((p) => {
+              const reservation = participants.find((r: any) => `reg-${r.id}` === p.id);
+              const studentId = reservation?.profiles?.id;
+              if (studentId && assistantStudentIdSet.has(studentId)) return;
+              if (p.isPublic || !studentId) {
+                rows.push({
+                  className: p.className || "-",
+                  fullName: p.name,
+                  status: (p.status === "present" || p.status === "late" ? "Prezent" : "Absent") as "Prezent" | "Absent",
+                });
+              } else {
+                rows.push({
+                  className: p.className || "-",
+                  fullName: p.name,
+                  status: (p.status === "present" || p.status === "late" ? "Prezent" : "Absent") as "Prezent" | "Absent",
+                });
+              }
+            });
             await exportSimpleAttendancePdf(
               event.title,
               formatDate(event.date),

@@ -144,7 +144,7 @@ export async function exportAttendancePdf(
 interface SimpleAttendanceRow {
   className: string;
   fullName: string;
-  status: "Prezent" | "Absent motivat" | "Absent";
+  status: "Prezent" | "Absent motivat" | "Absent" | "*asistent";
 }
 
 function isAbsentStatus(status: string): boolean {
@@ -181,7 +181,7 @@ export async function exportSimpleAttendancePdf(
 
   // Stats
   const total = sorted.length;
-  const prezenti = sorted.filter(r => r.status === "Prezent").length;
+  const prezenti = sorted.filter(r => r.status === "Prezent" || r.status === "*asistent").length;
   const absentMotivat = sorted.filter(r => r.status === "Absent motivat").length;
   const absenti = sorted.filter(r => r.status === "Absent").length;
 

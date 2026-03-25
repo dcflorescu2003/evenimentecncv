@@ -346,30 +346,37 @@ export default function EventDetailPage() {
 
   async function handleDownloadAttendancePdf() {
     if (!event) return;
+    const assistantStudentIdSet = new Set(assistants.map((a: any) => a.student_id));
+
     const simplifiedStatusMap = (status: string): "Prezent" | "Absent" => {
       if (status === "present" || status === "late") return "Prezent";
       return "Absent";
     };
 
-    const rows = participants.map((p: any) => {
+    const rows: { className: string; fullName: string; status: "Prezent" | "Absent" | "*asistent" }[] = [];
+
+    participants.forEach((p: any) => {
       const profile = p.profiles;
+      const studentId = profile?.id;
+      // If student is also an assistant, skip here — will be added as *asistent
+      if (assistantStudentIdSet.has(studentId)) return;
       const ticket = Array.isArray(p.tickets) ? p.tickets[0] : p.tickets;
       const ticketStatus = ticket?.status || "absent";
-      return {
-        className: classMap.get(profile?.id) || "-",
+      rows.push({
+        className: classMap.get(studentId) || "-",
         fullName: `${profile?.last_name || ""} ${profile?.first_name || ""}`.trim(),
         status: simplifiedStatusMap(ticketStatus),
-      };
+      });
     });
 
-    // Add assistants as "Prezent"
+    // Add assistants as "*asistent"
     assistants.forEach((a: any) => {
       const profile = a.profile;
       if (profile) {
         rows.push({
           className: classMap.get(a.student_id) || "-",
           fullName: `${profile.last_name || ""} ${profile.first_name || ""}`.trim(),
-          status: "Prezent" as const,
+          status: "*asistent" as const,
         });
       }
     });
