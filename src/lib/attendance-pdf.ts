@@ -138,6 +138,10 @@ interface SimpleAttendanceRow {
   status: "Prezent" | "Absent motivat" | "Absent";
 }
 
+function isAbsentStatus(status: string): boolean {
+  return status === "Absent" || status === "Absent motivat";
+}
+
 export async function exportSimpleAttendancePdf(
   eventTitle: string,
   eventDate: string,

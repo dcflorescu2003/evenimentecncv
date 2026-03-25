@@ -346,9 +346,8 @@ export default function EventDetailPage() {
 
   async function handleDownloadAttendancePdf() {
     if (!event) return;
-    const simplifiedStatusMap = (status: string): "Prezent" | "Absent motivat" | "Absent" => {
+    const simplifiedStatusMap = (status: string): "Prezent" | "Absent" => {
       if (status === "present" || status === "late") return "Prezent";
-      if (status === "excused") return "Absent motivat";
       return "Absent";
     };
 
