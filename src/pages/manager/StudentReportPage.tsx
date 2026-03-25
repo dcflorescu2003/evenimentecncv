@@ -153,6 +153,9 @@ export default function StudentReportPage() {
       </div>
 
       <div className="space-y-2">
+        {fromPage === "incomplete" && (
+          <Button variant="ghost" onClick={() => navigate("/manager/incomplete")} className="mb-2">← Înapoi la normă incompletă</Button>
+        )}
         <Input placeholder="Caută elev (min 2 caractere)..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-80" />
         {students?.length ? (
           <div className="flex flex-wrap gap-2">
