@@ -1,0 +1,1 @@
+ALTER TABLE public.program_sessions ADD COLUMN min_participants integer DEFAULT NULL;
