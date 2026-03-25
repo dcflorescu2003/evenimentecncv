@@ -247,6 +247,7 @@ export default function EventReportPage() {
 
   const selectedEvent = events?.find((e) => e.id === eventId);
   const eventTitle = selectedEvent?.title || "";
+  const assistantIdSet = new Set(report?.assistants?.map(a => a.id) || []);
 
   const handleExport = async () => {
     if (!report || !selectedEvent) return;
