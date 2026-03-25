@@ -156,7 +156,7 @@ export default function ClassReportPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {c.events.map(e => (
+                {c.events.length > 0 ? c.events.map(e => (
                     <TableRow key={e.id}>
                       <TableCell>{e.date}</TableCell>
                       <TableCell>{e.title}</TableCell>
@@ -164,7 +164,11 @@ export default function ClassReportPage() {
                       <TableCell>{e.counted_duration_hours}h</TableCell>
                       <TableCell>{e.studentCount}</TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-muted-foreground text-center">0 evenimente</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
