@@ -240,17 +240,18 @@ export default function StudentDashboard() {
                 className="cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => navigate(`/student/events/${a.event_id}`)}
               >
-                <CardContent className="flex items-center justify-between p-4">
-                  <div>
-                    <div className="flex items-center gap-2">
+              <CardContent className="flex flex-col gap-2 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium">{a.events?.title}</p>
                       <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-[10px]">Asistent</Badge>
                     </div>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 shrink-0">Prezent</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <p className="text-sm text-muted-foreground">
                       {formatDate(a.events?.date)} • {a.events?.start_time?.slice(0, 5)} – {a.events?.end_time?.slice(0, 5)}
                     </p>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -258,7 +259,6 @@ export default function StudentDashboard() {
                     >
                       <ScanLine className="mr-1 h-3 w-3" /> Scanează
                     </Button>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Prezent</Badge>
                   </div>
                 </CardContent>
               </Card>
