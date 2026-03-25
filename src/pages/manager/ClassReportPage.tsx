@@ -45,17 +45,18 @@ export default function ClassReportPage() {
         studentsByClass.get(a.class_id)!.add(a.student_id);
       });
 
-      const allStudentIds = [...new Set((assignments || []).map(a => a.student_id))];
-      if (!allStudentIds.length) return allClasses.map(c => ({ classId: c.id, className: c.display_name, studentCount: 0, events: [] }));
+      const allStudentIdSet = new Set((assignments || []).map(a => a.student_id));
+      if (!allStudentIdSet.size) return allClasses.map(c => ({ classId: c.id, className: c.display_name, studentCount: 0, events: [] }));
 
-      // Get all reservations for these students
-      const { data: reservations } = await supabase.from("reservations").select("student_id, event_id").eq("status", "reserved").in("student_id", allStudentIds);
+      // Get all session events first, then reservations per event
+      const { data: events } = await supabase.from("events").select("id, title, date, start_time, end_time, counted_duration_hours").eq("session_id", sessionId).order("date").order("start_time");
+      if (!events?.length) return allClasses.map(c => ({ classId: c.id, className: c.display_name, studentCount: studentsByClass.get(c.id)?.size || 0, events: [] }));
 
-      const eventIds = [...new Set((reservations || []).map(r => r.event_id))];
-      const { data: events } = eventIds.length
-        ? await supabase.from("events").select("id, title, date, start_time, end_time, counted_duration_hours").eq("session_id", sessionId).in("id", eventIds).order("date").order("start_time")
-        : { data: [] };
-      const sessionEventIds = new Set((events || []).map(e => e.id));
+      const sessionEventIds = new Set(events.map(e => e.id));
+
+      // Fetch reservations by event_id (much smaller set than student IDs)
+      const eventIdList = events.map(e => e.id);
+      const { data: reservations } = await supabase.from("reservations").select("student_id, event_id").eq("status", "reserved").in("event_id", eventIdList);
 
       // Build: for each class, which events have students from that class, and how many
       const classStudentMap = new Map<string, string>(); // student_id -> class_id
