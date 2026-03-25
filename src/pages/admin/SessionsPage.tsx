@@ -71,7 +71,7 @@ export default function SessionsPage() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (values: typeof form) => {
+    mutationFn: async (values: any) => {
       if (editingId) {
         const { error } = await supabase
           .from("program_sessions")
