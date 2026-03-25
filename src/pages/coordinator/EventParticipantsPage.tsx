@@ -130,17 +130,18 @@ export default function EventParticipantsPage() {
   const assistantStudentIds = assistants.map((a: any) => a.student_id).filter(Boolean);
   
   const participantStudentIds = participants.map((p: any) => p.profiles?.id).filter(Boolean);
+  const allCoordStudentIds = [...new Set([...participantStudentIds, ...assistantStudentIds])];
   const { data: participantClassAssignments = [] } = useQuery({
-    queryKey: ["coord_participant_classes", participantStudentIds],
+    queryKey: ["coord_participant_classes", allCoordStudentIds],
     queryFn: async () => {
-      if (participantStudentIds.length === 0) return [];
+      if (allCoordStudentIds.length === 0) return [];
       const { data } = await supabase
         .from("student_class_assignments")
         .select("student_id, classes(display_name, grade_number, section)")
-        .in("student_id", participantStudentIds);
+        .in("student_id", allCoordStudentIds);
       return data ?? [];
     },
-    enabled: participantStudentIds.length > 0,
+    enabled: allCoordStudentIds.length > 0,
   });
 
   const classLookup = new Map<string, string>();
