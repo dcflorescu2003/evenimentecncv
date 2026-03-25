@@ -23,6 +23,8 @@ export default function StudentReportPage() {
   const [searchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState(searchParams.get("id") || "");
   const [search, setSearch] = useState("");
+  const navigate = useNavigate();
+  const fromPage = searchParams.get("from");
 
   useEffect(() => {
     const id = searchParams.get("id");
