@@ -203,6 +203,15 @@ export async function exportSimpleAttendancePdf(
       3: { cellWidth: 35, halign: "center" },
     },
     alternateRowStyles: { fillColor: [245, 247, 250] },
+    didParseCell: (data) => {
+      if (data.section === "body") {
+        const rowIndex = data.row.index;
+        const status = sorted[rowIndex]?.status;
+        if (status && isAbsentStatus(status)) {
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    },
   });
 
   const filename = `prezenta-${safeTitle.replace(/\s+/g, "-").toLowerCase()}.pdf`;
