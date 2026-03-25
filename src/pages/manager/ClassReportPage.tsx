@@ -82,7 +82,7 @@ export default function ClassReportPage() {
             studentCount: eventClassStudents.get(e.id)?.get(c.id) || 0,
           }));
         return { classId: c.id, className: c.display_name, studentCount, events: classEvents };
-      }).filter(c => c.events.length > 0);
+      });
     },
   });
 
