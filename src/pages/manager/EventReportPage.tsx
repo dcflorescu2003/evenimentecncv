@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown, FileDown, FileText, Upload } from "lucide-react";
 import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
 import { buildAttendancePdfRows } from "@/lib/attendance-rows";
+import { formatDate } from "@/lib/time";
 import { useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 
@@ -266,7 +267,7 @@ export default function EventReportPage() {
 
     await exportSimpleAttendancePdf(
       selectedEvent.title,
-      selectedEvent.date,
+      formatDate(selectedEvent.date),
       `${selectedEvent.start_time?.slice(0, 5) || ""} – ${selectedEvent.end_time?.slice(0, 5) || ""}`,
       selectedEvent.location,
       rows,
