@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileDown } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 
 const statusLabel = (s: string) => {
