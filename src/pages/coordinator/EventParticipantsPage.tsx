@@ -103,7 +103,32 @@ export default function EventParticipantsPage() {
     },
     enabled: !!eventId,
   });
-  // Fetch class assignments for participants
+
+  // Event student assistants
+  const { data: assistants = [] } = useQuery({
+    queryKey: ["coord_event_assistants", eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("event_student_assistants")
+        .select("*")
+        .eq("event_id", eventId!);
+      if (error) throw error;
+      const sIds = (data || []).map((a: any) => a.student_id);
+      if (sIds.length === 0) return [];
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", sIds);
+      if (pErr) throw pErr;
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+      return (data || []).map((a: any) => ({ ...a, profile: profileMap.get(a.student_id) }));
+    },
+    enabled: !!eventId,
+  });
+
+  // Include assistant student IDs in class lookups
+  const assistantStudentIds = assistants.map((a: any) => a.student_id).filter(Boolean);
+  
   const participantStudentIds = participants.map((p: any) => p.profiles?.id).filter(Boolean);
   const { data: participantClassAssignments = [] } = useQuery({
     queryKey: ["coord_participant_classes", participantStudentIds],
