@@ -5,6 +5,109 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ── FCM v1 helpers ──────────────────────────────────────────────────────
+
+interface ServiceAccount {
+  client_email: string;
+  private_key: string;
+  project_id: string;
+  token_uri: string;
+}
+
+function base64url(data: Uint8Array): string {
+  return btoa(String.fromCharCode(...data))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function strToBase64url(s: string): string {
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function getAccessToken(sa: ServiceAccount): Promise<string> {
+  const header = strToBase64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const now = Math.floor(Date.now() / 1000);
+  const claimSet = {
+    iss: sa.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: sa.token_uri,
+    iat: now,
+    exp: now + 3600,
+  };
+  const payload = strToBase64url(JSON.stringify(claimSet));
+  const unsigned = `${header}.${payload}`;
+
+  // Import RSA private key
+  const pemBody = sa.private_key
+    .replace(/-----BEGIN PRIVATE KEY-----/, "")
+    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/\n/g, "");
+  const keyData = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8", keyData,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false, ["sign"]
+  );
+
+  const sig = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5", privateKey,
+    new TextEncoder().encode(unsigned)
+  );
+  const jwt = `${unsigned}.${base64url(new Uint8Array(sig))}`;
+
+  const resp = await fetch(sa.token_uri, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+  });
+  const json = await resp.json();
+  if (!resp.ok) throw new Error(`Token error: ${JSON.stringify(json)}`);
+  return json.access_token;
+}
+
+async function sendFcmNotification(
+  accessToken: string,
+  projectId: string,
+  deviceToken: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>
+): Promise<boolean> {
+  try {
+    const resp = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: {
+            token: deviceToken,
+            notification: { title, body },
+            data: data || {},
+            android: {
+              priority: "high",
+              notification: { click_action: "FLUTTER_NOTIFICATION_CLICK" },
+            },
+          },
+        }),
+      }
+    );
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error("FCM send error:", resp.status, err);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("FCM send exception:", e);
+    return false;
+  }
+}
+
+// ── Web Push helpers (existing) ─────────────────────────────────────────
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -26,11 +129,11 @@ async function createVapidJwt(audience: string, subject: string, privateKey: Cry
   const toBase64Url = (buf: ArrayBuffer) =>
     btoa(String.fromCharCode(...new Uint8Array(buf)))
       .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  const strToBase64Url = (s: string) =>
+  const strToB64Url = (s: string) =>
     btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
-  const headerB64 = strToBase64Url(JSON.stringify(header));
-  const payloadB64 = strToBase64Url(JSON.stringify(payload));
+  const headerB64 = strToB64Url(JSON.stringify(header));
+  const payloadB64 = strToB64Url(JSON.stringify(payload));
   const unsigned = `${headerB64}.${payloadB64}`;
 
   const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, privateKey, enc.encode(unsigned));
@@ -61,17 +164,16 @@ async function createVapidJwt(audience: string, subject: string, privateKey: Cry
   return `${unsigned}.${toBase64Url(rawSig.buffer)}`;
 }
 
-async function sendPushNotification(
+async function sendWebPush(
   subscription: { endpoint: string; p256dh: string; auth_key: string },
   payload: string,
   vapidPublicKey: string,
   vapidPrivateKey: CryptoKey
-) {
+): Promise<boolean> {
   try {
     const url = new URL(subscription.endpoint);
     const audience = `${url.protocol}//${url.host}`;
     const jwt = await createVapidJwt(audience, "mailto:noreply@school.local", vapidPrivateKey);
-
     const response = await fetch(subscription.endpoint, {
       method: "POST",
       headers: {
@@ -81,13 +183,14 @@ async function sendPushNotification(
       },
       body: new TextEncoder().encode(payload),
     });
-
     return response.ok || response.status === 201;
   } catch (e) {
-    console.error("Push send error:", e);
+    console.error("Web push send error:", e);
     return false;
   }
 }
+
+// ── Main handler ────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -97,146 +200,168 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const vapidPrivateKeyB64 = Deno.env.get("VAPID_PRIVATE_KEY")!;
+    const vapidPrivateKeyB64 = Deno.env.get("VAPID_PRIVATE_KEY");
+    const firebaseSaJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_KEY");
     const vapidPublicKey = "BJZcOwgP8NBFeqVTMiHpUqZWOH2kIy0hqomcRauEZgF2Hd5KdLa6yZ2KaDNddr7xO_BRs3W4BMzH15CahNwvaWk";
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get tomorrow's date
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    // Parse request body for mode (default: "evening" = tomorrow reminders)
+    let mode = "evening";
+    try {
+      const body = await req.json();
+      if (body?.mode === "morning") mode = "morning";
+    } catch { /* no body = evening mode */ }
 
-    // Find events happening tomorrow (published OR with assistants assigned)
-    const { data: tomorrowEvents, error: evErr } = await supabase
+    // Determine target date
+    const targetDate = new Date();
+    if (mode === "evening") {
+      targetDate.setDate(targetDate.getDate() + 1); // tomorrow
+    }
+    // morning mode = today
+    const targetStr = targetDate.toISOString().split("T")[0];
+
+    const reminderType = mode === "morning" ? "morning_reminder" : "event_reminder";
+
+    // Find events on target date
+    const { data: events, error: evErr } = await supabase
       .from("events")
       .select("id, title, date, start_time, end_time, location")
-      .eq("date", tomorrowStr)
+      .eq("date", targetStr)
       .in("status", ["published", "draft"]);
 
     if (evErr) throw evErr;
-    if (!tomorrowEvents || tomorrowEvents.length === 0) {
-      return new Response(JSON.stringify({ message: "No events tomorrow" }), {
+    if (!events || events.length === 0) {
+      return new Response(JSON.stringify({ message: `No events on ${targetStr}` }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const eventIds = tomorrowEvents.map((e: any) => e.id);
+    const eventIds = events.map((e: any) => e.id);
     const eventMap: Record<string, any> = {};
-    for (const e of tomorrowEvents) eventMap[e.id] = e;
+    for (const e of events) eventMap[e.id] = e;
 
-    // Get all active reservations for tomorrow's events
-    const { data: reservations, error: resErr } = await supabase
-      .from("reservations")
-      .select("student_id, event_id")
-      .in("event_id", eventIds)
-      .eq("status", "reserved");
+    // Get reservations + assistants
+    const { data: reservations } = await supabase
+      .from("reservations").select("student_id, event_id")
+      .in("event_id", eventIds).eq("status", "reserved");
 
-    if (resErr) throw resErr;
-
-    // Get all student assistants for tomorrow's events
-    const { data: assistants, error: assErr } = await supabase
-      .from("event_student_assistants")
-      .select("student_id, event_id")
+    const { data: assistants } = await supabase
+      .from("event_student_assistants").select("student_id, event_id")
       .in("event_id", eventIds);
 
-    if (assErr) throw assErr;
-
-    // Merge both into studentEvents map
     const studentEvents: Record<string, string[]> = {};
-    const addToMap = (studentId: string, eventId: string) => {
-      if (!studentEvents[studentId]) studentEvents[studentId] = [];
-      if (!studentEvents[studentId].includes(eventId)) {
-        studentEvents[studentId].push(eventId);
-      }
+    const addToMap = (sid: string, eid: string) => {
+      if (!studentEvents[sid]) studentEvents[sid] = [];
+      if (!studentEvents[sid].includes(eid)) studentEvents[sid].push(eid);
     };
-
     for (const r of (reservations || [])) addToMap(r.student_id, r.event_id);
     for (const a of (assistants || [])) addToMap(a.student_id, a.event_id);
 
     const studentIds = Object.keys(studentEvents);
-
     if (studentIds.length === 0) {
-      return new Response(JSON.stringify({ message: "No reservations or assistants for tomorrow" }), {
+      return new Response(JSON.stringify({ message: "No participants" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check which notifications already exist (avoid duplicates)
+    // Deduplicate notifications
     const { data: existingNotifs } = await supabase
-      .from("notifications")
-      .select("user_id, related_event_id")
-      .in("user_id", studentIds)
-      .in("related_event_id", eventIds)
-      .eq("type", "event_reminder");
+      .from("notifications").select("user_id, related_event_id")
+      .in("user_id", studentIds).in("related_event_id", eventIds)
+      .eq("type", reminderType);
 
     const existingSet = new Set(
       (existingNotifs || []).map((n: any) => `${n.user_id}_${n.related_event_id}`)
     );
 
-    // Create in-app notifications
+    const notifTitle = mode === "morning"
+      ? "Eveniment astăzi!"
+      : "Reminder: Eveniment mâine";
+
     const notificationsToInsert: any[] = [];
-    for (const studentId of studentIds) {
-      for (const eventId of studentEvents[studentId]) {
-        if (existingSet.has(`${studentId}_${eventId}`)) continue;
-        const ev = eventMap[eventId];
+    for (const sid of studentIds) {
+      for (const eid of studentEvents[sid]) {
+        if (existingSet.has(`${sid}_${eid}`)) continue;
+        const ev = eventMap[eid];
         notificationsToInsert.push({
-          user_id: studentId,
-          title: "Reminder: Eveniment mâine",
+          user_id: sid,
+          title: notifTitle,
           body: `${ev.title} • ${ev.start_time?.slice(0, 5)} – ${ev.end_time?.slice(0, 5)}${ev.location ? ` • ${ev.location}` : ""}`,
-          type: "event_reminder",
-          related_event_id: eventId,
+          type: reminderType,
+          related_event_id: eid,
         });
       }
     }
 
     let insertedCount = 0;
     if (notificationsToInsert.length > 0) {
-      const { error: insErr } = await supabase
-        .from("notifications")
-        .insert(notificationsToInsert);
+      const { error: insErr } = await supabase.from("notifications").insert(notificationsToInsert);
       if (insErr) console.error("Insert notifications error:", insErr);
       else insertedCount = notificationsToInsert.length;
     }
 
-    // Send push notifications
-    let pushCount = 0;
-    try {
-      const vapidPrivateKey = await importPrivateKey(vapidPrivateKeyB64);
+    // ── Send Web Push notifications ──
+    let webPushCount = 0;
+    if (vapidPrivateKeyB64) {
+      try {
+        const vapidKey = await importPrivateKey(vapidPrivateKeyB64);
+        const { data: subs } = await supabase
+          .from("push_subscriptions").select("*").in("user_id", studentIds);
 
-      const { data: subscriptions } = await supabase
-        .from("push_subscriptions")
-        .select("*")
-        .in("user_id", studentIds);
-
-      if (subscriptions && subscriptions.length > 0) {
-        for (const sub of subscriptions) {
-          const events = studentEvents[sub.user_id] || [];
-          if (events.length === 0) continue;
-
-          const evNames = events.map((eid: string) => eventMap[eid]?.title).filter(Boolean);
+        for (const sub of (subs || [])) {
+          const evts = studentEvents[sub.user_id] || [];
+          if (evts.length === 0) continue;
+          const names = evts.map((eid: string) => eventMap[eid]?.title).filter(Boolean);
           const pushPayload = JSON.stringify({
-            title: "Reminder: Eveniment mâine",
-            body: evNames.length === 1
-              ? evNames[0]
-              : `Ai ${evNames.length} evenimente mâine`,
+            title: notifTitle,
+            body: names.length === 1 ? names[0] : `Ai ${names.length} evenimente ${mode === "morning" ? "astăzi" : "mâine"}`,
             icon: "/favicon.ico",
             data: { url: "/student/tickets" },
           });
-
-          const ok = await sendPushNotification(sub, pushPayload, vapidPublicKey, vapidPrivateKey);
-          if (ok) pushCount++;
+          const ok = await sendWebPush(sub, pushPayload, vapidPublicKey, vapidKey);
+          if (ok) webPushCount++;
         }
+      } catch (e) {
+        console.error("Web push error:", e);
       }
-    } catch (pushErr) {
-      console.error("Push notifications error:", pushErr);
+    }
+
+    // ── Send FCM push notifications ──
+    let fcmCount = 0;
+    if (firebaseSaJson) {
+      try {
+        const sa: ServiceAccount = JSON.parse(firebaseSaJson);
+        const accessToken = await getAccessToken(sa);
+
+        const { data: fcmTokens } = await supabase
+          .from("fcm_tokens").select("*").in("user_id", studentIds);
+
+        for (const ft of (fcmTokens || [])) {
+          const evts = studentEvents[ft.user_id] || [];
+          if (evts.length === 0) continue;
+          const names = evts.map((eid: string) => eventMap[eid]?.title).filter(Boolean);
+          const body = names.length === 1
+            ? names[0]
+            : `Ai ${names.length} evenimente ${mode === "morning" ? "astăzi" : "mâine"}`;
+
+          const ok = await sendFcmNotification(
+            accessToken, sa.project_id, ft.token,
+            notifTitle, body, { url: "/student/tickets" }
+          );
+          if (ok) fcmCount++;
+        }
+      } catch (e) {
+        console.error("FCM error:", e);
+      }
     }
 
     return new Response(
       JSON.stringify({
-        message: `Created ${insertedCount} notifications, sent ${pushCount} push notifications`,
-        events: tomorrowEvents.length,
+        message: `Created ${insertedCount} notifications, ${webPushCount} web push, ${fcmCount} FCM`,
+        events: events.length,
         students: studentIds.length,
+        mode,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
