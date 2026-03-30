@@ -3,6 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 /**
  * Registers the device for FCM push notifications on Android/iOS (Capacitor).
@@ -26,15 +27,16 @@ export function useCapacitorPush() {
         }
         if (permStatus.receive !== "granted") {
           console.log("Push permission not granted");
+          toast("Notificările sunt dezactivate", {
+            description: "Activează permisiunea din sistem dacă vrei remindere pentru evenimente.",
+          });
           return;
         }
 
-        await PushNotifications.register();
-
-        PushNotifications.addListener("registration", async (token) => {
+        await PushNotifications.addListener("registration", async (token) => {
           console.log("FCM token:", token.value);
           const platform = Capacitor.getPlatform(); // 'android' | 'ios'
-          const { error } = await supabase.from("fcm_tokens" as any).upsert(
+          const { error } = await supabase.from("fcm_tokens").upsert(
             {
               user_id: user.id,
               token: token.value,
@@ -46,15 +48,30 @@ export function useCapacitorPush() {
           if (error) console.error("Failed to save FCM token:", error);
         });
 
-        PushNotifications.addListener("registrationError", (err) => {
+        await PushNotifications.addListener("registrationError", (err) => {
           console.error("Push registration error:", err);
         });
 
-        PushNotifications.addListener("pushNotificationReceived", (notification) => {
+        await PushNotifications.addListener("pushNotificationReceived", (notification) => {
           console.log("Push received:", notification);
+          const title = notification.title || "Notificare";
+          const body = notification.body;
+          const url = notification.data?.url;
+
+          toast(title, {
+            description: body,
+            action: url
+              ? {
+                  label: "Deschide",
+                  onClick: () => {
+                    window.location.href = String(url);
+                  },
+                }
+              : undefined,
+          });
         });
 
-        PushNotifications.addListener("pushNotificationActionPerformed", (notification) => {
+        await PushNotifications.addListener("pushNotificationActionPerformed", (notification) => {
           console.log("Push action:", notification);
           // Navigate to tickets page when notification is tapped
           const url = notification.notification?.data?.url;
@@ -63,6 +80,7 @@ export function useCapacitorPush() {
           }
         });
 
+        await PushNotifications.register();
         registered.current = true;
       } catch (err) {
         console.error("Capacitor push setup error:", err);
@@ -70,5 +88,10 @@ export function useCapacitorPush() {
     };
 
     setup();
+
+    return () => {
+      void PushNotifications.removeAllListeners();
+      registered.current = false;
+    };
   }, [user]);
 }
