@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "621457065479",
+    "project_id": "pyro-89b9f",
+    "storage_bucket": "pyro-89b9f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:621457065479:android:0b0e65387ecac141fb4ca2",
+        "android_client_info": {
+          "package_name": "com.evenimentecncv.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfKSQdlYf5oM36IBQfotAgmaQvBW3U_5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:621457065479:android:777aa70a9df916bafb4ca2",
+        "android_client_info": {
+          "package_name": "ro.pythonpathway.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfKSQdlYf5oM36IBQfotAgmaQvBW3U_5o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
