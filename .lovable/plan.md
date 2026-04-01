@@ -1,28 +1,42 @@
 
 
-## Plan: Fix buton "Scanează" invizibil pe iPhone pentru asistenți
+## Plan: Afișare evenimente trecute în rapoartele dirigintelui
 
 ### Problema
-În `StudentDashboard.tsx`, cardul asistentului (liniile 238-264) folosește un layout `flex justify-between` pe o singură linie. Pe iPhone (~375px), rândul conține:
-- Stânga: titlu + badge "Asistent"  
-- Dreapta: buton "Scanează" + badge "Prezent"
+Evenimentele trecute primesc automat statusul `closed` (prin funcția automată de închidere). Politica RLS permite diriginților să vadă doar:
+- Evenimentele proprii (create de ei)
+- Evenimentele cu `status = 'published'`
 
-Spațiul este insuficient, iar butonul fie este comprimat, fie este tăiat de overflow.
+Astfel, evenimentele închise create de alți profesori nu apar în niciun tab de raport, chiar dacă elevii dirigintelui au fost înscriși la ele.
 
-### Soluție
-**Fișier: `src/pages/student/StudentDashboard.tsx`**
-- Schimbă layout-ul cardului asistentului din dashboard de la un singur rând la un layout stacked pe mobile:
-  - Rândul 1: titlu eveniment + badge "Asistent" + badge "Prezent" (dreapta)
-  - Rândul 2: data/ora + buton "Scanează" (full-width sau aliniat dreapta)
-- Concret: `flex flex-col` pe container, cu un sub-rând pentru acțiuni care se afișează sub informații pe ecrane mici
-- Alternativ mai simplu: `flex flex-wrap` pe container-ul principal, permițând elementelor să se mute pe rândul următor
+### Soluția
+Adăugare unei noi politici RLS pe tabela `events` care permite diriginților să citească evenimentele la care elevii lor au rezervări.
 
-### Detalii tehnice
-Modificare doar în `StudentDashboard.tsx`, secțiunea `assistantAssignments.map()` (liniile 238-264):
-- Înlocuiesc `flex items-center justify-between` cu `flex flex-col gap-2`
-- Prima linie: titlu + badge-uri
-- A doua linie: data/ora + buton Scanează (aliniat dreapta)
-- Butonul "Scanează" va fi vizibil pe toate dimensiunile de ecran
+### Modificări
 
-Nu sunt necesare modificări de backend sau migrări.
+**1. Migrare SQL — nouă politică RLS pe `events`**
+
+Se adaugă o politică de tip SELECT care permite homeroom teachers să vadă evenimentele la care elevii din clasele lor au rezervări:
+
+```sql
+CREATE POLICY "Homeroom teachers read events with class student reservations"
+ON public.events
+FOR SELECT TO authenticated
+USING (
+  has_role(auth.uid(), 'homeroom_teacher'::app_role)
+  AND id IN (
+    SELECT r.event_id FROM reservations r
+    JOIN student_class_assignments sca ON sca.student_id = r.student_id
+    JOIN classes c ON c.id = sca.class_id
+    WHERE c.homeroom_teacher_id = auth.uid()
+  )
+);
+```
+
+**2. Nicio modificare de cod frontend** — toate cele 3 tab-uri (Situație elevi, Verificare după eveniment, Verificare după dată) folosesc deja query-uri corecte pe `events` filtrate după `session_id`. Odată ce RLS permite accesul la evenimentele închise, datele vor apărea automat.
+
+### Ce se rezolvă
+- **Situație elevi**: va afișa toate evenimentele din sesiune unde elevii clasei au fost înscriși (inclusiv cele închise)
+- **Verificare după eveniment**: dropdown-ul va include și evenimentele trecute/închise cu participanți
+- **Verificare după dată**: datele din calendar vor include și zilele cu evenimente închise
 
