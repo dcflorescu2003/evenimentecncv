@@ -328,7 +328,7 @@ export default function ProfEventsPage() {
         <Input placeholder="Caută…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
       </div>
 
-      <div className="rounded-lg border">
+      <div className="hidden md:block rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -370,6 +370,44 @@ export default function ProfEventsPage() {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Se încarcă…</p>
+        ) : filtered.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Niciun eveniment</p>
+        ) : (
+          filtered.map((ev) => (
+            <div
+              key={ev.id}
+              className="rounded-lg border bg-card p-3 space-y-2 cursor-pointer hover:bg-muted/50"
+              onClick={() => navigate(`/prof/events/${ev.id}`)}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium min-w-0 flex-1 truncate">{ev.title}</p>
+                <Badge variant="secondary" className={`${statusColors[ev.status as EventStatus]} shrink-0`}>
+                  {statusLabels[ev.status as EventStatus]}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {formatDate(ev.date)} · {ev.start_time?.slice(0, 5)}–{ev.end_time?.slice(0, 5)} · {ev.counted_duration_hours}h
+              </p>
+              <div className="flex gap-1 border-t pt-2" onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/prof/events/${ev.id}`)} title="Detalii">
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(ev)} title="Editează">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteId(ev.id)} title="Șterge">
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Create/Edit Dialog */}
