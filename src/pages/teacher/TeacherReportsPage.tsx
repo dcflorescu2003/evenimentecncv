@@ -255,6 +255,15 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
       const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
       const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
 
+      // Required hours per class for this session
+      const { data: rules } = await supabase
+        .from("class_participation_rules")
+        .select("class_id, required_value")
+        .eq("session_id", sessionId)
+        .in("class_id", classIds);
+      const requiredByClass = Object.fromEntries((rules ?? []).map(r => [r.class_id, r.required_value]));
+      const studentClassMap = Object.fromEntries((assignments ?? []).map(a => [a.student_id, a.class_id]));
+
       // Fetch assistant assignments
       const { data: assistantAssignments } = await supabase
         .from("event_student_assistants").select("student_id, event_id").in("student_id", studentIds);
@@ -299,6 +308,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
           lastName: p.last_name,
           eventStatuses,
           validatedHours,
+          requiredHours: requiredByClass[studentClassMap[p.id]] || 0,
         };
       }).sort((a, b) => a.lastName.localeCompare(b.lastName));
 
@@ -341,7 +351,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
     const rows = data.students.map(st => [
       st.name,
       ...data.events.map(e => statusText(st.eventStatuses[e.id])),
-      String(st.validatedHours),
+      formatHoursVsRequired(st.validatedHours, st.requiredHours),
     ]);
     exportReportPdf({
       title: "Situație elevi",
@@ -394,7 +404,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
                     {data.events.map(e => (
                       <TableCell key={e.id} className="text-center">{statusIcon(st.eventStatuses[e.id])}</TableCell>
                     ))}
-                    <TableCell className="text-right font-semibold">{st.validatedHours}h</TableCell>
+                    <TableCell className="text-right font-semibold">{formatHoursVsRequired(st.validatedHours, st.requiredHours)}h</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
