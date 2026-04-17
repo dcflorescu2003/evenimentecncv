@@ -134,11 +134,14 @@ export default function ManagerLayout() {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-2 border-b px-4">
+        <header className="flex h-14 items-center gap-2 border-b px-3 sm:px-4 min-w-0">
           <SidebarTrigger />
-          <span className="text-sm text-muted-foreground">Sesiune: <span className="font-medium text-foreground">{sessionName || "—"}</span></span>
+          <span className="text-xs sm:text-sm text-muted-foreground truncate min-w-0">
+            <span className="hidden sm:inline">Sesiune: </span>
+            <span className="font-medium text-foreground">{sessionName || "—"}</span>
+          </span>
         </header>
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-3 sm:p-6">
           <Outlet context={contextValue} />
         </main>
       </SidebarInset>
