@@ -332,7 +332,7 @@ export default function TeacherDashboard() {
               <Input placeholder="Caută elev…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
             </div>
             <Button variant="outline" size="sm" onClick={() => {
-              exportToCSV("raport-clasa", ["Elev", "Nr. înscrierea", "Ore rezervate", "Ore validate"],
+              exportToCSV("raport-clasa", ["Elev", "Inscrieri", "Ore rezervate", "Ore validate"],
                 reportData.map((s) => [s.name, String(s.reservations.length), String(s.totalReservedHours), String(s.totalValidatedHours)]));
             }}>
               <Download className="mr-2 h-4 w-4" /> CSV
@@ -348,8 +348,8 @@ export default function TeacherDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Elev</TableHead>
-                    <TableHead className="text-right">Înscrierea</TableHead>
+                    <TableHead className="px-[16px] text-left">Elev</TableHead>
+                    <TableHead className="px-[16px] text-center">Inscrieri</TableHead>
                     <TableHead className="text-right">Ore rezervate</TableHead>
                     <TableHead className="text-right">Ore validate</TableHead>
                     <TableHead className="w-10 print:hidden"></TableHead>
