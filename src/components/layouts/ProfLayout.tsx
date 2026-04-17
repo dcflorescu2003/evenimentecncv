@@ -19,19 +19,19 @@ export default function ProfLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-4 shadow-sm">
-        <div className="flex items-center gap-2">
-          <GraduationCap className="h-6 w-6 text-primary" />
-          <span className="font-display text-lg font-semibold">{title}</span>
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-3 sm:px-4 shadow-sm">
+        <div className="flex items-center gap-2 min-w-0">
+          <GraduationCap className="h-6 w-6 text-primary shrink-0" />
+          <span className="font-display text-base sm:text-lg font-semibold truncate">{title}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{profile?.display_name}</span>
+          <span className="hidden sm:inline text-sm text-muted-foreground truncate max-w-[160px]">{profile?.display_name}</span>
           <Button variant="ghost" size="icon" onClick={signOut}>
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </header>
-      <div className="flex items-center gap-2 border-b bg-card px-4 py-2 overflow-x-auto whitespace-nowrap">
+      <div className="flex items-center gap-1 sm:gap-2 border-b bg-card px-2 sm:px-4 py-2 overflow-x-auto whitespace-nowrap">
         {navItems.map((item) => (
           <Button
             key={item.path}
@@ -39,12 +39,12 @@ export default function ProfLayout() {
             size="sm"
             onClick={() => navigate(item.path)}
           >
-            <item.icon className="mr-2 h-4 w-4" />
-            {item.title}
+            <item.icon className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{item.title}</span>
           </Button>
         ))}
       </div>
-      <main className="flex-1 overflow-auto p-4">
+      <main className="flex-1 overflow-auto p-3 sm:p-4">
         <Outlet />
       </main>
     </div>

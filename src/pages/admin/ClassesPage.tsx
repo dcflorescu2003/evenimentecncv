@@ -434,23 +434,23 @@ export default function ClassesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold">Clase și reguli de participare</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Gestionare clase, diriginți, elevi și reguli de participare.
           </p>
         </div>
-        <Button onClick={() => openRuleCreate()}>
+        <Button onClick={() => openRuleCreate()} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Regulă nouă
         </Button>
       </div>
 
       {/* Session filter */}
-      <div className="flex items-center gap-3">
-        <Label>Filtrează după sesiune:</Label>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <Label className="sm:whitespace-nowrap">Filtrează după sesiune:</Label>
         <Select value={selectedSession} onValueChange={setSelectedSession}>
-          <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Toate sesiunile</SelectItem>
             {sessions.map((s) => (

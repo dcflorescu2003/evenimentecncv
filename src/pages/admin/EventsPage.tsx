@@ -357,19 +357,19 @@ export default function EventsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold">Evenimente</h1>
           <p className="mt-1 text-sm text-muted-foreground">Gestionare evenimente pentru sesiunile active.</p>
         </div>
-        <Button onClick={openCreate} disabled={sessions.length === 0}>
+        <Button onClick={openCreate} disabled={sessions.length === 0} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Eveniment nou
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+        <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Caută după titlu…"
@@ -379,7 +379,7 @@ export default function EventsPage() {
           />
         </div>
         <Select value={filterSession} onValueChange={setFilterSession}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Toate sesiunile" />
           </SelectTrigger>
           <SelectContent>
@@ -390,7 +390,7 @@ export default function EventsPage() {
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue placeholder="Toate statusurile" />
           </SelectTrigger>
           <SelectContent>
@@ -473,7 +473,7 @@ export default function EventsPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="ev-title">Titlu *</Label>
                 <Input id="ev-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="ex: Vizită la Muzeu" />
@@ -523,7 +523,7 @@ export default function EventsPage() {
                 Durată: {dur.display} → <strong>{dur.hours}h</strong> (ore contorizate)
               </p>
             )}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ev-loc">Locație</Label>
                 <Input id="ev-loc" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="ex: Sala Mare" />
@@ -599,7 +599,7 @@ export default function EventsPage() {
             )}
             <div className="space-y-2">
               <Label>Perioada de înscriere</Label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">De la - Data</Label>
                   <DateInput value={form.booking_open_date} onChange={(v) => setForm({ ...form, booking_open_date: v })} />
