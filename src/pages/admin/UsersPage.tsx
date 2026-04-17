@@ -329,6 +329,7 @@ export default function UsersPage() {
           )}
         </div>
 
+        <div className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -436,6 +437,57 @@ export default function UsersPage() {
             )}
           </TableBody>
         </Table>
+        </div>
+
+        {/* Mobile card view */}
+        <div className="md:hidden space-y-3">
+          {isLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Se încarcă…</p>
+          ) : filteredProfiles.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Niciun utilizator găsit</p>
+          ) : (
+            paginatedProfiles.map((p) => {
+              const userRoles = getRoles(p.id);
+              return (
+                <div key={p.id} className="rounded-lg border bg-card p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{`${p.last_name} ${p.first_name}`}</p>
+                      <p className="font-mono text-xs text-muted-foreground truncate">{p.username}</p>
+                    </div>
+                    <Badge variant={p.is_active ? "default" : "destructive"} className="shrink-0">
+                      {p.is_active ? "Activ" : "Inactiv"}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1">
+                    {userRoles.map((r) => (
+                      <Badge key={r} variant="secondary" className="text-xs">{roleLabels[r] || r}</Badge>
+                    ))}
+                    {userRoles.some((r) => r === "teacher" || r === "homeroom_teacher") && (
+                      <span className="text-xs text-muted-foreground">
+                        {(p as any).teaching_norm ? `· ${(p as any).teaching_norm}h` : "· fără normă"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-1 border-t pt-2">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(p)} title="Editează">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setResetUserId(p.id)} title="Resetează parola">
+                      <KeyRound className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleActiveMutation.mutate({ id: p.id, is_active: !p.is_active })} title={p.is_active ? "Dezactivează" : "Activează"}>
+                      {p.is_active ? <UserX className="h-4 w-4 text-destructive" /> : <UserCheck className="h-4 w-4 text-primary" />}
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteUserId(p.id)} title="Șterge">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
 
         {hasPagination && (
           <div className="flex flex-col gap-3 border-t pt-3 md:flex-row md:items-center md:justify-between">
