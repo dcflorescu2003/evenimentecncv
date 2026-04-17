@@ -308,7 +308,7 @@ export default function TeacherDashboard() {
                   <p className="text-2xl font-bold">
                     {reportData.reduce((s, r) => s + r.reservations.length, 0)}
                   </p>
-                  <p className="text-xs text-muted-foreground">Înscrierea totale</p>
+                  <p className="text-xs text-muted-foreground">Înscrieri totale</p>
                 </div>
               </CardContent>
             </Card>
@@ -319,7 +319,7 @@ export default function TeacherDashboard() {
                   <p className="text-2xl font-bold">
                     {reportData.reduce((s, r) => s + r.totalValidatedHours, 0)}h
                   </p>
-                  <p className="text-xs text-muted-foreground">Ore validate total</p>
+                  <p className="text-xs text-muted-foreground">Ore validate în total</p>
                 </div>
               </CardContent>
             </Card>
