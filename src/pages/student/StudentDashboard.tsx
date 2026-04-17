@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { CalendarDays, Clock, Ticket, CheckCircle2, ArrowRight, HelpCircle, AlertTriangle, ScanLine } from "lucide-react";
 import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 import type { Tables } from "@/integrations/supabase/types";
+import { formatHoursVsRequired } from "@/lib/hours-format";
 
 type Session = Tables<"program_sessions">;
 
@@ -172,12 +173,12 @@ export default function StudentDashboard() {
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="rounded-lg bg-muted p-3">
                     <CalendarDays className="mx-auto mb-1 h-5 w-5 text-primary" />
-                    <p className="text-lg font-bold">{p.reserved_hours}</p>
+                    <p className="text-lg font-bold">{formatHoursVsRequired(p.reserved_hours, requiredH)}</p>
                     <p className="text-xs text-muted-foreground">Ore rezervate</p>
                   </div>
                   <div className="rounded-lg bg-muted p-3">
                     <CheckCircle2 className="mx-auto mb-1 h-5 w-5 text-accent" />
-                    <p className="text-lg font-bold">{p.validated_hours}</p>
+                    <p className="text-lg font-bold">{formatHoursVsRequired(p.validated_hours, requiredH)}</p>
                     <p className="text-xs text-muted-foreground">Ore validate</p>
                   </div>
                   <div className="rounded-lg bg-muted p-3">

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Download, Printer } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
+import { formatHoursVsRequired } from "@/lib/hours-format";
 import {
   ChartContainer,
   ChartTooltip,
@@ -116,6 +117,14 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
       const classMap = Object.fromEntries((assignments ?? []).map(a => [a.student_id, a.class_id]));
       const classNameMap = Object.fromEntries((myClasses ?? []).map(c => [c.id, c.display_name]));
 
+      // Required hours per class for this session
+      const { data: rules } = await supabase
+        .from("class_participation_rules")
+        .select("class_id, required_value")
+        .eq("session_id", sessionId)
+        .in("class_id", classIds);
+      const requiredByClass = Object.fromEntries((rules ?? []).map(r => [r.class_id, r.required_value]));
+
       // Fetch assistant assignments
       const { data: assistantAssignments } = await supabase
         .from("event_student_assistants").select("student_id, event_id").in("student_id", studentIds);
@@ -131,7 +140,6 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
         const sRes = (reservations ?? []).filter(r => r.student_id === p.id && r.status === "reserved" && eventIds.includes(r.event_id));
         const reservedHours = sRes.reduce((s, r) => s + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
         const studentAssistantEvents = assistantByStudent.get(p.id) || new Set();
-        // Validated = ticket present/late + assistant events
         const validatedEventIds = new Set<string>();
         sRes.forEach(r => {
           const t = ticketByRes[r.id];
@@ -139,14 +147,16 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
         });
         studentAssistantEvents.forEach(eid => validatedEventIds.add(eid));
         const validatedHours = [...validatedEventIds].reduce((s, eid) => s + (eventMap[eid]?.counted_duration_hours ?? 0), 0);
+        const classId = classMap[p.id];
         return {
           id: p.id,
           name: `${p.last_name} ${p.first_name}`,
           lastName: p.last_name,
-          className: classNameMap[classMap[p.id]] ?? "—",
+          className: classNameMap[classId] ?? "—",
           reservations: sRes.length,
           reservedHours,
           validatedHours,
+          requiredHours: requiredByClass[classId] || 0,
         };
       }).sort((a, b) => a.lastName.localeCompare(b.lastName));
     },
@@ -164,7 +174,11 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
         <Button variant="outline" size="sm" onClick={() => {
           if (!reportData) return;
           exportReportPdf({ title: "Raport clasă", headers: ["Elev", "Clasă", "Rezervări", "Ore rezervate", "Ore validate"],
-            rows: reportData.map(s => [s.name, s.className, String(s.reservations), String(s.reservedHours), String(s.validatedHours)]),
+            rows: reportData.map(s => [
+              s.name, s.className, String(s.reservations),
+              formatHoursVsRequired(s.reservedHours, s.requiredHours),
+              formatHoursVsRequired(s.validatedHours, s.requiredHours),
+            ]),
             filename: "raport-clasa" });
         }}>
           <Download className="mr-2 h-4 w-4" /> Export PDF
@@ -210,8 +224,8 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
                   <TableCell className="font-medium">{s.name}</TableCell>
                   <TableCell>{s.className}</TableCell>
                   <TableCell className="text-right">{s.reservations}</TableCell>
-                  <TableCell className="text-right">{s.reservedHours}</TableCell>
-                  <TableCell className="text-right">{s.validatedHours}</TableCell>
+                  <TableCell className="text-right">{formatHoursVsRequired(s.reservedHours, s.requiredHours)}</TableCell>
+                  <TableCell className="text-right">{formatHoursVsRequired(s.validatedHours, s.requiredHours)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -240,6 +254,15 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
       const { data: reservations } = await supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", studentIds);
       const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
       const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
+
+      // Required hours per class for this session
+      const { data: rules } = await supabase
+        .from("class_participation_rules")
+        .select("class_id, required_value")
+        .eq("session_id", sessionId)
+        .in("class_id", classIds);
+      const requiredByClass = Object.fromEntries((rules ?? []).map(r => [r.class_id, r.required_value]));
+      const studentClassMap = Object.fromEntries((assignments ?? []).map(a => [a.student_id, a.class_id]));
 
       // Fetch assistant assignments
       const { data: assistantAssignments } = await supabase
@@ -285,6 +308,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
           lastName: p.last_name,
           eventStatuses,
           validatedHours,
+          requiredHours: requiredByClass[studentClassMap[p.id]] || 0,
         };
       }).sort((a, b) => a.lastName.localeCompare(b.lastName));
 
@@ -327,7 +351,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
     const rows = data.students.map(st => [
       st.name,
       ...data.events.map(e => statusText(st.eventStatuses[e.id])),
-      String(st.validatedHours),
+      formatHoursVsRequired(st.validatedHours, st.requiredHours),
     ]);
     exportReportPdf({
       title: "Situație elevi",
@@ -380,7 +404,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
                     {data.events.map(e => (
                       <TableCell key={e.id} className="text-center">{statusIcon(st.eventStatuses[e.id])}</TableCell>
                     ))}
-                    <TableCell className="text-right font-semibold">{st.validatedHours}h</TableCell>
+                    <TableCell className="text-right font-semibold">{formatHoursVsRequired(st.validatedHours, st.requiredHours)}h</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

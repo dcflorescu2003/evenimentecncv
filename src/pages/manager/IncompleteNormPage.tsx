@@ -9,6 +9,7 @@ import { exportReportPdf } from "@/lib/report-pdf";
 import { useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 import { getHeldEventIds } from "@/lib/held-events";
+import { formatHoursVsRequired } from "@/lib/hours-format";
 
 export default function IncompleteNormPage() {
   const { sessionId, sessionName } = useManagerSession();
@@ -209,7 +210,10 @@ export default function IncompleteNormPage() {
       title: `Normă incompletă — Elevi — ${sessionName}`,
       headers: ["Nr.", "Clasă", "Elev", "Ore rezervate", "Ore validate", "Ore necesare", "Ore rămase"],
       rows: studentData.map((s, i) => [
-        String(i + 1), s.className, s.name, `${s.reserved}h`, `${s.validated}h`, `${s.required}h`, `${s.remaining}h`,
+        String(i + 1), s.className, s.name,
+        `${formatHoursVsRequired(s.reserved, s.required)}h`,
+        `${formatHoursVsRequired(s.validated, s.required)}h`,
+        `${s.required}h`, `${s.remaining}h`,
       ]),
       filename: "norma-incompleta-elevi",
       orientation: "landscape",
@@ -294,8 +298,8 @@ export default function IncompleteNormPage() {
                     <TableCell>{i + 1}</TableCell>
                     <TableCell>{s.className}</TableCell>
                     <TableCell>{s.name}</TableCell>
-                    <TableCell>{s.reserved}h</TableCell>
-                    <TableCell>{s.validated}h</TableCell>
+                    <TableCell>{formatHoursVsRequired(s.reserved, s.required)}h</TableCell>
+                    <TableCell>{formatHoursVsRequired(s.validated, s.required)}h</TableCell>
                     <TableCell>{s.required}h</TableCell>
                     <TableCell className="font-semibold text-destructive">{s.remaining}h</TableCell>
                     <TableCell><Button variant="link" size="sm" onClick={() => navigate(`/manager/students?id=${s.id}&from=incomplete`)}>Detalii</Button></TableCell>

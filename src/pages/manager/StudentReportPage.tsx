@@ -10,6 +10,7 @@ import { FileDown } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
+import { formatHoursVsRequired } from "@/lib/hours-format";
 
 const statusLabel = (s: string) => {
   if (s === "present" || s === "late") return "Prezent";
@@ -133,7 +134,7 @@ export default function StudentReportPage() {
     const name = `${report.profile?.last_name || ""} ${report.profile?.first_name || ""}`;
     exportReportPdf({
       title: `Fișa elevului: ${name}`,
-      subtitle: `Clasă: ${report.className} | Sesiune: ${sessionName} | Ore validate: ${report.validatedHours} | Ore rezervate: ${report.totalReservedHours} | Ore rămase: ${report.remainingHours}`,
+      subtitle: `Clasă: ${report.className} | Sesiune: ${sessionName} | Ore validate: ${formatHoursVsRequired(report.validatedHours, report.requiredHours)} | Ore rezervate: ${formatHoursVsRequired(report.totalReservedHours, report.requiredHours)} | Ore rămase: ${report.remainingHours}`,
       headers: ["Nr.", "Data", "Eveniment", "Interval", "Ore", "Status"],
       rows: report.events.map((e, i) => [
         String(i + 1), e.date, e.title, `${e.startTime?.slice(0, 5)} - ${e.endTime?.slice(0, 5)}`,
@@ -175,8 +176,8 @@ export default function StudentReportPage() {
           <div className="grid gap-4 md:grid-cols-5">
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Elev</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{`${report.profile?.last_name || ""} ${report.profile?.first_name || ""}`}</p></CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clasă</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.className}</p></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore rezervate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.totalReservedHours}h</p></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore validate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.validatedHours}h</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore rezervate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{formatHoursVsRequired(report.totalReservedHours, report.requiredHours)}{report.requiredHours > 0 ? "h" : "h"}</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore validate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{formatHoursVsRequired(report.validatedHours, report.requiredHours)}{report.requiredHours > 0 ? "h" : "h"}</p></CardContent></Card>
             <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore rămase</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.remainingHours}h</p></CardContent></Card>
           </div>
 
