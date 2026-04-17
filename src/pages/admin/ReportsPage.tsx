@@ -39,11 +39,11 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6 print:space-y-4">
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <h1 className="font-display text-2xl font-bold">Rapoarte</h1>
         <div className="flex items-center gap-2">
           <Select value={sessionId} onValueChange={setSessionId}>
-            <SelectTrigger className="w-[220px]">
+            <SelectTrigger className="w-full sm:w-[220px]">
               <SelectValue placeholder="Selectează sesiunea" />
             </SelectTrigger>
             <SelectContent>

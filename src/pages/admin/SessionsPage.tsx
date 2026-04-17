@@ -151,14 +151,14 @@ export default function SessionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold">Sesiuni program</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Gestionare sesiuni: Școala Altfel, Săptămâna Verde etc.
           </p>
         </div>
-        <Button onClick={openCreate}>
+        <Button onClick={openCreate} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Sesiune nouă
         </Button>
       </div>
@@ -243,7 +243,7 @@ export default function SessionsPage() {
                 placeholder="2025-2026"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start_date">Data început *</Label>
                 <DateInput

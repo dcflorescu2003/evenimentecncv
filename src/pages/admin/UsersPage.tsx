@@ -263,21 +263,21 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold">Utilizatori</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Gestionare conturi: elevi, diriginți, asistenți.
           </p>
         </div>
-        <Button onClick={() => setCreateDialog(true)}>
+        <Button onClick={() => setCreateDialog(true)} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Utilizator nou
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <div className="relative w-full sm:flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Căutare după nume sau username…"
@@ -287,7 +287,7 @@ export default function UsersPage() {
           />
         </div>
         <Select value={roleFilter} onValueChange={handleRoleFilter}>
-          <SelectTrigger className="w-48">
+          <SelectTrigger className="w-full sm:w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -549,7 +549,7 @@ export default function UsersPage() {
             }
             editUserMutation.mutate({ id: editUser!.id, values: editForm });
           }} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Prenume *</Label>
                 <Input value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} />
@@ -608,7 +608,7 @@ export default function UsersPage() {
             <DialogDescription>Creați un cont nou cu parolă generată automat.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Prenume *</Label>
                 <Input value={createForm.first_name} onChange={(e) => setCreateForm({ ...createForm, first_name: e.target.value })} />
