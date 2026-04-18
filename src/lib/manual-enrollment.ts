@@ -1,8 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type EnrollmentResult =
-  | { ok: true; reactivated: boolean; reservationId: string }
-  | { ok: false; reason: string };
+export type EnrollmentResult = {
+  ok: boolean;
+  reactivated?: boolean;
+  reservationId?: string;
+  reason?: string;
+};
 
 export type ClassEnrollmentSummary = {
   enrolled: number;
