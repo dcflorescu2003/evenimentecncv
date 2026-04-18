@@ -1,9 +1,10 @@
 import { formatDate } from "@/lib/time";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Ticket, AlertTriangle, TrendingUp, Clock } from "lucide-react";
+import { Calendar, Users, Ticket, AlertTriangle, TrendingUp, Clock, GraduationCap } from "lucide-react";
 import {
   ChartContainer,
   ChartTooltip,
