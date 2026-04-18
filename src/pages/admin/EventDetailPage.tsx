@@ -636,6 +636,9 @@ export default function EventDetailPage() {
             )}
           </div>
         </div>
+        <Button onClick={() => navigate(`/admin/scan?event=${id}`)} className="gap-2">
+          <ScanLine className="h-4 w-4" /> Scanare bilete
+        </Button>
       </div>
 
       {/* Info Cards */}

@@ -23,6 +23,7 @@ import UsersPage from "./pages/admin/UsersPage";
 import ReportsPage from "./pages/admin/ReportsPage";
 import AuditPage from "./pages/admin/AuditPage";
 import CredentialsPage from "./pages/admin/CredentialsPage";
+import AdminScanPage from "./pages/admin/AdminScanPage";
 
 import StudentLayout from "./components/layouts/StudentLayout";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="/admin/reports" element={<ReportsPage />} />
               <Route path="/admin/audit" element={<AuditPage />} />
               <Route path="/admin/credentials" element={<CredentialsPage />} />
+              <Route path="/admin/scan" element={<AdminScanPage />} />
             </Route>
 
             {/* Student routes */}
