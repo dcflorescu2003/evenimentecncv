@@ -47,5 +47,13 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Aplicația folosește camera pentru a scana coduri QR la check-in la evenimente.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aplicația poate salva bilete și capturi cu coduri QR în galerie.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Aplicația salvează bilete cu coduri QR în galerie pentru acces rapid.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
