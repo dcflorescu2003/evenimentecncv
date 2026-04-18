@@ -136,6 +136,13 @@ export default function ProfEventDetailPage() {
   const [assistantSearch, setAssistantSearch] = useState("");
   const [removeAssistantId, setRemoveAssistantId] = useState<string | null>(null);
 
+  // Manual enrollment state (homeroom teacher: own class only)
+  const [enrollStudentDialogOpen, setEnrollStudentDialogOpen] = useState(false);
+  const [enrollStudentSearch, setEnrollStudentSearch] = useState("");
+  const [confirmEnrollClass, setConfirmEnrollClass] = useState<{ classId: string; className: string; count: number } | null>(null);
+  const [enrollingClass, setEnrollingClass] = useState(false);
+  const [enrollingStudentId, setEnrollingStudentId] = useState<string | null>(null);
+
   // Edit/Delete event state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteEventDialogOpen, setDeleteEventDialogOpen] = useState(false);
