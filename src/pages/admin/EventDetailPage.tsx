@@ -316,7 +316,7 @@ export default function EventDetailPage() {
       });
       return allProfiles;
     },
-    enabled: assistantDialogOpen,
+    enabled: assistantDialogOpen || enrollStudentDialogOpen,
   });
 
   // Exclude already-assistants (allow all students, even if already participants)
