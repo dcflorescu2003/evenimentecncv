@@ -1,42 +1,70 @@
 
-## Plan: Înscriere clasă/elev de către diriginte și admin
+## Plan: Pregătire pentru publicare pe App Store
 
-Confirmat: **fluxul intern** (orice eveniment publicat, nu doar `is_public`).
+### 1. Pagină nouă de Suport
+**Fișier nou** `src/pages/public/SupportPage.tsx` (similar ca structură cu `PrivacyPolicyPage.tsx`):
+- Titlu: „Suport și asistență"
+- Secțiuni:
+  - **Contact** — email `lcantemirvoda@yahoo.com`, instituția (CNCV București)
+  - **Întrebări frecvente (FAQ)** — autentificare, schimbare parolă, rezervare bilete, scanare QR, ștergere cont
+  - **Probleme tehnice** — instrucțiuni (reîncărcare, deconectare/reconectare, contact email)
+  - **Resetare parolă** — pașii (cere admin/diriginte)
+  - **Ștergere cont** — link către `/delete-account`
+  - **Politica de confidențialitate** — link către `/privacy`
+- Buton „Înapoi" în stânga sus
 
-### UI nou
-**Pagina admin** (`EventDetailPage.tsx`) și **pagina diriginte** (`ProfEventDetailPage.tsx`), tab „Participanți" — două butoane noi lângă „Adaugă elev asistent":
-- **Adaugă elev** — Combobox (Popover + Command) cu căutare server-side
-  - Admin: caută în toți elevii activi
-  - Diriginte: pre-filtrat la elevii propriei clase
-- **Adaugă clasă** — Select cu confirm
-  - Admin: dropdown toate clasele active
-  - Diriginte: doar propria clasă
+**Rută nouă** în `src/App.tsx`: `/support` → `<SupportPage />` (publică, fără auth)
 
-### Logică (helper nou `src/lib/manual-enrollment.ts`)
-`enrollStudent(eventId, studentId)`:
-1. Apelez RPC `check_booking_eligibility(studentId, eventId)` → dacă `allowed=false` returnez motivul.
-2. Verific dacă există rezervare `cancelled` → o reactivez (UPDATE status `reserved`, regenerez QR pe ticket).
-3. Altfel: INSERT `reservation` (status `reserved`) + INSERT `ticket` (status `reserved`, QR auto-generat de default).
-4. INSERT `audit_logs` cu `action='manual_enrollment'`, detalii `{ enrolled_by_role, student_id, event_id }`.
+### 2. Link Suport sub link Confidențialitate
+În `PrivacyPolicyPage.tsx` adaug la final un link către `/support`. În plus, adaug pe `Login.tsx` (și/sau footer comun) link-uri vizibile către `/privacy` și `/support` pentru a fi accesibile reviewer-ului App Store.
 
-`enrollClass(eventId, classId)`:
-- Fetch elevi din clasă → loop `enrollStudent` cu acumulare rezultate → toast sumar `X înscriși, Y săriți (motive grupate)`.
-- Confirm dialog înainte: „Vei înscrie N elevi din clasa Y. Continuă?"
+### 3. Configurare App Store (iOS — Capacitor)
+**`ios/App/App/Info.plist`** — adaug chei obligatorii cerute de App Store Review:
+- `NSCameraUsageDescription` — „Aplicația folosește camera pentru a scana coduri QR la check-in la evenimente."
+- `NSPhotoLibraryUsageDescription` — „Aplicația poate salva bilete în galerie." (dacă e cazul)
+- `ITSAppUsesNonExemptEncryption` = `false` (evită completare formular criptare)
+- `CFBundleShortVersionString` deja `$(MARKETING_VERSION)` — OK
+- Verific `LSApplicationQueriesSchemes` dacă e necesar
 
-### Migrație RLS (diriginte)
-Admin are deja `Admins manage reservations/tickets`. Pentru diriginte adaug:
-- `reservations` INSERT: dacă `student_id` ∈ elevii clasei lui (`homeroom_teacher_id = auth.uid()`)
-- `reservations` UPDATE: idem (pentru reactivare cancelled→reserved)
-- `tickets` INSERT: dacă `reservation_id` aparține unui elev al clasei lui
-- `tickets` UPDATE: idem (regenerare QR la reactivare)
+**`capacitor.config.ts`** — verific:
+- `appId` corect: `com.evenimentecncv.app`
+- `appName`: `Evenimente`
+- **Elimin** `server.url` (hot-reload) pentru build production — App Store respinge build-uri care încarcă din URL extern
 
-### Fișiere modificate
-1. **Migrație nouă** — 4 politici RLS pentru diriginte (INSERT/UPDATE pe `reservations`, `tickets`).
-2. `src/lib/manual-enrollment.ts` — helper nou (enrollStudent, enrollClass).
-3. `src/pages/admin/EventDetailPage.tsx` — butoane + dialoguri + invalidare query participanți.
-4. `src/pages/prof/ProfEventDetailPage.tsx` — butoane + dialoguri (limitate la clasa proprie).
+### 4. Metadata pentru App Store Connect
+Document `APPSTORE_SUBMISSION.md` la rădăcina proiectului cu:
+- **App name**: Evenimente CNCV
+- **Subtitle**: Evenimente Colegiul Cantemir Vodă
+- **Categorie**: Education
+- **Keywords**: școală, evenimente, CNCV, Cantemir, prezență, bilete
+- **Descriere** (RO) — text gata de copiat
+- **What's new** — text versiune inițială
+- **URL Suport**: `https://evenimentecncv.online/support`
+- **URL Confidențialitate**: `https://evenimentecncv.online/privacy`
+- **Demo account** pentru review: `elev.test / Elev123!` (cont test existent)
+- **Note pentru reviewer**: explicație flux școlar, conturi gestionate de admin
+- **Age rating**: 4+
+- **Export Compliance**: Nu folosește criptare proprietară
+- **Asset list necesar** (de generat manual de user în Xcode/App Store Connect):
+  - App Icon 1024×1024
+  - Screenshots iPhone 6.7" și 6.5" (min 3)
+  - Screenshots iPad 12.9" (dacă suportă iPad — momentan suportă, pot scoate iPad din target)
+
+### 5. Checklist final pentru user (în chat după implementare)
+- `npx cap sync ios` după modificări
+- Build în Xcode cu certificat de distribuție Apple Developer
+- Upload prin Xcode Organizer sau Transporter
+- Completare metadata în App Store Connect folosind `APPSTORE_SUBMISSION.md`
+
+### Fișiere modificate/create
+1. **Nou**: `src/pages/public/SupportPage.tsx`
+2. **Modificat**: `src/App.tsx` (rută `/support`)
+3. **Modificat**: `src/pages/public/PrivacyPolicyPage.tsx` (link spre suport)
+4. **Modificat**: `src/pages/Login.tsx` (linkuri footer privacy + support)
+5. **Modificat**: `ios/App/App/Info.plist` (permission descriptions + encryption flag)
+6. **Modificat**: `capacitor.config.ts` (clarificare server.url pentru production)
+7. **Nou**: `APPSTORE_SUBMISSION.md` (metadata + checklist)
 
 ### Ce NU se schimbă
-- RPC `check_booking_eligibility` — se refolosește.
-- Logica de generare QR / status default ticket — vine din schema (`gen_random_uuid()`).
-- Pagini elev (biletul apare automat prin query existent pe `reservations`+`tickets`).
+- Logica aplicației, RLS, edge functions, schema DB.
+- Android config (deja funcțional pentru Play Store separat).
