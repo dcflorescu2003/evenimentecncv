@@ -893,7 +893,27 @@ export default function ProfEventDetailPage() {
         <TabsContent value="participants" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Lista participanților înscriși.</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {ownClass && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => { setEnrollStudentDialogOpen(true); setEnrollStudentSearch(""); }}>
+                    <UserPlus className="mr-2 h-4 w-4" /> Adaugă elev
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const { count } = await supabase
+                        .from("student_class_assignments")
+                        .select("*", { count: "exact", head: true })
+                        .eq("class_id", ownClass.id);
+                      setConfirmEnrollClass({ classId: ownClass.id, className: ownClass.display_name, count: count || 0 });
+                    }}
+                  >
+                    <Users className="mr-2 h-4 w-4" /> Adaugă clasa {ownClass.display_name}
+                  </Button>
+                </>
+              )}
               <Button variant="outline" size="sm" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
                 <UserPlus className="mr-2 h-4 w-4" /> Adaugă elev asistent
               </Button>
