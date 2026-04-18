@@ -446,7 +446,105 @@ export default function ProfEventDetailPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // File upload
+  // Homeroom teacher's own class (for manual enrollment)
+  const { data: ownClass } = useQuery({
+    queryKey: ["prof_own_homeroom_class", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, display_name")
+        .eq("homeroom_teacher_id", user!.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Students of own class (for "Adaugă elev" combobox)
+  const { data: ownClassStudents = [] } = useQuery({
+    queryKey: ["prof_own_class_students", ownClass?.id],
+    queryFn: async () => {
+      const { data: assignments, error } = await supabase
+        .from("student_class_assignments")
+        .select("student_id")
+        .eq("class_id", ownClass!.id);
+      if (error) throw error;
+      const ids = (assignments || []).map((a) => a.student_id);
+      if (ids.length === 0) return [];
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", ids)
+        .eq("is_active", true);
+      if (pErr) throw pErr;
+      return (profiles || []).sort((a: any, b: any) => {
+        const cmp = (a.last_name || "").localeCompare(b.last_name || "", "ro");
+        return cmp !== 0 ? cmp : (a.first_name || "").localeCompare(b.first_name || "", "ro");
+      });
+    },
+    enabled: !!ownClass?.id,
+  });
+
+  function invalidateProfParticipantsQueries() {
+    queryClient.invalidateQueries({ queryKey: ["prof_event_participants", id] });
+    queryClient.invalidateQueries({ queryKey: ["prof_reservation_count", id] });
+  }
+
+  async function handleProfEnrollSingleStudent(studentId: string, studentName: string) {
+    if (!user || !id) return;
+    setEnrollingStudentId(studentId);
+    try {
+      const { enrollStudent } = await import("@/lib/manual-enrollment");
+      const res = await enrollStudent(id, studentId, {
+        enrolledByUserId: user.id,
+        enrolledByRole: "homeroom_teacher",
+      });
+      if (!res.ok) {
+        toast.error(`${studentName}: ${res.reason}`);
+      } else {
+        toast.success(res.reactivated ? `${studentName} reactivat` : `${studentName} înscris`);
+        invalidateProfParticipantsQueries();
+        setEnrollStudentDialogOpen(false);
+        setEnrollStudentSearch("");
+      }
+    } finally {
+      setEnrollingStudentId(null);
+    }
+  }
+
+  async function handleProfEnrollClass() {
+    if (!user || !id || !ownClass) return;
+    setEnrollingClass(true);
+    try {
+      const { enrollClass } = await import("@/lib/manual-enrollment");
+      const summary = await enrollClass(id, ownClass.id, {
+        enrolledByUserId: user.id,
+        enrolledByRole: "homeroom_teacher",
+      });
+      invalidateProfParticipantsQueries();
+      const reactivatedNote = summary.reactivated > 0 ? ` (${summary.reactivated} reactivați)` : "";
+      if (summary.skipped === 0) {
+        toast.success(`Clasa ${ownClass.display_name}: ${summary.enrolled} elevi înscriși${reactivatedNote}`);
+      } else {
+        toast.warning(
+          `Clasa ${ownClass.display_name}: ${summary.enrolled} înscriși${reactivatedNote}, ${summary.skipped} săriți`,
+          {
+            description: summary.details
+              .slice(0, 5)
+              .map((d) => `${d.studentName}: ${d.reason}`)
+              .join("\n") + (summary.details.length > 5 ? `\n…+${summary.details.length - 5} alți` : ""),
+            duration: 10000,
+          }
+        );
+      }
+      setConfirmEnrollClass(null);
+    } finally {
+      setEnrollingClass(false);
+    }
+  }
+
   async function handleFileUpload() {
     if (!user || !id) return;
     const file = fileInputRef.current?.files?.[0];
