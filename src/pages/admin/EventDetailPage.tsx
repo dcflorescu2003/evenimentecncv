@@ -86,6 +86,15 @@ export default function EventDetailPage() {
   const [assistantSearch, setAssistantSearch] = useState("");
   const [removeAssistantId, setRemoveAssistantId] = useState<string | null>(null);
 
+  // Manual enrollment state
+  const [enrollStudentDialogOpen, setEnrollStudentDialogOpen] = useState(false);
+  const [enrollStudentSearch, setEnrollStudentSearch] = useState("");
+  const [enrollClassDialogOpen, setEnrollClassDialogOpen] = useState(false);
+  const [selectedEnrollClassId, setSelectedEnrollClassId] = useState<string>("");
+  const [confirmEnrollClass, setConfirmEnrollClass] = useState<{ classId: string; className: string; count: number } | null>(null);
+  const [enrollingClass, setEnrollingClass] = useState(false);
+  const [enrollingStudentId, setEnrollingStudentId] = useState<string | null>(null);
+
   // Queries
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ["event", id],
