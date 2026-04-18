@@ -1,38 +1,42 @@
 
-## Plan: Afișare ore raportate la norma minimă
+## Plan: Înscriere clasă/elev de către diriginte și admin
 
-### Format
-- **Ore rezervate**: `rezervate / required` (ex: `12 / 17`). Dacă nu există regulă → doar numărul.
-- **Ore validate**: `validate / required` (ex: `8 / 17`). Dacă nu există regulă → doar numărul.
+Confirmat: **fluxul intern** (orice eveniment publicat, nu doar `is_public`).
 
-### Helper nou
-`src/lib/hours-format.ts`:
-```ts
-export function formatHoursVsRequired(hours: number, required?: number | null): string {
-  if (required && required > 0) return `${hours} / ${required}`;
-  return `${hours}`;
-}
-```
+### UI nou
+**Pagina admin** (`EventDetailPage.tsx`) și **pagina diriginte** (`ProfEventDetailPage.tsx`), tab „Participanți" — două butoane noi lângă „Adaugă elev asistent":
+- **Adaugă elev** — Combobox (Popover + Command) cu căutare server-side
+  - Admin: caută în toți elevii activi
+  - Diriginte: pre-filtrat la elevii propriei clase
+- **Adaugă clasă** — Select cu confirm
+  - Admin: dropdown toate clasele active
+  - Diriginte: doar propria clasă
 
-### Pagini modificate
+### Logică (helper nou `src/lib/manual-enrollment.ts`)
+`enrollStudent(eventId, studentId)`:
+1. Apelez RPC `check_booking_eligibility(studentId, eventId)` → dacă `allowed=false` returnez motivul.
+2. Verific dacă există rezervare `cancelled` → o reactivez (UPDATE status `reserved`, regenerez QR pe ticket).
+3. Altfel: INSERT `reservation` (status `reserved`) + INSERT `ticket` (status `reserved`, QR auto-generat de default).
+4. INSERT `audit_logs` cu `action='manual_enrollment'`, detalii `{ enrolled_by_role, student_id, event_id }`.
 
-1. **`src/pages/manager/StudentReportPage.tsx`** — `requiredHours` deja disponibil. Aplic format pe cardurile „Ore rezervate" și „Ore validate" + în subtitlul PDF.
+`enrollClass(eventId, classId)`:
+- Fetch elevi din clasă → loop `enrollStudent` cu acumulare rezultate → toast sumar `X înscriși, Y săriți (motive grupate)`.
+- Confirm dialog înainte: „Vei înscrie N elevi din clasa Y. Continuă?"
 
-2. **`src/pages/manager/IncompleteNormPage.tsx`** — query-ul aduce deja `required_value` per clasă (e baza filtrului „normă incompletă"). Aplic format pe coloanele de ore + export PDF.
+### Migrație RLS (diriginte)
+Admin are deja `Admins manage reservations/tickets`. Pentru diriginte adaug:
+- `reservations` INSERT: dacă `student_id` ∈ elevii clasei lui (`homeroom_teacher_id = auth.uid()`)
+- `reservations` UPDATE: idem (pentru reactivare cancelled→reserved)
+- `tickets` INSERT: dacă `reservation_id` aparține unui elev al clasei lui
+- `tickets` UPDATE: idem (regenerare QR la reactivare)
 
-3. **`src/pages/teacher/TeacherReportsPage.tsx`** (secțiunea diriginte/matrice clasă) — clasa = clasa dirigintelui, deci `required_value` e cunoscut o singură dată. Aplic format pe celulele cu ore rezervate/validate per elev + în PDF.
-
-4. **`src/pages/manager/SessionReportPage.tsx`** — verific dacă afișează ore agregate per elev; dacă da, aplic format (necesită fetch `class_participation_rules` per clasă a elevului).
-
-5. **`src/pages/student/StudentDashboard.tsx`** — afișează propriul progres (ore rezervate/validate). Folosesc `get_student_progress` RPC care întoarce `required_hours`. Aplic format.
+### Fișiere modificate
+1. **Migrație nouă** — 4 politici RLS pentru diriginte (INSERT/UPDATE pe `reservations`, `tickets`).
+2. `src/lib/manual-enrollment.ts` — helper nou (enrollStudent, enrollClass).
+3. `src/pages/admin/EventDetailPage.tsx` — butoane + dialoguri + invalidare query participanți.
+4. `src/pages/prof/ProfEventDetailPage.tsx` — butoane + dialoguri (limitate la clasa proprie).
 
 ### Ce NU se schimbă
-- RPC, queries de bază, RLS, schema DB.
-- Coloane care arată o singură valoare fără context (durată eveniment etc.).
-
-### Pași
-1. Creez `src/lib/hours-format.ts`.
-2. Refactor `StudentReportPage` (carduri + PDF subtitle).
-3. Refactor `IncompleteNormPage` (tabel + PDF).
-4. Refactor `TeacherReportsPage` matrice diriginte (tabel + PDF).
-5. Verific & adapt `SessionReportPage` și `StudentDashboard`.
+- RPC `check_booking_eligibility` — se refolosește.
+- Logica de generare QR / status default ticket — vine din schema (`gen_random_uuid()`).
+- Pagini elev (biletul apare automat prin query existent pe `reservations`+`tickets`).
