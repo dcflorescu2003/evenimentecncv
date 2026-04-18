@@ -1,58 +1,40 @@
 
-## Plan: Fix safe-area inferior pentru toate layout-urile
+## Plan: Admin poate scana bilete la orice eveniment
 
-### Problemă
-Pe mobil (în special iOS/Android cu home indicator sau bara de navigare), butoanele din partea de jos a layout-urilor sunt acoperite de bara sistemului:
-- **Admin**: butonul „Logout" din `SidebarFooter` nu e accesibil
-- **Student**: bottom navigation (Panou/Evenimente/Bilete) e parțial acoperită
-- **Coordinator/Prof/Teacher/Manager**: footer/conținut tăiat
+### Context
+În acest moment scanarea de bilete e disponibilă doar pentru:
+- **Coordonator** (`/coordinator/scan`) — bazat pe `coordinator_assignments`
+- **Profesor/Diriginte** (`/prof/scan`) — pentru evenimentele proprii
+- **Elev asistent** (`/student/scan`) — pentru evenimente în care e asistent
 
-În `src/index.css`, `body` are deja `padding-bottom: env(safe-area-inset-bottom)`, DAR:
-- Layout-urile cu `min-h-screen` + header `sticky` + bottom nav `fixed` ignoră padding-ul de pe body
-- `StudentLayout` are `<nav className="fixed bottom-0 ...">` fără safe-area
-- `AdminLayout` sidebar ocupă toată înălțimea, footer-ul e la `100vh` — pe mobil bara sistemului îl acoperă
+Adminul nu are o pagină dedicată de scanare. RLS-urile pe `tickets` / `public_tickets` permit deja adminului `ALL` (manage), deci permisiunile sunt OK — lipsește doar UI-ul.
 
-### Soluție — un singur pattern aplicat consistent
+### Soluție — minimă, refolosind logica existentă
 
-**1. `src/index.css`** — adaug utility class:
-```css
-.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
-.bottom-safe { bottom: env(safe-area-inset-bottom); }
-```
-Și elimin/ajustez padding global pe `body` (acum dublează în unele layout-uri).
+**1. Pagină nouă `src/pages/admin/AdminScanPage.tsx`**
+- Bazată pe `ProfScanPage` (cea mai apropiată ca funcționalitate — admin poate scana orice eveniment, fără restricții de creator).
+- Selector de eveniment: dropdown cu toate evenimentele din sesiunea curentă (sau picker pe date), nu doar cele create de user.
+- Query: `events` filtrat pe sesiunea activă (sau toate), ordonate desc după `date`.
+- Reutilizează aceeași logică de scanare QR + listă de prezență (html5-qrcode + `attendance.ts`).
+- Identic cu fluxul prof: scan QR → găsește ticket (intern sau public) → marchează `present`/`late` în funcție de fereastra de timp (memoria `attendance-verification`).
 
-**2. `src/components/layouts/StudentLayout.tsx`**
-- Bottom nav `fixed`: adaug `pb-[env(safe-area-inset-bottom)]` pe `<nav>` și măresc `pb-20` → `pb-24` pe `<main>` ca să nu acopere conținutul.
+**2. Rută în `src/App.tsx`**
+- `/admin/scan` → `AdminScanPage` în `AdminLayout`, protejat cu `ProtectedRoute role="admin"`.
 
-**3. `src/components/layouts/AdminLayout.tsx`**
-- `SidebarFooter` → adaug `pb-[max(env(safe-area-inset-bottom),0.75rem)]`
-- `<main>` din `SidebarInset` → adaug `pb-safe`
+**3. Link în meniul AdminLayout**
+- Adaug intrare „Scanare bilete" cu icon `QrCode` (lucide) în `menuItems` din `AdminLayout.tsx`.
 
-**4. `src/components/layouts/ManagerLayout.tsx`** (analog cu Admin) — verific în implementare.
-
-**5. `src/components/layouts/CoordinatorLayout.tsx`**
-- `<main>` → adaug `pb-safe` (extra ~16px pe mobil)
-
-**6. `src/components/layouts/ProfLayout.tsx`** și **`TeacherLayout.tsx`**
-- `<main>` → adaug `pb-safe`
-
-**7. Pagini cu butoane sticky/fixed la bottom** (verific în implementare):
-- `StudentScanPage`, `ProfScanPage`, `CoordinatorScanPage` — eventual butoane „Înapoi"/„Confirmă" care pot cădea sub bara sistemului.
-
-### Pattern aplicat
-- `<main>` pe toate layout-urile non-sidebar: `pb-[max(env(safe-area-inset-bottom),1rem)]` (sau clasa `pb-safe`)
-- Bottom navs `fixed`: `pb-[env(safe-area-inset-bottom)]` pe container + `bottom-0` (safe-area se adaugă în interior cu padding)
-- Sidebar footers: padding inferior crescut cu `env(safe-area-inset-bottom)`
-
-### Fișiere modificate
-1. `src/index.css` — utility classes `pb-safe`
-2. `src/components/layouts/AdminLayout.tsx` — sidebar footer + main
-3. `src/components/layouts/ManagerLayout.tsx` — sidebar footer + main (de citit)
-4. `src/components/layouts/StudentLayout.tsx` — bottom nav + main padding
-5. `src/components/layouts/CoordinatorLayout.tsx` — main padding
-6. `src/components/layouts/ProfLayout.tsx` — main padding
-7. `src/components/layouts/TeacherLayout.tsx` — main padding
+**4. Buton rapid „Scanare bilete" pe `EventDetailPage` admin**
+- În `src/pages/admin/EventDetailPage.tsx` adaug un buton care deschide `/admin/scan?event=<id>`.
+- `AdminScanPage` citește `?event=` din URL și pre-selectează evenimentul.
 
 ### Ce NU se schimbă
-- Logica de business, RLS, edge functions
-- Structura header-elor (rămân sticky top cu safe-area-top deja activ pe body)
+- RLS, schema DB (adminul are deja `ALL` pe tickets/public_tickets/attendance_log).
+- Logica de validare prezență, ferestre de timp, rotunjire ore.
+- Paginile existente de scan (coordinator/prof/student).
+
+### Fișiere modificate/create
+1. **NOU**: `src/pages/admin/AdminScanPage.tsx` (variantă din `ProfScanPage` cu selector de eveniment fără filtru pe creator)
+2. `src/App.tsx` — rută `/admin/scan`
+3. `src/components/layouts/AdminLayout.tsx` — item de meniu
+4. `src/pages/admin/EventDetailPage.tsx` — buton „Scanare bilete" către `/admin/scan?event=<id>`
