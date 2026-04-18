@@ -71,7 +71,7 @@ async function sendFcmNotification(
   title: string,
   body: string,
   data?: Record<string, string>
-): Promise<boolean> {
+): Promise<{ ok: boolean; invalid: boolean }> {
   try {
     const resp = await fetch(
       `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
@@ -97,12 +97,17 @@ async function sendFcmNotification(
     if (!resp.ok) {
       const err = await resp.text();
       console.error("FCM send error:", resp.status, err);
-      return false;
+      const invalid =
+        resp.status === 404 ||
+        resp.status === 410 ||
+        (resp.status === 400 &&
+          /UNREGISTERED|INVALID_ARGUMENT|registration-token-not-registered/i.test(err));
+      return { ok: false, invalid };
     }
-    return true;
+    return { ok: true, invalid: false };
   } catch (e) {
     console.error("FCM send exception:", e);
-    return false;
+    return { ok: false, invalid: false };
   }
 }
 
