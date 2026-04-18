@@ -143,6 +143,20 @@ async function notifyStudent(
       type: "manual_enrollment",
       related_event_id: eventId,
     });
+
+    // Best-effort web/FCM push
+    try {
+      await supabase.functions.invoke("send-push-to-user", {
+        body: {
+          user_id: studentId,
+          title,
+          body,
+          url: "/student/tickets",
+        },
+      });
+    } catch (e) {
+      console.warn("Push send failed (non-fatal):", e);
+    }
   } catch {
     /* best-effort */
   }
