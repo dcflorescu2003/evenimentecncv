@@ -201,91 +201,131 @@ export default function TeacherReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Raport pe profesori</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold">Raport pe profesori</h1>
         <div className="flex gap-2">
-          {!selectedId && filteredTeachers.length ? <Button variant="outline" onClick={handleExportSummary}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
-          {selectedId && detail?.events.length ? <Button variant="outline" onClick={handleExportDetail}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
+          {!selectedId && filteredTeachers.length ? <Button variant="outline" onClick={handleExportSummary} className="w-full sm:w-auto"><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
+          {selectedId && detail?.events.length ? <Button variant="outline" onClick={handleExportDetail} className="w-full sm:w-auto"><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
         </div>
       </div>
 
-      <div className="flex gap-4">
-        <Input placeholder="Caută profesor..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-80" />
-        {selectedId && <Button variant="ghost" onClick={handleBack}>← Înapoi la {fromPage === "incomplete" ? "normă incompletă" : "listă"}</Button>}
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+        <Input placeholder="Caută profesor..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-80" />
+        {selectedId && <Button variant="ghost" onClick={handleBack} className="w-full sm:w-auto">← Înapoi la {fromPage === "incomplete" ? "normă incompletă" : "listă"}</Button>}
       </div>
 
       {!selectedId ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">Nr.</TableHead>
-              <TableHead>Profesor</TableHead>
-              <TableHead>Nr. evenimente</TableHead>
-              <TableHead>Ore organizate</TableHead>
-              {sessionHasRules && <TableHead>Norma</TableHead>}
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          {/* Desktop */}
+          <div className="hidden md:block overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">Nr.</TableHead>
+                  <TableHead>Profesor</TableHead>
+                  <TableHead>Nr. evenimente</TableHead>
+                  <TableHead>Ore organizate</TableHead>
+                  {sessionHasRules && <TableHead>Norma</TableHead>}
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTeachers.map((t, i) => (
+                  <TableRow key={t.id}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell>{`${t.last_name} ${t.first_name}`}</TableCell>
+                    <TableCell>{summary?.[t.id]?.events || 0}</TableCell>
+                    <TableCell>{summary?.[t.id]?.hours || 0}h</TableCell>
+                    {sessionHasRules && (
+                      <TableCell>
+                        {t.teaching_norm ? (
+                          <span className={summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : "text-destructive font-semibold"}>
+                            {summary?.[t.id]?.hours || 0}h / {t.teaching_norm}h
+                          </span>
+                        ) : "—"}
+                      </TableCell>
+                    )}
+                    <TableCell><Button variant="link" size="sm" onClick={() => setSelectedId(t.id)}>Detalii</Button></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-2">
             {filteredTeachers.map((t, i) => (
-              <TableRow key={t.id}>
-                <TableCell>{i + 1}</TableCell>
-                <TableCell>{`${t.last_name} ${t.first_name}`}</TableCell>
-                <TableCell>{summary?.[t.id]?.events || 0}</TableCell>
-                <TableCell>{summary?.[t.id]?.hours || 0}h</TableCell>
-                {sessionHasRules && (
-                  <TableCell>
-                    {t.teaching_norm ? (
-                      <span className={summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : "text-destructive font-semibold"}>
-                        {summary?.[t.id]?.hours || 0}h / {t.teaching_norm}h
-                      </span>
-                    ) : "—"}
-                  </TableCell>
+              <div key={t.id} className="rounded-lg border bg-card p-3 space-y-1 cursor-pointer hover:bg-muted/30" onClick={() => setSelectedId(t.id)}>
+                <p className="font-medium">{i + 1}. {`${t.last_name} ${t.first_name}`}</p>
+                <p className="text-xs text-muted-foreground">
+                  {summary?.[t.id]?.events || 0} evenimente · {summary?.[t.id]?.hours || 0}h organizate
+                </p>
+                {sessionHasRules && t.teaching_norm && (
+                  <p className={`text-xs ${summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : "text-destructive font-semibold"}`}>
+                    Normă: {summary?.[t.id]?.hours || 0}h / {t.teaching_norm}h
+                  </p>
                 )}
-                <TableCell><Button variant="link" size="sm" onClick={() => setSelectedId(t.id)}>Detalii</Button></TableCell>
-              </TableRow>
+              </div>
             ))}
-          </TableBody>
-        </Table>
+          </div>
+        </>
       ) : (
         <>
           {detailLoading && <p className="text-muted-foreground">Se încarcă...</p>}
           {detail && (
             <>
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Profesor</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{`${detail.profile?.last_name || ""} ${detail.profile?.first_name || ""}`}</p></CardContent></Card>
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+                <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Profesor</CardTitle></CardHeader><CardContent><p className="text-base sm:text-lg font-bold break-words">{`${detail.profile?.last_name || ""} ${detail.profile?.first_name || ""}`}</p></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Nr. evenimente desfășurate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.events.filter(e => e.isHeld).length}</p></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore organizate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{detail.totalHours}h{sessionHasRules && (detail.profile as any)?.teaching_norm ? ` / ${(detail.profile as any).teaching_norm}h` : ""}</p></CardContent></Card>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">Nr.</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Eveniment</TableHead>
-                    <TableHead>Interval</TableHead>
-                    <TableHead>Ore</TableHead>
-                    <TableHead>Participanți</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Desfășurat</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {detail.events.map((e, i) => (
-                    <TableRow key={e.id} className={!e.isHeld ? "opacity-50" : ""}>
-                      <TableCell>{i + 1}</TableCell>
-                      <TableCell>{e.date}</TableCell>
-                      <TableCell>{e.title}</TableCell>
-                      <TableCell>{e.start_time?.slice(0, 5)} - {e.end_time?.slice(0, 5)}</TableCell>
-                      <TableCell>{e.counted_duration_hours}h</TableCell>
-                      <TableCell>{e.participants}</TableCell>
-                      <TableCell>{e.status}</TableCell>
-                      <TableCell>{e.isHeld ? "✓" : "—"}</TableCell>
+              {/* Desktop */}
+              <div className="hidden md:block overflow-x-auto rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">Nr.</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Eveniment</TableHead>
+                      <TableHead>Interval</TableHead>
+                      <TableHead>Ore</TableHead>
+                      <TableHead>Participanți</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Desfășurat</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {detail.events.map((e, i) => (
+                      <TableRow key={e.id} className={!e.isHeld ? "opacity-50" : ""}>
+                        <TableCell>{i + 1}</TableCell>
+                        <TableCell>{e.date}</TableCell>
+                        <TableCell>{e.title}</TableCell>
+                        <TableCell>{e.start_time?.slice(0, 5)} - {e.end_time?.slice(0, 5)}</TableCell>
+                        <TableCell>{e.counted_duration_hours}h</TableCell>
+                        <TableCell>{e.participants}</TableCell>
+                        <TableCell>{e.status}</TableCell>
+                        <TableCell>{e.isHeld ? "✓" : "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile */}
+              <div className="md:hidden space-y-2">
+                {detail.events.map((e, i) => (
+                  <div key={e.id} className={`rounded-lg border bg-card p-3 space-y-1 ${!e.isHeld ? "opacity-60" : ""}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium min-w-0 flex-1 break-words">{i + 1}. {e.title}</p>
+                      <Badge variant={e.isHeld ? "default" : "secondary"} className="shrink-0">{e.isHeld ? "✓ Desf." : e.status}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {e.date} · {e.start_time?.slice(0, 5)}–{e.end_time?.slice(0, 5)} · {e.counted_duration_hours}h · {e.participants} part.
+                    </p>
+                  </div>
+                ))}
+              </div>
             </>
           )}
         </>

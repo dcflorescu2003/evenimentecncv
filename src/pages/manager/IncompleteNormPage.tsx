@@ -224,14 +224,14 @@ export default function IncompleteNormPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Normă incompletă</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold">Normă incompletă</h1>
         <div className="flex gap-2">
           {tab === "teachers" && teacherData?.length ? (
-            <Button variant="outline" onClick={handleExportTeachers}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button>
+            <Button variant="outline" onClick={handleExportTeachers} className="w-full sm:w-auto"><FileDown className="mr-2 h-4 w-4" />Export PDF</Button>
           ) : null}
           {tab === "students" && studentData?.length ? (
-            <Button variant="outline" onClick={handleExportStudents}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button>
+            <Button variant="outline" onClick={handleExportStudents} className="w-full sm:w-auto"><FileDown className="mr-2 h-4 w-4" />Export PDF</Button>
           ) : null}
         </div>
       </div>
@@ -246,32 +246,47 @@ export default function IncompleteNormPage() {
           {teachersLoading && <p className="text-muted-foreground">Se încarcă...</p>}
           {!teachersLoading && !teacherData?.length && <p className="text-muted-foreground">Toți profesorii au norma completă.</p>}
           {teacherData && teacherData.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-              <TableHead className="w-12">Nr.</TableHead>
-                  <TableHead>Profesor</TableHead>
-                  <TableHead>Nr. evenimente</TableHead>
-                  <TableHead>Ore organizate</TableHead>
-                  <TableHead>Norma</TableHead>
-                  <TableHead>Ore rămase</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop */}
+              <div className="hidden md:block overflow-x-auto rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">Nr.</TableHead>
+                      <TableHead>Profesor</TableHead>
+                      <TableHead>Nr. evenimente</TableHead>
+                      <TableHead>Ore organizate</TableHead>
+                      <TableHead>Norma</TableHead>
+                      <TableHead>Ore rămase</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teacherData.map((t, i) => (
+                      <TableRow key={t.id}>
+                        <TableCell>{i + 1}</TableCell>
+                        <TableCell>{t.name}</TableCell>
+                        <TableCell>{t.events}</TableCell>
+                        <TableCell>{t.organizedHours}h</TableCell>
+                        <TableCell>{t.norm}h</TableCell>
+                        <TableCell className="font-semibold text-destructive">{t.remaining}h</TableCell>
+                        <TableCell><Button variant="link" size="sm" onClick={() => navigate(`/manager/teachers?id=${t.id}&from=incomplete`)}>Detalii</Button></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Mobile */}
+              <div className="md:hidden space-y-2">
                 {teacherData.map((t, i) => (
-                  <TableRow key={t.id}>
-                    <TableCell>{i + 1}</TableCell>
-                    <TableCell>{t.name}</TableCell>
-                    <TableCell>{t.events}</TableCell>
-                    <TableCell>{t.organizedHours}h</TableCell>
-                    <TableCell>{t.norm}h</TableCell>
-                    <TableCell className="font-semibold text-destructive">{t.remaining}h</TableCell>
-                    <TableCell><Button variant="link" size="sm" onClick={() => navigate(`/manager/teachers?id=${t.id}&from=incomplete`)}>Detalii</Button></TableCell>
-                  </TableRow>
+                  <div key={t.id} className="rounded-lg border bg-card p-3 space-y-1 cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/manager/teachers?id=${t.id}&from=incomplete`)}>
+                    <p className="font-medium">{i + 1}. {t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.events} evenimente · {t.organizedHours}h / {t.norm}h</p>
+                    <p className="text-xs font-semibold text-destructive">Rămase: {t.remaining}h</p>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </TabsContent>
 
@@ -279,34 +294,49 @@ export default function IncompleteNormPage() {
           {studentsLoading && <p className="text-muted-foreground">Se încarcă...</p>}
           {!studentsLoading && !studentData?.length && <p className="text-muted-foreground">Toți elevii au norma completă.</p>}
           {studentData && studentData.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">Nr.</TableHead>
-                  <TableHead>Clasă</TableHead>
-                  <TableHead>Elev</TableHead>
-                  <TableHead>Ore rezervate</TableHead>
-                  <TableHead>Ore validate</TableHead>
-                  <TableHead>Ore necesare</TableHead>
-                  <TableHead>Ore rămase</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop */}
+              <div className="hidden md:block overflow-x-auto rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">Nr.</TableHead>
+                      <TableHead>Clasă</TableHead>
+                      <TableHead>Elev</TableHead>
+                      <TableHead>Ore rezervate</TableHead>
+                      <TableHead>Ore validate</TableHead>
+                      <TableHead>Ore necesare</TableHead>
+                      <TableHead>Ore rămase</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {studentData.map((s, i) => (
+                      <TableRow key={s.id}>
+                        <TableCell>{i + 1}</TableCell>
+                        <TableCell>{s.className}</TableCell>
+                        <TableCell>{s.name}</TableCell>
+                        <TableCell>{formatHoursVsRequired(s.reserved, s.required)}h</TableCell>
+                        <TableCell>{formatHoursVsRequired(s.validated, s.required)}h</TableCell>
+                        <TableCell>{s.required}h</TableCell>
+                        <TableCell className="font-semibold text-destructive">{s.remaining}h</TableCell>
+                        <TableCell><Button variant="link" size="sm" onClick={() => navigate(`/manager/students?id=${s.id}&from=incomplete`)}>Detalii</Button></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Mobile */}
+              <div className="md:hidden space-y-2">
                 {studentData.map((s, i) => (
-                  <TableRow key={s.id}>
-                    <TableCell>{i + 1}</TableCell>
-                    <TableCell>{s.className}</TableCell>
-                    <TableCell>{s.name}</TableCell>
-                    <TableCell>{formatHoursVsRequired(s.reserved, s.required)}h</TableCell>
-                    <TableCell>{formatHoursVsRequired(s.validated, s.required)}h</TableCell>
-                    <TableCell>{s.required}h</TableCell>
-                    <TableCell className="font-semibold text-destructive">{s.remaining}h</TableCell>
-                    <TableCell><Button variant="link" size="sm" onClick={() => navigate(`/manager/students?id=${s.id}&from=incomplete`)}>Detalii</Button></TableCell>
-                  </TableRow>
+                  <div key={s.id} className="rounded-lg border bg-card p-3 space-y-1 cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/manager/students?id=${s.id}&from=incomplete`)}>
+                    <p className="font-medium">{i + 1}. {s.name}</p>
+                    <p className="text-xs text-muted-foreground">{s.className} · Validate: {formatHoursVsRequired(s.validated, s.required)}h / {s.required}h</p>
+                    <p className="text-xs font-semibold text-destructive">Rămase: {s.remaining}h</p>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </TabsContent>
       </Tabs>

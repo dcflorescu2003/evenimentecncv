@@ -279,13 +279,17 @@ export default function EventReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Raport pe eveniment</h1>
-        {report?.students.length ? <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold">Raport pe eveniment</h1>
+        {report?.students.length ? (
+          <Button variant="outline" onClick={handleExport} className="w-full sm:w-auto">
+            <FileDown className="mr-2 h-4 w-4" />Export PDF
+          </Button>
+        ) : null}
       </div>
 
       <Select value={eventId} onValueChange={setEventId}>
-        <SelectTrigger className="w-80"><SelectValue placeholder="Selectează evenimentul" /></SelectTrigger>
+        <SelectTrigger className="w-full sm:w-80"><SelectValue placeholder="Selectează evenimentul" /></SelectTrigger>
         <SelectContent>{events?.map((e) => <SelectItem key={e.id} value={e.id}>{e.date} — {e.title}</SelectItem>)}</SelectContent>
       </Select>
 
@@ -295,34 +299,57 @@ export default function EventReportPage() {
 
       {report && (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">Nr.</TableHead>
-                <TableHead>Clasă</TableHead>
-                <TableHead>Nume elev</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ore rezervate</TableHead>
-                <TableHead>Ore validate</TableHead>
-                <TableHead>Ore rămase</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {report.students.map((s, i) => (
-                <TableRow key={s.id}>
-                  <TableCell>{i + 1}</TableCell>
-                  <TableCell>{s.className}</TableCell>
-                  <TableCell>
-                    <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/students?id=${s.id}`)}>{s.name}</button>
-                  </TableCell>
-                  <TableCell><Badge variant={assistantIdSet.has(s.id) || s.status === "present" || s.status === "late" ? "default" : "secondary"}>{assistantIdSet.has(s.id) ? "Prezent" : statusLabel(s.status)}</Badge></TableCell>
-                  <TableCell>{s.reserved}h</TableCell>
-                  <TableCell>{s.validated}h</TableCell>
-                  <TableCell>{Math.max(0, s.required - s.validated)}h</TableCell>
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">Nr.</TableHead>
+                  <TableHead>Clasă</TableHead>
+                  <TableHead>Nume elev</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ore rezervate</TableHead>
+                  <TableHead>Ore validate</TableHead>
+                  <TableHead>Ore rămase</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {report.students.map((s, i) => (
+                  <TableRow key={s.id}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell>{s.className}</TableCell>
+                    <TableCell>
+                      <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/students?id=${s.id}`)}>{s.name}</button>
+                    </TableCell>
+                    <TableCell><Badge variant={assistantIdSet.has(s.id) || s.status === "present" || s.status === "late" ? "default" : "secondary"}>{assistantIdSet.has(s.id) ? "Prezent" : statusLabel(s.status)}</Badge></TableCell>
+                    <TableCell>{s.reserved}h</TableCell>
+                    <TableCell>{s.validated}h</TableCell>
+                    <TableCell>{Math.max(0, s.required - s.validated)}h</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-2">
+            {report.students.map((s, i) => (
+              <div key={s.id} className="rounded-lg border bg-card p-3 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <button className="font-medium text-primary underline hover:no-underline text-left min-w-0 flex-1 break-words" onClick={() => navigate(`/manager/students?id=${s.id}`)}>
+                    {i + 1}. {s.name}
+                  </button>
+                  <Badge variant={assistantIdSet.has(s.id) || s.status === "present" || s.status === "late" ? "default" : "secondary"} className="shrink-0">
+                    {assistantIdSet.has(s.id) ? "Prezent" : statusLabel(s.status)}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">{s.className}</p>
+                <p className="text-xs text-muted-foreground">
+                  Rezervate: {s.reserved}h · Validate: {s.validated}h · Rămase: {Math.max(0, s.required - s.validated)}h
+                </p>
+              </div>
+            ))}
+          </div>
 
           {report.assistants.length > 0 && (
             <div>

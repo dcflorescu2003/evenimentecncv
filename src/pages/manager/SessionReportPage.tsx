@@ -62,45 +62,70 @@ export default function SessionReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Raport pe sesiune</h1>
-        {events?.length ? <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold">Raport pe sesiune</h1>
+        {events?.length ? <Button variant="outline" onClick={handleExport} className="w-full sm:w-auto"><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
       </div>
 
       {isLoading && <p className="text-muted-foreground">Se încarcă...</p>}
 
       {Object.entries(grouped).map(([date, dayEvents]) => (
         <div key={date} className="space-y-2">
-          <h3 className="font-semibold text-lg">{new Date(date + "T00:00:00").toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Interval</TableHead>
-                <TableHead>Eveniment</TableHead>
-                <TableHead>Durata</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Profesori coordonatori</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(dayEvents || []).map((e: any) => (
-                <TableRow key={e.id}>
-                  <TableCell>{e.start_time?.slice(0, 5)} - {e.end_time?.slice(0, 5)}</TableCell>
-                  <TableCell>{e.title}</TableCell>
-                  <TableCell>{e.counted_duration_hours}h</TableCell>
-                  <TableCell>{e.status}</TableCell>
-                  <TableCell>
+          <h3 className="font-semibold text-base sm:text-lg break-words">{new Date(date + "T00:00:00").toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</h3>
+          {/* Desktop */}
+          <div className="hidden md:block overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Interval</TableHead>
+                  <TableHead>Eveniment</TableHead>
+                  <TableHead>Durata</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Profesori coordonatori</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(dayEvents || []).map((e: any) => (
+                  <TableRow key={e.id}>
+                    <TableCell>{e.start_time?.slice(0, 5)} - {e.end_time?.slice(0, 5)}</TableCell>
+                    <TableCell>{e.title}</TableCell>
+                    <TableCell>{e.counted_duration_hours}h</TableCell>
+                    <TableCell>{e.status}</TableCell>
+                    <TableCell>
+                      {e.coordinators.map((c: any, i: number) => (
+                        <span key={c.id}>
+                          <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/teachers?id=${c.id}`)}>{c.name}</button>
+                          {i < e.coordinators.length - 1 ? ", " : ""}
+                        </span>
+                      ))}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {/* Mobile */}
+          <div className="md:hidden space-y-2">
+            {(dayEvents || []).map((e: any) => (
+              <div key={e.id} className="rounded-lg border bg-card p-3 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium min-w-0 flex-1 break-words">{e.title}</p>
+                  <Badge variant="secondary" className="shrink-0">{e.counted_duration_hours}h</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">{e.start_time?.slice(0, 5)} - {e.end_time?.slice(0, 5)} · {e.status}</p>
+                {e.coordinators.length > 0 && (
+                  <p className="text-xs">
                     {e.coordinators.map((c: any, i: number) => (
                       <span key={c.id}>
                         <button className="text-primary underline hover:no-underline" onClick={() => navigate(`/manager/teachers?id=${c.id}`)}>{c.name}</button>
                         {i < e.coordinators.length - 1 ? ", " : ""}
                       </span>
                     ))}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>
