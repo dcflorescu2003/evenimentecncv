@@ -1,70 +1,45 @@
 
-## Plan: Pregătire pentru publicare pe App Store
+## Plan: Conformitate App Store (Opțiunea B — iPhone-only)
 
-### 1. Pagină nouă de Suport
-**Fișier nou** `src/pages/public/SupportPage.tsx` (similar ca structură cu `PrivacyPolicyPage.tsx`):
-- Titlu: „Suport și asistență"
-- Secțiuni:
-  - **Contact** — email `lcantemirvoda@yahoo.com`, instituția (CNCV București)
-  - **Întrebări frecvente (FAQ)** — autentificare, schimbare parolă, rezervare bilete, scanare QR, ștergere cont
-  - **Probleme tehnice** — instrucțiuni (reîncărcare, deconectare/reconectare, contact email)
-  - **Resetare parolă** — pașii (cere admin/diriginte)
-  - **Ștergere cont** — link către `/delete-account`
-  - **Politica de confidențialitate** — link către `/privacy`
-- Buton „Înapoi" în stânga sus
+### 1. `ios/App/App/Info.plist`
+- Adaug `UIBackgroundModes` → `remote-notification` (push în background).
+- Schimb `CFBundleDevelopmentRegion` din `en` → `ro`.
+- Înlocuiesc `armv7` → `arm64` în `UIRequiredDeviceCapabilities`.
+- **Elimin** `UISupportedInterfaceOrientations~ipad` (iPhone-only).
 
-**Rută nouă** în `src/App.tsx`: `/support` → `<SupportPage />` (publică, fără auth)
+### 2. `ios/App/App.xcodeproj/project.pbxproj`
+- Schimb `TARGETED_DEVICE_FAMILY = "1,2"` → `"1"` (iPhone-only) în ambele config (Debug + Release).
 
-### 2. Link Suport sub link Confidențialitate
-În `PrivacyPolicyPage.tsx` adaug la final un link către `/support`. În plus, adaug pe `Login.tsx` (și/sau footer comun) link-uri vizibile către `/privacy` și `/support` pentru a fi accesibile reviewer-ului App Store.
+### 3. Nou `ios/App/App/PrivacyInfo.xcprivacy`
+Privacy Manifest obligatoriu (mai 2024) cu declarațiile standard pentru Capacitor:
+- `NSPrivacyAccessedAPICategoryUserDefaults` — reason `CA92.1`
+- `NSPrivacyAccessedAPICategoryFileTimestamp` — reason `C617.1`
+- `NSPrivacyAccessedAPICategorySystemBootTime` — reason `35F9.1`
+- `NSPrivacyAccessedAPICategoryDiskSpace` — reason `E174.1`
+- `NSPrivacyTracking` = `false`
+- `NSPrivacyCollectedDataTypes` — Email, Name, User ID (toate „Linked, NOT used for tracking", purpose: App Functionality)
 
-### 3. Configurare App Store (iOS — Capacitor)
-**`ios/App/App/Info.plist`** — adaug chei obligatorii cerute de App Store Review:
-- `NSCameraUsageDescription` — „Aplicația folosește camera pentru a scana coduri QR la check-in la evenimente."
-- `NSPhotoLibraryUsageDescription` — „Aplicația poate salva bilete în galerie." (dacă e cazul)
-- `ITSAppUsesNonExemptEncryption` = `false` (evită completare formular criptare)
-- `CFBundleShortVersionString` deja `$(MARKETING_VERSION)` — OK
-- Verific `LSApplicationQueriesSchemes` dacă e necesar
+### 4. `ios/App/App.xcodeproj/project.pbxproj` — adaug PrivacyInfo la Resources
+Adaug `PrivacyInfo.xcprivacy` în `PBXFileReference`, `PBXResourcesBuildPhase` și grupul `App` ca să fie inclus în bundle.
 
-**`capacitor.config.ts`** — verific:
-- `appId` corect: `com.evenimentecncv.app`
-- `appName`: `Evenimente`
-- **Elimin** `server.url` (hot-reload) pentru build production — App Store respinge build-uri care încarcă din URL extern
-
-### 4. Metadata pentru App Store Connect
-Document `APPSTORE_SUBMISSION.md` la rădăcina proiectului cu:
-- **App name**: Evenimente CNCV
-- **Subtitle**: Evenimente Colegiul Cantemir Vodă
-- **Categorie**: Education
-- **Keywords**: școală, evenimente, CNCV, Cantemir, prezență, bilete
-- **Descriere** (RO) — text gata de copiat
-- **What's new** — text versiune inițială
-- **URL Suport**: `https://evenimentecncv.online/support`
-- **URL Confidențialitate**: `https://evenimentecncv.online/privacy`
-- **Demo account** pentru review: `elev.test / Elev123!` (cont test existent)
-- **Note pentru reviewer**: explicație flux școlar, conturi gestionate de admin
-- **Age rating**: 4+
-- **Export Compliance**: Nu folosește criptare proprietară
-- **Asset list necesar** (de generat manual de user în Xcode/App Store Connect):
-  - App Icon 1024×1024
-  - Screenshots iPhone 6.7" și 6.5" (min 3)
-  - Screenshots iPad 12.9" (dacă suportă iPad — momentan suportă, pot scoate iPad din target)
-
-### 5. Checklist final pentru user (în chat după implementare)
-- `npx cap sync ios` după modificări
-- Build în Xcode cu certificat de distribuție Apple Developer
-- Upload prin Xcode Organizer sau Transporter
-- Completare metadata în App Store Connect folosind `APPSTORE_SUBMISSION.md`
+### 5. `APPSTORE_SUBMISSION.md` — checklist extins
+Adaug secțiuni:
+- **Capabilities Xcode**: Push Notifications + Background Modes → Remote notifications
+- **Target device**: iPhone-only (fără screenshots iPad necesare)
+- **Privacy Manifest**: inclus automat (`PrivacyInfo.xcprivacy`)
+- **Privacy Nutrition Labels** (App Store Connect):
+  - Contact Info → Email Address (Linked, App Functionality)
+  - User Content → Other (Linked, App Functionality)
+  - Identifiers → User ID (Linked, App Functionality)
+  - **Tracking: No**
+- **Account deletion**: confirmat — `/delete-account` accesibil din UI
 
 ### Fișiere modificate/create
-1. **Nou**: `src/pages/public/SupportPage.tsx`
-2. **Modificat**: `src/App.tsx` (rută `/support`)
-3. **Modificat**: `src/pages/public/PrivacyPolicyPage.tsx` (link spre suport)
-4. **Modificat**: `src/pages/Login.tsx` (linkuri footer privacy + support)
-5. **Modificat**: `ios/App/App/Info.plist` (permission descriptions + encryption flag)
-6. **Modificat**: `capacitor.config.ts` (clarificare server.url pentru production)
-7. **Nou**: `APPSTORE_SUBMISSION.md` (metadata + checklist)
+1. `ios/App/App/Info.plist` — chei push + region + arch + scoatere iPad orientations
+2. `ios/App/App.xcodeproj/project.pbxproj` — `TARGETED_DEVICE_FAMILY=1` + referință PrivacyInfo
+3. **Nou** `ios/App/App/PrivacyInfo.xcprivacy`
+4. `APPSTORE_SUBMISSION.md` — checklist actualizat
 
 ### Ce NU se schimbă
-- Logica aplicației, RLS, edge functions, schema DB.
-- Android config (deja funcțional pentru Play Store separat).
+- Logică aplicație, RLS, edge functions, schema DB.
+- Android (Play Store separat).
