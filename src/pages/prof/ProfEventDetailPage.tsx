@@ -1204,6 +1204,67 @@ export default function ProfEventDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Enroll Single Student Dialog (homeroom: own class only) */}
+      <Dialog open={enrollStudentDialogOpen} onOpenChange={(o) => { if (!o) { setEnrollStudentDialogOpen(false); setEnrollStudentSearch(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Înscrie un elev din clasa {ownClass?.display_name}</DialogTitle>
+            <DialogDescription>Selectează un elev din clasa ta pentru a-l înscrie la acest eveniment. Va primi automat un bilet cu QR.</DialogDescription>
+          </DialogHeader>
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Caută elev..." value={enrollStudentSearch} onValueChange={setEnrollStudentSearch} />
+            <CommandList>
+              <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+              <CommandGroup>
+                {ownClassStudents
+                  .filter((s: any) => {
+                    if (!enrollStudentSearch) return true;
+                    const q = enrollStudentSearch.toLowerCase();
+                    return `${s.last_name} ${s.first_name}`.toLowerCase().includes(q);
+                  })
+                  .slice(0, 30)
+                  .map((s: any) => (
+                    <CommandItem
+                      key={s.id}
+                      value={`${s.last_name} ${s.first_name}`}
+                      disabled={enrollingStudentId !== null}
+                      onSelect={() => handleProfEnrollSingleStudent(s.id, `${s.last_name} ${s.first_name}`)}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      <span>{s.last_name} {s.first_name}</span>
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEnrollStudentDialogOpen(false)}>Închide</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Enroll Class */}
+      <AlertDialog open={!!confirmEnrollClass} onOpenChange={(o) => !o && !enrollingClass && setConfirmEnrollClass(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmare înscriere clasă</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vei înscrie {confirmEnrollClass?.count} elev(i) din clasa <strong>{confirmEnrollClass?.className}</strong> la acest eveniment. Elevii care nu sunt eligibili (locuri ocupate, suprapuneri, restricții) vor fi săriți. Continuați?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={enrollingClass}>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={enrollingClass}
+              onClick={(e) => { e.preventDefault(); handleProfEnrollClass(); }}
+            >
+              {enrollingClass ? "Se înscriu..." : "Înscrie clasa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Upload file dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={(o) => { if (!o) { setUploadDialogOpen(false); setUploadTitle(""); } }}>
         <DialogContent>
