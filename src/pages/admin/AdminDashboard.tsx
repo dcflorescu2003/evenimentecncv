@@ -30,39 +30,68 @@ const pieConfig: ChartConfig = {
   reserved: { label: "Rezervat", color: STATUS_COLORS.reserved },
 };
 
+async function countActiveByRole(roles: ("student" | "teacher" | "homeroom_teacher" | "coordinator_teacher")[]) {
+  const ids = new Set<string>();
+  const PAGE = 1000;
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .in("role", roles)
+      .range(from, from + PAGE - 1);
+    if (error || !data || data.length === 0) break;
+    data.forEach((r) => ids.add(r.user_id));
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  if (ids.size === 0) return 0;
+
+  const idArr = Array.from(ids);
+  let active = 0;
+  for (let i = 0; i < idArr.length; i += PAGE) {
+    const chunk = idArr.slice(i, i + PAGE);
+    const { data } = await supabase
+      .from("profiles")
+      .select("id")
+      .in("id", chunk)
+      .eq("is_active", true);
+    active += data?.length ?? 0;
+  }
+  return active;
+}
+
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const { data: stats } = useQuery({
     queryKey: ["admin-dashboard-stats"],
     queryFn: async () => {
-      const [sessionsRes, eventsRes, profilesRes, reservationsRes, ticketsRes, classesRes] =
+      const [sessionsRes, eventsRes, reservationsRes, ticketsRes, classesRes, activeStudents, activeTeachers] =
         await Promise.all([
           supabase.from("program_sessions").select("id, name, status"),
           supabase.from("events").select("id, title, status, date, max_capacity, session_id"),
-          supabase.from("profiles").select("id, is_active"),
           supabase.from("reservations").select("id, status, event_id"),
           supabase.from("tickets").select("id, status"),
           supabase.from("classes").select("id, is_active"),
+          countActiveByRole(["student"]),
+          countActiveByRole(["teacher", "homeroom_teacher", "coordinator_teacher"]),
         ]);
 
       const sessions = sessionsRes.data ?? [];
       const events = eventsRes.data ?? [];
-      const profiles = profilesRes.data ?? [];
       const reservations = reservationsRes.data ?? [];
       const tickets = ticketsRes.data ?? [];
       const classes = classesRes.data ?? [];
 
       const activeSessions = sessions.filter(s => s.status === "active");
       const publishedEvents = events.filter(e => e.status === "published");
-      const activeStudents = profiles.filter(p => p.is_active).length;
       const activeReservations = reservations.filter(r => r.status === "reserved").length;
 
-      // Events with low capacity
       const lowCapacityEvents = publishedEvents.filter(e => {
         const reserved = reservations.filter(r => r.event_id === e.id && r.status === "reserved").length;
         return reserved >= e.max_capacity * 0.9;
       });
 
-      // Upcoming events (next 7 days)
       const now = new Date();
       const weekFromNow = new Date(now.getTime() + 7 * 86400000);
       const upcomingEvents = events.filter(e => {
@@ -70,7 +99,6 @@ export default function AdminDashboard() {
         return d >= now && d <= weekFromNow && e.status === "published";
       });
 
-      // Ticket status distribution
       const ticketDist = tickets.reduce((acc, t) => {
         if (t.status !== "cancelled") {
           acc[t.status] = (acc[t.status] || 0) + 1;
@@ -84,7 +112,6 @@ export default function AdminDashboard() {
         fill: STATUS_COLORS[name as keyof typeof STATUS_COLORS] ?? "hsl(220, 10%, 50%)",
       }));
 
-      // Events per session bar chart
       const barData = sessions.map(s => ({
         name: s.name.length > 15 ? s.name.slice(0, 15) + "…" : s.name,
         evenimente: events.filter(e => e.session_id === s.id).length,
@@ -96,6 +123,7 @@ export default function AdminDashboard() {
         totalEvents: events.length,
         publishedEvents: publishedEvents.length,
         activeStudents,
+        activeTeachers,
         activeReservations,
         activeClasses: classes.filter(c => c.is_active).length,
         lowCapacityEvents,
