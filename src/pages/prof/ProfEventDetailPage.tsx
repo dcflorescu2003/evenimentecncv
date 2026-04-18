@@ -136,6 +136,13 @@ export default function ProfEventDetailPage() {
   const [assistantSearch, setAssistantSearch] = useState("");
   const [removeAssistantId, setRemoveAssistantId] = useState<string | null>(null);
 
+  // Manual enrollment state (homeroom teacher: own class only)
+  const [enrollStudentDialogOpen, setEnrollStudentDialogOpen] = useState(false);
+  const [enrollStudentSearch, setEnrollStudentSearch] = useState("");
+  const [confirmEnrollClass, setConfirmEnrollClass] = useState<{ classId: string; className: string; count: number } | null>(null);
+  const [enrollingClass, setEnrollingClass] = useState(false);
+  const [enrollingStudentId, setEnrollingStudentId] = useState<string | null>(null);
+
   // Edit/Delete event state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteEventDialogOpen, setDeleteEventDialogOpen] = useState(false);
@@ -439,7 +446,105 @@ export default function ProfEventDetailPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // File upload
+  // Homeroom teacher's own class (for manual enrollment)
+  const { data: ownClass } = useQuery({
+    queryKey: ["prof_own_homeroom_class", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, display_name")
+        .eq("homeroom_teacher_id", user!.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Students of own class (for "Adaugă elev" combobox)
+  const { data: ownClassStudents = [] } = useQuery({
+    queryKey: ["prof_own_class_students", ownClass?.id],
+    queryFn: async () => {
+      const { data: assignments, error } = await supabase
+        .from("student_class_assignments")
+        .select("student_id")
+        .eq("class_id", ownClass!.id);
+      if (error) throw error;
+      const ids = (assignments || []).map((a) => a.student_id);
+      if (ids.length === 0) return [];
+      const { data: profiles, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", ids)
+        .eq("is_active", true);
+      if (pErr) throw pErr;
+      return (profiles || []).sort((a: any, b: any) => {
+        const cmp = (a.last_name || "").localeCompare(b.last_name || "", "ro");
+        return cmp !== 0 ? cmp : (a.first_name || "").localeCompare(b.first_name || "", "ro");
+      });
+    },
+    enabled: !!ownClass?.id,
+  });
+
+  function invalidateProfParticipantsQueries() {
+    queryClient.invalidateQueries({ queryKey: ["prof_event_participants", id] });
+    queryClient.invalidateQueries({ queryKey: ["prof_reservation_count", id] });
+  }
+
+  async function handleProfEnrollSingleStudent(studentId: string, studentName: string) {
+    if (!user || !id) return;
+    setEnrollingStudentId(studentId);
+    try {
+      const { enrollStudent } = await import("@/lib/manual-enrollment");
+      const res = await enrollStudent(id, studentId, {
+        enrolledByUserId: user.id,
+        enrolledByRole: "homeroom_teacher",
+      });
+      if (!res.ok) {
+        toast.error(`${studentName}: ${res.reason}`);
+      } else {
+        toast.success(res.reactivated ? `${studentName} reactivat` : `${studentName} înscris`);
+        invalidateProfParticipantsQueries();
+        setEnrollStudentDialogOpen(false);
+        setEnrollStudentSearch("");
+      }
+    } finally {
+      setEnrollingStudentId(null);
+    }
+  }
+
+  async function handleProfEnrollClass() {
+    if (!user || !id || !ownClass) return;
+    setEnrollingClass(true);
+    try {
+      const { enrollClass } = await import("@/lib/manual-enrollment");
+      const summary = await enrollClass(id, ownClass.id, {
+        enrolledByUserId: user.id,
+        enrolledByRole: "homeroom_teacher",
+      });
+      invalidateProfParticipantsQueries();
+      const reactivatedNote = summary.reactivated > 0 ? ` (${summary.reactivated} reactivați)` : "";
+      if (summary.skipped === 0) {
+        toast.success(`Clasa ${ownClass.display_name}: ${summary.enrolled} elevi înscriși${reactivatedNote}`);
+      } else {
+        toast.warning(
+          `Clasa ${ownClass.display_name}: ${summary.enrolled} înscriși${reactivatedNote}, ${summary.skipped} săriți`,
+          {
+            description: summary.details
+              .slice(0, 5)
+              .map((d) => `${d.studentName}: ${d.reason}`)
+              .join("\n") + (summary.details.length > 5 ? `\n…+${summary.details.length - 5} alți` : ""),
+            duration: 10000,
+          }
+        );
+      }
+      setConfirmEnrollClass(null);
+    } finally {
+      setEnrollingClass(false);
+    }
+  }
+
   async function handleFileUpload() {
     if (!user || !id) return;
     const file = fileInputRef.current?.files?.[0];
@@ -788,7 +893,27 @@ export default function ProfEventDetailPage() {
         <TabsContent value="participants" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Lista participanților înscriși.</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              {ownClass && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => { setEnrollStudentDialogOpen(true); setEnrollStudentSearch(""); }}>
+                    <UserPlus className="mr-2 h-4 w-4" /> Adaugă elev
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const { count } = await supabase
+                        .from("student_class_assignments")
+                        .select("*", { count: "exact", head: true })
+                        .eq("class_id", ownClass.id);
+                      setConfirmEnrollClass({ classId: ownClass.id, className: ownClass.display_name, count: count || 0 });
+                    }}
+                  >
+                    <Users className="mr-2 h-4 w-4" /> Adaugă clasa {ownClass.display_name}
+                  </Button>
+                </>
+              )}
               <Button variant="outline" size="sm" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
                 <UserPlus className="mr-2 h-4 w-4" /> Adaugă elev asistent
               </Button>
@@ -1074,6 +1199,67 @@ export default function ProfEventDetailPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Elimină
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Enroll Single Student Dialog (homeroom: own class only) */}
+      <Dialog open={enrollStudentDialogOpen} onOpenChange={(o) => { if (!o) { setEnrollStudentDialogOpen(false); setEnrollStudentSearch(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Înscrie un elev din clasa {ownClass?.display_name}</DialogTitle>
+            <DialogDescription>Selectează un elev din clasa ta pentru a-l înscrie la acest eveniment. Va primi automat un bilet cu QR.</DialogDescription>
+          </DialogHeader>
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Caută elev..." value={enrollStudentSearch} onValueChange={setEnrollStudentSearch} />
+            <CommandList>
+              <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+              <CommandGroup>
+                {ownClassStudents
+                  .filter((s: any) => {
+                    if (!enrollStudentSearch) return true;
+                    const q = enrollStudentSearch.toLowerCase();
+                    return `${s.last_name} ${s.first_name}`.toLowerCase().includes(q);
+                  })
+                  .slice(0, 30)
+                  .map((s: any) => (
+                    <CommandItem
+                      key={s.id}
+                      value={`${s.last_name} ${s.first_name}`}
+                      disabled={enrollingStudentId !== null}
+                      onSelect={() => handleProfEnrollSingleStudent(s.id, `${s.last_name} ${s.first_name}`)}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      <span>{s.last_name} {s.first_name}</span>
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEnrollStudentDialogOpen(false)}>Închide</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Enroll Class */}
+      <AlertDialog open={!!confirmEnrollClass} onOpenChange={(o) => !o && !enrollingClass && setConfirmEnrollClass(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmare înscriere clasă</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vei înscrie {confirmEnrollClass?.count} elev(i) din clasa <strong>{confirmEnrollClass?.className}</strong> la acest eveniment. Elevii care nu sunt eligibili (locuri ocupate, suprapuneri, restricții) vor fi săriți. Continuați?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={enrollingClass}>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={enrollingClass}
+              onClick={(e) => { e.preventDefault(); handleProfEnrollClass(); }}
+            >
+              {enrollingClass ? "Se înscriu..." : "Înscrie clasa"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

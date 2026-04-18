@@ -86,6 +86,15 @@ export default function EventDetailPage() {
   const [assistantSearch, setAssistantSearch] = useState("");
   const [removeAssistantId, setRemoveAssistantId] = useState<string | null>(null);
 
+  // Manual enrollment state
+  const [enrollStudentDialogOpen, setEnrollStudentDialogOpen] = useState(false);
+  const [enrollStudentSearch, setEnrollStudentSearch] = useState("");
+  const [enrollClassDialogOpen, setEnrollClassDialogOpen] = useState(false);
+  const [selectedEnrollClassId, setSelectedEnrollClassId] = useState<string>("");
+  const [confirmEnrollClass, setConfirmEnrollClass] = useState<{ classId: string; className: string; count: number } | null>(null);
+  const [enrollingClass, setEnrollingClass] = useState(false);
+  const [enrollingStudentId, setEnrollingStudentId] = useState<string | null>(null);
+
   // Queries
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ["event", id],
@@ -307,7 +316,7 @@ export default function EventDetailPage() {
       });
       return allProfiles;
     },
-    enabled: assistantDialogOpen,
+    enabled: assistantDialogOpen || enrollStudentDialogOpen,
   });
 
   // Exclude already-assistants (allow all students, even if already participants)
@@ -344,6 +353,83 @@ export default function EventDetailPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Active classes for "Adaugă clasă" selector
+  const { data: enrollableClasses = [] } = useQuery({
+    queryKey: ["active_classes_for_enrollment"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, display_name, grade_number, section")
+        .eq("is_active", true)
+        .order("grade_number")
+        .order("section");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: enrollClassDialogOpen,
+  });
+
+  function invalidateParticipantsQueries() {
+    queryClient.invalidateQueries({ queryKey: ["admin_event_participants", id] });
+    queryClient.invalidateQueries({ queryKey: ["admin_event_public_participants", id] });
+    queryClient.invalidateQueries({ queryKey: ["reservation_count", id] });
+  }
+
+  async function handleEnrollSingleStudent(studentId: string, studentName: string) {
+    if (!user || !id) return;
+    setEnrollingStudentId(studentId);
+    try {
+      const { enrollStudent } = await import("@/lib/manual-enrollment");
+      const res = await enrollStudent(id, studentId, {
+        enrolledByUserId: user.id,
+        enrolledByRole: "admin",
+      });
+      if (!res.ok) {
+        toast.error(`${studentName}: ${res.reason}`);
+      } else {
+        toast.success(res.reactivated ? `${studentName} reactivat` : `${studentName} înscris`);
+        invalidateParticipantsQueries();
+        setEnrollStudentDialogOpen(false);
+        setEnrollStudentSearch("");
+      }
+    } finally {
+      setEnrollingStudentId(null);
+    }
+  }
+
+  async function handleEnrollClass(classId: string, className: string) {
+    if (!user || !id) return;
+    setEnrollingClass(true);
+    try {
+      const { enrollClass } = await import("@/lib/manual-enrollment");
+      const summary = await enrollClass(id, classId, {
+        enrolledByUserId: user.id,
+        enrolledByRole: "admin",
+      });
+      invalidateParticipantsQueries();
+      const reactivatedNote = summary.reactivated > 0 ? ` (${summary.reactivated} reactivați)` : "";
+      if (summary.skipped === 0) {
+        toast.success(`Clasa ${className}: ${summary.enrolled} elevi înscriși${reactivatedNote}`);
+      } else {
+        toast.warning(
+          `Clasa ${className}: ${summary.enrolled} înscriși${reactivatedNote}, ${summary.skipped} săriți`,
+          {
+            description: summary.details
+              .slice(0, 5)
+              .map((d) => `${d.studentName}: ${d.reason}`)
+              .join("\n") + (summary.details.length > 5 ? `\n…+${summary.details.length - 5} alți` : ""),
+            duration: 10000,
+          }
+        );
+      }
+      setConfirmEnrollClass(null);
+      setEnrollClassDialogOpen(false);
+      setSelectedEnrollClassId("");
+    } finally {
+      setEnrollingClass(false);
+    }
+  }
 
   async function handleDownloadAttendancePdf() {
     if (!event) return;
@@ -645,6 +731,14 @@ export default function EventDetailPage() {
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
             <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setEnrollStudentDialogOpen(true); setEnrollStudentSearch(""); }}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Adaugă elev
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => { setEnrollClassDialogOpen(true); setSelectedEnrollClassId(""); }}>
+                <Users className="mr-2 h-4 w-4" />
+                Adaugă clasă
+              </Button>
               <Button variant="outline" size="sm" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Adaugă elev asistent
@@ -1145,6 +1239,112 @@ export default function EventDetailPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Elimină
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Enroll Single Student Dialog */}
+      <Dialog open={enrollStudentDialogOpen} onOpenChange={(o) => { if (!o) { setEnrollStudentDialogOpen(false); setEnrollStudentSearch(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Înscrie un elev</DialogTitle>
+            <DialogDescription>Caută și selectează un elev pentru a-l înscrie la acest eveniment. Elevul va primi automat un bilet cu QR.</DialogDescription>
+          </DialogHeader>
+          <Command className="border rounded-md">
+            <CommandInput placeholder="Caută elev după nume sau clasă..." value={enrollStudentSearch} onValueChange={setEnrollStudentSearch} />
+            <CommandList>
+              <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+              <CommandGroup>
+                {allStudents
+                  .filter((s: any) => {
+                    if (!enrollStudentSearch) return true;
+                    const q = enrollStudentSearch.toLowerCase();
+                    const name = `${s.last_name} ${s.first_name}`.toLowerCase();
+                    return name.includes(q) || (s.class_name || "").toLowerCase().includes(q);
+                  })
+                  .slice(0, 30)
+                  .map((s: any) => (
+                    <CommandItem
+                      key={s.id}
+                      value={`${s.last_name} ${s.first_name} ${s.class_name || ""}`}
+                      disabled={enrollingStudentId !== null}
+                      onSelect={() => handleEnrollSingleStudent(s.id, `${s.last_name} ${s.first_name}`)}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      <span>{s.last_name} {s.first_name}</span>
+                      {s.class_name && <Badge variant="outline" className="ml-2 text-xs">{s.class_name}</Badge>}
+                    </CommandItem>
+                  ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEnrollStudentDialogOpen(false)}>Închide</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Enroll Class Dialog */}
+      <Dialog open={enrollClassDialogOpen} onOpenChange={(o) => { if (!o) { setEnrollClassDialogOpen(false); setSelectedEnrollClassId(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Înscrie o clasă</DialogTitle>
+            <DialogDescription>Toți elevii eligibili din clasa selectată vor fi înscriși automat. Elevii care nu sunt eligibili (ex: clasă neacceptată, lipsă locuri) vor fi săriți.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Clasă</Label>
+            <Select value={selectedEnrollClassId} onValueChange={setSelectedEnrollClassId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Alege clasa..." />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {enrollableClasses.map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEnrollClassDialogOpen(false)}>Anulează</Button>
+            <Button
+              disabled={!selectedEnrollClassId}
+              onClick={async () => {
+                const cls = enrollableClasses.find((c: any) => c.id === selectedEnrollClassId);
+                if (!cls) return;
+                const { count } = await supabase
+                  .from("student_class_assignments")
+                  .select("*", { count: "exact", head: true })
+                  .eq("class_id", selectedEnrollClassId);
+                setConfirmEnrollClass({ classId: selectedEnrollClassId, className: cls.display_name, count: count || 0 });
+              }}
+            >
+              Continuă
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Enroll Class */}
+      <AlertDialog open={!!confirmEnrollClass} onOpenChange={(o) => !o && !enrollingClass && setConfirmEnrollClass(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmare înscriere clasă</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vei înscrie {confirmEnrollClass?.count} elev(i) din clasa <strong>{confirmEnrollClass?.className}</strong> la acest eveniment. Elevii care nu sunt eligibili vor fi săriți automat. Continuați?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={enrollingClass}>Anulează</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={enrollingClass}
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirmEnrollClass) handleEnrollClass(confirmEnrollClass.classId, confirmEnrollClass.className);
+              }}
+            >
+              {enrollingClass ? "Se înscriu..." : "Înscrie clasa"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
