@@ -1,30 +1,58 @@
 
-## Plan: Fix KPI elevi/profesori + click pe „Evenimente săptămâna aceasta"
+## Plan: Fix safe-area inferior pentru toate layout-urile
 
-### Problemă identificată
-În `src/pages/admin/AdminDashboard.tsx`:
-1. `supabase.from("profiles").select("id, is_active")` returnează doar 1000 rânduri (limita PostgREST), iar valoarea afișată „Elevi activi" numără orice profil activ — nu doar elevi.
-2. Cardul „Evenimente săptămâna aceasta" nu este clickabil.
+### Problemă
+Pe mobil (în special iOS/Android cu home indicator sau bara de navigare), butoanele din partea de jos a layout-urilor sunt acoperite de bara sistemului:
+- **Admin**: butonul „Logout" din `SidebarFooter` nu e accesibil
+- **Student**: bottom navigation (Panou/Evenimente/Bilete) e parțial acoperită
+- **Coordinator/Prof/Teacher/Manager**: footer/conținut tăiat
 
-### Modificări — un singur fișier: `src/pages/admin/AdminDashboard.tsx`
+În `src/index.css`, `body` are deja `padding-bottom: env(safe-area-inset-bottom)`, DAR:
+- Layout-urile cu `min-h-screen` + header `sticky` + bottom nav `fixed` ignoră padding-ul de pe body
+- `StudentLayout` are `<nav className="fixed bottom-0 ...">` fără safe-area
+- `AdminLayout` sidebar ocupă toată înălțimea, footer-ul e la `100vh` — pe mobil bara sistemului îl acoperă
 
-1. **Înlocuiesc query-ul `profiles`** cu două count-uri exacte prin `user_roles` join cu `profiles`:
-   - Elevi activi: `user_roles` cu `role='student'` ∩ `profiles.is_active=true` (DISTINCT user_id)
-   - Profesori activi: `user_roles` cu `role IN ('teacher','homeroom_teacher','coordinator_teacher')` ∩ `profiles.is_active=true` (DISTINCT user_id)
-   - Folosesc pattern-ul de batching pe ID-uri (memoria `tech/database-constraints` & `ui-query-pattern`) pentru a evita limita 1000: fetch IDs din `user_roles` per rol → fetch `profiles.is_active` în chunk-uri de 1000 → numărare distinctă.
+### Soluție — un singur pattern aplicat consistent
 
-2. **Schimb grila KPI** la 5 carduri pe lg (`lg:grid-cols-5`) sau păstrez `lg:grid-cols-4` și pun „Profesori activi" pe rând nou. Aleg `lg:grid-cols-4` cu un al 5-lea card care wrapează (mai curat). Folosesc icon `GraduationCap` pentru profesori și `Users` pentru elevi.
+**1. `src/index.css`** — adaug utility class:
+```css
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
+.bottom-safe { bottom: env(safe-area-inset-bottom); }
+```
+Și elimin/ajustez padding global pe `body` (acum dublează în unele layout-uri).
 
-3. **Cardul „Evenimente săptămâna aceasta"** → wrap în element clickabil cu `onClick={() => navigate("/admin/events")}` + clase `cursor-pointer hover:shadow-md transition-shadow`. Folosesc `useNavigate` din `react-router-dom`.
+**2. `src/components/layouts/StudentLayout.tsx`**
+- Bottom nav `fixed`: adaug `pb-[env(safe-area-inset-bottom)]` pe `<nav>` și măresc `pb-20` → `pb-24` pe `<main>` ca să nu acopere conținutul.
 
-### KPI final (5 carduri):
-- Sesiuni active
-- Evenimente publicate
-- **Elevi activi** (count corect)
-- **Profesori activi** (NOU)
-- Rezervări active
+**3. `src/components/layouts/AdminLayout.tsx`**
+- `SidebarFooter` → adaug `pb-[max(env(safe-area-inset-bottom),0.75rem)]`
+- `<main>` din `SidebarInset` → adaug `pb-safe`
+
+**4. `src/components/layouts/ManagerLayout.tsx`** (analog cu Admin) — verific în implementare.
+
+**5. `src/components/layouts/CoordinatorLayout.tsx`**
+- `<main>` → adaug `pb-safe` (extra ~16px pe mobil)
+
+**6. `src/components/layouts/ProfLayout.tsx`** și **`TeacherLayout.tsx`**
+- `<main>` → adaug `pb-safe`
+
+**7. Pagini cu butoane sticky/fixed la bottom** (verific în implementare):
+- `StudentScanPage`, `ProfScanPage`, `CoordinatorScanPage` — eventual butoane „Înapoi"/„Confirmă" care pot cădea sub bara sistemului.
+
+### Pattern aplicat
+- `<main>` pe toate layout-urile non-sidebar: `pb-[max(env(safe-area-inset-bottom),1rem)]` (sau clasa `pb-safe`)
+- Bottom navs `fixed`: `pb-[env(safe-area-inset-bottom)]` pe container + `bottom-0` (safe-area se adaugă în interior cu padding)
+- Sidebar footers: padding inferior crescut cu `env(safe-area-inset-bottom)`
+
+### Fișiere modificate
+1. `src/index.css` — utility classes `pb-safe`
+2. `src/components/layouts/AdminLayout.tsx` — sidebar footer + main
+3. `src/components/layouts/ManagerLayout.tsx` — sidebar footer + main (de citit)
+4. `src/components/layouts/StudentLayout.tsx` — bottom nav + main padding
+5. `src/components/layouts/CoordinatorLayout.tsx` — main padding
+6. `src/components/layouts/ProfLayout.tsx` — main padding
+7. `src/components/layouts/TeacherLayout.tsx` — main padding
 
 ### Ce NU se schimbă
-- Schema DB, RLS, alte pagini.
-- Logica chart-urilor pie/bar.
-- Cardul „Capacitate aproape plină" (rămâne neclickabil, are deja listă inline).
+- Logica de business, RLS, edge functions
+- Structura header-elor (rămân sticky top cu safe-area-top deja activ pe body)
