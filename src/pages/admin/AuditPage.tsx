@@ -105,8 +105,8 @@ export default function AuditPage() {
         </Select>
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border">
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-lg border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -157,6 +157,41 @@ export default function AuditPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-2">
+        {isLoading ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Se încarcă…</p>
+        ) : filtered.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            <Shield className="mx-auto mb-2 h-8 w-8" />
+            Nicio intrare în jurnal
+          </div>
+        ) : (
+          filtered.map((log) => (
+            <div key={log.id} className="rounded-lg border bg-card p-3 space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs text-muted-foreground">{formatDateTime(log.created_at)}</span>
+                <Badge variant="outline" className="text-xs shrink-0">
+                  {actionLabels[log.action] || log.action}
+                </Badge>
+              </div>
+              <p className="text-sm font-medium">
+                {log.user_id ? (profiles as Record<string, string>)[log.user_id] || log.user_id.slice(0, 8) : "Sistem"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {log.entity_type}
+                {log.entity_id && <span className="ml-1">#{log.entity_id.slice(0, 8)}</span>}
+              </p>
+              {log.details && (
+                <p className="text-xs text-muted-foreground break-all">
+                  {JSON.stringify(log.details).slice(0, 120)}
+                </p>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
