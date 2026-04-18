@@ -310,12 +310,14 @@ Deno.serve(async (req) => {
 
     // ── Send Web Push notifications ──
     let webPushCount = 0;
+    let webPushPruned = 0;
     if (vapidPrivateKeyB64) {
       try {
         const vapidKey = await importPrivateKey(vapidPrivateKeyB64);
         const { data: subs } = await supabase
           .from("push_subscriptions").select("*").in("user_id", studentIds);
 
+        const invalidIds: string[] = [];
         for (const sub of (subs || [])) {
           const evts = studentEvents[sub.user_id] || [];
           if (evts.length === 0) continue;
@@ -326,8 +328,15 @@ Deno.serve(async (req) => {
             icon: "/favicon.ico",
             data: { url: "/student/tickets" },
           });
-          const ok = await sendWebPush(sub, pushPayload, vapidPublicKey, vapidKey);
-          if (ok) webPushCount++;
+          const res = await sendWebPush(sub, pushPayload, vapidPublicKey, vapidKey);
+          if (res.ok) webPushCount++;
+          if (res.invalid) invalidIds.push(sub.id);
+        }
+        if (invalidIds.length > 0) {
+          const { error: delErr } = await supabase
+            .from("push_subscriptions").delete().in("id", invalidIds);
+          if (!delErr) webPushPruned = invalidIds.length;
+          else console.error("Web push prune error:", delErr);
         }
       } catch (e) {
         console.error("Web push error:", e);
@@ -336,6 +345,7 @@ Deno.serve(async (req) => {
 
     // ── Send FCM push notifications ──
     let fcmCount = 0;
+    let fcmPruned = 0;
     if (firebaseSaJson) {
       try {
         const sa: ServiceAccount = JSON.parse(firebaseSaJson);
@@ -344,6 +354,7 @@ Deno.serve(async (req) => {
         const { data: fcmTokens } = await supabase
           .from("fcm_tokens").select("*").in("user_id", studentIds);
 
+        const invalidIds: string[] = [];
         for (const ft of (fcmTokens || [])) {
           const evts = studentEvents[ft.user_id] || [];
           if (evts.length === 0) continue;
@@ -352,11 +363,18 @@ Deno.serve(async (req) => {
             ? names[0]
             : `Ai ${names.length} evenimente ${mode === "morning" ? "astăzi" : "mâine"}`;
 
-          const ok = await sendFcmNotification(
+          const res = await sendFcmNotification(
             accessToken, sa.project_id, ft.token,
             notifTitle, body, { url: "/student/tickets" }
           );
-          if (ok) fcmCount++;
+          if (res.ok) fcmCount++;
+          if (res.invalid) invalidIds.push(ft.id);
+        }
+        if (invalidIds.length > 0) {
+          const { error: delErr } = await supabase
+            .from("fcm_tokens").delete().in("id", invalidIds);
+          if (!delErr) fcmPruned = invalidIds.length;
+          else console.error("FCM prune error:", delErr);
         }
       } catch (e) {
         console.error("FCM error:", e);
