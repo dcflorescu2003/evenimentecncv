@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function PrivacyPolicyPage() {
   const navigate = useNavigate();
@@ -98,6 +98,13 @@ export default function PrivacyPolicyPage() {
             <p className="text-muted-foreground mt-2">
               <strong>Colegiul Național „Cantemir Vodă" București</strong><br />
               E-mail: <a href="mailto:lcantemirvoda@yahoo.com" className="text-primary hover:underline">lcantemirvoda@yahoo.com</a>
+            </p>
+          </section>
+
+          <section className="pt-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              Pentru asistență sau întrebări tehnice, vizitează pagina noastră de{" "}
+              <Link to="/support" className="text-primary hover:underline">Suport și asistență</Link>.
             </p>
           </section>
         </div>

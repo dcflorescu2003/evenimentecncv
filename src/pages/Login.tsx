@@ -152,8 +152,10 @@ export default function Login() {
         </section>
       )}
 
-      <footer className="mt-12 pb-6 text-center text-xs text-muted-foreground">
+      <footer className="mt-12 pb-6 text-center text-xs text-muted-foreground space-x-3">
         <Link to="/privacy" className="hover:underline">Politica de Confidențialitate</Link>
+        <span>·</span>
+        <Link to="/support" className="hover:underline">Suport</Link>
       </footer>
       </div>
     </div>

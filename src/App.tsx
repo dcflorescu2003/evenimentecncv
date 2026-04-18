@@ -61,6 +61,7 @@ import PublicEventsPage from "./pages/public/PublicEventsPage";
 import PublicEventBookingPage from "./pages/public/PublicEventBookingPage";
 import PublicTicketViewPage from "./pages/public/PublicTicketViewPage";
 import PrivacyPolicyPage from "./pages/public/PrivacyPolicyPage";
+import SupportPage from "./pages/public/SupportPage";
 
 const queryClient = new QueryClient();
 
@@ -177,6 +178,7 @@ const App = () => (
             <Route path="/public/tickets/:code" element={<PublicTicketViewPage />} />
             <Route path="/public/tickets" element={<PublicTicketViewPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/support" element={<SupportPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
