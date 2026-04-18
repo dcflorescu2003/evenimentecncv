@@ -84,6 +84,7 @@ export async function enrollStudent(
     }
 
     await logEnrollment(eventId, studentId, existing.id, ctx, true);
+    await notifyStudent(eventId, studentId, ctx, true);
     return { ok: true, reactivated: true, reservationId: existing.id };
   }
 
@@ -105,7 +106,46 @@ export async function enrollStudent(
   if (tErr) return { ok: false, reason: tErr.message };
 
   await logEnrollment(eventId, studentId, newRes.id, ctx, false);
+  await notifyStudent(eventId, studentId, ctx, false);
   return { ok: true, reactivated: false, reservationId: newRes.id };
+}
+
+async function notifyStudent(
+  eventId: string,
+  studentId: string,
+  ctx: EnrollContext,
+  reactivated: boolean
+) {
+  try {
+    const { data: event } = await supabase
+      .from("events")
+      .select("title, date, start_time")
+      .eq("id", eventId)
+      .maybeSingle();
+
+    const title = reactivated ? "Rezervare reactivată" : "Ai un bilet nou";
+    const roleLabel = ctx.enrolledByRole === "admin" ? "administrator" : "diriginte";
+
+    let body: string;
+    if (event) {
+      const [y, m, d] = String(event.date).split("-");
+      const dateStr = `${d}.${m}.${y}`;
+      const time = String(event.start_time).slice(0, 5);
+      body = `Ai fost înscris${reactivated ? " din nou" : ""} de către ${roleLabel} la „${event.title}" (${dateStr}, ora ${time}). Biletul este disponibil în contul tău.`;
+    } else {
+      body = `Ai fost înscris${reactivated ? " din nou" : ""} de către ${roleLabel} la un eveniment. Biletul este disponibil în contul tău.`;
+    }
+
+    await supabase.from("notifications").insert({
+      user_id: studentId,
+      title,
+      body,
+      type: "manual_enrollment",
+      related_event_id: eventId,
+    });
+  } catch {
+    /* best-effort */
+  }
 }
 
 async function logEnrollment(
