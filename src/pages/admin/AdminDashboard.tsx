@@ -143,10 +143,11 @@ export default function AdminDashboard() {
       <h1 className="font-display text-2xl font-bold">Panou principal</h1>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <KPICard icon={Calendar} label="Sesiuni active" value={stats?.activeSessions ?? 0} sub={`din ${stats?.totalSessions ?? 0} total`} />
         <KPICard icon={TrendingUp} label="Evenimente publicate" value={stats?.publishedEvents ?? 0} sub={`din ${stats?.totalEvents ?? 0} total`} />
         <KPICard icon={Users} label="Elevi activi" value={stats?.activeStudents ?? 0} sub={`${stats?.activeClasses ?? 0} clase`} />
+        <KPICard icon={GraduationCap} label="Profesori activi" value={stats?.activeTeachers ?? 0} />
         <KPICard icon={Ticket} label="Rezervări active" value={stats?.activeReservations ?? 0} />
       </div>
 
@@ -169,7 +170,13 @@ export default function AdminDashboard() {
             </Card>
           )}
           {stats.upcomingEvents.length > 0 && (
-            <Card className="border-primary/30 bg-primary/5">
+            <Card
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate("/admin/events")}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("/admin/events"); } }}
+              className="cursor-pointer border-primary/30 bg-primary/5 transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Clock className="h-4 w-4 text-primary" />
