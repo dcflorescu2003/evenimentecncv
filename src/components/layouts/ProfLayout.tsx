@@ -44,7 +44,7 @@ export default function ProfLayout() {
           </Button>
         ))}
       </div>
-      <main className="flex-1 overflow-auto p-3 sm:p-4">
+      <main className="flex-1 overflow-auto p-3 sm:p-4 pb-safe">
         <Outlet />
       </main>
     </div>
