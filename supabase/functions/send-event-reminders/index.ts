@@ -174,7 +174,7 @@ async function sendWebPush(
   payload: string,
   vapidPublicKey: string,
   vapidPrivateKey: CryptoKey
-): Promise<boolean> {
+): Promise<{ ok: boolean; invalid: boolean }> {
   try {
     const url = new URL(subscription.endpoint);
     const audience = `${url.protocol}//${url.host}`;
@@ -188,10 +188,12 @@ async function sendWebPush(
       },
       body: new TextEncoder().encode(payload),
     });
-    return response.ok || response.status === 201;
+    const ok = response.ok || response.status === 201;
+    const invalid = response.status === 404 || response.status === 410;
+    return { ok, invalid };
   } catch (e) {
     console.error("Web push send error:", e);
-    return false;
+    return { ok: false, invalid: false };
   }
 }
 
