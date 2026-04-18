@@ -31,7 +31,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, FileText, Upload, Trash2, Download,
-  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle, FileDown, Search,
+  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle, FileDown, Search, ScanLine,
 } from "lucide-react";
 import {
   Select as StatusSelect, SelectContent as StatusSelectContent,
@@ -636,6 +636,9 @@ export default function EventDetailPage() {
             )}
           </div>
         </div>
+        <Button onClick={() => navigate(`/admin/scan?event=${id}`)} className="gap-2">
+          <ScanLine className="h-4 w-4" /> Scanare bilete
+        </Button>
       </div>
 
       {/* Info Cards */}

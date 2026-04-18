@@ -27,6 +27,7 @@ import {
   Shield,
   LogOut,
   KeyRound,
+  QrCode,
 } from "lucide-react";
 
 const menuItems = [
@@ -35,6 +36,7 @@ const menuItems = [
   { title: "Clase", icon: GraduationCap, path: "/admin/classes" },
   { title: "Import CSV", icon: FileUp, path: "/admin/import" },
   { title: "Evenimente", icon: CalendarDays, path: "/admin/events" },
+  { title: "Scanare bilete", icon: QrCode, path: "/admin/scan" },
   { title: "Utilizatori", icon: Users, path: "/admin/users" },
   { title: "Rapoarte", icon: BarChart3, path: "/admin/reports" },
   { title: "Jurnal audit", icon: Shield, path: "/admin/audit" },
