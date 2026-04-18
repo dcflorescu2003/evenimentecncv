@@ -31,7 +31,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, FileText, Upload, Trash2, Download,
-  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle, FileDown, Search,
+  UserPlus, X, FolderOpen, CheckCircle2, XCircle, AlertCircle, FileDown, Search, ScanLine,
 } from "lucide-react";
 import {
   Select as StatusSelect, SelectContent as StatusSelectContent,
