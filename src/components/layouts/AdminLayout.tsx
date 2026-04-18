@@ -81,7 +81,10 @@ export default function AdminLayout() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border p-3">
+        <SidebarFooter
+          className="border-t border-sidebar-border p-3"
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
+        >
           <div className="flex items-center justify-between">
             <span className="truncate text-xs text-sidebar-foreground/70">
               {profile?.display_name}
@@ -101,7 +104,7 @@ export default function AdminLayout() {
         <header className="flex h-14 items-center gap-2 border-b px-4">
           <SidebarTrigger />
         </header>
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 pb-safe">
           <Outlet />
         </main>
       </SidebarInset>

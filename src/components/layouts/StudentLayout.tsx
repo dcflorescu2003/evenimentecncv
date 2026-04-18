@@ -33,11 +33,14 @@ export default function StudentLayout() {
           </Button>
         </div>
       </header>
-      <main className="flex-1 overflow-auto p-4 pb-20">
+      <main className="flex-1 overflow-auto p-4 pb-safe-nav">
         <Outlet />
       </main>
       
-      <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t bg-card p-2">
+      <nav
+        className="fixed left-0 right-0 z-30 flex items-center justify-around border-t bg-card px-2 pt-2"
+        style={{ bottom: 0, paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
+      >
         {navItems.map((item) => (
           <Button
             key={item.path}
