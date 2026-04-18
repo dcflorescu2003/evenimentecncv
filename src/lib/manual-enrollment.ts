@@ -84,6 +84,7 @@ export async function enrollStudent(
     }
 
     await logEnrollment(eventId, studentId, existing.id, ctx, true);
+    await notifyStudent(eventId, studentId, ctx, true);
     return { ok: true, reactivated: true, reservationId: existing.id };
   }
 
