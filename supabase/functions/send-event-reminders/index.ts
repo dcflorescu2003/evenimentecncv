@@ -383,9 +383,11 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        message: `Created ${insertedCount} notifications, ${webPushCount} web push, ${fcmCount} FCM`,
+        message: `Created ${insertedCount} notifications, ${webPushCount} web push, ${fcmCount} FCM (pruned ${webPushPruned} web, ${fcmPruned} FCM)`,
         events: events.length,
         students: studentIds.length,
+        webPushPruned,
+        fcmPruned,
         mode,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
