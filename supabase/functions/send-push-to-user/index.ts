@@ -65,7 +65,7 @@ async function sendFcmNotification(
   title: string,
   body: string,
   data?: Record<string, string>
-): Promise<boolean> {
+): Promise<{ ok: boolean; status: number; invalid: boolean }> {
   try {
     const resp = await fetch(
       `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
@@ -83,13 +83,19 @@ async function sendFcmNotification(
       }
     );
     if (!resp.ok) {
-      console.error("FCM send error:", resp.status, await resp.text());
-      return false;
+      const text = await resp.text();
+      console.error("FCM send error:", resp.status, text);
+      const invalid =
+        resp.status === 404 ||
+        resp.status === 410 ||
+        (resp.status === 400 &&
+          /UNREGISTERED|INVALID_ARGUMENT|registration-token-not-registered/i.test(text));
+      return { ok: false, status: resp.status, invalid };
     }
-    return true;
+    return { ok: true, status: resp.status, invalid: false };
   } catch (e) {
     console.error("FCM send exception:", e);
-    return false;
+    return { ok: false, status: 0, invalid: false };
   }
 }
 
@@ -143,7 +149,7 @@ async function sendWebPush(
   payload: string,
   vapidPublicKey: string,
   vapidPrivateKey: CryptoKey
-): Promise<boolean> {
+): Promise<{ ok: boolean; status: number; invalid: boolean }> {
   try {
     const url = new URL(subscription.endpoint);
     const audience = `${url.protocol}//${url.host}`;
@@ -157,10 +163,12 @@ async function sendWebPush(
       },
       body: new TextEncoder().encode(payload),
     });
-    return response.ok || response.status === 201;
+    const ok = response.ok || response.status === 201;
+    const invalid = response.status === 404 || response.status === 410;
+    return { ok, status: response.status, invalid };
   } catch (e) {
     console.error("Web push send error:", e);
-    return false;
+    return { ok: false, status: 0, invalid: false };
   }
 }
 
@@ -216,16 +224,26 @@ Deno.serve(async (req) => {
 
     // Web Push
     let webPushCount = 0;
+    let webPushPruned = 0;
     if (vapidPrivateKeyB64) {
       try {
         const vapidKey = await importPrivateKey(vapidPrivateKeyB64);
         const { data: subs } = await admin
           .from("push_subscriptions").select("*").eq("user_id", user_id);
+        const invalidIds: string[] = [];
         for (const sub of (subs || [])) {
           const payload = JSON.stringify({
             title, body: msgBody, icon: "/favicon.ico", data: { url: targetUrl },
           });
-          if (await sendWebPush(sub, payload, vapidPublicKey, vapidKey)) webPushCount++;
+          const res = await sendWebPush(sub, payload, vapidPublicKey, vapidKey);
+          if (res.ok) webPushCount++;
+          if (res.invalid) invalidIds.push(sub.id);
+        }
+        if (invalidIds.length > 0) {
+          const { error: delErr } = await admin
+            .from("push_subscriptions").delete().in("id", invalidIds);
+          if (!delErr) webPushPruned = invalidIds.length;
+          else console.error("Web push prune error:", delErr);
         }
       } catch (e) {
         console.error("Web push block error:", e);
@@ -234,16 +252,26 @@ Deno.serve(async (req) => {
 
     // FCM
     let fcmCount = 0;
+    let fcmPruned = 0;
     if (firebaseSaJson) {
       try {
         const sa: ServiceAccount = JSON.parse(firebaseSaJson);
         const accessToken = await getAccessToken(sa);
         const { data: tokens } = await admin
           .from("fcm_tokens").select("*").eq("user_id", user_id);
+        const invalidIds: string[] = [];
         for (const ft of (tokens || [])) {
-          if (await sendFcmNotification(
+          const res = await sendFcmNotification(
             accessToken, sa.project_id, ft.token, title, msgBody, { url: targetUrl }
-          )) fcmCount++;
+          );
+          if (res.ok) fcmCount++;
+          if (res.invalid) invalidIds.push(ft.id);
+        }
+        if (invalidIds.length > 0) {
+          const { error: delErr } = await admin
+            .from("fcm_tokens").delete().in("id", invalidIds);
+          if (!delErr) fcmPruned = invalidIds.length;
+          else console.error("FCM prune error:", delErr);
         }
       } catch (e) {
         console.error("FCM block error:", e);
@@ -251,7 +279,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, webPushCount, fcmCount }),
+      JSON.stringify({ ok: true, webPushCount, fcmCount, webPushPruned, fcmPruned }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
