@@ -168,7 +168,7 @@ export async function enrollClass(
       : studentId;
 
     const res = await enrollStudent(eventId, studentId, ctx);
-    if (res.ok) {
+    if (res.ok === true) {
       summary.enrolled += 1;
       if (res.reactivated) summary.reactivated += 1;
     } else {
