@@ -90,15 +90,51 @@ Sugestii capturi:
 4. Ecranul de scanare QR (profesor)
 5. Dashboard cu statistici de participare
 
+## Capabilities Xcode (obligatoriu)
+
+În Xcode → target **App** → **Signing & Capabilities** → **+ Capability**:
+- **Push Notifications**
+- **Background Modes** → bifează **Remote notifications**
+
+APNs Key (`.p8`) trebuie încărcat în Firebase Console → Project Settings → Cloud Messaging → Apple app configuration.
+
+## Target device
+
+**iPhone-only** (`TARGETED_DEVICE_FAMILY = 1`). Nu sunt necesare screenshots iPad la submit.
+
+## Privacy Manifest
+
+`ios/App/App/PrivacyInfo.xcprivacy` este inclus automat în bundle și declară:
+- `NSPrivacyTracking = false`
+- API-uri „required reason" standard Capacitor: UserDefaults (CA92.1), FileTimestamp (C617.1), SystemBootTime (35F9.1), DiskSpace (E174.1)
+- Tipuri de date: Email, Name, User ID, Other User Content (toate Linked, App Functionality, **NOT used for tracking**)
+
+## Privacy Nutrition Labels (App Store Connect)
+
+- **Contact Info → Email Address** — Linked, App Functionality
+- **Contact Info → Name** — Linked, App Functionality
+- **Identifiers → User ID** — Linked, App Functionality
+- **User Content → Other User Content** — Linked, App Functionality
+- **User Content → Photos or Videos** (opțional, QR salvat) — Not linked, App Functionality
+- **Tracking: No**
+
+## Account deletion (Guideline 5.1.1(v))
+
+Confirmat — utilizatorii își pot șterge contul din UI după login (ruta `/delete-account`, edge function `delete-own-account`).
+
 ## Checklist final înainte de submit
 
 - [ ] `capacitor.config.ts` — fără `server.url` activ pentru build production
-- [ ] `Info.plist` — `NSCameraUsageDescription` și `ITSAppUsesNonExemptEncryption=false` adăugate
+- [ ] `Info.plist` — `NSCameraUsageDescription`, `UIBackgroundModes=remote-notification`, `arm64`, `CFBundleDevelopmentRegion=ro`, `ITSAppUsesNonExemptEncryption=false` ✅
+- [ ] `PrivacyInfo.xcprivacy` prezent în bundle ✅
+- [ ] `TARGETED_DEVICE_FAMILY = 1` (iPhone-only) ✅
+- [ ] Capabilities în Xcode: Push Notifications + Background Modes (Remote notifications)
 - [ ] `npm run build` rulează fără erori
 - [ ] `npx cap sync ios` executat după modificări
 - [ ] Build production în Xcode cu certificat de distribuție Apple Developer
 - [ ] Upload prin Xcode Organizer sau Transporter
-- [ ] Metadata completate în App Store Connect (text, screenshots, URLs)
+- [ ] Metadata completate în App Store Connect (text, screenshots iPhone, URLs)
+- [ ] Privacy Nutrition Labels completate ca mai sus
 - [ ] Demo account funcțional verificat înainte de submit
 
 ## Contact
