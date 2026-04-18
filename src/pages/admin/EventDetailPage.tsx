@@ -385,13 +385,13 @@ export default function EventDetailPage() {
         enrolledByUserId: user.id,
         enrolledByRole: "admin",
       });
-      if (res.ok) {
+      if (!res.ok) {
+        toast.error(`${studentName}: ${res.reason}`);
+      } else {
         toast.success(res.reactivated ? `${studentName} reactivat` : `${studentName} înscris`);
         invalidateParticipantsQueries();
         setEnrollStudentDialogOpen(false);
         setEnrollStudentSearch("");
-      } else {
-        toast.error(`${studentName}: ${res.reason}`);
       }
     } finally {
       setEnrollingStudentId(null);
