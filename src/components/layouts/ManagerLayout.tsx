@@ -122,7 +122,10 @@ export default function ManagerLayout() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border p-3">
+        <SidebarFooter
+          className="border-t border-sidebar-border p-3"
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
+        >
           <div className="flex items-center justify-between">
             <span className="truncate text-xs text-sidebar-foreground/70">
               {profile?.display_name}
@@ -141,7 +144,7 @@ export default function ManagerLayout() {
             <span className="font-medium text-foreground">{sessionName || "—"}</span>
           </span>
         </header>
-        <main className="flex-1 overflow-auto p-3 sm:p-6">
+        <main className="flex-1 overflow-auto p-3 sm:p-6 pb-safe">
           <Outlet context={contextValue} />
         </main>
       </SidebarInset>
