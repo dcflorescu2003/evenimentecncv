@@ -121,20 +121,20 @@ export default function ClassReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Raport pe clase</h1>
-        {displayedClasses.length ? <Button variant="outline" onClick={handleExportAllClasses}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold">Raport pe clase</h1>
+        {displayedClasses.length ? <Button variant="outline" onClick={handleExportAllClasses} className="w-full sm:w-auto"><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
       </div>
 
-      <div className="flex gap-4">
-        <Input placeholder="Caută clasă..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-56" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+        <Input placeholder="Caută clasă..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-56" />
         <Select value={classId} onValueChange={setClassId}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="Toate clasele" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Toate clasele" /></SelectTrigger>
           <SelectContent>
             {filteredClasses.map((c) => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}
           </SelectContent>
         </Select>
-        {classId && <Button variant="ghost" onClick={() => setClassId("")}>← Toate clasele</Button>}
+        {classId && <Button variant="ghost" onClick={() => setClassId("")} className="w-full sm:w-auto">← Toate clasele</Button>}
       </div>
 
       {summaryLoading && <p className="text-muted-foreground">Se încarcă...</p>}
@@ -147,36 +147,55 @@ export default function ClassReportPage() {
         <div className="space-y-6">
           {displayedClasses.map(c => (
             <div key={c.classId} className="space-y-2">
-              <h3 className="font-semibold text-lg flex items-center gap-2">
+              <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2 flex-wrap">
                 {c.className}
                 <Badge variant="secondary">{c.studentCount} elevi</Badge>
               </h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Eveniment</TableHead>
-                    <TableHead>Interval</TableHead>
-                    <TableHead>Durata</TableHead>
-                    <TableHead>Elevi înscriși</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                {c.events.length > 0 ? c.events.map(e => (
-                    <TableRow key={e.id}>
-                      <TableCell>{e.date}</TableCell>
-                      <TableCell>{e.title}</TableCell>
-                      <TableCell>{e.start_time?.slice(0, 5)} - {e.end_time?.slice(0, 5)}</TableCell>
-                      <TableCell>{e.counted_duration_hours}h</TableCell>
-                      <TableCell>{e.studentCount}</TableCell>
-                    </TableRow>
-                  )) : (
+              {/* Desktop */}
+              <div className="hidden md:block overflow-x-auto rounded-lg border">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-muted-foreground text-center">0 evenimente</TableCell>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Eveniment</TableHead>
+                      <TableHead>Interval</TableHead>
+                      <TableHead>Durata</TableHead>
+                      <TableHead>Elevi înscriși</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {c.events.length > 0 ? c.events.map(e => (
+                      <TableRow key={e.id}>
+                        <TableCell>{e.date}</TableCell>
+                        <TableCell>{e.title}</TableCell>
+                        <TableCell>{e.start_time?.slice(0, 5)} - {e.end_time?.slice(0, 5)}</TableCell>
+                        <TableCell>{e.counted_duration_hours}h</TableCell>
+                        <TableCell>{e.studentCount}</TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-muted-foreground text-center">0 evenimente</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Mobile */}
+              <div className="md:hidden space-y-2">
+                {c.events.length > 0 ? c.events.map(e => (
+                  <div key={e.id} className="rounded-lg border bg-card p-3 space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium min-w-0 flex-1 break-words">{e.title}</p>
+                      <Badge variant="secondary" className="shrink-0">{e.studentCount}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {e.date} · {e.start_time?.slice(0, 5)}–{e.end_time?.slice(0, 5)} · {e.counted_duration_hours}h
+                    </p>
+                  </div>
+                )) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">0 evenimente</p>
+                )}
+              </div>
             </div>
           ))}
         </div>

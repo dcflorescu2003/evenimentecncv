@@ -148,16 +148,16 @@ export default function StudentReportPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Raport per elev</h1>
-        {report?.events.length ? <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl sm:text-2xl font-bold">Raport per elev</h1>
+        {report?.events.length ? <Button variant="outline" onClick={handleExport} className="w-full sm:w-auto"><FileDown className="mr-2 h-4 w-4" />Export PDF</Button> : null}
       </div>
 
       <div className="space-y-2">
         {fromPage === "incomplete" && (
           <Button variant="ghost" onClick={() => navigate("/manager/incomplete")} className="mb-2">← Înapoi la normă incompletă</Button>
         )}
-        <Input placeholder="Caută elev (min 2 caractere)..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-80" />
+        <Input placeholder="Caută elev (min 2 caractere)..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:w-80" />
         {students?.length ? (
           <div className="flex flex-wrap gap-2">
             {students.map((s) => (
@@ -173,38 +173,58 @@ export default function StudentReportPage() {
 
       {report && (
         <>
-          <div className="grid gap-4 md:grid-cols-5">
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Elev</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{`${report.profile?.last_name || ""} ${report.profile?.first_name || ""}`}</p></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Clasă</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.className}</p></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore rezervate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{formatHoursVsRequired(report.totalReservedHours, report.requiredHours)}{report.requiredHours > 0 ? "h" : "h"}</p></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore validate</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{formatHoursVsRequired(report.validatedHours, report.requiredHours)}{report.requiredHours > 0 ? "h" : "h"}</p></CardContent></Card>
-            <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Ore rămase</CardTitle></CardHeader><CardContent><p className="text-lg font-bold">{report.remainingHours}h</p></CardContent></Card>
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+            <Card><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Elev</CardTitle></CardHeader><CardContent><p className="text-sm sm:text-lg font-bold break-words">{`${report.profile?.last_name || ""} ${report.profile?.first_name || ""}`}</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Clasă</CardTitle></CardHeader><CardContent><p className="text-sm sm:text-lg font-bold">{report.className}</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Ore rezervate</CardTitle></CardHeader><CardContent><p className="text-sm sm:text-lg font-bold">{formatHoursVsRequired(report.totalReservedHours, report.requiredHours)}h</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Ore validate</CardTitle></CardHeader><CardContent><p className="text-sm sm:text-lg font-bold">{formatHoursVsRequired(report.validatedHours, report.requiredHours)}h</p></CardContent></Card>
+            <Card><CardHeader className="pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Ore rămase</CardTitle></CardHeader><CardContent><p className="text-sm sm:text-lg font-bold">{report.remainingHours}h</p></CardContent></Card>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">Nr.</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Eveniment</TableHead>
-                <TableHead>Interval</TableHead>
-                <TableHead>Ore</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {report.events.map((e, i) => (
-                <TableRow key={e.eventId}>
-                  <TableCell>{i + 1}</TableCell>
-                  <TableCell>{e.date}</TableCell>
-                  <TableCell>{e.title}</TableCell>
-                  <TableCell>{e.startTime?.slice(0, 5)} - {e.endTime?.slice(0, 5)}</TableCell>
-                  <TableCell>{e.hours}h</TableCell>
-                  <TableCell><Badge variant={e.status === "present" || e.status === "late" ? "default" : "secondary"}>{statusLabel(e.status)}</Badge></TableCell>
+          {/* Desktop */}
+          <div className="hidden md:block overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">Nr.</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Eveniment</TableHead>
+                  <TableHead>Interval</TableHead>
+                  <TableHead>Ore</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {report.events.map((e, i) => (
+                  <TableRow key={e.eventId}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell>{e.date}</TableCell>
+                    <TableCell>{e.title}</TableCell>
+                    <TableCell>{e.startTime?.slice(0, 5)} - {e.endTime?.slice(0, 5)}</TableCell>
+                    <TableCell>{e.hours}h</TableCell>
+                    <TableCell><Badge variant={e.status === "present" || e.status === "late" ? "default" : "secondary"}>{statusLabel(e.status)}</Badge></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile */}
+          <div className="md:hidden space-y-2">
+            {report.events.map((e, i) => (
+              <div key={e.eventId} className="rounded-lg border bg-card p-3 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium min-w-0 flex-1 break-words">{i + 1}. {e.title}</p>
+                  <Badge variant={e.status === "present" || e.status === "late" ? "default" : "secondary"} className="shrink-0">
+                    {statusLabel(e.status)}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {e.date} · {e.startTime?.slice(0, 5)}–{e.endTime?.slice(0, 5)} · {e.hours}h
+                </p>
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>

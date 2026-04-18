@@ -163,7 +163,8 @@ export default function SessionsPage() {
         </Button>
       </div>
 
-      <div className="rounded-lg border">
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -213,6 +214,37 @@ export default function SessionsPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Se încarcă…</p>
+        ) : sessions.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Nicio sesiune creată</p>
+        ) : (
+          sessions.map((s) => (
+            <div key={s.id} className="rounded-lg border bg-card p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium min-w-0 flex-1 break-words">{s.name}</p>
+                <Badge variant="secondary" className={`${statusColors[s.status as SessionStatus]} shrink-0`}>
+                  {statusLabels[s.status as SessionStatus]}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {s.academic_year} · {formatDate(s.start_date)} — {formatDate(s.end_date)}
+              </p>
+              <div className="flex gap-1 border-t pt-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(s)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteId(s.id)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Create/Edit Dialog */}
