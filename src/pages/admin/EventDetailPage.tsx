@@ -354,6 +354,83 @@ export default function EventDetailPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Active classes for "Adaugă clasă" selector
+  const { data: enrollableClasses = [] } = useQuery({
+    queryKey: ["active_classes_for_enrollment"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, display_name, grade_number, section")
+        .eq("is_active", true)
+        .order("grade_number")
+        .order("section");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: enrollClassDialogOpen,
+  });
+
+  function invalidateParticipantsQueries() {
+    queryClient.invalidateQueries({ queryKey: ["admin_event_participants", id] });
+    queryClient.invalidateQueries({ queryKey: ["admin_event_public_participants", id] });
+    queryClient.invalidateQueries({ queryKey: ["reservation_count", id] });
+  }
+
+  async function handleEnrollSingleStudent(studentId: string, studentName: string) {
+    if (!user || !id) return;
+    setEnrollingStudentId(studentId);
+    try {
+      const { enrollStudent } = await import("@/lib/manual-enrollment");
+      const res = await enrollStudent(id, studentId, {
+        enrolledByUserId: user.id,
+        enrolledByRole: "admin",
+      });
+      if (res.ok) {
+        toast.success(res.reactivated ? `${studentName} reactivat` : `${studentName} înscris`);
+        invalidateParticipantsQueries();
+        setEnrollStudentDialogOpen(false);
+        setEnrollStudentSearch("");
+      } else {
+        toast.error(`${studentName}: ${res.reason}`);
+      }
+    } finally {
+      setEnrollingStudentId(null);
+    }
+  }
+
+  async function handleEnrollClass(classId: string, className: string) {
+    if (!user || !id) return;
+    setEnrollingClass(true);
+    try {
+      const { enrollClass } = await import("@/lib/manual-enrollment");
+      const summary = await enrollClass(id, classId, {
+        enrolledByUserId: user.id,
+        enrolledByRole: "admin",
+      });
+      invalidateParticipantsQueries();
+      const reactivatedNote = summary.reactivated > 0 ? ` (${summary.reactivated} reactivați)` : "";
+      if (summary.skipped === 0) {
+        toast.success(`Clasa ${className}: ${summary.enrolled} elevi înscriși${reactivatedNote}`);
+      } else {
+        toast.warning(
+          `Clasa ${className}: ${summary.enrolled} înscriși${reactivatedNote}, ${summary.skipped} săriți`,
+          {
+            description: summary.details
+              .slice(0, 5)
+              .map((d) => `${d.studentName}: ${d.reason}`)
+              .join("\n") + (summary.details.length > 5 ? `\n…+${summary.details.length - 5} alți` : ""),
+            duration: 10000,
+          }
+        );
+      }
+      setConfirmEnrollClass(null);
+      setEnrollClassDialogOpen(false);
+      setSelectedEnrollClassId("");
+    } finally {
+      setEnrollingClass(false);
+    }
+  }
+
   async function handleDownloadAttendancePdf() {
     if (!event) return;
     const rows = buildAttendancePdfRows({
