@@ -86,7 +86,7 @@ export default function StudentEventsPage() {
         .select("*")
         .eq("status", "published")
         .eq("published", true)
-        .order("date", { ascending: true });
+        .order("date", { ascending: false });
       if (error) throw error;
       return data as Event[];
     },
@@ -372,8 +372,12 @@ export default function StudentEventsPage() {
           }
           return false;
         };
-        const upcoming = filtered.filter((ev) => !isEventPast(ev));
-        const past = filtered.filter((ev) => isEventPast(ev));
+        const upcoming = filtered
+          .filter((ev) => !isEventPast(ev))
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const past = filtered
+          .filter((ev) => isEventPast(ev))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         return (
           <div className="space-y-6">
