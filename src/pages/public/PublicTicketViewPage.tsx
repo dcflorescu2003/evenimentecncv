@@ -95,6 +95,20 @@ export default function PublicTicketViewPage() {
                       </>
                     )}
                     <p className="text-xs text-muted-foreground">Bilet {i + 1}/{data.tickets.length}</p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <p className="text-[10px] text-muted-foreground font-mono break-all flex-1">{t.qr_code_data}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 print:hidden"
+                        onClick={() => {
+                          navigator.clipboard.writeText(t.qr_code_data);
+                          toast.success("Cod copiat");
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
