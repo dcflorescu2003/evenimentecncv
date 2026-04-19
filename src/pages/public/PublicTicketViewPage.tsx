@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
-import { Search } from "lucide-react";
+import { Search, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 const statusLabels: Record<string, string> = {
   reserved: "Rezervat", present: "Prezent", late: "Întârziat",
