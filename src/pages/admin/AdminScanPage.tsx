@@ -40,6 +40,7 @@ export default function AdminScanPage() {
 
   const eventId = searchParams.get("event") || "";
 
+  const [selectedSessionId, setSelectedSessionId] = useState<string>("");
   const [activeTab, setActiveTab] = useState("scan");
   const [manualCode, setManualCode] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,19 +57,58 @@ export default function AdminScanPage() {
   const scannerRef = useRef<any>(null);
   const videoRef = useRef<HTMLDivElement>(null);
 
-  // All events (admin can scan any)
-  const { data: events = [] } = useQuery({
-    queryKey: ["admin_scan_events"],
+  // Sessions (for filtering events)
+  const { data: sessions = [] } = useQuery({
+    queryKey: ["admin_scan_sessions"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("events")
-        .select("id, title, date, start_time, end_time")
-        .order("date", { ascending: false })
-        .limit(500);
+        .from("program_sessions")
+        .select("id, name, academic_year, status, start_date")
+        .order("start_date", { ascending: false });
       if (error) throw error;
       return data || [];
     },
   });
+
+  // Auto-select active session (or most recent) on load
+  useEffect(() => {
+    if (selectedSessionId || sessions.length === 0) return;
+    const active = sessions.find((s: any) => s.status === "active");
+    setSelectedSessionId(active?.id || sessions[0].id);
+  }, [sessions, selectedSessionId]);
+
+  // Events filtered by session (admin can scan any)
+  const { data: events = [] } = useQuery({
+    queryKey: ["admin_scan_events", selectedSessionId],
+    queryFn: async () => {
+      let q = supabase
+        .from("events")
+        .select("id, title, date, start_time, end_time, session_id")
+        .order("date", { ascending: false })
+        .limit(500);
+      if (selectedSessionId) q = q.eq("session_id", selectedSessionId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !selectedSessionId ? true : !!selectedSessionId,
+  });
+
+  // If URL has ?event=, ensure we load the right session for it
+  useEffect(() => {
+    if (!eventId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("events")
+        .select("session_id")
+        .eq("id", eventId)
+        .maybeSingle();
+      if (data?.session_id && data.session_id !== selectedSessionId) {
+        setSelectedSessionId(data.session_id);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId]);
 
   const event = useMemo(
     () => events.find((e: any) => e.id === eventId) || null,
@@ -325,22 +365,49 @@ export default function AdminScanPage() {
         </div>
       </div>
 
-      {/* Event selector */}
+      {/* Session + Event selectors */}
       <Card>
-        <CardContent className="p-3 space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">Eveniment</label>
-          <Select value={eventId || ""} onValueChange={selectEvent}>
-            <SelectTrigger>
-              <SelectValue placeholder="Alege un eveniment…" />
-            </SelectTrigger>
-            <SelectContent>
-              {events.map((e: any) => (
-                <SelectItem key={e.id} value={e.id}>
-                  {formatDate(e.date)} • {e.start_time?.slice(0, 5)} — {e.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <CardContent className="p-3 space-y-3">
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Sesiune</label>
+            <Select
+              value={selectedSessionId || "__all__"}
+              onValueChange={(val) => {
+                setSelectedSessionId(val === "__all__" ? "" : val);
+                if (eventId) selectEvent("");
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Alege sesiune…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Toate sesiunile</SelectItem>
+                {sessions.map((s: any) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} ({s.academic_year}){s.status === "active" ? " • activă" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Eveniment</label>
+            <Select value={eventId || ""} onValueChange={selectEvent}>
+              <SelectTrigger>
+                <SelectValue placeholder="Alege un eveniment…" />
+              </SelectTrigger>
+              <SelectContent>
+                {events.length === 0 && (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">Nu există evenimente.</div>
+                )}
+                {events.map((e: any) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {formatDate(e.date)} • {e.start_time?.slice(0, 5)} — {e.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
