@@ -11,7 +11,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CalendarDays, Clock, MapPin, Ticket, X, ScanLine } from "lucide-react";
+import { CalendarDays, Clock, MapPin, Ticket, X, ScanLine, Copy } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
@@ -290,9 +290,23 @@ function TicketCard({
                   level="M"
                   className="rounded-lg border p-2 bg-card"
                 />
-                <p className="text-xs text-muted-foreground font-mono">
-                  {ticket.qr_code_data.slice(0, 8)}…
-                </p>
+                <div className="w-full max-w-xs">
+                  <p className="text-xs text-muted-foreground font-mono break-all text-center mb-2">
+                    {ticket.qr_code_data}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      navigator.clipboard.writeText(ticket.qr_code_data);
+                      toast.success("Cod copiat");
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                    Copiază cod
+                  </Button>
+                </div>
               </div>
             )}
 

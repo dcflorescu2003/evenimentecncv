@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
-import { Search } from "lucide-react";
+import { Search, Copy } from "lucide-react";
+import { toast } from "sonner";
 
 const statusLabels: Record<string, string> = {
   reserved: "Rezervat", present: "Prezent", late: "Întârziat",
@@ -94,6 +95,20 @@ export default function PublicTicketViewPage() {
                       </>
                     )}
                     <p className="text-xs text-muted-foreground">Bilet {i + 1}/{data.tickets.length}</p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <p className="text-[10px] text-muted-foreground font-mono break-all flex-1">{t.qr_code_data}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 print:hidden"
+                        onClick={() => {
+                          navigator.clipboard.writeText(t.qr_code_data);
+                          toast.success("Cod copiat");
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
