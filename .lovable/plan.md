@@ -1,52 +1,17 @@
 
-## Plan: Sortare evenimente de la cel mai apropiat la cel mai îndepărtat
+## Plan: Afișează codul complet al biletului sub QR
 
 ### Problema
-- Query-ul curent folosește `.order("date", { ascending: true })` → cele mai vechi date primele
-- Pentru viitoare, vrem cel mai apropiat de azi primul, nu cel mai îndepărtat
+Sub QR code apare un cod trunchiat cu „..." la sfârșit. Când userul îl introduce manual în pagina de scanare, nu funcționează pentru că e incomplet — `qr_code_data` real e mai lung decât ce se afișează.
+
+### Investigație necesară (în default mode)
+- Caut în `src/pages/student/StudentTicketsPage.tsx` și `src/pages/public/PublicTicketViewPage.tsx` unde e afișat codul sub QR.
+- Identific clasa CSS care taie textul (`truncate`, `text-ellipsis`, `line-clamp`) sau un `slice/substring` în cod.
 
 ### Soluție
-Schimb ordinea în query și aplic sortare explicită pe fiecare categorie (viitoare vs trecute) pentru UX optim:
-
-1. **Modific `StudentEventsPage.tsx`:**
-   - Schimb query-ul să folosească `.order("date", { ascending: false })` (descendent)
-   - Sortez explicit array-urile `upcoming` și `past` înainte de render:
-     - `upcoming`: sortare ascendentă (cel mai apropiat → cel mai departe)
-     - `past`: sortare descendentă (cel mai recent → cel mai vechi)
-
-### Cod modificat (liniile 81-93 și 375-385)
-
-```typescript
-// Query - schimbat în descending
-const { data: events = [], isLoading } = useQuery({
-  queryKey: ["published_events"],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from("events")
-      .select("*")
-      .eq("status", "published")
-      .eq("published", true)
-      .order("date", { ascending: false }); // ← schimbat din true în false
-    if (error) throw error;
-    return data as Event[];
-  },
-});
-
-// În render, sortare explicită pentru fiecare categorie:
-const upcoming = filtered
-  .filter((ev) => !isEventPast(ev))
-  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // ↑ apropiat → departe
-
-const past = filtered
-  .filter((ev) => isEventPast(ev))
-  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // ↓ recent → vechi
-```
-
-### Ce se schimbă
-- **Viitoare**: ordine cronologică naturală (azi → mâine → săptămâna viitoare)
-- **Trecute**: ordine inversă (ieri → săptămâna trecută → acum 2 luni)
+1. **Elimin trunchierea vizuală** — fie scot clasa `truncate`, fie folosesc `break-all` + `font-mono` ca să încapă pe mai multe linii.
+2. **Adaug buton „Copiază cod"** lângă cod (icon `Copy` din lucide) care copiază în clipboard `qr_code_data` complet — UX mult mai sigur decât tastarea manuală a unui UUID.
+3. **Aplicabil pe**: `StudentTicketsPage.tsx`, `PublicTicketViewPage.tsx` (oriunde se afișează codul sub QR).
 
 ### Ce NU se schimbă
-- Logica de filtrare, RLS, rezervări
-- Structura UI (secțiunile „Disponibile" și „Desfășurate")
-- Paginile din alte roluri (profesor, admin, coordonator)
+- Logica de scanare, generare QR, RLS, schema DB.
