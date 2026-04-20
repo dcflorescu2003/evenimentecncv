@@ -1,17 +1,24 @@
 
-## Plan: Afișează codul complet al biletului sub QR
+## Plan: Trimitere manuală notificări de test pentru evenimentul de mâine
 
-### Problema
-Sub QR code apare un cod trunchiat cu „..." la sfârșit. Când userul îl introduce manual în pagina de scanare, nu funcționează pentru că e incomplet — `qr_code_data` real e mai lung decât ce se afișează.
-
-### Investigație necesară (în default mode)
-- Caut în `src/pages/student/StudentTicketsPage.tsx` și `src/pages/public/PublicTicketViewPage.tsx` unde e afișat codul sub QR.
-- Identific clasa CSS care taie textul (`truncate`, `text-ellipsis`, `line-clamp`) sau un `slice/substring` în cod.
+### Context
+Funcția `send-event-reminders` rulează automat (cron) și trimite notificări către elevii înscriși la evenimentele de mâine (mode `evening`) sau de azi (mode `morning`). Se trimit prin trei canale: in-app (`notifications`), Web Push, FCM (Android/iOS).
 
 ### Soluție
-1. **Elimin trunchierea vizuală** — fie scot clasa `truncate`, fie folosesc `break-all` + `font-mono` ca să încapă pe mai multe linii.
-2. **Adaug buton „Copiază cod"** lângă cod (icon `Copy` din lucide) care copiază în clipboard `qr_code_data` complet — UX mult mai sigur decât tastarea manuală a unui UUID.
-3. **Aplicabil pe**: `StudentTicketsPage.tsx`, `PublicTicketViewPage.tsx` (oriunde se afișează codul sub QR).
+Invoc manual edge function-ul `send-event-reminders` cu `mode: "evening"` (default → evenimente de mâine) folosind `supabase--curl_edge_functions`. Fără modificări de cod.
+
+### Pași
+1. Verific cu `supabase--read_query` câte evenimente sunt programate mâine și câți elevi au rezervări (sanity check înainte de trimitere).
+2. Apelez `supabase--curl_edge_functions` POST `/send-event-reminders` cu body `{"mode":"evening"}`.
+3. Citesc răspunsul: număr de notificări in-app create, FCM trimise, Web Push trimise, tokenuri invalide curățate.
+4. Verific log-urile cu `supabase--edge_function_logs` dacă e nevoie de debug.
+
+### Notă deduplicare
+Funcția evită dublurile: dacă există deja un rând `notifications` cu același `user_id`, `related_event_id` și `type='event_reminder'`, sare peste in-app, **dar trimite mereu push-uri** (FCM + Web Push) către dispozitivele cu token salvat. Deci pot rerula liniștit pentru test fără spam in-app, însă pe telefon vei primi push de fiecare dată — bun pentru test.
+
+### Acțiune necesară de la tine după test
+- Confirmă că ai instalat APK-ul cu pluginul FCM activ și ai acordat permisiunea de notificări.
+- Verifică în log dacă există un `fcm_tokens` salvat pentru contul tău de elev.
 
 ### Ce NU se schimbă
-- Logica de scanare, generare QR, RLS, schema DB.
+- Cod, schemă DB, cron job, RLS.
