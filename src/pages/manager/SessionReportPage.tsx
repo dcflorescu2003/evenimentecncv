@@ -74,7 +74,7 @@ export default function SessionReportPage() {
         <div key={date} className="space-y-2">
           <h3 className="font-semibold text-base sm:text-lg break-words">{new Date(date + "T00:00:00").toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</h3>
           {/* Desktop */}
-          <div className="hidden md:block overflow-x-auto rounded-lg border">
+          <div className="hidden md:block overflow-x-auto overscroll-x-contain rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>

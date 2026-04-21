@@ -300,7 +300,7 @@ export default function EventReportPage() {
       {report && (
         <>
           {/* Desktop table */}
-          <div className="hidden md:block overflow-x-auto rounded-lg border">
+          <div className="hidden md:block overflow-x-auto overscroll-x-contain rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>

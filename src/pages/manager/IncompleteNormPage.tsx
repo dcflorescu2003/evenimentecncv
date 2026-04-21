@@ -248,7 +248,7 @@ export default function IncompleteNormPage() {
           {teacherData && teacherData.length > 0 && (
             <>
               {/* Desktop */}
-              <div className="hidden md:block overflow-x-auto rounded-lg border">
+              <div className="hidden md:block overflow-x-auto overscroll-x-contain rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -296,7 +296,7 @@ export default function IncompleteNormPage() {
           {studentData && studentData.length > 0 && (
             <>
               {/* Desktop */}
-              <div className="hidden md:block overflow-x-auto rounded-lg border">
+              <div className="hidden md:block overflow-x-auto overscroll-x-contain rounded-lg border">
                 <Table>
                   <TableHeader>
                     <TableRow>

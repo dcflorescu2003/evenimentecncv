@@ -106,7 +106,7 @@ export default function AuditPage() {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block rounded-lg border overflow-x-auto">
+      <div className="hidden md:block rounded-lg border overflow-x-auto overscroll-x-contain">
         <Table>
           <TableHeader>
             <TableRow>

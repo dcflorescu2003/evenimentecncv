@@ -113,7 +113,11 @@
     padding-bottom: max(env(safe-area-inset-bottom), 1rem);
   }
   .pb-safe-nav {
-    padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 6rem);
+  }
+  .overscroll-x-contain {
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
