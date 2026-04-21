@@ -111,6 +111,9 @@ export default function PublicEventBookingPage() {
               <p className="font-semibold">⚠️ Important!</p>
               <p className="mt-1">Printează sau salvează ca PDF această pagină acum. Biletele <strong>nu pot fi recuperate ulterior</strong>.</p>
             </div>
+            <div className="mt-3 rounded-lg border border-blue-300 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-200">
+              <p>În cazul în care nu puteți ajunge la ora programată, vă rugăm să ne anunțați la adresa <a href="mailto:cncvonline@gmail.com" className="font-semibold underline">cncvonline@gmail.com</a></p>
+            </div>
           </div>
 
           <div className="space-y-4 print:space-y-6">
