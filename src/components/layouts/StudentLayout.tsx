@@ -39,7 +39,7 @@ export default function StudentLayout() {
       
       <nav
         className="fixed left-0 right-0 z-30 flex items-center justify-around border-t bg-card px-2 pt-2"
-        style={{ bottom: 0, paddingBottom: "max(env(safe-area-inset-bottom), 0.5rem)" }}
+        style={{ bottom: 0, paddingBottom: "max(env(safe-area-inset-bottom), 1.25rem)" }}
       >
         {navItems.map((item) => (
           <Button
