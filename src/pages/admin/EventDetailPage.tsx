@@ -689,6 +689,7 @@ export default function EventDetailPage() {
           <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
           <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
           <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
+          {event?.is_public && <TabsTrigger value="contact">Contact ({publicParticipants.length})</TabsTrigger>}
         </TabsList>
 
         {/* Info Tab */}

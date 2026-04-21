@@ -24,6 +24,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Email is mandatory for all public reservations
+    if (!guest_email || typeof guest_email !== "string" || !guest_email.trim()) {
+      return new Response(JSON.stringify({ error: "Adresa de email este obligatorie" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(guest_email.trim())) {
+      return new Response(JSON.stringify({ error: "Formatul adresei de email este invalid" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (attendees.length > 32) {
       return new Response(JSON.stringify({ error: "Maximum 32 bilete per rezervare" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
