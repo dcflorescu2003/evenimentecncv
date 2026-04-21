@@ -86,6 +86,7 @@ export default function StudentEventsPage() {
         .select("*")
         .eq("status", "published")
         .eq("published", true)
+        .eq("is_public", false)
         .order("date", { ascending: false });
       if (error) throw error;
       return data as Event[];
