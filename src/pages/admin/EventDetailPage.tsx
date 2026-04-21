@@ -689,6 +689,7 @@ export default function EventDetailPage() {
           <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
           <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
           <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
+          {event?.is_public && <TabsTrigger value="contact">Contact ({publicParticipants.length})</TabsTrigger>}
         </TabsList>
 
         {/* Info Tab */}
@@ -1025,6 +1026,51 @@ export default function EventDetailPage() {
             </div>
           )}
         </TabsContent>
+
+        {/* Contact Tab - only for public events */}
+        {event?.is_public && (
+          <TabsContent value="contact" className="space-y-4">
+            <p className="text-sm text-muted-foreground">Datele de contact ale persoanelor care au făcut rezervări publice.</p>
+            {publicParticipants.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <Users className="mx-auto mb-2 h-8 w-8" />
+                  <p>Nicio rezervare publică.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nume</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Telefon</TableHead>
+                      <TableHead>Locuri rezervate</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {publicParticipants.map((pr: any) => {
+                      const ticketCount = (pr.public_tickets || []).filter((t: any) => t.status !== "cancelled").length;
+                      return (
+                        <TableRow key={pr.id}>
+                          <TableCell className="font-medium">{pr.guest_name}</TableCell>
+                          <TableCell>
+                            {pr.guest_email ? (
+                              <a href={`mailto:${pr.guest_email}`} className="text-primary underline">{pr.guest_email}</a>
+                            ) : "—"}
+                          </TableCell>
+                          <TableCell>{pr.guest_phone || "—"}</TableCell>
+                          <TableCell>{ticketCount}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Upload Dialog */}

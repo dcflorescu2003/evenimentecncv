@@ -68,8 +68,9 @@ export default function PublicEventBookingPage() {
     if (honeypot) { toast.error("Verificare de securitate eșuată"); return; }
     const elapsed = (Date.now() - formLoadedAt) / 1000;
     if (elapsed < 3) { toast.error("Vă rugăm să completați formularul mai încet"); return; }
-    if (!guestName.trim()) { toast.error("Introduceți numele dvs."); return; }
-    if (numTickets >= 10 && !guestPhone.trim()) { toast.error("Numărul de telefon este obligatoriu pentru 10+ bilete"); return; }
+      if (!guestName.trim()) { toast.error("Introduceți numele dvs."); return; }
+      if (!guestEmail.trim()) { toast.error("Adresa de email este obligatorie"); return; }
+      if (numTickets >= 10 && !guestPhone.trim()) { toast.error("Numărul de telefon este obligatoriu pentru 10+ bilete"); return; }
     if (attendeeNames.some((n) => !n.trim())) { toast.error("Completați numele pentru fiecare participant"); return; }
 
     setSubmitting(true);
@@ -181,16 +182,14 @@ export default function PublicEventBookingPage() {
                 <Input id="guest-name" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Numele complet" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="guest-email">Email (opțional)</Label>
-                <Input id="guest-email" type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="email@exemplu.ro" />
+                <Label htmlFor="guest-email">Email *</Label>
+                <Input id="guest-email" type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="email@exemplu.ro" required />
               </div>
-              {numTickets >= 10 && (
-                <div className="space-y-2">
-                  <Label htmlFor="guest-phone">Telefon *</Label>
-                  <Input id="guest-phone" type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="07xxxxxxxx" required />
-                  <p className="text-xs text-muted-foreground">Obligatoriu pentru rezervări de 10+ locuri, pentru confirmarea rezervării.</p>
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="guest-phone">Telefon {numTickets >= 10 ? "*" : "(opțional)"}</Label>
+                <Input id="guest-phone" type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="07xxxxxxxx" required={numTickets >= 10} />
+                {numTickets >= 10 && <p className="text-xs text-muted-foreground">Obligatoriu pentru rezervări de 10+ locuri, pentru confirmarea rezervării.</p>}
+              </div>
               <div className="space-y-2">
                 <Label>Număr de locuri</Label>
                 <Select value={String(numTickets)} onValueChange={handleNumChange}>
