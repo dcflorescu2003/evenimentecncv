@@ -1,31 +1,39 @@
 
 
-## Plan: Fix nav bar overlap pe Android gestural + previne swipe-back pe tabele iOS
+## Plan: Email obligatoriu + Tab „Contact" pentru evenimente publice
 
-### Problema 1: Butoanele de navigare se suprapun cu bara de navigare Android
-Pe telefoanele Android cu navigare gestuală (fără butoane fizice), zona de gesture overlap cu bara de navigare a aplicației. `env(safe-area-inset-bottom)` nu e suficient — în Capacitor/WebView pe Android, aceste valori sunt adesea 0 chiar dacă există gesture bar.
+### 1. Email obligatoriu la rezervare publică (sub 10 bilete)
 
-**Soluție:**
-1. **`StudentLayout.tsx`** — măresc padding-ul implicit minim de la `0.5rem` la `1.25rem` (`20px`) pentru a acoperi gesture bar-ul Android (de obicei ~48px cu padding). Formula: `max(env(safe-area-inset-bottom), 1.25rem)`.
-2. **`index.css`** — actualizez `.pb-safe-nav` pentru conținutul din spatele nav-ului: `calc(env(safe-area-inset-bottom) + 6rem)` (mai mult spațiu).
-3. **Capacitor config** — adaug `statusBar` și `android.backgroundColor` + `plugins.StatusBar` pentru a seta corect safe areas pe Android WebView.
-4. **`CoordinatorLayout.tsx`** — aceeași ajustare la footer padding.
+**`src/pages/public/PublicEventBookingPage.tsx`**
+- Schimb label-ul de la „Email (opțional)" la „Email *"
+- Adaug validare client-side: dacă `guestEmail` e gol, afișez toast de eroare și opresc submit-ul
+- Mut câmpul de telefon să apară mereu (nu doar la 10+ bilete), dar rămâne opțional sub 10
 
-### Problema 2: Swipe left pe tabele declanșează „back" pe iPhone
-Pe iOS Safari/WebView, swipe de la marginea stângă = navigare înapoi. Tabelele cu scroll orizontal intră în conflict.
+**`supabase/functions/public-book-event/index.ts`**
+- Adaug validare server-side: emailul devine obligatoriu pentru toate rezervările (nu doar 10+)
+- Validez formatul email cu regex simplu
+- Păstrez telefonul obligatoriu doar la 10+ bilete (cum e acum)
 
-**Soluție:**
-1. Creez o clasă CSS utilitar `.overscroll-x-contain` cu `overscroll-behavior-x: contain` — previne propagarea swipe-ului către browser.
-2. Aplic această clasă pe toate containerele `overflow-x-auto` din paginile cu tabele (manager reports, admin audit, teacher reports).
-3. Adaug `touch-action: pan-x` pe containerele de tabel pentru a indica explicit browserului că swipe-ul e pentru scroll, nu navigare.
+### 2. Tab „Contact" în pagina de detalii eveniment admin
+
+**`src/pages/admin/EventDetailPage.tsx`**
+- Adaug un nou `TabsTrigger` cu valoarea „contact", vizibil doar dacă evenimentul este public (`event.is_public`)
+- Label: `Contact ({publicParticipants.length})`
+- Query-ul existent `publicParticipants` include deja `guest_name`, `guest_email`, `guest_phone` și `public_tickets(*)` — nu e nevoie de query nou
+- Conținutul tab-ului: un tabel cu coloanele:
+  - **Nume** — `guest_name`
+  - **Email** — `guest_email` (cu link `mailto:`)
+  - **Telefon** — `guest_phone` (sau „—")
+  - **Locuri rezervate** — numărul de bilete non-cancelled din `public_tickets`
+- Afișez mesaj „Nicio rezervare publică" dacă lista e goală
 
 ### Fișiere modificate
-- `src/index.css` — utilitar nou `.overscroll-x-contain`, update `.pb-safe-nav`
-- `src/components/layouts/StudentLayout.tsx` — padding minim mai mare
-- `src/components/layouts/CoordinatorLayout.tsx` — padding footer
-- `src/pages/manager/*.tsx` (6 fișiere) — adaug `overscroll-behavior-x: contain`
-- `src/pages/admin/AuditPage.tsx` — adaug `overscroll-behavior-x: contain`
+- `src/pages/public/PublicEventBookingPage.tsx` — email obligatoriu + validare
+- `supabase/functions/public-book-event/index.ts` — validare server email obligatoriu
+- `src/pages/admin/EventDetailPage.tsx` — tab nou „Contact"
 
 ### Ce NU se schimbă
-- Schema DB, RLS, edge functions, logica de business.
+- Schema DB (emailul e deja stocat în `public_reservations.guest_email`)
+- RLS policies
+- Alte pagini (prof, coordinator)
 
