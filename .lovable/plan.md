@@ -1,39 +1,36 @@
 
 
-## Plan: Email obligatoriu + Tab „Contact" pentru evenimente publice
+## Plan: Buton „Anulează toate biletele" în tab-ul Contact
 
-### 1. Email obligatoriu la rezervare publică (sub 10 bilete)
+### Ce se adaugă
 
-**`src/pages/public/PublicEventBookingPage.tsx`**
-- Schimb label-ul de la „Email (opțional)" la „Email *"
-- Adaug validare client-side: dacă `guestEmail` e gol, afișez toast de eroare și opresc submit-ul
-- Mut câmpul de telefon să apară mereu (nu doar la 10+ bilete), dar rămâne opțional sub 10
+**`src/pages/admin/EventDetailPage.tsx`** — tab-ul Contact
 
-**`supabase/functions/public-book-event/index.ts`**
-- Adaug validare server-side: emailul devine obligatoriu pentru toate rezervările (nu doar 10+)
-- Validez formatul email cu regex simplu
-- Păstrez telefonul obligatoriu doar la 10+ bilete (cum e acum)
+- Adaug o coloană nouă „Acțiuni" în tabel
+- Fiecare rând primește un buton „Anulează toate" (icon Trash2) care va:
+  - Seta `setCancelReservation` cu un nou flag (ex. `cancelAll: true`) + `publicReservationId` = `pr.id` + `name` = `pr.guest_name`
+  - Butonul apare doar dacă `ticketCount > 0` (are bilete active)
+- Rândurile cu `ticketCount === 0` afișează un badge „Anulat" în loc de buton
 
-### 2. Tab „Contact" în pagina de detalii eveniment admin
+### Logica de anulare (în AlertDialog-ul existent)
 
-**`src/pages/admin/EventDetailPage.tsx`**
-- Adaug un nou `TabsTrigger` cu valoarea „contact", vizibil doar dacă evenimentul este public (`event.is_public`)
-- Label: `Contact ({publicParticipants.length})`
-- Query-ul existent `publicParticipants` include deja `guest_name`, `guest_email`, `guest_phone` și `public_tickets(*)` — nu e nevoie de query nou
-- Conținutul tab-ului: un tabel cu coloanele:
-  - **Nume** — `guest_name`
-  - **Email** — `guest_email` (cu link `mailto:`)
-  - **Telefon** — `guest_phone` (sau „—")
-  - **Locuri rezervate** — numărul de bilete non-cancelled din `public_tickets`
-- Afișez mesaj „Nicio rezervare publică" dacă lista e goală
+- Când `cancelReservation.cancelAll === true`:
+  - Update toate biletele din `public_tickets` unde `public_reservation_id = pr.id` la `status = 'cancelled'`
+  - Update `public_reservations` cu `status = 'cancelled'` pentru acel `pr.id`
+  - Audit log cu `action: "all_tickets_cancelled_by_admin"`, `entity_type: "public_reservation"`, `entity_id: pr.id`
+  - Invalidate queries + toast succes
+- Mesajul din dialog se adaptează: „Toate biletele pentru **{name}** vor fi anulate"
+
+### Detalii tehnice
+
+- State-ul `cancelReservation` se extinde cu proprietatea opțională `cancelAll?: boolean`
+- Se reutilizează AlertDialog-ul existent, adăugând o ramură `if (cancelReservation.cancelAll)` în handler-ul onClick
+- Nu e nevoie de schema DB nouă — `public_reservations.status` și `public_tickets.status` suportă deja valoarea `'cancelled'`
+- RLS: admin-ul are deja politică `ALL` pe ambele tabele
 
 ### Fișiere modificate
-- `src/pages/public/PublicEventBookingPage.tsx` — email obligatoriu + validare
-- `supabase/functions/public-book-event/index.ts` — validare server email obligatoriu
-- `src/pages/admin/EventDetailPage.tsx` — tab nou „Contact"
+- `src/pages/admin/EventDetailPage.tsx` — coloană Acțiuni + logică anulare în bulk
 
 ### Ce NU se schimbă
-- Schema DB (emailul e deja stocat în `public_reservations.guest_email`)
-- RLS policies
-- Alte pagini (prof, coordinator)
+- Schema DB, RLS, edge functions
 
