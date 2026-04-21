@@ -79,7 +79,7 @@ export default function EventDetailPage() {
   const [coordSearch, setCoordSearch] = useState("");
   const [deleteFileId, setDeleteFileId] = useState<string | null>(null);
   const [removeCoordId, setRemoveCoordId] = useState<string | null>(null);
-  const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; publicReservationId?: string } | null>(null);
+  const [cancelReservation, setCancelReservation] = useState<{ id: string; name: string; isPublic: boolean; publicReservationId?: string; cancelAll?: boolean } | null>(null);
 
   // Student assistant state
   const [assistantDialogOpen, setAssistantDialogOpen] = useState(false);
@@ -1047,6 +1047,7 @@ export default function EventDetailPage() {
                       <TableHead>Email</TableHead>
                       <TableHead>Telefon</TableHead>
                       <TableHead>Locuri rezervate</TableHead>
+                      <TableHead>Acțiuni</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1062,6 +1063,15 @@ export default function EventDetailPage() {
                           </TableCell>
                           <TableCell>{pr.guest_phone || "—"}</TableCell>
                           <TableCell>{ticketCount}</TableCell>
+                          <TableCell>
+                            {ticketCount > 0 ? (
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCancelReservation({ id: pr.id, name: pr.guest_name, isPublic: true, cancelAll: true })}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            ) : (
+                              <Badge variant="secondary">Anulat</Badge>
+                            )}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -1183,9 +1193,12 @@ export default function EventDetailPage() {
       <AlertDialog open={!!cancelReservation} onOpenChange={(o) => !o && setCancelReservation(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Anulează rezervarea?</AlertDialogTitle>
+            <AlertDialogTitle>{cancelReservation?.cancelAll ? "Anulează toate biletele?" : "Anulează rezervarea?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              Rezervarea pentru <strong>{cancelReservation?.name}</strong> va fi anulată, locul va fi eliberat și se va reflecta în contul participantului.
+              {cancelReservation?.cancelAll
+                ? <>Toate biletele pentru <strong>{cancelReservation?.name}</strong> vor fi anulate și locurile vor fi eliberate.</>
+                : <>Rezervarea pentru <strong>{cancelReservation?.name}</strong> va fi anulată, locul va fi eliberat și se va reflecta în contul participantului.</>
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1195,34 +1208,56 @@ export default function EventDetailPage() {
               onClick={async () => {
                 if (!cancelReservation) return;
                 try {
-                  if (cancelReservation.isPublic) {
-                    // Cancel public ticket
+                  if (cancelReservation.cancelAll) {
+                    // Cancel all tickets for this public reservation
+                    const { error: tickErr } = await supabase.from("public_tickets").update({ status: "cancelled" }).eq("public_reservation_id", cancelReservation.id);
+                    if (tickErr) throw tickErr;
+                    const { error: resErr } = await supabase.from("public_reservations").update({ status: "cancelled" }).eq("id", cancelReservation.id);
+                    if (resErr) throw resErr;
+                    await supabase.from("audit_logs").insert({
+                      user_id: user!.id,
+                      action: "all_tickets_cancelled_by_admin",
+                      entity_type: "public_reservation",
+                      entity_id: cancelReservation.id,
+                      details: { event_id: id, participant_name: cancelReservation.name },
+                    });
+                    toast.success("Toate biletele au fost anulate");
+                  } else if (cancelReservation.isPublic) {
+                    // Cancel single public ticket
                     const { error } = await supabase.from("public_tickets").update({ status: "cancelled" }).eq("id", cancelReservation.id);
                     if (error) throw error;
+                    await supabase.from("audit_logs").insert({
+                      user_id: user!.id,
+                      action: "reservation_cancelled_by_admin",
+                      entity_type: "public_ticket",
+                      entity_id: cancelReservation.id,
+                      details: { event_id: id, participant_name: cancelReservation.name },
+                    });
+                    toast.success("Rezervare anulată");
                   } else {
                     // Cancel student reservation + ticket
                     const { error: resErr } = await supabase.from("reservations").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", cancelReservation.id);
                     if (resErr) throw resErr;
                     await supabase.from("tickets").update({ status: "cancelled" as any }).eq("reservation_id", cancelReservation.id);
+                    await supabase.from("audit_logs").insert({
+                      user_id: user!.id,
+                      action: "reservation_cancelled_by_admin",
+                      entity_type: "reservation",
+                      entity_id: cancelReservation.id,
+                      details: { event_id: id, participant_name: cancelReservation.name },
+                    });
+                    toast.success("Rezervare anulată");
                   }
-                  await supabase.from("audit_logs").insert({
-                    user_id: user!.id,
-                    action: "reservation_cancelled_by_admin",
-                    entity_type: cancelReservation.isPublic ? "public_ticket" : "reservation",
-                    entity_id: cancelReservation.id,
-                    details: { event_id: id, participant_name: cancelReservation.name },
-                  });
                   queryClient.invalidateQueries({ queryKey: ["admin_event_participants", id] });
                   queryClient.invalidateQueries({ queryKey: ["admin_event_public_participants", id] });
                   queryClient.invalidateQueries({ queryKey: ["reservation_count", id] });
-                  toast.success("Rezervare anulată");
                 } catch (e: any) {
                   toast.error(e.message);
                 }
                 setCancelReservation(null);
               }}
             >
-              Anulează rezervarea
+              {cancelReservation?.cancelAll ? "Anulează toate" : "Anulează rezervarea"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
