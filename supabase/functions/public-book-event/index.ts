@@ -5,6 +5,26 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function formatDtBucharest(d: string | Date): string {
+  const dt = typeof d === "string" ? new Date(d) : d;
+  return dt.toLocaleString("ro-RO", {
+    timeZone: "Europe/Bucharest",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function validationResponse(error: string, extra?: Record<string, unknown>) {
+  return new Response(JSON.stringify({ error, ...extra }), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -19,31 +39,22 @@ Deno.serve(async (req) => {
     const { event_id, guest_name, guest_email, guest_phone, attendees } = await req.json();
 
     if (!event_id || !guest_name || !attendees || !Array.isArray(attendees) || attendees.length === 0) {
-      return new Response(JSON.stringify({ error: "Câmpuri lipsă: event_id, guest_name, attendees[]" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return validationResponse("Câmpuri lipsă: event_id, guest_name, attendees[]");
     }
 
-    // Email is mandatory for all public reservations
     if (!guest_email || typeof guest_email !== "string" || !guest_email.trim()) {
-      return new Response(JSON.stringify({ error: "Adresa de email este obligatorie" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return validationResponse("Adresa de email este obligatorie");
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(guest_email.trim())) {
-      return new Response(JSON.stringify({ error: "Formatul adresei de email este invalid" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return validationResponse("Formatul adresei de email este invalid");
     }
 
     if (attendees.length > 32) {
-      return new Response(JSON.stringify({ error: "Maximum 32 bilete per rezervare" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return validationResponse("Maximum 32 bilete per rezervare");
     }
 
-    // Rate limiting: max 5 reservations per IP per hour
+    // Rate limiting
     const clientIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     if (clientIP !== "unknown") {
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -54,17 +65,13 @@ Deno.serve(async (req) => {
         .gte("created_at", oneHourAgo);
 
       if ((recentCount ?? 0) >= 5) {
-        return new Response(JSON.stringify({ error: "Prea multe rezervări. Încercați din nou mai târziu." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return validationResponse("Prea multe rezervări. Încercați din nou mai târziu.");
       }
     }
 
     for (const a of attendees) {
       if (!a.name || typeof a.name !== "string" || a.name.trim().length === 0) {
-        return new Response(JSON.stringify({ error: "Fiecare participant trebuie să aibă un nume" }), {
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return validationResponse("Fiecare participant trebuie să aibă un nume");
       }
     }
 
@@ -76,41 +83,26 @@ Deno.serve(async (req) => {
       .single();
 
     if (eventErr || !event) {
-      return new Response(JSON.stringify({ error: "Evenimentul nu există" }), {
-        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return validationResponse("Evenimentul nu există");
     }
 
     if (!event.is_public || !event.published || event.status !== "published") {
-      return new Response(JSON.stringify({ error: "Evenimentul nu este disponibil pentru rezervări publice" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return validationResponse("Evenimentul nu este disponibil pentru rezervări publice");
     }
 
     // Check booking window
     const now = new Date();
     if (event.booking_open_at && now < new Date(event.booking_open_at)) {
-      const formatDt = (d: string) => {
-        const dt = new Date(d);
-        const day = String(dt.getDate()).padStart(2, '0');
-        const month = String(dt.getMonth() + 1).padStart(2, '0');
-        const year = dt.getFullYear();
-        const hours = String(dt.getHours()).padStart(2, '0');
-        const minutes = String(dt.getMinutes()).padStart(2, '0');
-        return `${day}.${month}.${year} ${hours}:${minutes}`;
-      };
-      const closeStr = event.booking_close_at ? formatDt(event.booking_close_at) : 'nedefinit';
-      return new Response(JSON.stringify({ error: `Înscrierile nu sunt deschise încă. Perioada de rezervare: ${formatDt(event.booking_open_at)} – ${closeStr}` }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const closeStr = event.booking_close_at ? formatDtBucharest(event.booking_close_at) : "nedefinit";
+      return validationResponse(
+        `Înscrierile nu sunt deschise încă. Perioada de rezervare: ${formatDtBucharest(event.booking_open_at)} – ${closeStr}`
+      );
     }
     if (event.booking_close_at && now > new Date(event.booking_close_at)) {
-      return new Response(JSON.stringify({ error: "Înscrierile s-au închis" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return validationResponse("Înscrierile s-au închis");
     }
 
-    // Check capacity (normal + public reservations)
+    // Check capacity
     const { count: normalCount } = await supabase
       .from("reservations")
       .select("id", { count: "exact", head: true })
@@ -128,19 +120,15 @@ Deno.serve(async (req) => {
     const remaining = event.max_capacity - currentOccupied;
 
     if (attendees.length > remaining) {
-      return new Response(JSON.stringify({ 
-        error: `Nu sunt suficiente locuri. Disponibile: ${remaining}`,
-        available: remaining,
-      }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return validationResponse(
+        `Nu sunt suficiente locuri. Disponibile: ${remaining}`,
+        { available: remaining }
+      );
     }
 
     // Validate phone for 10+ attendees
     if (attendees.length >= 10 && (!guest_phone || typeof guest_phone !== "string" || guest_phone.trim().length < 6)) {
-      return new Response(JSON.stringify({ error: "Numărul de telefon este obligatoriu pentru rezervări de 10+ locuri" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return validationResponse("Numărul de telefon este obligatoriu pentru rezervări de 10+ locuri");
     }
 
     // Create reservation
