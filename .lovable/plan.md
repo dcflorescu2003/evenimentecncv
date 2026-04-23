@@ -1,42 +1,64 @@
 
 
-## Plan: Deschidere rezervări + mesaj de eroare clar
+## Plan: Pagină „Raport ISMB" în contul de Manager
 
-### 1. Actualizare `booking_open_at` pentru evenimentele „Ziua Portilor deschise"
+### Ce se adaugă
 
-Folosind un UPDATE pe toate evenimentele publice cu `booking_open_at = '2026-04-22 13:00:00+00'`, setez `booking_open_at` la `now()` (adică imediat deschise).
+O pagină nouă `/manager/ismb-report` care reproduce structura raportului ISMB uploadat, cu secțiuni pre-completate din baza de date și câmpuri editabile (Textarea) pentru textul liber. Managerul poate edita orice secțiune, apoi exporta PDF-ul final.
 
-### 2. Corectare afișare oră în Edge Function — fus orar București
+### Structura paginii
 
-**`supabase/functions/public-book-event/index.ts`**
+Pagina va conține un formular cu secțiuni editabile, fiecare într-un Card separat:
 
-Funcția `formatDt` folosește `new Date().getHours()` care returnează ora UTC (Deno rulează în UTC). Voi converti explicit la fusul orar `Europe/Bucharest` folosind `Intl.DateTimeFormat` sau `toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest' })`.
+1. **Descriere generală** (Textarea) — primul paragraf din raport, pre-completat cu text template care include:
+   - Perioada sesiunii (din `program_sessions.start_date` / `end_date`)
+   - Numărul total de activități (count din `events` pentru sesiune)
+   - Text editabil cu descrierea activităților
 
-### 3. Mesaj de eroare vizibil pe client
+2. **Tipul activităților** (Textarea) — punctul 2, pre-completat cu textul template din raportul model
 
-**`src/pages/public/PublicEventBookingPage.tsx`**
+3. **Participanți** (pre-completat automat din DB, editabil):
+   - Cadre didactice: count DISTINCT `coordinator_assignments.teacher_id` pentru evenimentele sesiunii
+   - Elevi: count DISTINCT `reservations.student_id` + count `public_tickets` non-cancelled pentru sesiune
+   - Afișat ca text editabil
 
-`supabase.functions.invoke()` nu pune body-ul în `data` când statusul e non-2xx — pune un obiect generic în `error`. Trebuie extras mesajul real din eroarea returnată:
+4. **Parteneri implicați** (Textarea) — text liber, pre-completat cu template
 
-```typescript
-// Actual fix:
-if (error) {
-  // FunctionsHttpError contains the response context
-  const errorBody = error.context?.body 
-    ? JSON.parse(await error.context.text())
-    : null;
-  throw new Error(errorBody?.error || error.message || "Eroare la rezervare");
-}
-```
+5. **Spații de desfășurare** (pre-completat automat din DB):
+   - Se extrag DISTINCT `events.location` pentru sesiune
+   - Afișat ca text editabil
 
-Alternativ, mai simplu: schimb Edge Function-ul să returneze `status: 200` cu un câmp `error` în JSON (pattern deja folosit în alte funcții), iar clientul verifică `data.error`.
+6. **Rezultate înregistrate** (Textarea) — pre-completat cu lista din raportul model
 
-**Abordare aleasă**: Modific edge function-ul să returneze 200 cu `{ error: "..." }` pentru erorile de validare (booking window, capacitate, etc.), păstrând 500 doar pentru erori reale de server. Clientul deja verifică `data.error` pe linia 89.
+7. **Analiza SWOT** (Textarea) — pre-completat cu template-ul complet (Puncte tari, Puncte slabe, Oportunități, Amenințări)
+
+8. **Recomandări, sugestii** (Textarea) — pre-completat cu template
+
+9. **Semnături** (Textarea) — Director, Consilier educativ, Coordonator CEAC
+
+### Buton Export PDF
+
+Un buton „Exportă PDF" în header-ul paginii care:
+- Generează un PDF A4 portrait folosind `jsPDF` (pattern existent în `report-pdf.ts`)
+- Include antetul „Colegiul Național CANTEMIR-VODĂ" + adresa + nr. înregistrare
+- Fiecare secțiune e redată ca titlu + text, cu paginare automată
+- Textul trece prin `stripDiacritics` (limitare jsPDF fără fonturi custom)
+- Download via `downloadFileMobileSafe`
+
+### Fișiere noi
+- `src/pages/manager/ISMBReportPage.tsx` — pagina completă cu state local pentru fiecare secțiune, queries pentru pre-completare, logica de export PDF
 
 ### Fișiere modificate
-- `supabase/functions/public-book-event/index.ts` — status 200 cu `error` field pentru validări + formatare oră București
-- `src/pages/public/PublicEventBookingPage.tsx` — fără modificări (logica `data.error` există deja)
+- `src/components/layouts/ManagerLayout.tsx` — adăugare menu item „Raport ISMB" cu icon `FileText`
+- `src/App.tsx` — adăugare rută `/manager/ismb-report`
 
-### Date actualizate
-- UPDATE pe `public_reservations` / `events` — `booking_open_at = now()` pentru evenimentele blocate
+### Detalii tehnice
+
+- State-ul fiecărei secțiuni e un `useState<string>` inițializat la mount cu valorile din DB + template text
+- Queries folosite:
+  - `events` filtrate pe `session_id` — count total, locații distincte
+  - `coordinator_assignments` JOIN `events` — count cadre didactice
+  - `reservations` + `public_tickets` — count elevi participanți
+- PDF-ul se generează client-side cu `jsPDF`, text wrapping manual via `doc.splitTextToSize()`
+- Nu e nevoie de modificări DB sau RLS (managerul are deja SELECT pe toate tabelele relevante)
 
