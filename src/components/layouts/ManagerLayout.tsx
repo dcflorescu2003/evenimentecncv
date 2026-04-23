@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, BarChart3, CalendarDays, CalendarRange, GraduationCap, LayoutDashboard, LogOut, User, Users } from "lucide-react";
+import { AlertTriangle, BarChart3, CalendarDays, CalendarRange, FileText, GraduationCap, LayoutDashboard, LogOut, User, Users } from "lucide-react";
 
 const menuItems = [
   { title: "Panou principal", icon: LayoutDashboard, path: "/manager" },
@@ -21,6 +21,7 @@ const menuItems = [
   { title: "Raport elevi", icon: User, path: "/manager/students" },
   { title: "Raport profesori", icon: Users, path: "/manager/teachers" },
   { title: "Normă incompletă", icon: AlertTriangle, path: "/manager/incomplete" },
+  { title: "Raport ISMB", icon: FileText, path: "/manager/ismb-report" },
 ];
 
 export type ManagerSessionContext = {

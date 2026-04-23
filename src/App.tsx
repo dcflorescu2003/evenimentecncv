@@ -57,6 +57,7 @@ import ClassReportPage from "./pages/manager/ClassReportPage";
 import StudentReportPage from "./pages/manager/StudentReportPage";
 import TeacherReportPage from "./pages/manager/TeacherReportPage";
 import IncompleteNormPage from "./pages/manager/IncompleteNormPage";
+import ISMBReportPage from "./pages/manager/ISMBReportPage";
 
 import PublicEventsPage from "./pages/public/PublicEventsPage";
 import PublicEventBookingPage from "./pages/public/PublicEventBookingPage";
@@ -172,6 +173,7 @@ const App = () => (
               <Route path="/manager/students" element={<StudentReportPage />} />
               <Route path="/manager/teachers" element={<TeacherReportPage />} />
               <Route path="/manager/incomplete" element={<IncompleteNormPage />} />
+              <Route path="/manager/ismb-report" element={<ISMBReportPage />} />
             </Route>
 
             {/* Public routes (no auth) */}
