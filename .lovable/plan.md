@@ -75,3 +75,17 @@ Scop: toate paginile Admin trebuie să fie utilizabile confortabil pe ecran de t
 - Nu modificăm structura datelor sau RLS.
 - Nu refacem complet design-ul; păstrăm look & feel actual, doar adaptăm pentru mobil.
 - Nu atingem rolurile non-admin (Student, Teacher, Coordinator, Manager, Prof) – cele student/teacher/coordinator/manager au fost deja optimizate anterior. Dacă observ în drum probleme evidente la layout-urile partajate, le menționez fără să le modific.
+
+---
+
+## Implementare finalizată (Admin mobile)
+
+- **AdminLayout**: padding responsiv `p-3 sm:p-4 md:p-6`; header sticky cu titlul paginii vizibil pe mobil.
+- **ClassesPage**: tabelele Gimnaziu și Liceu (în Accordion) au variantă card compactă pe mobil cu `ClassCardComponent`; TabsList full-width pe mobil; toate dialogurile primesc `max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto`.
+- **EventDetailPage**: header titlu+acțiuni stack vertical pe mobil, titlu cu wrap; TabsList scrollabil orizontal pe mobil; toate cele 4 tabele wrapped în `overflow-x-auto`; secțiuni de header `flex-col sm:flex-row`; toate dialogurile mobile-fit.
+- **ReportsPage**: TabsList full-width pe mobil; toate cele 3 tabele cu `overflow-x-auto`; filtrul StudentReport stack vertical pe mobil cu butoane full-width.
+- **ImportPage**: tabel "Importuri recente" wrapped în `overflow-x-auto`; toate rândurile de acțiuni (preview, results) `flex-col gap-3 sm:flex-row sm:justify-between` cu butoane `flex-wrap`.
+- **CredentialsPage**: spațiere și grid optimizate pentru mobil (`sm:grid-cols-3` în loc de `md:grid-cols-3`).
+- **AdminScanPage**: deja mobile-friendly (TabsList full-width, butoane w-full, scanner max-w-sm).
+
+Type-check: trecut.
