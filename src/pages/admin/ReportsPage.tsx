@@ -156,7 +156,7 @@ function ClassReport({ sessionId }: { sessionId: string }) {
         </Card>
       )}
       <Card className="print:shadow-none print:border-0">
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -264,7 +264,7 @@ function EventReport({ sessionId }: { sessionId: string }) {
         </Button>
       </div>
       <Card className="print:shadow-none print:border-0">
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -397,7 +397,7 @@ function StudentReport({ sessionId }: { sessionId: string }) {
         </Button>
       </div>
       <Card className="print:shadow-none print:border-0">
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
