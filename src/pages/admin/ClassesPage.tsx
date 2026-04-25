@@ -351,7 +351,29 @@ export default function ClassesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Already assigned student IDs for a class
+  // Promote classes mutation
+  const promoteMutation = useMutation({
+    mutationFn: async (newYear: string) => {
+      const { data, error } = await supabase.functions.invoke("admin-promote-classes", {
+        body: { new_academic_year: newYear },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as { promoted_classes: number; converted_classes: number; deleted_students: number };
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["student_class_assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["all_students"] });
+      queryClient.invalidateQueries({ queryKey: ["teacher_profiles_for_classes"] });
+      toast.success(
+        `Promovare reușită: ${res.promoted_classes} clase promovate, ${res.converted_classes} clase convertite (V/IX), ${res.deleted_students} elevi absolvenți șterși.`
+      );
+      setPromoteDialog(false);
+      setPromoteConfirmText("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const assignedStudentIds = (classId: string) =>
     studentAssignments.filter((a: any) => a.class_id === classId).map((a: any) => a.student_id);
 
