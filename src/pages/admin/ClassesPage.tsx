@@ -638,7 +638,7 @@ export default function ClassesPage() {
 
       {/* Rule Dialog */}
       <Dialog open={ruleDialog} onOpenChange={(o) => !o && closeRuleDialog()}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingRuleId ? "Editare regulă" : "Regulă nouă de participare"}</DialogTitle>
             <DialogDescription>Definiți numărul de ore necesar pentru o clasă într-o sesiune.</DialogDescription>
@@ -710,7 +710,7 @@ export default function ClassesPage() {
 
       {/* Assign Teacher Dialog */}
       <Dialog open={teacherDialog} onOpenChange={(o) => !o && setTeacherDialog(false)}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Asignează diriginte</DialogTitle>
             <DialogDescription>Selectează dirigintele pentru această clasă.</DialogDescription>
@@ -762,7 +762,7 @@ export default function ClassesPage() {
 
       {/* Students List Dialog */}
       <Dialog open={!!studentsListClassId} onOpenChange={(o) => !o && setStudentsListClassId(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Elevii din {currentClassName}</DialogTitle>
             <DialogDescription>{currentClassStudents.length} elevi asignați</DialogDescription>
@@ -798,7 +798,7 @@ export default function ClassesPage() {
 
       {/* Add Student Dialog */}
       <Dialog open={studentDialog} onOpenChange={(o) => !o && setStudentDialog(false)}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adaugă elev în clasă</DialogTitle>
             <DialogDescription>Selectează elevul de adăugat.</DialogDescription>
@@ -864,7 +864,7 @@ export default function ClassesPage() {
 
       {/* Edit Class Dialog */}
       <Dialog open={editClassDialog} onOpenChange={(o) => !o && setEditClassDialog(false)}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editare clasă</DialogTitle>
             <DialogDescription>Modificați detaliile clasei.</DialogDescription>
@@ -915,7 +915,7 @@ export default function ClassesPage() {
 
       {/* Promote Classes Dialog */}
       <Dialog open={promoteDialog} onOpenChange={(o) => { if (!o && !promoteMutation.isPending) { setPromoteDialog(false); setPromoteConfirmText(""); } }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Promovează toate clasele</DialogTitle>
             <DialogDescription>
