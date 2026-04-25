@@ -683,14 +683,16 @@ export default function EventDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="info" className="space-y-4">
-        <TabsList className="w-full flex-wrap h-auto justify-start">
-          <TabsTrigger value="info">Informații</TabsTrigger>
-          <TabsTrigger value="participants">Participanți ({participants.length + assistants.length + publicParticipants.reduce((sum: number, pr: any) => sum + (pr.public_tickets?.filter((t: any) => t.status !== 'cancelled')?.length || 0), 0)})</TabsTrigger>
-          <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
-          <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
-          <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
-          {event?.is_public && <TabsTrigger value="contact">Contact ({publicParticipants.length})</TabsTrigger>}
-        </TabsList>
+        <div className="-mx-3 px-3 sm:mx-0 sm:px-0 overflow-x-auto">
+          <TabsList className="w-max sm:w-full sm:flex-wrap sm:h-auto sm:justify-start">
+            <TabsTrigger value="info">Informații</TabsTrigger>
+            <TabsTrigger value="participants">Participanți ({participants.length + assistants.length + publicParticipants.reduce((sum: number, pr: any) => sum + (pr.public_tickets?.filter((t: any) => t.status !== 'cancelled')?.length || 0), 0)})</TabsTrigger>
+            <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
+            <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
+            <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
+            {event?.is_public && <TabsTrigger value="contact">Contact ({publicParticipants.length})</TabsTrigger>}
+          </TabsList>
+        </div>
 
         {/* Info Tab */}
         <TabsContent value="info" className="space-y-4">
