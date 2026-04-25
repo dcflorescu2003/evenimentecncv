@@ -1,77 +1,77 @@
-## Obiectiv
+# Optimizare mobilă pentru aplicația Admin
 
-Adaugă în `/admin/classes` un buton **„Promovează clasele”** care, după confirmare, avansează toate clasele cu un an, păstrând dirigintele și elevii. Cazul special: clasele a XII-a devin clase a IX-a goale (elevii absolvenți sunt șterși complet din sistem).
+Scop: toate paginile Admin trebuie să fie utilizabile confortabil pe ecran de telefon (≤640px), fără scroll orizontal nedorit, cu butoane atinse ușor (≥44px), tabele transformate în carduri și dialoguri care încap pe ecran.
 
-## Comportament funcțional
+## Probleme identificate
 
-La click pe „Promovează clasele”, se deschide un dialog de confirmare care:
+1. **AdminLayout** – padding `p-6` prea mare pe mobil, headerul nu afișează titlul paginii.
+2. **ClassesPage** – tabelele Gimnaziu/Liceu sunt afișate pe mobil fără scroll/transformare → rând cu 5 coloane se sparge urât. Acțiunile (Reguli + Acțiuni) sunt înghesuite.
+3. **EventDetailPage** – are 4 tabele mari (participanți, profesori coordonatori, asistenți elevi, fișiere) fără variantă mobilă; headerul cu titlu + butoane nu se înfășoară bine; tab-urile pot deborda.
+4. **ReportsPage** – 3 tabele de raport fără variantă mobilă; filtrele (selectoare) nu sunt grupate vertical pe mobil.
+5. **ImportPage** – 3 tabele (preview CSV, erori, rezultate) fără scroll orizontal.
+6. **CredentialsPage** – listă utilizatori și butoane de generare PDF nu sunt verificate pe mobil.
+7. **AdminScanPage** – verificat că zona de cameră QR + listă scanări recente se adaptează (font-size + padding).
+8. **Dialog-uri** – câteva dialoguri mari (editare clasă, asignare diriginte, listă elevi) fără `max-h` + scroll pe mobil.
 
-1. Rezumă ce se va întâmpla (nr. clase de promovat, nr. elevi a XII-a care vor fi șterși, nr. clase a XII-a care devin a IX-a).
-2. Cere admin-ului să **selecteze noul an școlar** (ex. „2026-2027”), cu valoare implicită = anul școlar curent +1.
-3. Cere o confirmare suplimentară prin tastarea cuvântului `PROMOVEAZĂ` (acțiune ireversibilă).
+## Modificări planificate
 
-La confirmare, se execută într-un edge function nou (`admin-promote-classes`) cu service role:
+### `src/components/layouts/AdminLayout.tsx`
+- Padding responsiv: `p-3 sm:p-4 md:p-6` în `<main>`.
+- Header sticky cu `SidebarTrigger` + nume pagină curentă (preluat din rută) – titlu vizibil pe mobil.
 
-**Pas 1 — Absolvenți (clasele a XII-a curente):**
+### `src/pages/admin/ClassesPage.tsx`
+- Header: stack vertical cu butoane full-width pe mobil (deja parțial făcut – verificare).
+- Tab Gimnaziu: tabel ascuns sub `md`; afișare ca listă de carduri (clasă, diriginte cu buton edit, elevi count, badge-uri reguli, acțiuni cu icon-uri 36px).
+- Tab Liceu: în interiorul fiecărui Accordion, același pattern card pentru mobil.
+- Dialog "Elevi" și "Editare clasă": `max-w-[calc(100vw-2rem)]` + scroll intern.
 
-- Se identifică toți elevii din `student_class_assignments` cu `class_id` în clasele a XII-a.
-- Pentru fiecare elev se șterge complet contul (profile, user_roles, reservations, tickets, form_submissions, push_subscriptions, fcm_tokens, notifications, event_student_assistants, attendance_log via cascadă) + `auth.admin.deleteUser()` — refolosind logica din `delete-own-account`.
-- Toate `student_class_assignments` pentru clasele a XII-a sunt șterse.
+### `src/pages/admin/EventDetailPage.tsx`
+- Header titlu + acțiuni: stack vertical sub `sm`, butoane full-width, tab-list cu `overflow-x-auto`.
+- Tabel participanți, profesori coordonatori, asistenți elevi, fișiere: variantă card pe mobil (`md:hidden` cards + `hidden md:block` tabel). Pentru fiecare card – nume + meta + acțiuni stacked.
+- Card-urile cu informații despre eveniment: grid `grid-cols-1 sm:grid-cols-2`.
 
-**Pas 2 — Conversie XII → IX:**
+### `src/pages/admin/ReportsPage.tsx`
+- Filtre: `flex-col sm:flex-row` cu select-uri full-width pe mobil.
+- Cele 3 tabele: variantă card pe mobil (rezumat per linie + valori sub formă de label/value).
+- Butoane Export PDF/CSV: full-width pe mobil.
 
-- Pentru fiecare clasă a XII-a: `grade_number = 9`, `display_name = "IX " + section`, `academic_year = <noul an>`. Dirigintele rămâne neschimbat. Nu mai are elevi.
+### `src/pages/admin/ImportPage.tsx`
+- Tabel preview, erori, rezultate: wrapper `overflow-x-auto` + font mai mic pe mobil.
+- Zona de upload + selectoare: stack vertical, butoane full-width.
 
-**Pas 3 — Promovare clase V–XI:**
+### `src/pages/admin/CredentialsPage.tsx`
+- Filtre & butoane generare: stack vertical + full-width pe mobil.
+- Listă utilizatori: card-uri sub `sm`.
 
-- `grade_number += 1` și `display_name` se recalculează cu cifra romană corespunzătoare (V→VI, …, XI→XII).
-- `academic_year` se setează la noul an.
-- Elevii (`student_class_assignments`) și dirigintele rămân atașați aceleiași clase (doar coloanele clasei se schimbă).
-- `student_class_assignments.academic_year` se actualizează la noul an pentru toate înregistrările păstrate.
+### `src/pages/admin/AdminScanPage.tsx`
+- Zonă cameră responsivă (`aspect-square w-full max-w-md`).
+- Listă scanări recente cu padding redus pe mobil + truncate pe nume lungi.
+- Butoane control (start/stop, switch listă manuală) full-width pe mobil.
 
-**Pas 4:** Audit log în `audit_logs` cu sumar (clase promovate, elevi absolvenți șterși).
+### Sweep general (toate paginile Admin)
+- Header titlu + butoane: pattern `flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`.
+- Toate `Dialog`/`AlertDialog` mari primesc `max-h-[90vh] overflow-y-auto` și `max-w-[calc(100vw-2rem)] sm:max-w-lg`.
+- Înlocuim `gap-6` cu `gap-4 md:gap-6` unde e cazul pentru a economisi spațiu pe mobil.
+- Iconuri-only buttons în acțiuni primesc `h-9 w-9` (target tap 36px) pe mobil.
 
-## Ordine sigură de execuție în edge function
+## Detalii tehnice
 
-```text
-1. Validează rol admin (JWT)
-2. Citește toate clasele grupate pe grade_number
-3. Pentru fiecare elev XII: șterge cont complet (cascade pe rezervări/bilete + auth user)
-4. UPDATE classes SET grade_number=9, display_name='IX '||section, academic_year=$1 WHERE grade_number=12
-5. UPDATE classes SET grade_number=grade_number+1, display_name=<roman>, academic_year=$1 WHERE grade_number BETWEEN 5 AND 11 (de la 11 la 5, descendent, ca să evităm conflicte de unicitate dacă există)
-6. UPDATE student_class_assignments SET academic_year=$1
-7. INSERT audit_logs
-```
+- Pattern repetat pentru tabele: păstrăm `<Table>` original cu `hidden md:block`, adăugăm un `<div className="md:hidden space-y-2">` cu carduri compacte (deja folosit în UsersPage / EventsPage / SessionsPage / AuditPage – aplicăm același pattern peste tot pentru consistență).
+- Nu se modifică logica de date / queries / mutations – doar markup și clase Tailwind.
+- Nu se introduce nicio dependență nouă.
 
-Cifre romane folosite: V, VI, VII, VIII, IX, X, XI, XII.
+## Fișiere afectate
 
-&nbsp;
+- `src/components/layouts/AdminLayout.tsx`
+- `src/pages/admin/ClassesPage.tsx`
+- `src/pages/admin/EventDetailPage.tsx`
+- `src/pages/admin/ReportsPage.tsx`
+- `src/pages/admin/ImportPage.tsx`
+- `src/pages/admin/CredentialsPage.tsx`
+- `src/pages/admin/AdminScanPage.tsx`
 
-Acelasi lucru ca la clasa 12 trebuie sa il favem si la clasa 8. Ei se sterg din baza de date, sunt alt ciclu. Deci 5 devine 6, 6 devine 7, 7 devine 8 si 8 devine 5 fara elevi doar cu diriginte
+## În afara scopului
 
-## Modificări tehnice
-
-**Edge function nouă: `supabase/functions/admin-promote-classes/index.ts**`
-
-- Validează JWT + rol `admin` (folosește pattern din `admin-manage-users`).
-- Acceptă body `{ new_academic_year: string }` cu validare Zod (format `^\d{4}-\d{4}$`).
-- Folosește `SUPABASE_SERVICE_ROLE_KEY` pentru ștergere `auth.admin.deleteUser()`.
-- Refolosește logica de cleanup din `delete-own-account` (extras într-un helper local în fișier).
-- Returnează `{ promoted_classes: number, deleted_students: number, converted_classes: number }`.
-
-**Pagina `src/pages/admin/ClassesPage.tsx`:**
-
-- Buton nou `Promovează clasele` (variant `outline`, icon `GraduationCap` sau `ArrowUp`) lângă butonul existent „Adaugă clasă”.
-- AlertDialog de confirmare cu:
-  - Sumar pre-calculat din datele deja în cache (clase pe grad, contoare elevi a XII-a).
-  - Input `Select` / `Input` pentru noul an școlar (default = an curent +1).
-  - Input text pentru tastarea `PROMOVEAZĂ`.
-- Mutație care apelează `supabase.functions.invoke('admin-promote-classes', { body: { new_academic_year } })`.
-- La succes: toast cu sumar + invalidate `["classes"]`, `["student_class_assignments"]`, `["all_students"]`.
-
-## Riscuri & mitigare
-
-- **Ireversibil:** confirmare dublă (text `PROMOVEAZĂ` + dialog).
-- **Conflict de unicitate la display_name:** display_name nu are constraint unique → ok. Dacă apare în viitor, edge function poate face update-urile într-o tranzacție prin RPC.
-- **Reguli participare (`class_participation_rules`):** rămân legate de același `class_id` (corect, deoarece clasa „rămâne aceeași entitate, doar promovată”). Nu se modifică, dar admin poate vrea să le revizuiască — vom menționa în toast-ul de succes.
-- **Elevi a XII-a cu rezervări active:** ștergerea cascadează automat (RLS-ul existent permite admin să șteargă orice).
+- Nu modificăm structura datelor sau RLS.
+- Nu refacem complet design-ul; păstrăm look & feel actual, doar adaptăm pentru mobil.
+- Nu atingem rolurile non-admin (Student, Teacher, Coordinator, Manager, Prof) – cele student/teacher/coordinator/manager au fost deja optimizate anterior. Dacă observ în drum probleme evidente la layout-urile partajate, le menționez fără să le modific.
