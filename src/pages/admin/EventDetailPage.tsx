@@ -1087,7 +1087,7 @@ export default function EventDetailPage() {
 
       {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={(o) => { if (!o) { setUploadDialogOpen(false); setUploadTitle(""); } }}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Încarcă {fileCategoryLabels[uploadCategory]?.toLowerCase()}</DialogTitle>
             <DialogDescription>Selectați un fișier (max 10MB).</DialogDescription>
@@ -1113,7 +1113,7 @@ export default function EventDetailPage() {
 
       {/* Coordinator Assignment Dialog */}
       <Dialog open={coordDialogOpen} onOpenChange={(o) => { if (!o) { setCoordDialogOpen(false); setSelectedTeacherId(""); setCoordSearch(""); } }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Atribuie coordonator</DialogTitle>
             <DialogDescription>Caută și selectează un profesor coordonator disponibil.</DialogDescription>
@@ -1267,7 +1267,7 @@ export default function EventDetailPage() {
 
       {/* Add Student Assistant Dialog */}
       <Dialog open={assistantDialogOpen} onOpenChange={(o) => { if (!o) { setAssistantDialogOpen(false); setAssistantSearch(""); } }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adaugă elev asistent</DialogTitle>
             <DialogDescription>Caută și selectează un elev care va fi asistent la acest eveniment.</DialogDescription>
@@ -1332,7 +1332,7 @@ export default function EventDetailPage() {
 
       {/* Enroll Single Student Dialog */}
       <Dialog open={enrollStudentDialogOpen} onOpenChange={(o) => { if (!o) { setEnrollStudentDialogOpen(false); setEnrollStudentSearch(""); } }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Înscrie un elev</DialogTitle>
             <DialogDescription>Caută și selectează un elev pentru a-l înscrie la acest eveniment. Elevul va primi automat un bilet cu QR.</DialogDescription>
@@ -1374,7 +1374,7 @@ export default function EventDetailPage() {
 
       {/* Enroll Class Dialog */}
       <Dialog open={enrollClassDialogOpen} onOpenChange={(o) => { if (!o) { setEnrollClassDialogOpen(false); setSelectedEnrollClassId(""); } }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Înscrie o clasă</DialogTitle>
             <DialogDescription>Toți elevii eligibili din clasa selectată vor fi înscriși automat. Elevii care nu sunt eligibili (ex: clasă neacceptată, lipsă locuri) vor fi săriți.</DialogDescription>
