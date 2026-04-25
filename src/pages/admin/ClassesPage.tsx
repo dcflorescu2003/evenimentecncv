@@ -457,6 +457,67 @@ export default function ClassesPage() {
     );
   }
 
+  function ClassCardComponent({ cls }: { cls: ClassRow }) {
+    const classRules = getRulesForClass(cls.id);
+    const studentCount = getStudentsForClass(cls.id).length;
+    return (
+      <div className="rounded-lg border p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="font-medium text-base">{cls.display_name}</div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openRuleCreate(cls.id)} title="Adaugă regulă">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => {
+              setEditClassForm({ id: cls.id, display_name: cls.display_name, grade_number: cls.grade_number, section: cls.section || "" });
+              setEditClassDialog(true);
+            }} title="Editează clasa">
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive" onClick={() => {
+              setDeleteClassConfirm({ id: cls.id, name: cls.display_name });
+            }} title="Șterge clasa">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Diriginte:</span>
+          <span className="flex-1 truncate">{getTeacherName(cls.homeroom_teacher_id)}</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => {
+            setTeacherClassId(cls.id);
+            setSelectedTeacherId(cls.homeroom_teacher_id || "");
+            setTeacherDialog(true);
+          }}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <Button variant="outline" size="sm" className="w-full justify-start gap-2" onClick={() => setStudentsListClassId(cls.id)}>
+          <Users className="h-4 w-4" /> {studentCount} elevi
+        </Button>
+        <div>
+          <div className="text-xs text-muted-foreground mb-1">Reguli:</div>
+          {classRules.length === 0 ? (
+            <span className="text-muted-foreground text-xs">Nicio regulă</span>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {classRules.map((r) => {
+                const rMax = (r as any).max_hours as number | null;
+                const reqLabel = r.required_value === 0 ? "∞" : `${r.required_value}h`;
+                const maxLabel = rMax === null || rMax === undefined ? "∞" : `${rMax}h`;
+                return (
+                  <Badge key={r.id} variant="outline" className="cursor-pointer hover:bg-accent text-xs" onClick={() => openRuleEdit(r)}>
+                    {getSessionName(r.session_id)}: {reqLabel}/{maxLabel}
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // Current class for students list dialog
   const currentClassStudents = studentsListClassId ? getStudentsForClass(studentsListClassId) : [];
   const currentClassName = studentsListClassId ? classes.find((c) => c.id === studentsListClassId)?.display_name : "";
