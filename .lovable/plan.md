@@ -1,64 +1,65 @@
-
-
-## Plan: Pagină „Raport ISMB" în contul de Manager
+## Plan: Calendar evenimente în Panoul Principal al elevului
 
 ### Ce se adaugă
 
-O pagină nouă `/manager/ismb-report` care reproduce structura raportului ISMB uploadat, cu secțiuni pre-completate din baza de date și câmpuri editabile (Textarea) pentru textul liber. Managerul poate edita orice secțiune, apoi exporta PDF-ul final.
+O nouă secțiune „Calendar evenimente" inserată în `src/pages/student/StudentDashboard.tsx` între prima secțiune (progresul pe sesiuni) și a doua (Rezervările tale recente). Calendarul oferă o vizualizare cronologică pe **Zi / Săptămână / Lună** a tuturor evenimentelor eligibile pentru elev.
 
-### Structura paginii
+### Funcționalități
 
-Pagina va conține un formular cu secțiuni editabile, fiecare într-un Card separat:
+**1. Toggle pentru vizualizare**
+- Trei butoane (Tabs): „Zi" / „Săptămână" / „Lună"
+- Implicit: vizualizarea „Lună"
+- Navigare cu săgeți ‹ › (anterior / următor) + buton „Azi" pentru reset rapid
 
-1. **Descriere generală** (Textarea) — primul paragraf din raport, pre-completat cu text template care include:
-   - Perioada sesiunii (din `program_sessions.start_date` / `end_date`)
-   - Numărul total de activități (count din `events` pentru sesiune)
-   - Text editabil cu descrierea activităților
+**2. Vizualizarea Lună (compact)**
+- Grid 7×6 (tip calendar standard) cu nume zile (L Ma Mi J V S D)
+- Pe fiecare zi cu evenimente: punct(e) colorate sau un mic badge cu numărul de evenimente (ex: „•3" sau cerc cu cifră)
+- Culori semantice:
+  - **Albastru** = eveniment disponibil (poate rezerva)
+  - **Verde** = elevul are deja rezervare confirmată
+  - **Gri** = eveniment trecut sau plin
+- Click pe o zi → deschide popover/dialog cu lista evenimentelor din ziua respectivă (titlu, oră, locație, status)
+- Click pe un eveniment din listă → navighează la `/student/events/{id}`
 
-2. **Tipul activităților** (Textarea) — punctul 2, pre-completat cu textul template din raportul model
+**3. Vizualizarea Săptămână**
+- 7 coloane (zilele săptămânii curente) cu numele și data în antet
+- Sub fiecare zi, lista verticală a evenimentelor din ziua respectivă (carduri compacte: titlu + interval orar + locație)
+- Click pe card → navighează la pagina evenimentului
 
-3. **Participanți** (pre-completat automat din DB, editabil):
-   - Cadre didactice: count DISTINCT `coordinator_assignments.teacher_id` pentru evenimentele sesiunii
-   - Elevi: count DISTINCT `reservations.student_id` + count `public_tickets` non-cancelled pentru sesiune
-   - Afișat ca text editabil
+**4. Vizualizarea Zi**
+- O singură zi afișată în detaliu, cu toate evenimentele listate cronologic
+- Carduri mai mari, cu descriere scurtă, durată, locuri rămase, badge status
+- Click pe card → navighează la pagina evenimentului
 
-4. **Parteneri implicați** (Textarea) — text liber, pre-completat cu template
+### Sursa de date
 
-5. **Spații de desfășurare** (pre-completat automat din DB):
-   - Se extrag DISTINCT `events.location` pentru sesiune
-   - Afișat ca text editabil
+Reutilizează aceeași logică din `StudentEventsPage.tsx`:
+- Query: `events` filtrate pe `status='published'`, `published=true`, `is_public=false`
+- Filtrare client-side pe eligibilitate (`eligible_classes` / `eligible_grades` vs clasa elevului)
+- Include și evenimentele unde elevul are deja rezervare (din `reservations`)
+- Folosește `get_events_reserved_counts` RPC pentru locuri ocupate
 
-6. **Rezultate înregistrate** (Textarea) — pre-completat cu lista din raportul model
+În calendarul lunar, per perioadă vizibilă filtrăm evenimentele după `event.date` în interval.
 
-7. **Analiza SWOT** (Textarea) — pre-completat cu template-ul complet (Puncte tari, Puncte slabe, Oportunități, Amenințări)
+### UX & îmbunătățiri sugerate
 
-8. **Recomandări, sugestii** (Textarea) — pre-completat cu template
-
-9. **Semnături** (Textarea) — Director, Consilier educativ, Coordonator CEAC
-
-### Buton Export PDF
-
-Un buton „Exportă PDF" în header-ul paginii care:
-- Generează un PDF A4 portrait folosind `jsPDF` (pattern existent în `report-pdf.ts`)
-- Include antetul „Colegiul Național CANTEMIR-VODĂ" + adresa + nr. înregistrare
-- Fiecare secțiune e redată ca titlu + text, cu paginare automată
-- Textul trece prin `stripDiacritics` (limitare jsPDF fără fonturi custom)
-- Download via `downloadFileMobileSafe`
-
-### Fișiere noi
-- `src/pages/manager/ISMBReportPage.tsx` — pagina completă cu state local pentru fiecare secțiune, queries pentru pre-completare, logica de export PDF
-
-### Fișiere modificate
-- `src/components/layouts/ManagerLayout.tsx` — adăugare menu item „Raport ISMB" cu icon `FileText`
-- `src/App.tsx` — adăugare rută `/manager/ismb-report`
+- **Legendă mică sub calendar** (3 puncte colorate cu etichete: „Disponibile" / „Rezervate de tine" / „Trecute/Pline")
+- **Indicator „azi"**: ziua curentă marcată cu border accentuat
+- **Counter în antet**: „X evenimente în această lună/săptămână"
+- **Empty state**: mesaj prietenos când nu sunt evenimente în perioadă („Niciun eveniment programat în această perioadă")
+- **Dialog detaliat pe lună**: când dai click pe o zi cu mai multe evenimente, se deschide un Dialog cu lista completă, fiecare cu buton „Vezi detalii" care duce la pagina evenimentului
+- **Responsive**: pe mobil (viewport <768px), vizualizarea Lună reduce textul la doar puncte colorate; vizualizarea Săptămână devine scrollabilă orizontal sau colapsează în listă verticală grupată pe zile
 
 ### Detalii tehnice
 
-- State-ul fiecărei secțiuni e un `useState<string>` inițializat la mount cu valorile din DB + template text
-- Queries folosite:
-  - `events` filtrate pe `session_id` — count total, locații distincte
-  - `coordinator_assignments` JOIN `events` — count cadre didactice
-  - `reservations` + `public_tickets` — count elevi participanți
-- PDF-ul se generează client-side cu `jsPDF`, text wrapping manual via `doc.splitTextToSize()`
-- Nu e nevoie de modificări DB sau RLS (managerul are deja SELECT pe toate tabelele relevante)
+- Componentă nouă: `src/components/student/EventsCalendar.tsx` care primește `events: Event[]` și `myReservationIds: Set<string>` ca props
+- State intern: `view: 'day' | 'week' | 'month'`, `currentDate: Date`
+- Helper-i pentru navigare dată: `addDays`, `addWeeks`, `addMonths`, `startOfMonth`, `startOfWeek` (folosind `date-fns` care e deja instalat — verificat în alte fișiere `format`)
+- Fără modificări DB; toate query-urile sunt SELECT pe tabele cu RLS deja configurat pentru elevi
+- Fără edge functions noi
+- Romanian locale: nume zile/luni în limba română (constante locale, nu importăm `date-fns/locale` pentru simplitate)
 
+### Fișiere modificate / create
+
+- **Creat**: `src/components/student/EventsCalendar.tsx` — componenta calendar cu cele 3 view-uri
+- **Modificat**: `src/pages/student/StudentDashboard.tsx` — adaugă query pentru evenimente eligibile + integrare componentă între cele două secțiuni existente
