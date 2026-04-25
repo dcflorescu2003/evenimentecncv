@@ -240,42 +240,51 @@ export default function EventsCalendar({ events, myReservationIds, reservationCo
         {days.map((d, i) => {
           const dayEvents = eventsOnDay(d);
           const isToday = isSameDay(d, today);
+          const isEmpty = dayEvents.length === 0;
           return (
             <div
               key={i}
               className={cn(
-                "rounded-md border p-2 min-h-[100px] flex flex-col gap-1.5",
+                "rounded-md border p-2 flex gap-2 sm:flex-col sm:gap-1.5 sm:min-h-[100px]",
                 isToday && "border-primary border-2",
+                isEmpty && "opacity-60 sm:opacity-100",
               )}
             >
-              <div className={cn("text-[11px] font-semibold", isToday ? "text-primary" : "text-muted-foreground")}>
+              <div
+                className={cn(
+                  "text-[11px] font-semibold shrink-0 w-12 sm:w-auto",
+                  isToday ? "text-primary" : "text-muted-foreground",
+                )}
+              >
                 {RO_DAYS_SHORT[i]} {d.getDate()}
               </div>
-              {dayEvents.length === 0 ? (
-                <div className="text-[10px] text-muted-foreground/60 mt-1">—</div>
-              ) : (
-                dayEvents.map((ev) => {
-                  const s = getEventStatus(ev, myReservationIds, reservationCounts, today);
-                  return (
-                    <button
-                      key={ev.id}
-                      type="button"
-                      onClick={() => navigate(`/student/events/${ev.id}`)}
-                      className="text-left rounded border bg-card hover:bg-muted/60 p-1.5 transition-colors"
-                    >
-                      <div className="flex items-start gap-1">
-                        <span className={cn("h-1.5 w-1.5 rounded-full mt-1 shrink-0", statusDotClass(s))} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[11px] font-medium truncate">{ev.title}</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {fmtRange(ev.start_time)}–{fmtRange(ev.end_time)}
-                          </p>
+              <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                {isEmpty ? (
+                  <div className="text-[10px] text-muted-foreground/60">—</div>
+                ) : (
+                  dayEvents.map((ev) => {
+                    const s = getEventStatus(ev, myReservationIds, reservationCounts, today);
+                    return (
+                      <button
+                        key={ev.id}
+                        type="button"
+                        onClick={() => navigate(`/student/events/${ev.id}`)}
+                        className="text-left rounded border bg-card hover:bg-muted/60 p-1.5 transition-colors"
+                      >
+                        <div className="flex items-start gap-1">
+                          <span className={cn("h-1.5 w-1.5 rounded-full mt-1 shrink-0", statusDotClass(s))} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-medium truncate">{ev.title}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {fmtRange(ev.start_time)}–{fmtRange(ev.end_time)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
             </div>
           );
         })}
