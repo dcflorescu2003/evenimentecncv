@@ -559,9 +559,9 @@ export default function ClassesPage() {
         <p className="text-muted-foreground">Se încarcă…</p>
       ) : (
         <Tabs defaultValue="high" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="middle">Gimnaziu (V–VIII)</TabsTrigger>
-            <TabsTrigger value="high">Liceu (IX–XII)</TabsTrigger>
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="middle" className="flex-1 sm:flex-none">Gimnaziu (V–VIII)</TabsTrigger>
+            <TabsTrigger value="high" className="flex-1 sm:flex-none">Liceu (IX–XII)</TabsTrigger>
           </TabsList>
 
           <TabsContent value="middle">
