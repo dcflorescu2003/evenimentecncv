@@ -103,10 +103,13 @@ export default function AdminLayout() {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-2 border-b px-4">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-4">
           <SidebarTrigger />
+          <span className="truncate text-sm font-medium text-foreground/80 sm:hidden">
+            {menuItems.find((m) => m.path === location.pathname)?.title ?? "Admin"}
+          </span>
         </header>
-        <main className="flex-1 overflow-auto p-6 pb-safe">
+        <main className="flex-1 overflow-auto p-3 pb-safe sm:p-4 md:p-6">
           <Outlet />
         </main>
       </SidebarInset>
