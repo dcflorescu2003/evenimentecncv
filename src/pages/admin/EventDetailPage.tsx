@@ -617,14 +617,14 @@ export default function EventDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/events")}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/events")} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="font-display text-2xl font-bold">{event.title}</h1>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="font-display text-xl sm:text-2xl font-bold break-words">{event.title}</h1>
               <Badge variant="secondary" className={statusColors[event.status]}>
                 {statusLabels[event.status]}
               </Badge>
@@ -636,7 +636,7 @@ export default function EventDetailPage() {
             )}
           </div>
         </div>
-        <Button onClick={() => navigate(`/admin/scan?event=${id}`)} className="gap-2">
+        <Button onClick={() => navigate(`/admin/scan?event=${id}`)} className="gap-2 w-full sm:w-auto">
           <ScanLine className="h-4 w-4" /> Scanare bilete
         </Button>
       </div>
