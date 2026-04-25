@@ -269,13 +269,13 @@ export default function CredentialsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Generare credențiale PDF</h1>
-        <p className="text-muted-foreground">
+        <h1 className="font-display text-xl sm:text-2xl font-bold">Generare credențiale PDF</h1>
+        <p className="text-sm text-muted-foreground">
           Resetează parolele și descarcă un PDF cu credențialele de acces.
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 md:gap-6 sm:grid-cols-3">
         <Card
           className={`cursor-pointer transition-all ${mode === "user" ? "ring-2 ring-primary" : ""}`}
           onClick={() => setMode("user")}
