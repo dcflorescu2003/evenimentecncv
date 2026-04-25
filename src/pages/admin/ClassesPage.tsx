@@ -457,6 +457,67 @@ export default function ClassesPage() {
     );
   }
 
+  function ClassCardComponent({ cls }: { cls: ClassRow }) {
+    const classRules = getRulesForClass(cls.id);
+    const studentCount = getStudentsForClass(cls.id).length;
+    return (
+      <div className="rounded-lg border p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="font-medium text-base">{cls.display_name}</div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => openRuleCreate(cls.id)} title="Adaugă regulă">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => {
+              setEditClassForm({ id: cls.id, display_name: cls.display_name, grade_number: cls.grade_number, section: cls.section || "" });
+              setEditClassDialog(true);
+            }} title="Editează clasa">
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive" onClick={() => {
+              setDeleteClassConfirm({ id: cls.id, name: cls.display_name });
+            }} title="Șterge clasa">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Diriginte:</span>
+          <span className="flex-1 truncate">{getTeacherName(cls.homeroom_teacher_id)}</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => {
+            setTeacherClassId(cls.id);
+            setSelectedTeacherId(cls.homeroom_teacher_id || "");
+            setTeacherDialog(true);
+          }}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        <Button variant="outline" size="sm" className="w-full justify-start gap-2" onClick={() => setStudentsListClassId(cls.id)}>
+          <Users className="h-4 w-4" /> {studentCount} elevi
+        </Button>
+        <div>
+          <div className="text-xs text-muted-foreground mb-1">Reguli:</div>
+          {classRules.length === 0 ? (
+            <span className="text-muted-foreground text-xs">Nicio regulă</span>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {classRules.map((r) => {
+                const rMax = (r as any).max_hours as number | null;
+                const reqLabel = r.required_value === 0 ? "∞" : `${r.required_value}h`;
+                const maxLabel = rMax === null || rMax === undefined ? "∞" : `${rMax}h`;
+                return (
+                  <Badge key={r.id} variant="outline" className="cursor-pointer hover:bg-accent text-xs" onClick={() => openRuleEdit(r)}>
+                    {getSessionName(r.session_id)}: {reqLabel}/{maxLabel}
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // Current class for students list dialog
   const currentClassStudents = studentsListClassId ? getStudentsForClass(studentsListClassId) : [];
   const currentClassName = studentsListClassId ? classes.find((c) => c.id === studentsListClassId)?.display_name : "";
@@ -498,13 +559,13 @@ export default function ClassesPage() {
         <p className="text-muted-foreground">Se încarcă…</p>
       ) : (
         <Tabs defaultValue="high" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="middle">Gimnaziu (V–VIII)</TabsTrigger>
-            <TabsTrigger value="high">Liceu (IX–XII)</TabsTrigger>
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="middle" className="flex-1 sm:flex-none">Gimnaziu (V–VIII)</TabsTrigger>
+            <TabsTrigger value="high" className="flex-1 sm:flex-none">Liceu (IX–XII)</TabsTrigger>
           </TabsList>
 
           <TabsContent value="middle">
-            <div className="rounded-lg border">
+            <div className="hidden md:block rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -522,6 +583,11 @@ export default function ClassesPage() {
                 </TableBody>
               </Table>
             </div>
+            <div className="md:hidden space-y-2">
+              {[5, 6, 7, 8].flatMap((g) => (grouped[g] || []).map((cls) => (
+                <ClassCardComponent key={cls.id} cls={cls} />
+              )))}
+            </div>
           </TabsContent>
 
           <TabsContent value="high">
@@ -529,7 +595,7 @@ export default function ClassesPage() {
               {[9, 10, 11, 12].map((grade) => {
                 const gradeClasses = grouped[grade] || [];
                 return (
-                  <AccordionItem key={grade} value={`grade-${grade}`} className="rounded-lg border px-4">
+                  <AccordionItem key={grade} value={`grade-${grade}`} className="rounded-lg border px-3 sm:px-4">
                     <AccordionTrigger className="hover:no-underline">
                       <div className="flex items-center gap-2">
                         <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -538,22 +604,29 @@ export default function ClassesPage() {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Secțiune</TableHead>
-                            <TableHead>Diriginte</TableHead>
-                            <TableHead>Elevi</TableHead>
-                            <TableHead>Reguli</TableHead>
-                            <TableHead className="w-24">Acțiuni</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {gradeClasses.map((cls) => (
-                            <ClassRowComponent key={cls.id} cls={cls} />
-                          ))}
-                        </TableBody>
-                      </Table>
+                      <div className="hidden md:block">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Secțiune</TableHead>
+                              <TableHead>Diriginte</TableHead>
+                              <TableHead>Elevi</TableHead>
+                              <TableHead>Reguli</TableHead>
+                              <TableHead className="w-24">Acțiuni</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {gradeClasses.map((cls) => (
+                              <ClassRowComponent key={cls.id} cls={cls} />
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="md:hidden space-y-2 pb-2">
+                        {gradeClasses.map((cls) => (
+                          <ClassCardComponent key={cls.id} cls={cls} />
+                        ))}
+                      </div>
                     </AccordionContent>
                   </AccordionItem>
                 );
@@ -565,7 +638,7 @@ export default function ClassesPage() {
 
       {/* Rule Dialog */}
       <Dialog open={ruleDialog} onOpenChange={(o) => !o && closeRuleDialog()}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingRuleId ? "Editare regulă" : "Regulă nouă de participare"}</DialogTitle>
             <DialogDescription>Definiți numărul de ore necesar pentru o clasă într-o sesiune.</DialogDescription>
@@ -637,7 +710,7 @@ export default function ClassesPage() {
 
       {/* Assign Teacher Dialog */}
       <Dialog open={teacherDialog} onOpenChange={(o) => !o && setTeacherDialog(false)}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Asignează diriginte</DialogTitle>
             <DialogDescription>Selectează dirigintele pentru această clasă.</DialogDescription>
@@ -689,7 +762,7 @@ export default function ClassesPage() {
 
       {/* Students List Dialog */}
       <Dialog open={!!studentsListClassId} onOpenChange={(o) => !o && setStudentsListClassId(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Elevii din {currentClassName}</DialogTitle>
             <DialogDescription>{currentClassStudents.length} elevi asignați</DialogDescription>
@@ -725,7 +798,7 @@ export default function ClassesPage() {
 
       {/* Add Student Dialog */}
       <Dialog open={studentDialog} onOpenChange={(o) => !o && setStudentDialog(false)}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adaugă elev în clasă</DialogTitle>
             <DialogDescription>Selectează elevul de adăugat.</DialogDescription>
@@ -791,7 +864,7 @@ export default function ClassesPage() {
 
       {/* Edit Class Dialog */}
       <Dialog open={editClassDialog} onOpenChange={(o) => !o && setEditClassDialog(false)}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editare clasă</DialogTitle>
             <DialogDescription>Modificați detaliile clasei.</DialogDescription>
@@ -842,7 +915,7 @@ export default function ClassesPage() {
 
       {/* Promote Classes Dialog */}
       <Dialog open={promoteDialog} onOpenChange={(o) => { if (!o && !promoteMutation.isPending) { setPromoteDialog(false); setPromoteConfirmText(""); } }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Promovează toate clasele</DialogTitle>
             <DialogDescription>

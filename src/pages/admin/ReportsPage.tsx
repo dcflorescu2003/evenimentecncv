@@ -62,10 +62,10 @@ export default function ReportsPage() {
         <p className="text-muted-foreground">Selectează o sesiune pentru a vedea rapoartele.</p>
       ) : (
         <Tabs defaultValue="classes">
-          <TabsList className="print:hidden">
-            <TabsTrigger value="classes">Pe clasă</TabsTrigger>
-            <TabsTrigger value="events">Pe eveniment</TabsTrigger>
-            <TabsTrigger value="students">Pe elev</TabsTrigger>
+          <TabsList className="print:hidden w-full sm:w-auto">
+            <TabsTrigger value="classes" className="flex-1 sm:flex-none">Pe clasă</TabsTrigger>
+            <TabsTrigger value="events" className="flex-1 sm:flex-none">Pe eveniment</TabsTrigger>
+            <TabsTrigger value="students" className="flex-1 sm:flex-none">Pe elev</TabsTrigger>
           </TabsList>
           <TabsContent value="classes"><ClassReport sessionId={sessionId} /></TabsContent>
           <TabsContent value="events"><EventReport sessionId={sessionId} /></TabsContent>
@@ -156,7 +156,7 @@ function ClassReport({ sessionId }: { sessionId: string }) {
         </Card>
       )}
       <Card className="print:shadow-none print:border-0">
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -264,7 +264,7 @@ function EventReport({ sessionId }: { sessionId: string }) {
         </Button>
       </div>
       <Card className="print:shadow-none print:border-0">
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -375,9 +375,9 @@ function StudentReport({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <Select value={classFilter} onValueChange={setClassFilter}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Toate clasele" />
           </SelectTrigger>
           <SelectContent>
@@ -387,7 +387,7 @@ function StudentReport({ sessionId }: { sessionId: string }) {
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" onClick={() => {
+        <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => {
           if (!data) return;
           exportReportPdf({ title: "Raport pe elevi", headers: ["Elev", "Clasă", "Rezervări", "Ore rezervate", "Ore validate"],
             rows: data.map(s => [s.name, s.className, String(s.reservations), String(s.reservedHours), String(s.validatedHours)]),
@@ -397,7 +397,7 @@ function StudentReport({ sessionId }: { sessionId: string }) {
         </Button>
       </div>
       <Card className="print:shadow-none print:border-0">
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -617,14 +617,14 @@ export default function EventDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/events")}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin/events")} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="font-display text-2xl font-bold">{event.title}</h1>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="font-display text-xl sm:text-2xl font-bold break-words">{event.title}</h1>
               <Badge variant="secondary" className={statusColors[event.status]}>
                 {statusLabels[event.status]}
               </Badge>
@@ -636,7 +636,7 @@ export default function EventDetailPage() {
             )}
           </div>
         </div>
-        <Button onClick={() => navigate(`/admin/scan?event=${id}`)} className="gap-2">
+        <Button onClick={() => navigate(`/admin/scan?event=${id}`)} className="gap-2 w-full sm:w-auto">
           <ScanLine className="h-4 w-4" /> Scanare bilete
         </Button>
       </div>
@@ -683,14 +683,16 @@ export default function EventDetailPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="info" className="space-y-4">
-        <TabsList className="w-full flex-wrap h-auto justify-start">
-          <TabsTrigger value="info">Informații</TabsTrigger>
-          <TabsTrigger value="participants">Participanți ({participants.length + assistants.length + publicParticipants.reduce((sum: number, pr: any) => sum + (pr.public_tickets?.filter((t: any) => t.status !== 'cancelled')?.length || 0), 0)})</TabsTrigger>
-          <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
-          <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
-          <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
-          {event?.is_public && <TabsTrigger value="contact">Contact ({publicParticipants.length})</TabsTrigger>}
-        </TabsList>
+        <div className="-mx-3 px-3 sm:mx-0 sm:px-0 overflow-x-auto">
+          <TabsList className="w-max sm:w-full sm:flex-wrap sm:h-auto sm:justify-start">
+            <TabsTrigger value="info">Informații</TabsTrigger>
+            <TabsTrigger value="participants">Participanți ({participants.length + assistants.length + publicParticipants.reduce((sum: number, pr: any) => sum + (pr.public_tickets?.filter((t: any) => t.status !== 'cancelled')?.length || 0), 0)})</TabsTrigger>
+            <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
+            <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
+            <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
+            {event?.is_public && <TabsTrigger value="contact">Contact ({publicParticipants.length})</TabsTrigger>}
+          </TabsList>
+        </div>
 
         {/* Info Tab */}
         <TabsContent value="info" className="space-y-4">
@@ -732,7 +734,7 @@ export default function EventDetailPage() {
 
         {/* Participants Tab - Admin Override */}
         <TabsContent value="participants" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => { setEnrollStudentDialogOpen(true); setEnrollStudentSearch(""); }}>
@@ -763,7 +765,7 @@ export default function EventDetailPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="rounded-lg border">
+            <div className="rounded-lg border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -942,7 +944,7 @@ export default function EventDetailPage() {
 
         {/* Dossier Tab */}
         <TabsContent value="dossier" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">Documente ale dosarului evenimentului (vizibile doar pentru admin).</p>
             <Button size="sm" onClick={() => { setUploadCategory("event_dossier"); setUploadDialogOpen(true); }}>
               <Upload className="mr-2 h-4 w-4" /> Încarcă document
@@ -962,7 +964,7 @@ export default function EventDetailPage() {
 
         {/* Forms Tab */}
         <TabsContent value="forms" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">Șabloane de formulare (descărcabile de elevi eligibili).</p>
             <Button size="sm" onClick={() => { setUploadCategory("form_template"); setUploadDialogOpen(true); }}>
               <Upload className="mr-2 h-4 w-4" /> Încarcă șablon
@@ -982,7 +984,7 @@ export default function EventDetailPage() {
 
         {/* Coordinators Tab */}
         <TabsContent value="coordinators" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">Profesori coordonatori atribuiți acestui eveniment.</p>
             <Button size="sm" onClick={() => { setCoordDialogOpen(true); setCoordSearch(""); }} disabled={availableTeachers.length === 0}>
               <UserPlus className="mr-2 h-4 w-4" /> Atribuie coordonator
@@ -996,7 +998,7 @@ export default function EventDetailPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="rounded-lg border">
+            <div className="rounded-lg border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1039,7 +1041,7 @@ export default function EventDetailPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="rounded-lg border">
+              <div className="rounded-lg border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1085,7 +1087,7 @@ export default function EventDetailPage() {
 
       {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={(o) => { if (!o) { setUploadDialogOpen(false); setUploadTitle(""); } }}>
-        <DialogContent>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Încarcă {fileCategoryLabels[uploadCategory]?.toLowerCase()}</DialogTitle>
             <DialogDescription>Selectați un fișier (max 10MB).</DialogDescription>
@@ -1111,7 +1113,7 @@ export default function EventDetailPage() {
 
       {/* Coordinator Assignment Dialog */}
       <Dialog open={coordDialogOpen} onOpenChange={(o) => { if (!o) { setCoordDialogOpen(false); setSelectedTeacherId(""); setCoordSearch(""); } }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Atribuie coordonator</DialogTitle>
             <DialogDescription>Caută și selectează un profesor coordonator disponibil.</DialogDescription>
@@ -1265,7 +1267,7 @@ export default function EventDetailPage() {
 
       {/* Add Student Assistant Dialog */}
       <Dialog open={assistantDialogOpen} onOpenChange={(o) => { if (!o) { setAssistantDialogOpen(false); setAssistantSearch(""); } }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adaugă elev asistent</DialogTitle>
             <DialogDescription>Caută și selectează un elev care va fi asistent la acest eveniment.</DialogDescription>
@@ -1330,7 +1332,7 @@ export default function EventDetailPage() {
 
       {/* Enroll Single Student Dialog */}
       <Dialog open={enrollStudentDialogOpen} onOpenChange={(o) => { if (!o) { setEnrollStudentDialogOpen(false); setEnrollStudentSearch(""); } }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Înscrie un elev</DialogTitle>
             <DialogDescription>Caută și selectează un elev pentru a-l înscrie la acest eveniment. Elevul va primi automat un bilet cu QR.</DialogDescription>
@@ -1372,7 +1374,7 @@ export default function EventDetailPage() {
 
       {/* Enroll Class Dialog */}
       <Dialog open={enrollClassDialogOpen} onOpenChange={(o) => { if (!o) { setEnrollClassDialogOpen(false); setSelectedEnrollClassId(""); } }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Înscrie o clasă</DialogTitle>
             <DialogDescription>Toți elevii eligibili din clasa selectată vor fi înscriși automat. Elevii care nu sunt eligibili (ex: clasă neacceptată, lipsă locuri) vor fi săriți.</DialogDescription>
@@ -1448,7 +1450,7 @@ function FileTable({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-lg border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>

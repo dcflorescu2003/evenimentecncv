@@ -284,34 +284,36 @@ export default function ImportPage() {
                 <CardTitle>Importuri recente</CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fișier</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Rânduri</TableHead>
-                      <TableHead>Reușite</TableHead>
-                      <TableHead>Erori</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {batches.map((b) => (
-                      <TableRow key={b.id}>
-                        <TableCell>{b.file_name}</TableCell>
-                        <TableCell>{formatDateTime(b.imported_at)}</TableCell>
-                        <TableCell>{b.row_count}</TableCell>
-                        <TableCell>{b.success_count}</TableCell>
-                        <TableCell>{b.error_count}</TableCell>
-                        <TableCell>
-                          <Badge variant={b.status === "completed" ? "default" : "destructive"}>
-                            {b.status}
-                          </Badge>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fișier</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Rânduri</TableHead>
+                        <TableHead>Reușite</TableHead>
+                        <TableHead>Erori</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {batches.map((b) => (
+                        <TableRow key={b.id}>
+                          <TableCell>{b.file_name}</TableCell>
+                          <TableCell>{formatDateTime(b.imported_at)}</TableCell>
+                          <TableCell>{b.row_count}</TableCell>
+                          <TableCell>{b.success_count}</TableCell>
+                          <TableCell>{b.error_count}</TableCell>
+                          <TableCell>
+                            <Badge variant={b.status === "completed" ? "default" : "destructive"}>
+                              {b.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -320,7 +322,7 @@ export default function ImportPage() {
 
       {step === "preview" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <Badge variant="secondary">{rows.length} rânduri</Badge>
               {errors.length > 0 ? (
@@ -335,7 +337,7 @@ export default function ImportPage() {
                 </Badge>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={reset}>Anulează</Button>
               <Button
                 onClick={() => importMutation.mutate()}
@@ -397,7 +399,7 @@ export default function ImportPage() {
 
       {step === "results" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                 {results.filter((r) => !r.error).length} create
@@ -408,7 +410,7 @@ export default function ImportPage() {
                 </Badge>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={exportCredentials}>
                 <Download className="mr-2 h-4 w-4" /> Exportă CSV
               </Button>
