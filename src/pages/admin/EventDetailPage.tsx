@@ -734,7 +734,7 @@ export default function EventDetailPage() {
 
         {/* Participants Tab - Admin Override */}
         <TabsContent value="participants" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">Lista participanților cu posibilitate de override al statusului prezență.</p>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => { setEnrollStudentDialogOpen(true); setEnrollStudentSearch(""); }}>
@@ -944,7 +944,7 @@ export default function EventDetailPage() {
 
         {/* Dossier Tab */}
         <TabsContent value="dossier" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">Documente ale dosarului evenimentului (vizibile doar pentru admin).</p>
             <Button size="sm" onClick={() => { setUploadCategory("event_dossier"); setUploadDialogOpen(true); }}>
               <Upload className="mr-2 h-4 w-4" /> Încarcă document
@@ -964,7 +964,7 @@ export default function EventDetailPage() {
 
         {/* Forms Tab */}
         <TabsContent value="forms" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">Șabloane de formulare (descărcabile de elevi eligibili).</p>
             <Button size="sm" onClick={() => { setUploadCategory("form_template"); setUploadDialogOpen(true); }}>
               <Upload className="mr-2 h-4 w-4" /> Încarcă șablon
@@ -984,7 +984,7 @@ export default function EventDetailPage() {
 
         {/* Coordinators Tab */}
         <TabsContent value="coordinators" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">Profesori coordonatori atribuiți acestui eveniment.</p>
             <Button size="sm" onClick={() => { setCoordDialogOpen(true); setCoordSearch(""); }} disabled={availableTeachers.length === 0}>
               <UserPlus className="mr-2 h-4 w-4" /> Atribuie coordonator
