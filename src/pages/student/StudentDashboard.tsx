@@ -84,6 +84,87 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
+  // Student's class for eligibility filtering on the calendar
+  const { data: studentClass } = useQuery({
+    queryKey: ["dashboard_my_class", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("student_class_assignments")
+        .select("class_id, classes(id, grade_number)")
+        .eq("student_id", user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { class_id: string; classes: { id: string; grade_number: number } | null } | null;
+    },
+    enabled: !!user,
+  });
+
+  // All published, non-public events (same source as Events page)
+  const { data: allEvents = [] } = useQuery({
+    queryKey: ["dashboard_calendar_events"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .eq("status", "published")
+        .eq("published", true)
+        .eq("is_public", false)
+        .order("date", { ascending: true });
+      if (error) throw error;
+      return data as Event[];
+    },
+  });
+
+  // All my reservations (any status) for marking calendar
+  const { data: myReservationsAll = [] } = useQuery({
+    queryKey: ["dashboard_my_reservations_all", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("event_id, status")
+        .eq("student_id", user!.id)
+        .eq("status", "reserved");
+      if (error) throw error;
+      return data as { event_id: string; status: string }[];
+    },
+    enabled: !!user,
+  });
+
+  // Filter events to those the student is eligible for OR has reserved
+  const calendarEvents = useMemo(() => {
+    const reservedSet = new Set(myReservationsAll.map((r) => r.event_id));
+    const classId = studentClass?.class_id;
+    const grade = studentClass?.classes?.grade_number;
+    return allEvents.filter((e) => {
+      if (reservedSet.has(e.id)) return true;
+      const eligibleClasses = (e.eligible_classes as string[] | null) || [];
+      const eligibleGrades = (e.eligible_grades as number[] | null) || [];
+      const noRestriction = eligibleClasses.length === 0 && eligibleGrades.length === 0;
+      if (noRestriction) return true;
+      if (classId && eligibleClasses.includes(classId)) return true;
+      if (grade !== undefined && grade !== null && eligibleGrades.includes(grade)) return true;
+      return false;
+    });
+  }, [allEvents, myReservationsAll, studentClass]);
+
+  const myReservedIdSet = useMemo(
+    () => new Set(myReservationsAll.map((r) => r.event_id)),
+    [myReservationsAll],
+  );
+
+  // Reservation counts for the calendar events
+  const { data: calendarReservationCounts = {} } = useQuery({
+    queryKey: ["dashboard_calendar_counts", calendarEvents.map((e) => e.id).join(",")],
+    queryFn: async () => {
+      const ids = calendarEvents.map((e) => e.id);
+      if (ids.length === 0) return {};
+      const { data, error } = await supabase.rpc("get_events_reserved_counts", { _event_ids: ids });
+      if (error) throw error;
+      return (data as Record<string, number>) || {};
+    },
+    enabled: calendarEvents.length > 0,
+  });
+
   return (
     <div className="space-y-6">
       <PushNotificationPrompt />
