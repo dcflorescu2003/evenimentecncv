@@ -470,9 +470,14 @@ export default function ClassesPage() {
             Gestionare clase, diriginți, elevi și reguli de participare.
           </p>
         </div>
-        <Button onClick={() => openRuleCreate()} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" /> Regulă nouă
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button variant="outline" onClick={() => { setPromoteYear(defaultNewYear); setPromoteConfirmText(""); setPromoteDialog(true); }} className="w-full sm:w-auto">
+            <ArrowUp className="mr-2 h-4 w-4" /> Promovează clasele
+          </Button>
+          <Button onClick={() => openRuleCreate()} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" /> Regulă nouă
+          </Button>
+        </div>
       </div>
 
       {/* Session filter */}
