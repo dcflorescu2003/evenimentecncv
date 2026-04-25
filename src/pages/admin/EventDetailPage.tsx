@@ -765,7 +765,7 @@ export default function EventDetailPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="rounded-lg border">
+            <div className="rounded-lg border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -998,7 +998,7 @@ export default function EventDetailPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="rounded-lg border">
+            <div className="rounded-lg border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1041,7 +1041,7 @@ export default function EventDetailPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="rounded-lg border">
+              <div className="rounded-lg border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1450,7 +1450,7 @@ function FileTable({
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-lg border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
