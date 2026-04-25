@@ -63,6 +63,13 @@ export default function ClassesPage() {
   // Delete class state
   const [deleteClassConfirm, setDeleteClassConfirm] = useState<{ id: string; name: string } | null>(null);
 
+  // Promote classes state
+  const [promoteDialog, setPromoteDialog] = useState(false);
+  const currentYear = new Date().getMonth() >= 7 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+  const defaultNewYear = `${currentYear + 1}-${currentYear + 2}`;
+  const [promoteYear, setPromoteYear] = useState(defaultNewYear);
+  const [promoteConfirmText, setPromoteConfirmText] = useState("");
+
   const { data: classes = [], isLoading } = useQuery({
     queryKey: ["classes"],
     queryFn: async () => {
