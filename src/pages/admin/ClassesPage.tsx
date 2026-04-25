@@ -565,7 +565,7 @@ export default function ClassesPage() {
           </TabsList>
 
           <TabsContent value="middle">
-            <div className="rounded-lg border">
+            <div className="hidden md:block rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -583,6 +583,11 @@ export default function ClassesPage() {
                 </TableBody>
               </Table>
             </div>
+            <div className="md:hidden space-y-2">
+              {[5, 6, 7, 8].flatMap((g) => (grouped[g] || []).map((cls) => (
+                <ClassCardComponent key={cls.id} cls={cls} />
+              )))}
+            </div>
           </TabsContent>
 
           <TabsContent value="high">
@@ -590,7 +595,7 @@ export default function ClassesPage() {
               {[9, 10, 11, 12].map((grade) => {
                 const gradeClasses = grouped[grade] || [];
                 return (
-                  <AccordionItem key={grade} value={`grade-${grade}`} className="rounded-lg border px-4">
+                  <AccordionItem key={grade} value={`grade-${grade}`} className="rounded-lg border px-3 sm:px-4">
                     <AccordionTrigger className="hover:no-underline">
                       <div className="flex items-center gap-2">
                         <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -599,22 +604,29 @@ export default function ClassesPage() {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Secțiune</TableHead>
-                            <TableHead>Diriginte</TableHead>
-                            <TableHead>Elevi</TableHead>
-                            <TableHead>Reguli</TableHead>
-                            <TableHead className="w-24">Acțiuni</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {gradeClasses.map((cls) => (
-                            <ClassRowComponent key={cls.id} cls={cls} />
-                          ))}
-                        </TableBody>
-                      </Table>
+                      <div className="hidden md:block">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Secțiune</TableHead>
+                              <TableHead>Diriginte</TableHead>
+                              <TableHead>Elevi</TableHead>
+                              <TableHead>Reguli</TableHead>
+                              <TableHead className="w-24">Acțiuni</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {gradeClasses.map((cls) => (
+                              <ClassRowComponent key={cls.id} cls={cls} />
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="md:hidden space-y-2 pb-2">
+                        {gradeClasses.map((cls) => (
+                          <ClassCardComponent key={cls.id} cls={cls} />
+                        ))}
+                      </div>
                     </AccordionContent>
                   </AccordionItem>
                 );
