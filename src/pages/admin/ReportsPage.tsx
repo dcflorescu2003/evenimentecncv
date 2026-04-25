@@ -375,9 +375,9 @@ function StudentReport({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <Select value={classFilter} onValueChange={setClassFilter}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Toate clasele" />
           </SelectTrigger>
           <SelectContent>
@@ -387,7 +387,7 @@ function StudentReport({ sessionId }: { sessionId: string }) {
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" onClick={() => {
+        <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => {
           if (!data) return;
           exportReportPdf({ title: "Raport pe elevi", headers: ["Elev", "Clasă", "Rezervări", "Ore rezervate", "Ore validate"],
             rows: data.map(s => [s.name, s.className, String(s.reservations), String(s.reservedHours), String(s.validatedHours)]),
