@@ -839,6 +839,65 @@ export default function ClassesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Promote Classes Dialog */}
+      <Dialog open={promoteDialog} onOpenChange={(o) => { if (!o && !promoteMutation.isPending) { setPromoteDialog(false); setPromoteConfirmText(""); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Promovează toate clasele</DialogTitle>
+            <DialogDescription>
+              Acțiune ireversibilă. Toate clasele vor fi promovate cu un an. Elevii din clasele a VIII-a și a XII-a vor fi șterși definitiv (cont, rezervări, bilete, formulare). Clasele a VIII-a devin clase a V-a goale, iar clasele a XII-a devin clase a IX-a goale (dirigintele se păstrează).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {(() => {
+              const g8 = (grouped[8] || []).length;
+              const g12 = (grouped[12] || []).length;
+              const studentsToDelete = studentAssignments.filter((a: any) => {
+                const cls = classes.find((c) => c.id === a.class_id);
+                return cls && (cls.grade_number === 8 || cls.grade_number === 12);
+              }).length;
+              const promoted = classes.filter((c) => c.grade_number >= 5 && c.grade_number <= 7 || c.grade_number >= 9 && c.grade_number <= 11).length;
+              return (
+                <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                  <div>• <strong>{promoted}</strong> clase promovate cu un an (V→VI, VI→VII, VII→VIII, IX→X, X→XI, XI→XII)</div>
+                  <div>• <strong>{g8 + g12}</strong> clase resetate ({g8} de a VIII-a → V, {g12} de a XII-a → IX)</div>
+                  <div className="text-destructive">• <strong>{studentsToDelete}</strong> elevi absolvenți vor fi șterși definitiv</div>
+                </div>
+              );
+            })()}
+            <div className="space-y-2">
+              <Label>Anul școlar nou *</Label>
+              <Input
+                value={promoteYear}
+                onChange={(e) => setPromoteYear(e.target.value)}
+                placeholder="ex: 2026-2027"
+              />
+              <p className="text-xs text-muted-foreground">Format: AAAA-AAAA</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Pentru confirmare, tastați <code className="px-1 rounded bg-muted">PROMOVEAZĂ</code></Label>
+              <Input
+                value={promoteConfirmText}
+                onChange={(e) => setPromoteConfirmText(e.target.value)}
+                placeholder="PROMOVEAZĂ"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPromoteDialog(false)} disabled={promoteMutation.isPending}>
+              Anulează
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={promoteMutation.isPending || promoteConfirmText !== "PROMOVEAZĂ" || !/^\d{4}-\d{4}$/.test(promoteYear)}
+              onClick={() => promoteMutation.mutate(promoteYear)}
+            >
+              {promoteMutation.isPending ? "Se promovează…" : "Promovează clasele"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
