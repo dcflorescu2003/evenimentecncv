@@ -284,34 +284,36 @@ export default function ImportPage() {
                 <CardTitle>Importuri recente</CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fișier</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Rânduri</TableHead>
-                      <TableHead>Reușite</TableHead>
-                      <TableHead>Erori</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {batches.map((b) => (
-                      <TableRow key={b.id}>
-                        <TableCell>{b.file_name}</TableCell>
-                        <TableCell>{formatDateTime(b.imported_at)}</TableCell>
-                        <TableCell>{b.row_count}</TableCell>
-                        <TableCell>{b.success_count}</TableCell>
-                        <TableCell>{b.error_count}</TableCell>
-                        <TableCell>
-                          <Badge variant={b.status === "completed" ? "default" : "destructive"}>
-                            {b.status}
-                          </Badge>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fișier</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Rânduri</TableHead>
+                        <TableHead>Reușite</TableHead>
+                        <TableHead>Erori</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {batches.map((b) => (
+                        <TableRow key={b.id}>
+                          <TableCell>{b.file_name}</TableCell>
+                          <TableCell>{formatDateTime(b.imported_at)}</TableCell>
+                          <TableCell>{b.row_count}</TableCell>
+                          <TableCell>{b.success_count}</TableCell>
+                          <TableCell>{b.error_count}</TableCell>
+                          <TableCell>
+                            <Badge variant={b.status === "completed" ? "default" : "destructive"}>
+                              {b.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           )}
