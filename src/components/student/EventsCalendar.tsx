@@ -102,7 +102,7 @@ function statusBadge(s: Status) {
 export default function EventsCalendar({ events, myReservationIds, reservationCounts }: Props) {
   const navigate = useNavigate();
   const today = useMemo(() => startOfDay(new Date()), []);
-  const [view, setView] = useState<View>("month");
+  const [view, setView] = useState<View>("week");
   const [currentDate, setCurrentDate] = useState<Date>(today);
   const [dayDialogDate, setDayDialogDate] = useState<Date | null>(null);
 
