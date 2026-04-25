@@ -11,10 +11,12 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CalendarDays, Clock, Ticket, CheckCircle2, ArrowRight, HelpCircle, AlertTriangle, ScanLine } from "lucide-react";
 import PushNotificationPrompt from "@/components/PushNotificationPrompt";
+import EventsCalendar from "@/components/student/EventsCalendar";
 import type { Tables } from "@/integrations/supabase/types";
 import { formatHoursVsRequired } from "@/lib/hours-format";
 
 type Session = Tables<"program_sessions">;
+type Event = Tables<"events">;
 
 export default function StudentDashboard() {
   const { user, profile } = useAuth();
