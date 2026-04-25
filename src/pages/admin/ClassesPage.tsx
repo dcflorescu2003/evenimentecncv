@@ -25,7 +25,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from "@/components/ui/command";
-import { Plus, Pencil, BookOpen, UserPlus, X, Users, Check, ChevronsUpDown, Trash2 } from "lucide-react";
+import { Plus, Pencil, BookOpen, UserPlus, X, Users, Check, ChevronsUpDown, Trash2, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
@@ -62,6 +62,13 @@ export default function ClassesPage() {
 
   // Delete class state
   const [deleteClassConfirm, setDeleteClassConfirm] = useState<{ id: string; name: string } | null>(null);
+
+  // Promote classes state
+  const [promoteDialog, setPromoteDialog] = useState(false);
+  const currentYear = new Date().getMonth() >= 7 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+  const defaultNewYear = `${currentYear + 1}-${currentYear + 2}`;
+  const [promoteYear, setPromoteYear] = useState(defaultNewYear);
+  const [promoteConfirmText, setPromoteConfirmText] = useState("");
 
   const { data: classes = [], isLoading } = useQuery({
     queryKey: ["classes"],
@@ -344,7 +351,29 @@ export default function ClassesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Already assigned student IDs for a class
+  // Promote classes mutation
+  const promoteMutation = useMutation({
+    mutationFn: async (newYear: string) => {
+      const { data, error } = await supabase.functions.invoke("admin-promote-classes", {
+        body: { new_academic_year: newYear },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data as { promoted_classes: number; converted_classes: number; deleted_students: number };
+    },
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["student_class_assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["all_students"] });
+      queryClient.invalidateQueries({ queryKey: ["teacher_profiles_for_classes"] });
+      toast.success(
+        `Promovare reușită: ${res.promoted_classes} clase promovate, ${res.converted_classes} clase convertite (V/IX), ${res.deleted_students} elevi absolvenți șterși.`
+      );
+      setPromoteDialog(false);
+      setPromoteConfirmText("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const assignedStudentIds = (classId: string) =>
     studentAssignments.filter((a: any) => a.class_id === classId).map((a: any) => a.student_id);
 
@@ -441,9 +470,14 @@ export default function ClassesPage() {
             Gestionare clase, diriginți, elevi și reguli de participare.
           </p>
         </div>
-        <Button onClick={() => openRuleCreate()} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" /> Regulă nouă
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Button variant="outline" onClick={() => { setPromoteYear(defaultNewYear); setPromoteConfirmText(""); setPromoteDialog(true); }} className="w-full sm:w-auto">
+            <ArrowUp className="mr-2 h-4 w-4" /> Promovează clasele
+          </Button>
+          <Button onClick={() => openRuleCreate()} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" /> Regulă nouă
+          </Button>
+        </div>
       </div>
 
       {/* Session filter */}
@@ -805,6 +839,65 @@ export default function ClassesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Promote Classes Dialog */}
+      <Dialog open={promoteDialog} onOpenChange={(o) => { if (!o && !promoteMutation.isPending) { setPromoteDialog(false); setPromoteConfirmText(""); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Promovează toate clasele</DialogTitle>
+            <DialogDescription>
+              Acțiune ireversibilă. Toate clasele vor fi promovate cu un an. Elevii din clasele a VIII-a și a XII-a vor fi șterși definitiv (cont, rezervări, bilete, formulare). Clasele a VIII-a devin clase a V-a goale, iar clasele a XII-a devin clase a IX-a goale (dirigintele se păstrează).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {(() => {
+              const g8 = (grouped[8] || []).length;
+              const g12 = (grouped[12] || []).length;
+              const studentsToDelete = studentAssignments.filter((a: any) => {
+                const cls = classes.find((c) => c.id === a.class_id);
+                return cls && (cls.grade_number === 8 || cls.grade_number === 12);
+              }).length;
+              const promoted = classes.filter((c) => c.grade_number >= 5 && c.grade_number <= 7 || c.grade_number >= 9 && c.grade_number <= 11).length;
+              return (
+                <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                  <div>• <strong>{promoted}</strong> clase promovate cu un an (V→VI, VI→VII, VII→VIII, IX→X, X→XI, XI→XII)</div>
+                  <div>• <strong>{g8 + g12}</strong> clase resetate ({g8} de a VIII-a → V, {g12} de a XII-a → IX)</div>
+                  <div className="text-destructive">• <strong>{studentsToDelete}</strong> elevi absolvenți vor fi șterși definitiv</div>
+                </div>
+              );
+            })()}
+            <div className="space-y-2">
+              <Label>Anul școlar nou *</Label>
+              <Input
+                value={promoteYear}
+                onChange={(e) => setPromoteYear(e.target.value)}
+                placeholder="ex: 2026-2027"
+              />
+              <p className="text-xs text-muted-foreground">Format: AAAA-AAAA</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Pentru confirmare, tastați <code className="px-1 rounded bg-muted">PROMOVEAZĂ</code></Label>
+              <Input
+                value={promoteConfirmText}
+                onChange={(e) => setPromoteConfirmText(e.target.value)}
+                placeholder="PROMOVEAZĂ"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPromoteDialog(false)} disabled={promoteMutation.isPending}>
+              Anulează
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={promoteMutation.isPending || promoteConfirmText !== "PROMOVEAZĂ" || !/^\d{4}-\d{4}$/.test(promoteYear)}
+              onClick={() => promoteMutation.mutate(promoteYear)}
+            >
+              {promoteMutation.isPending ? "Se promovează…" : "Promovează clasele"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
