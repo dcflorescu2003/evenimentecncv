@@ -298,6 +298,13 @@ export default function StudentDashboard() {
         })
       )}
 
+      {/* Events calendar */}
+      <EventsCalendar
+        events={calendarEvents}
+        myReservationIds={myReservedIdSet}
+        reservationCounts={calendarReservationCounts}
+      />
+
       {/* Upcoming reservations */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
