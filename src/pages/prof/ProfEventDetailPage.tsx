@@ -1130,6 +1130,97 @@ export default function ProfEventDetailPage() {
               </Table>
             </div>
           )}
+
+          {/* Submissions section */}
+          <div className="mt-6 space-y-3 border-t pt-6">
+            <div className="flex items-center gap-2">
+              <Inbox className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Formulare primite de la elevi / părinți</h3>
+              <Badge variant="secondary">{submissions.length}</Badge>
+            </div>
+            {submissions.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <Inbox className="mb-2 h-8 w-8" />
+                  <p className="text-sm">Nicio submisie încă</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="rounded-lg border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Elev</TableHead>
+                      <TableHead>Formular</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-[260px]">Acțiuni</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {submissions.map((s: any) => {
+                      const studentName = s.student
+                        ? `${s.student.last_name || ""} ${s.student.first_name || ""}`.trim()
+                        : "—";
+                      const statusMeta: Record<string, { label: string; className: string }> = {
+                        uploaded: { label: "Încărcat", className: "bg-muted text-muted-foreground" },
+                        reviewed: { label: "Verificat", className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+                        accepted: { label: "Acceptat", className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+                        rejected: { label: "Respins", className: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+                      };
+                      const meta = statusMeta[s.status] || statusMeta.uploaded;
+                      return (
+                        <TableRow key={s.id}>
+                          <TableCell className="font-medium">{studentName}</TableCell>
+                          <TableCell>
+                            <div className="text-sm">{s.form_title}</div>
+                            <div className="text-xs text-muted-foreground">{s.file_name}</div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{formatDateTime(s.uploaded_at)}</TableCell>
+                          <TableCell>
+                            <Badge className={meta.className}>{meta.label}</Badge>
+                            {s.admin_notes && s.status === "rejected" ? (
+                              <div className="mt-1 text-xs text-destructive">{s.admin_notes}</div>
+                            ) : null}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              <Button variant="ghost" size="icon" title="Descarcă" onClick={() => downloadSubmission(s)}>
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              {s.status === "uploaded" && (
+                                <Button variant="outline" size="sm" onClick={() => updateSubmissionStatusMutation.mutate({ id: s.id, status: "reviewed" })}>
+                                  <Eye className="mr-1 h-3 w-3" /> Verificat
+                                </Button>
+                              )}
+                              {s.status === "reviewed" && (
+                                <>
+                                  <Button variant="outline" size="sm" className="text-green-700 dark:text-green-400" onClick={() => updateSubmissionStatusMutation.mutate({ id: s.id, status: "accepted", notes: null })}>
+                                    <CheckCircle2 className="mr-1 h-3 w-3" /> Acceptă
+                                  </Button>
+                                  <Button variant="outline" size="sm" className="text-destructive" onClick={() => {
+                                    const reason = window.prompt("Motiv respingere (opțional):") ?? "";
+                                    updateSubmissionStatusMutation.mutate({ id: s.id, status: "rejected", notes: reason || null });
+                                  }}>
+                                    <XCircle className="mr-1 h-3 w-3" /> Respinge
+                                  </Button>
+                                </>
+                              )}
+                              {(s.status === "accepted" || s.status === "rejected") && (
+                                <Button variant="ghost" size="sm" onClick={() => updateSubmissionStatusMutation.mutate({ id: s.id, status: "reviewed", notes: null })}>
+                                  <RotateCcw className="mr-1 h-3 w-3" /> Resetează
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
