@@ -1043,7 +1043,7 @@ export default function ProfEventDetailPage() {
         {/* Dossier Tab */}
         <TabsContent value="dossier" className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Documente birocratice ale evenimentului.</p>
+            <p className="text-sm text-muted-foreground">{isCse ? "Documente interne / cereri pentru eveniment." : "Documente birocratice ale evenimentului."}</p>
             <Button size="sm" onClick={() => { setUploadCategory("event_dossier"); setUploadDialogOpen(true); }}>
               <Upload className="mr-2 h-4 w-4" /> Încarcă document
             </Button>
