@@ -64,6 +64,7 @@ export default function Login() {
     }
     if (roles.includes("admin")) return <Navigate to="/admin" replace />;
     if (roles.includes("manager")) return <Navigate to="/manager" replace />;
+    if (roles.includes("cse")) return <Navigate to="/prof" replace />;
     if (roles.includes("teacher")) return <Navigate to="/prof" replace />;
     if (roles.includes("homeroom_teacher")) return <Navigate to="/prof" replace />;
     if (roles.includes("student")) return <Navigate to="/student" replace />;

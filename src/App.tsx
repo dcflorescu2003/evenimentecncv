@@ -120,7 +120,7 @@ const App = () => (
             {/* Teacher (profesor) routes */}
             <Route
               element={
-                <ProtectedRoute allowedRoles={["teacher", "homeroom_teacher"]}>
+                <ProtectedRoute allowedRoles={["teacher", "homeroom_teacher", "cse"]}>
                   <ProfLayout />
                 </ProtectedRoute>
               }
