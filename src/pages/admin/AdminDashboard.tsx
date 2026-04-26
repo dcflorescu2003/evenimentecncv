@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Ticket, AlertTriangle, TrendingUp, Clock, GraduationCap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, Users, Ticket, AlertTriangle, TrendingUp, Clock, GraduationCap, Bell } from "lucide-react";
 import {
   ChartContainer,
   ChartTooltip,
@@ -12,6 +13,9 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const STATUS_COLORS = {
   present: "hsl(160, 60%, 40%)",
