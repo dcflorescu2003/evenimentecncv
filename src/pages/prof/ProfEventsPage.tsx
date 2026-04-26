@@ -24,6 +24,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Eye, Search } from "lucide-react";
+import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
 import { formatDate, isValidTime24h, normalizeTimeInput } from "@/lib/time";
 
@@ -353,7 +354,12 @@ export default function ProfEventsPage() {
               <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Niciun eveniment</TableCell></TableRow>
             ) : filtered.map((ev) => (
               <TableRow key={ev.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/prof/events/${ev.id}`)}>
-                <TableCell className="font-medium">{ev.title}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <span>{ev.title}</span>
+                    {(ev as any).is_cse && <CseBadge short />}
+                  </div>
+                </TableCell>
                 <TableCell>{formatDate(ev.date)}</TableCell>
                 <TableCell>{ev.start_time?.slice(0, 5)} – {ev.end_time?.slice(0, 5)}</TableCell>
                 <TableCell>{ev.counted_duration_hours}h</TableCell>
@@ -392,7 +398,10 @@ export default function ProfEventsPage() {
               onClick={() => navigate(`/prof/events/${ev.id}`)}
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="font-medium min-w-0 flex-1 truncate">{ev.title}</p>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="font-medium truncate">{ev.title}</p>
+                  {(ev as any).is_cse && <CseBadge short />}
+                </div>
                 <Badge variant="secondary" className={`${statusColors[ev.status as EventStatus]} shrink-0`}>
                   {statusLabels[ev.status as EventStatus]}
                 </Badge>
