@@ -33,6 +33,7 @@ const roleLabels: Record<string, string> = {
   coordinator_teacher: "Asistent",
   teacher: "Profesor",
   manager: "Manager",
+  cse: "CSE",
 };
 
 export default function UsersPage() {
