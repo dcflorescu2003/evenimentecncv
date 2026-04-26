@@ -1319,7 +1319,7 @@ export default function ProfEventDetailPage() {
       <Dialog open={uploadDialogOpen} onOpenChange={(o) => { if (!o) { setUploadDialogOpen(false); setUploadTitle(""); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Încarcă {fileCategoryLabels[uploadCategory]?.toLowerCase()}</DialogTitle>
+            <DialogTitle>Încarcă {(uploadCategory === "event_dossier" && isCse ? "dosar / cerere" : fileCategoryLabels[uploadCategory]?.toLowerCase())}</DialogTitle>
             <DialogDescription>Selectați un fișier (max 10MB).</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
