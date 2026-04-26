@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
-import { PushNotifications } from "@capacitor/push-notifications";
+import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,6 +8,8 @@ import { toast } from "sonner";
 
 /**
  * Registers the device for FCM push notifications on Android/iOS (Capacitor).
+ * Uses @capacitor-firebase/messaging so we get an FCM token on BOTH platforms
+ * (on iOS, the underlying APNs token is exchanged for an FCM token by Firebase SDK).
  * Stores the FCM token in the fcm_tokens table.
  * This hook is a no-op on web.
  */
@@ -22,11 +24,12 @@ export function useCapacitorPush() {
 
     const setup = async () => {
       try {
-        let permStatus = await PushNotifications.checkPermissions();
-        if (permStatus.receive === "prompt") {
-          permStatus = await PushNotifications.requestPermissions();
+        // 1. Cere permisiune pentru push
+        let perm = await FirebaseMessaging.checkPermissions();
+        if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
+          perm = await FirebaseMessaging.requestPermissions();
         }
-        if (permStatus.receive !== "granted") {
+        if (perm.receive !== "granted") {
           console.log("Push permission not granted");
           toast("Notificările sunt dezactivate", {
             description: "Activează permisiunea din sistem dacă vrei remindere pentru evenimente.",
@@ -34,13 +37,12 @@ export function useCapacitorPush() {
           return;
         }
 
-        // Asigurăm și permisiune pentru notificări locale (foreground fallback)
+        // 2. Permisiune + canal pentru notificări locale (foreground fallback Android)
         try {
           const localPerm = await LocalNotifications.checkPermissions();
           if (localPerm.display === "prompt") {
             await LocalNotifications.requestPermissions();
           }
-          // Creează canalul "default" pe Android (idempotent)
           if (Capacitor.getPlatform() === "android") {
             await LocalNotifications.createChannel({
               id: "default",
@@ -56,13 +58,14 @@ export function useCapacitorPush() {
           console.warn("LocalNotifications setup warning:", e);
         }
 
-        await PushNotifications.addListener("registration", async (token) => {
-          console.log("FCM token:", token.value);
+        // 3. Listener pentru token FCM (același format pe Android și iOS)
+        await FirebaseMessaging.addListener("tokenReceived", async ({ token }) => {
+          console.log("FCM token:", token);
           const platform = Capacitor.getPlatform(); // 'android' | 'ios'
           const { error } = await supabase.from("fcm_tokens").upsert(
             {
               user_id: user.id,
-              token: token.value,
+              token,
               platform,
               updated_at: new Date().toISOString(),
             },
@@ -71,18 +74,16 @@ export function useCapacitorPush() {
           if (error) console.error("Failed to save FCM token:", error);
         });
 
-        await PushNotifications.addListener("registrationError", (err) => {
-          console.error("Push registration error:", err);
-        });
+        // 4. Notificare primită în foreground
+        await FirebaseMessaging.addListener("notificationReceived", async (event) => {
+          console.log("Push received (foreground):", event);
+          const notification = event.notification;
+          const title = notification?.title || "Notificare";
+          const body = notification?.body || "";
+          const data = (notification?.data ?? {}) as Record<string, unknown>;
+          const url = data.url as string | undefined;
 
-        await PushNotifications.addListener("pushNotificationReceived", async (notification) => {
-          console.log("Push received (foreground):", notification);
-          const title = notification.title || "Notificare";
-          const body = notification.body || "";
-          const url = notification.data?.url;
-
-          // Pe Android, push-urile primite în foreground NU sunt afișate automat în system tray.
-          // Afișăm o notificare locală nativă, ca să fie vizibilă chiar și când app e deschis.
+          // În foreground, sistemul nu afișează automat notificarea — o afișăm local
           try {
             await LocalNotifications.schedule({
               notifications: [
@@ -91,7 +92,6 @@ export function useCapacitorPush() {
                   title,
                   body,
                   channelId: Capacitor.getPlatform() === "android" ? "default" : undefined,
-                  sound: undefined,
                   smallIcon: "ic_launcher",
                   extra: { url: url || "/student/tickets" },
                 },
@@ -114,7 +114,17 @@ export function useCapacitorPush() {
           });
         });
 
-        // Tap pe notificarea locală (foreground)
+        // 5. Tap pe notificare push (background/closed)
+        await FirebaseMessaging.addListener("notificationActionPerformed", (event) => {
+          console.log("Push action:", event);
+          const data = (event.notification?.data ?? {}) as Record<string, unknown>;
+          const url = data.url as string | undefined;
+          if (url) {
+            window.location.href = url;
+          }
+        });
+
+        // 6. Tap pe notificarea locală (foreground)
         try {
           await LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
             const url = action.notification?.extra?.url;
@@ -124,16 +134,22 @@ export function useCapacitorPush() {
           console.warn("LocalNotifications listener warning:", e);
         }
 
-        await PushNotifications.addListener("pushNotificationActionPerformed", (notification) => {
-          console.log("Push action:", notification);
-          // Navigate to tickets page when notification is tapped
-          const url = notification.notification?.data?.url;
-          if (url) {
-            window.location.href = url;
-          }
-        });
+        // 7. Obține token-ul (pe iOS asta declanșează și înregistrarea APNs)
+        const { token } = await FirebaseMessaging.getToken();
+        if (token) {
+          console.log("FCM token (initial):", token);
+          const platform = Capacitor.getPlatform();
+          await supabase.from("fcm_tokens").upsert(
+            {
+              user_id: user.id,
+              token,
+              platform,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id,token" }
+          );
+        }
 
-        await PushNotifications.register();
         registered.current = true;
       } catch (err) {
         console.error("Capacitor push setup error:", err);
@@ -143,7 +159,7 @@ export function useCapacitorPush() {
     setup();
 
     return () => {
-      void PushNotifications.removeAllListeners();
+      void FirebaseMessaging.removeAllListeners();
       registered.current = false;
     };
   }, [user]);
