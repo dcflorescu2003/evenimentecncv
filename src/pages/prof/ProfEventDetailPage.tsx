@@ -237,6 +237,48 @@ export default function ProfEventDetailPage() {
     enabled: !!id,
   });
 
+  // Form submissions from students/parents for this event
+  const { data: submissions = [] } = useQuery({
+    queryKey: ["prof_event_submissions", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("form_submissions")
+        .select("*")
+        .eq("event_id", id!)
+        .order("uploaded_at", { ascending: false });
+      if (error) throw error;
+      const studentIds = Array.from(new Set((data || []).map((s: any) => s.student_id)));
+      if (studentIds.length === 0) return data || [];
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, display_name")
+        .in("id", studentIds);
+      const pMap = new Map((profs || []).map((p: any) => [p.id, p]));
+      return (data || []).map((s: any) => ({ ...s, student: pMap.get(s.student_id) }));
+    },
+    enabled: !!id,
+  });
+
+  const updateSubmissionStatusMutation = useMutation({
+    mutationFn: async ({ id: subId, status, notes }: { id: string; status: string; notes?: string | null }) => {
+      const payload: any = { status };
+      if (notes !== undefined) payload.admin_notes = notes;
+      const { error } = await supabase.from("form_submissions").update(payload).eq("id", subId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["prof_event_submissions", id] });
+      toast.success("Status actualizat");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  async function downloadSubmission(sub: any) {
+    const { data, error } = await supabase.storage.from("event-files").createSignedUrl(sub.storage_path, 60);
+    if (error) { toast.error("Nu s-a putut genera link-ul"); return; }
+    window.open(data.signedUrl, "_blank");
+  }
+
   // Event student assistants
   const { data: assistants = [] } = useQuery({
     queryKey: ["prof_event_assistants", id],
