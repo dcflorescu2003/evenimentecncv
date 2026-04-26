@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -31,6 +32,28 @@ export function useCapacitorPush() {
             description: "Activează permisiunea din sistem dacă vrei remindere pentru evenimente.",
           });
           return;
+        }
+
+        // Asigurăm și permisiune pentru notificări locale (foreground fallback)
+        try {
+          const localPerm = await LocalNotifications.checkPermissions();
+          if (localPerm.display === "prompt") {
+            await LocalNotifications.requestPermissions();
+          }
+          // Creează canalul "default" pe Android (idempotent)
+          if (Capacitor.getPlatform() === "android") {
+            await LocalNotifications.createChannel({
+              id: "default",
+              name: "Notificări",
+              description: "Notificări evenimente",
+              importance: 5,
+              visibility: 1,
+              sound: "default",
+              vibration: true,
+            });
+          }
+        } catch (e) {
+          console.warn("LocalNotifications setup warning:", e);
         }
 
         await PushNotifications.addListener("registration", async (token) => {
