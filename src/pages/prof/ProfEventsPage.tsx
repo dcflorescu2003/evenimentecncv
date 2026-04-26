@@ -98,7 +98,8 @@ function joinDatetime(date: string, time: string): string | null {
 }
 
 export default function ProfEventsPage() {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
+  const isCse = roles.includes("cse");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -165,12 +166,17 @@ export default function ProfEventsPage() {
         max_capacity: values.max_capacity,
         status: values.status,
         eligible_grades: values.eligible_grades.length > 0 ? values.eligible_grades : null,
-        eligible_classes: values.eligible_classes.length > 0 ? values.eligible_classes : null,
+        eligible_classes: isCse
+          ? null
+          : values.eligible_classes.length > 0
+          ? values.eligible_classes
+          : null,
         booking_open_at: joinDatetime(values.booking_open_date, values.booking_open_time),
         booking_close_at: joinDatetime(values.booking_close_date, values.booking_close_time),
         notes_for_teachers: values.notes_for_teachers || null,
         published: values.status === "published",
         is_public: values.is_public,
+        is_cse: isCse,
         created_by: user!.id,
       };
       if (editingId) {
