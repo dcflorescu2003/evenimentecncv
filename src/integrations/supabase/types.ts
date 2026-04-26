@@ -322,6 +322,7 @@ export type Database = {
           eligible_grades: number[] | null
           end_time: string
           id: string
+          is_cse: boolean
           is_public: boolean
           location: string | null
           max_capacity: number
@@ -347,6 +348,7 @@ export type Database = {
           eligible_grades?: number[] | null
           end_time: string
           id?: string
+          is_cse?: boolean
           is_public?: boolean
           location?: string | null
           max_capacity: number
@@ -372,6 +374,7 @@ export type Database = {
           eligible_grades?: number[] | null
           end_time?: string
           id?: string
+          is_cse?: boolean
           is_public?: boolean
           location?: string | null
           max_capacity?: number
