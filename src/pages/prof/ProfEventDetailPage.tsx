@@ -897,8 +897,8 @@ export default function ProfEventDetailPage() {
         <TabsList className="w-full flex-wrap h-auto justify-start">
           <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
           <TabsTrigger value="participants">Participanți ({participants.length + assistants.length})</TabsTrigger>
-          <TabsTrigger value="dossier">Dosar ({dossierFiles.length})</TabsTrigger>
-          <TabsTrigger value="forms">Formulare ({templateFiles.length})</TabsTrigger>
+          <TabsTrigger value="dossier">{isCse ? "Dosar / Cerere" : "Dosar"} ({dossierFiles.length})</TabsTrigger>
+          <TabsTrigger value="forms">Formulare ({templateFiles.length}{submissions.length > 0 ? ` · ${submissions.length} primite` : ""})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="coordinators" className="space-y-4">
