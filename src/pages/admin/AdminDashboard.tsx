@@ -85,13 +85,34 @@ export default function AdminDashboard() {
       if (error) throw error;
       console.log("[push test] response:", data);
       const r = data as any;
-      const fcmDetails = r?.fcmStatuses?.length
-        ? r.fcmStatuses.map((s: any) => `${s.token_prefix}…→${s.status}${s.invalid ? " (invalid)" : ""}`).join(", ")
-        : "fără token-uri FCM";
-      toast.success(`Trimis: ${r?.fcmCount ?? 0} FCM, ${r?.webPushCount ?? 0} web. Project=${r?.fcmProjectId || "?"}`, {
-        description: fcmDetails,
-        duration: 12000,
-      });
+
+      // Construim un raport detaliat
+      const lines: string[] = [];
+      lines.push(`FCM: ${r?.fcmConfigured ? `configurat ✓ (project: ${r.fcmProjectId})` : "NU e configurat ✗"}`);
+      if (r?.fcmError) lines.push(`⚠ ${r.fcmError}`);
+      lines.push(`Tokene Android pentru contul tău: ${r?.tokensFound ?? 0}`);
+      lines.push(`Trimise FCM: ${r?.fcmCount ?? 0}, Web Push: ${r?.webPushCount ?? 0}`);
+      if (r?.fcmStatuses?.length) {
+        lines.push(
+          "Detalii: " +
+            r.fcmStatuses
+              .map((s: any) => `${s.token_prefix}…→${s.status}${s.invalid ? " (invalid)" : ""}`)
+              .join(", ")
+        );
+      }
+      if (r?.tokensFound === 0 && r?.fcmConfigured) {
+        lines.push("→ Logează-te în aplicația Android cu acest cont pentru a salva tokenul FCM.");
+      }
+
+      const isSuccess = (r?.fcmCount ?? 0) > 0 || (r?.webPushCount ?? 0) > 0;
+      const summary = `Trimis: ${r?.fcmCount ?? 0} FCM, ${r?.webPushCount ?? 0} web`;
+      const description = lines.join("\n");
+
+      if (isSuccess) {
+        toast.success(summary, { description, duration: 15000 });
+      } else {
+        toast.warning(summary, { description, duration: 20000 });
+      }
     } catch (e: any) {
       console.error("[push test] error:", e);
       toast.error("Eroare la trimiterea push-ului", { description: e.message });

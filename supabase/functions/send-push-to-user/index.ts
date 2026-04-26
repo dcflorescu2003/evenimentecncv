@@ -117,7 +117,13 @@ function urlBase64ToUint8Array(b64: string): Uint8Array {
 
 async function importPrivateKey(b64url: string) {
   const raw = urlBase64ToUint8Array(b64url);
-  return await crypto.subtle.importKey("raw", raw, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  return await crypto.subtle.importKey(
+    "raw",
+    raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength) as ArrayBuffer,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"],
+  );
 }
 
 async function createVapidJwt(audience: string, subject: string, privateKey: CryptoKey): Promise<string> {
@@ -231,12 +237,15 @@ Deno.serve(async (req) => {
 
     const targetUrl = url || "/student/tickets";
 
-    // Web Push
+    // ── Web Push (opțional, eșuează silențios dacă VAPID e invalid) ─────
     let webPushCount = 0;
     let webPushPruned = 0;
+    let webPushConfigured = false;
+    let webPushError: string | null = null;
     if (vapidPrivateKeyB64) {
       try {
         const vapidKey = await importPrivateKey(vapidPrivateKeyB64);
+        webPushConfigured = true;
         const { data: subs } = await admin
           .from("push_subscriptions").select("*").eq("user_id", user_id);
         const invalidIds: string[] = [];
@@ -255,46 +264,77 @@ Deno.serve(async (req) => {
           else console.error("Web push prune error:", delErr);
         }
       } catch (e) {
+        webPushError = `VAPID_PRIVATE_KEY invalid: ${(e as Error).message}`;
         console.error("Web push block error:", e);
       }
+    } else {
+      webPushError = "VAPID_PRIVATE_KEY nu e setat";
     }
 
-    // FCM
+    // ── FCM (Android/iOS native) ────────────────────────────────────────
     let fcmCount = 0;
     let fcmPruned = 0;
     const fcmStatuses: Array<{ token_prefix: string; status: number; ok: boolean; invalid: boolean }> = [];
     let fcmProjectId: string | null = null;
-    if (firebaseSaJson) {
+    let fcmConfigured = false;
+    let fcmError: string | null = null;
+    let tokensFound = 0;
+
+    if (!firebaseSaJson) {
+      fcmError = "FIREBASE_SERVICE_ACCOUNT_KEY nu e setat în Lovable Cloud secrets";
+    } else {
+      let sa: ServiceAccount | null = null;
       try {
-        const sa: ServiceAccount = JSON.parse(firebaseSaJson);
-        fcmProjectId = sa.project_id;
-        console.log(`[send-push-to-user] FCM project_id=${sa.project_id}, target user=${user_id}`);
-        const accessToken = await getAccessToken(sa);
-        const { data: tokens } = await admin
-          .from("fcm_tokens").select("*").eq("user_id", user_id);
-        console.log(`[send-push-to-user] Found ${tokens?.length || 0} FCM tokens for user`);
-        const invalidIds: string[] = [];
-        for (const ft of (tokens || [])) {
-          const res = await sendFcmNotification(
-            accessToken, sa.project_id, ft.token, title, msgBody, { url: targetUrl }
-          );
-          fcmStatuses.push({
-            token_prefix: ft.token.substring(0, 20),
-            status: res.status,
-            ok: res.ok,
-            invalid: res.invalid,
-          });
-          if (res.ok) fcmCount++;
-          if (res.invalid) invalidIds.push(ft.id);
-        }
-        if (invalidIds.length > 0) {
-          const { error: delErr } = await admin
-            .from("fcm_tokens").delete().in("id", invalidIds);
-          if (!delErr) fcmPruned = invalidIds.length;
-          else console.error("FCM prune error:", delErr);
-        }
+        sa = JSON.parse(firebaseSaJson);
       } catch (e) {
-        console.error("FCM block error:", e);
+        fcmError =
+          "FIREBASE_SERVICE_ACCOUNT_KEY nu este JSON valid. " +
+          "Trebuie să conțină exact conținutul fișierului service-account.json descărcat din Firebase Console " +
+          "(Project Settings → Service Accounts → Generate new private key). " +
+          `Eroare: ${(e as Error).message}`;
+        console.error("FCM JSON.parse error:", e);
+      }
+
+      if (sa) {
+        if (!sa.project_id || !sa.client_email || !sa.private_key) {
+          fcmError =
+            "FIREBASE_SERVICE_ACCOUNT_KEY nu conține câmpurile necesare " +
+            "(project_id, client_email, private_key). Re-descarcă fișierul service-account.json din Firebase.";
+        } else {
+          fcmProjectId = sa.project_id;
+          fcmConfigured = true;
+          console.log(`[send-push-to-user] FCM project_id=${sa.project_id}, target user=${user_id}`);
+          try {
+            const accessToken = await getAccessToken(sa);
+            const { data: tokens } = await admin
+              .from("fcm_tokens").select("*").eq("user_id", user_id);
+            tokensFound = tokens?.length || 0;
+            console.log(`[send-push-to-user] Found ${tokensFound} FCM tokens for user`);
+            const invalidIds: string[] = [];
+            for (const ft of (tokens || [])) {
+              const res = await sendFcmNotification(
+                accessToken, sa.project_id, ft.token, title, msgBody, { url: targetUrl }
+              );
+              fcmStatuses.push({
+                token_prefix: ft.token.substring(0, 20),
+                status: res.status,
+                ok: res.ok,
+                invalid: res.invalid,
+              });
+              if (res.ok) fcmCount++;
+              if (res.invalid) invalidIds.push(ft.id);
+            }
+            if (invalidIds.length > 0) {
+              const { error: delErr } = await admin
+                .from("fcm_tokens").delete().in("id", invalidIds);
+              if (!delErr) fcmPruned = invalidIds.length;
+              else console.error("FCM prune error:", delErr);
+            }
+          } catch (e) {
+            fcmError = `FCM send error: ${(e as Error).message}`;
+            console.error("FCM block error:", e);
+          }
+        }
       }
     }
 
@@ -306,6 +346,11 @@ Deno.serve(async (req) => {
         webPushPruned,
         fcmPruned,
         fcmProjectId,
+        fcmConfigured,
+        webPushConfigured,
+        tokensFound,
+        fcmError,
+        webPushError,
         fcmStatuses,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

@@ -183,7 +183,7 @@ serve(async (req) => {
           first_name: row.first_name,
           last_name: row.last_name,
           role: row.role,
-          error: err.message,
+          error: (err as Error).message,
         });
         errorCount++;
       }
@@ -204,7 +204,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

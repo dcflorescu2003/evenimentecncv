@@ -1,24 +1,44 @@
-# Plan curent — Diagnostic notificări push Android
+## Diagnostic
 
-## Status: implementat
+Din logs și din lista de secrets:
 
-### Modificări aplicate
-1. **`send-push-to-user`** + **`send-event-reminders`**: payload Android FCM îmbogățit cu `channel_id: "default"`, `sound`, `notification_priority: PRIORITY_HIGH`. Plus logare detaliată în `send-push-to-user` (project_id Firebase folosit, status HTTP per token, prefix token).
-2. **`AndroidManifest.xml`**: adăugate meta-data `default_notification_channel_id = "default"` și `default_notification_icon = ic_launcher`.
-3. **`useCapacitorPush.ts`**: 
-   - Cere și permisiune `LocalNotifications`.
-   - Creează canalul „default” pe Android (importance 5, sound, vibration).
-   - În foreground (când app e deschis), planifică o notificare locală nativă vizibilă în system tray (push-urile FCM cu payload `notification` NU se afișează singure pe Android când app e foreground).
-   - Listener pentru tap-ul pe notificarea locală navighează la URL-ul din extras.
-4. **AdminDashboard**: card „Test notificări push” cu buton care invocă `send-push-to-user` pe contul curent și afișează în toast `fcmProjectId` + statusurile per token (200 OK / 403 SENDER_ID_MISMATCH / 404 / etc.).
+- Secret-ul existent: `FIREBASE_SERVICE_ACCOUNT_KEY` ✅
+- Secret-ul citit de cod: `FCM_SERVICE_ACCOUNT_JSON` ❌ (nu există)
+- Rezultat: blocul FCM e sărit, `fcmProjectId = null` → UI-ul afișează „Project=?” și „fără token-uri FCM”.
+- VAPID key (`VAPID_PRIVATE_KEY`) e setat dar într-un format pe care `crypto.subtle.importKey` nu îl acceptă (`Invalid key usage`).
+- În `fcm_tokens` există 7 device-uri Android înregistrate, deci hook-ul `useCapacitorPush` funcționează — dar **user-ul tău admin actual probabil nu are token salvat** (te-ai logat ca admin pe web, nu pe APK-ul cu telefonul).
 
-### Următorii pași pentru utilizator
-- **Web**: nimic; testează din `/admin` → buton „Trimite test”.
-- **Android (APK)**: git pull → `npm install` → `npx cap sync android` → rebuild APK → reinstalează pe device. Apoi loghează-te ca admin și apasă „Trimite test”.
+## Modificări
 
-### Diagnostic așteptat
-Toast-ul de răspuns indică:
-- `Project=pyro-89b9f`: secretul Firebase e corect; dacă tot nu apare push, e probabil canal/permisiune device.
-- `Project=` alt nume: secret Firebase greșit → trebuie regenerat din Firebase Console pentru projectul `pyro-89b9f`.
-- `status=403`/`SENDER_ID_MISMATCH`: același caz — secret Firebase aparține altui project decât cel din `google-services.json`.
-- `status=404` / `invalid`: token expirat (se șterge automat la următoarea sincronizare a app-ului).
+### 1. `supabase/functions/send-push-to-user/index.ts`
+
+- Citește serviciul FCM din **ambele** nume de secret (compatibilitate): `FIREBASE_SERVICE_ACCOUNT_KEY` (preferat) sau `FCM_SERVICE_ACCOUNT_JSON` (fallback).
+- Întoarce în răspuns: `fcmConfigured` (boolean), `webPushConfigured` (boolean), `tokensFound` (numărul de tokene găsite pentru user_id), și mesaje de eroare clare.
+- Pune blocul Web Push într-un `try/catch` care nu mai loghează ca eroare absența VAPID — doar dacă chiar e setat și eșuează.
+- La eroarea de import VAPID, marchează `webPushConfigured = false` și continuă (nu mai blochează).
+
+### 2. `supabase/functions/send-event-reminders/index.ts`
+
+Aceeași schimbare de citire a secretului FCM (`FIREBASE_SERVICE_ACCOUNT_KEY` cu fallback).
+
+### 3. `src/pages/admin/AdminDashboard.tsx` (butonul de test push)
+
+- Afișează un mesaj mai clar: `FCM: configurat ✓ / nu`, `tokene găsite: N`, `trimise: M`.
+- Dacă `tokensFound === 0` pentru user-ul curent → spune clar: „User-ul X nu are niciun device Android înregistrat. Logează-te în aplicația Android cu acest user pentru a salva tokenul.”
+
+### 4. (Opțional, dacă vrei web push să meargă)
+
+VAPID_PRIVATE_KEY trebuie să fie cheia privată EC P-256 în format **base64url raw** (32 bytes). Dacă o ai în PEM, trebuie regenerată cu `npx web-push generate-vapid-keys` și salvată ca atare. Dar asta e un secret pe care îl actualizezi tu manual — nu e ceva pe care îl putem face din cod. Pentru Android nu contează (folosim FCM, nu Web Push).
+
+## Pași de verificare după implementare
+
+1. Deploy automat la `send-push-to-user` și `send-event-reminders`.
+2. Apeși butonul de test push în AdminDashboard.
+3. Răspunsul ar trebui să arate `fcmConfigured: true`, `fcmProjectId: <numele real>`, și `tokensFound: N`.
+4. Dacă `tokensFound = 0`, te loghezi în APK pe Android cu user-ul respectiv → tokenul se salvează automat → reîncerci.
+
+## Note tehnice
+
+- Nu modificăm `useCapacitorPush.ts` — funcționează corect (există tokene în DB).
+- Nu modificăm `AndroidManifest.xml` — e configurat OK.
+- Numele secretului în Lovable Cloud rămâne `FIREBASE_SERVICE_ACCOUNT_KEY` (nu trebuie să adaugi unul nou).
