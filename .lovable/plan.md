@@ -1,93 +1,56 @@
-## Obiectiv
+## Problema
 
-Adăugare workflow complet pentru CSE de gestionare documente eveniment (Dosar/Cerere + Formulare) și tracking al submisiilor formularelor de la elevi/părinți, cu statusuri: încărcat / verificat / acceptat / respins.
+Notificările push nu apar pe Android, deși:
+- Token-urile FCM sunt salvate corect în `fcm_tokens` (ultima actualizare azi)
+- `send-event-reminders` rulează și creează notificări in-app
+- Edge function `send-push-to-user` și `send-event-reminders` apelează FCM v1 API
 
-CSE folosește deja `ProfEventDetailPage.tsx` (rute `/prof`), deci modificările se fac în această pagină comună, condiționat pe rol.
+Cauze probabile, în ordinea probabilității:
 
-## Modificări UI
+### 1. Mismatch între `FIREBASE_SERVICE_ACCOUNT_KEY` și `google-services.json`
+`google-services.json` din Android indică Firebase project **`pyro-89b9f`** (sender ID `621457065479`). Token-urile FCM ale device-urilor sunt emise de acest sender. Dacă secretul `FIREBASE_SERVICE_ACCOUNT_KEY` aparține altui project Firebase, FCM v1 va respinge cererile cu `SENDER_ID_MISMATCH` (HTTP 403) și nu va livra nimic.
 
-### 1. Tab "Dosar / Cerere" (CSE) vs "Dosar" (profesor)
+### 2. Notificările trimise în foreground nu apar pe device
+Plugin-ul `@capacitor/push-notifications` NU afișează automat notificare în system tray când app-ul este deschis (foreground). În prezent afișăm un toast Sonner în `useCapacitorPush.ts`, dar nu o notificare locală. Când user-ul are app-ul închis/în background, FCM ar trebui să afișeze automat notificarea (folosim payload `notification`), dar dacă nu ajunge — vezi punctul 1.
 
-În `ProfEventDetailPage.tsx`, când `isCse === true`:
-- Eticheta tabului devine **"Dosar / Cerere"** (în loc de "Dosar eveniment")
-- Eticheta categoriei `event_dossier` în dialogul de upload devine **"Dosar / Cerere"**
-- Restul comportamentului identic (upload, listă, descărcare, ștergere)
+### 3. Lipsa canalului default explicit
+Pe Android 8+ canalele sunt obligatorii. Plugin-ul creează unul default, dar nu este declarat în `AndroidManifest.xml`, iar payload-ul FCM nu specifică `android.notification.channel_id`.
 
-Pentru profesor rămâne neschimbat: "Dosar eveniment".
+## Pași de remediere
 
-### 2. Tab "Formulare" — extins cu tracking submisii
+### Pas 1 — Verificare diagnostic (executat direct de mine după aprobare)
+Voi adăuga logare detaliată temporară în `send-push-to-user` (project_id folosit, status FCM per token, primii 30 caractere din răspunsul FCM) și voi crea un buton de test în pagina admin „Trimite push test către mine” care apelează funcția pe contul curent, ca să vedem imediat răspunsul real al FCM (200 OK / 403 SENDER_ID_MISMATCH / 404 UNREGISTERED etc.).
 
-Tabul existent "Formulare" (șabloane încărcate de organizator) primește o secțiune nouă dedesubt: **"Formulare primite de la elevi / părinți"**.
+### Pas 2 — Remediere previzibilă în paralel
+- **AndroidManifest.xml**: adaug meta-data pentru default notification channel + default icon + culoare:
+  ```xml
+  <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="default" />
+  <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@mipmap/ic_launcher" />
+  ```
+- **Edge functions** (`send-push-to-user` + `send-event-reminders`): adaug în payload FCM:
+  ```js
+  android: {
+    priority: "high",
+    notification: {
+      channel_id: "default",
+      sound: "default",
+      click_action: "OPEN_APP"
+    }
+  }
+  ```
+- **`useCapacitorPush.ts`**: când vine push în foreground, în loc de toast Sonner (care poate nu fi vizibil), afișez și o notificare locală nativă folosind plugin-ul `@capacitor/local-notifications` (sau triggher manual `LocalNotifications.schedule`). Alternativ doar îmbunătățesc toast-ul cu vibrate.
 
-Această secțiune este vizibilă pentru CSE, profesor coordonator și diriginte (creatorul evenimentului). Conține:
-- Listă agregată din `form_submissions` filtrată pe `event_id`
-- Coloane: Elev, Titlu formular, Fișier (download), Data încărcării, Status (badge colorat), Acțiuni
-- Buton de schimbare status pentru fiecare submisie:
-  - `uploaded` (gri) → "Marchează verificat"
-  - `reviewed` (albastru) → "Acceptă" / "Respinge"
-  - `accepted` (verde) / `rejected` (roșu) → "Resetează la verificat"
-- Câmp opțional pentru `admin_notes` la respingere
+### Pas 3 — După diagnostic
+Dacă log-urile arată **`SENDER_ID_MISMATCH`** sau `403`, cauza e secretul Firebase. Voi cere user-ului să încarce noul `FIREBASE_SERVICE_ACCOUNT_KEY` care aparține project-ului `pyro-89b9f` (din Firebase Console → Project settings → Service accounts → Generate new private key).
 
-### 3. Badge "Eveniment CSE" în tab Formulare
+## Fișiere modificate
 
-Pentru claritate, dacă evenimentul este CSE, secțiunea Formulare afișează `<CseBadge />` lângă titlu.
+- `supabase/functions/send-push-to-user/index.ts` — logare detaliată + payload Android cu channel_id
+- `supabase/functions/send-event-reminders/index.ts` — payload Android cu channel_id
+- `android/app/src/main/AndroidManifest.xml` — meta-data canal default
+- `src/hooks/useCapacitorPush.ts` — fallback local notification în foreground
+- `src/pages/admin/AdminDashboard.tsx` (sau pagină dedicată debug) — buton test push
 
-## Modificări baza de date
+## Notă pentru user
 
-### Migrație: extind enum `form_submission_status`
-
-Verific valorile existente — adaug `reviewed` dacă lipsește (există deja `uploaded`, `accepted`, `rejected` pe baza componentelor existente).
-
-```sql
-ALTER TYPE public.form_submission_status ADD VALUE IF NOT EXISTS 'reviewed';
-```
-
-### Migrație: RLS pentru `form_submissions`
-
-Politici noi pentru a permite organizatorului evenimentului (CSE / profesor / diriginte) să citească și să actualizeze submisiile elevilor pentru evenimentele lor:
-
-```sql
--- Citire submisii pentru creatorul evenimentului
-CREATE POLICY "CSE read event submissions" ON public.form_submissions
-FOR SELECT TO authenticated
-USING (has_role(auth.uid(), 'cse') AND is_event_creator(event_id, auth.uid()));
-
-CREATE POLICY "Teachers read event submissions" ON public.form_submissions
-FOR SELECT TO authenticated
-USING (has_role(auth.uid(), 'teacher') AND is_event_creator(event_id, auth.uid()));
-
-CREATE POLICY "Homeroom teachers read event submissions" ON public.form_submissions
-FOR SELECT TO authenticated
-USING (has_role(auth.uid(), 'homeroom_teacher') AND is_event_creator(event_id, auth.uid()));
-
--- Update status submisii pentru creatorul evenimentului
-CREATE POLICY "CSE update event submissions" ON public.form_submissions
-FOR UPDATE TO authenticated
-USING (has_role(auth.uid(), 'cse') AND is_event_creator(event_id, auth.uid()))
-WITH CHECK (has_role(auth.uid(), 'cse') AND is_event_creator(event_id, auth.uid()));
-
-CREATE POLICY "Teachers update event submissions" ON public.form_submissions
-FOR UPDATE TO authenticated
-USING (has_role(auth.uid(), 'teacher') AND is_event_creator(event_id, auth.uid()))
-WITH CHECK (has_role(auth.uid(), 'teacher') AND is_event_creator(event_id, auth.uid()));
-
-CREATE POLICY "Homeroom teachers update event submissions" ON public.form_submissions
-FOR UPDATE TO authenticated
-USING (has_role(auth.uid(), 'homeroom_teacher') AND is_event_creator(event_id, auth.uid()))
-WITH CHECK (has_role(auth.uid(), 'homeroom_teacher') AND is_event_creator(event_id, auth.uid()));
-```
-
-### Storage RLS
-
-Pentru ca CSE/profesor/diriginte să descarce fișierul submisiei din bucket-ul `event-files`, adaug politică pe `storage.objects` care verifică prin `form_submissions.event_id` că userul este creator. (Profesorul are deja acces prin politicile generice pe `event_files` — pentru `form_submissions` este bucket separat / același, verific la implementare.)
-
-## Fișiere afectate
-
-- **Edit** `src/pages/prof/ProfEventDetailPage.tsx` — etichete condiționate CSE, secțiune nouă "Formulare primite" cu query + mutații status
-- **Migrație nouă** — extind enum status + RLS pentru `form_submissions` + storage policy
-
-## Detalii de comportament
-
-- Statusurile rămân vizibile și elevului (acesta vede deja statusul submisiei sale în `StudentEventDetailPage.tsx`)
-- Modificarea statusului se loghează automat doar prin `updated_at` implicit; nu se cere audit suplimentar
-- Lista submisiilor este sortată cronologic descendent (cele mai noi sus)
+După modificări la Android (manifest), trebuie să faci git pull, `npm install`, `npx cap sync android`, apoi rebuild APK-ul. Modificările la edge functions se aplică instant, fără rebuild.
