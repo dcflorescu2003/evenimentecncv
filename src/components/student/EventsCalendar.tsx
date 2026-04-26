@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, CalendarDays, Clock, MapPin, ArrowRight } from "lucide-react";
+import { CseBadge } from "@/components/CseBadge";
 import type { Tables } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 
@@ -315,7 +316,7 @@ export default function EventsCalendar({ events, myReservationIds, reservationCo
             >
               <CardContent className="p-3 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium text-sm">{ev.title}</p>
+                  <div className="flex items-center gap-2 flex-wrap"><p className="font-medium text-sm">{ev.title}</p>{(ev as any).is_cse && <CseBadge short />}</div>
                   {statusBadge(s)}
                 </div>
                 {ev.description && (
@@ -420,7 +421,7 @@ export default function EventsCalendar({ events, myReservationIds, reservationCo
                       className="w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-start justify-between gap-2 mb-1">
-                        <p className="font-medium text-sm">{ev.title}</p>
+                        <div className="flex items-center gap-2 flex-wrap"><p className="font-medium text-sm">{ev.title}</p>{(ev as any).is_cse && <CseBadge short />}</div>
                         {statusBadge(s)}
                       </div>
                       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
