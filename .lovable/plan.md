@@ -1,44 +1,49 @@
-## Diagnostic
+## Notificări automate planificate
 
-Din logs și din lista de secrets:
+### 1. Notificare elevi dimineața — la 09:30 (GMT+3)
 
-- Secret-ul existent: `FIREBASE_SERVICE_ACCOUNT_KEY` ✅
-- Secret-ul citit de cod: `FCM_SERVICE_ACCOUNT_JSON` ❌ (nu există)
-- Rezultat: blocul FCM e sărit, `fcmProjectId = null` → UI-ul afișează „Project=?” și „fără token-uri FCM”.
-- VAPID key (`VAPID_PRIVATE_KEY`) e setat dar într-un format pe care `crypto.subtle.importKey` nu îl acceptă (`Invalid key usage`).
-- În `fcm_tokens` există 7 device-uri Android înregistrate, deci hook-ul `useCapacitorPush` funcționează — dar **user-ul tău admin actual probabil nu are token salvat** (te-ai logat ca admin pe web, nu pe APK-ul cu telefonul).
+Funcția `send-event-reminders` cu `mode: "morning"` deja există și funcționează (trimite notificare elevilor cu rezervare în ziua curentă).
 
-## Modificări
+**Schimbare:** mutăm cron job-ul `send-morning-reminders` din ora 07:00 UTC (= 10:00 GMT+3) la **06:30 UTC (= 09:30 GMT+3)**.
 
-### 1. `supabase/functions/send-push-to-user/index.ts`
+```text
+cron:  30 6 * * *   →  send-event-reminders { mode: "morning" }
+```
 
-- Citește serviciul FCM din **ambele** nume de secret (compatibilitate): `FIREBASE_SERVICE_ACCOUNT_KEY` (preferat) sau `FCM_SERVICE_ACCOUNT_JSON` (fallback).
-- Întoarce în răspuns: `fcmConfigured` (boolean), `webPushConfigured` (boolean), `tokensFound` (numărul de tokene găsite pentru user_id), și mesaje de eroare clare.
-- Pune blocul Web Push într-un `try/catch` care nu mai loghează ca eroare absența VAPID — doar dacă chiar e setat și eșuează.
-- La eroarea de import VAPID, marchează `webPushConfigured = false` și continuă (nu mai blochează).
+### 2. Notificare diriginți seara — la 19:00 (GMT+3) după evenimente
 
-### 2. `supabase/functions/send-event-reminders/index.ts`
+Creăm o funcție edge nouă: **`notify-homeroom-absences`**.
 
-Aceeași schimbare de citire a secretului FCM (`FIREBASE_SERVICE_ACCOUNT_KEY` cu fallback).
+**Logica:**
+1. Găsește toate evenimentele cu `date = azi` (în Europe/Bucharest).
+2. Pentru fiecare eveniment, identifică elevii cu rezervare care au absentat:
+   - `tickets.status = 'absent'` (sau `'reserved'` rămas neînregistrat — îl considerăm absent doar dacă ticket-ul e marcat absent; `close-past-events` rulează la 06:00 a doua zi, deci la 19:00 încă nu a marcat automat).
+   - **Important:** la 19:00 evenimentul s-a încheiat (verificăm `end_time < now()`), iar elevii încă neprezenți (`status IN ('reserved','absent')`) sunt considerați absenți.
+3. Grupează absenții pe diriginte (prin `student_class_assignments` → `classes.homeroom_teacher_id`).
+4. Pentru fiecare diriginte cu cel puțin un elev absent la un eveniment azi, creează o notificare:
+   - **Titlu:** „Eveniment încheiat — verifică prezența”
+   - **Body:** „Evenimentul «X» s-a încheiat. Ai N elev(i) din clasă marcat(i) absent(i). Verifică lista de prezență.”
+   - `related_event_id` = id-ul evenimentului
+   - `type = 'homeroom_absence_alert'`
+5. Trimite și push (Web Push + FCM) folosind aceleași helpere ca în `send-event-reminders`.
+6. Deduplicare: nu creează notificare dacă există deja una de același tip pentru același (`user_id`, `related_event_id`).
 
-### 3. `src/pages/admin/AdminDashboard.tsx` (butonul de test push)
+**Cron nou:** rulează zilnic la **16:00 UTC (= 19:00 GMT+3)**.
 
-- Afișează un mesaj mai clar: `FCM: configurat ✓ / nu`, `tokene găsite: N`, `trimise: M`.
-- Dacă `tokensFound === 0` pentru user-ul curent → spune clar: „User-ul X nu are niciun device Android înregistrat. Logează-te în aplicația Android cu acest user pentru a salva tokenul.”
+```text
+cron:  0 16 * * *  →  notify-homeroom-absences
+```
 
-### 4. (Opțional, dacă vrei web push să meargă)
+### Fișiere
 
-VAPID_PRIVATE_KEY trebuie să fie cheia privată EC P-256 în format **base64url raw** (32 bytes). Dacă o ai în PEM, trebuie regenerată cu `npx web-push generate-vapid-keys` și salvată ca atare. Dar asta e un secret pe care îl actualizezi tu manual — nu e ceva pe care îl putem face din cod. Pentru Android nu contează (folosim FCM, nu Web Push).
+- **Modificat:** `supabase/config.toml` — adaugă bloc `[functions.notify-homeroom-absences]` cu `verify_jwt = false`.
+- **Nou:** `supabase/functions/notify-homeroom-absences/index.ts` — logica descrisă mai sus.
+- **Migrare SQL:**
+  - `cron.unschedule('send-morning-reminders')` și re-schedule la `30 6 * * *`.
+  - `cron.schedule('notify-homeroom-absences-daily', '0 16 * * *', ...)`.
 
-## Pași de verificare după implementare
+### Note tehnice
 
-1. Deploy automat la `send-push-to-user` și `send-event-reminders`.
-2. Apeși butonul de test push în AdminDashboard.
-3. Răspunsul ar trebui să arate `fcmConfigured: true`, `fcmProjectId: <numele real>`, și `tokensFound: N`.
-4. Dacă `tokensFound = 0`, te loghezi în APK pe Android cu user-ul respectiv → tokenul se salvează automat → reîncerci.
-
-## Note tehnice
-
-- Nu modificăm `useCapacitorPush.ts` — funcționează corect (există tokene în DB).
-- Nu modificăm `AndroidManifest.xml` — e configurat OK.
-- Numele secretului în Lovable Cloud rămâne `FIREBASE_SERVICE_ACCOUNT_KEY` (nu trebuie să adaugi unul nou).
+- Politica RLS pe `notifications` permite INSERT doar pentru admini. Funcția folosește `SUPABASE_SERVICE_ROLE_KEY` care bypass-uiește RLS — OK.
+- Detectarea „absent” la 19:00: tickets cu `status IN ('reserved','absent')` pentru rezervări la evenimente cu `date = azi` și `end_time <= now()`. Elevii prezenți (`present`/`late`) sunt excluși.
+- Cron-ul rulează în UTC; nu ținem cont de schimbarea oră de vară/iarnă (cum e și acum pentru celelalte joburi). 19:00 GMT+3 = 16:00 UTC vara, iarna devine 18:00 ora locală — acceptăm comportamentul actual al sistemului.
