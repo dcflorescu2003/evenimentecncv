@@ -67,6 +67,39 @@ async function countActiveByRole(roles: ("student" | "teacher" | "homeroom_teach
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [testing, setTesting] = useState(false);
+
+  async function sendTestPush() {
+    if (!user) return;
+    setTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-push-to-user", {
+        body: {
+          user_id: user.id,
+          title: "Test notificare push",
+          body: "Dacă vezi acest mesaj, push-ul funcționează!",
+          url: "/admin",
+        },
+      });
+      if (error) throw error;
+      console.log("[push test] response:", data);
+      const r = data as any;
+      const fcmDetails = r?.fcmStatuses?.length
+        ? r.fcmStatuses.map((s: any) => `${s.token_prefix}…→${s.status}${s.invalid ? " (invalid)" : ""}`).join(", ")
+        : "fără token-uri FCM";
+      toast.success(`Trimis: ${r?.fcmCount ?? 0} FCM, ${r?.webPushCount ?? 0} web. Project=${r?.fcmProjectId || "?"}`, {
+        description: fcmDetails,
+        duration: 12000,
+      });
+    } catch (e: any) {
+      console.error("[push test] error:", e);
+      toast.error("Eroare la trimiterea push-ului", { description: e.message });
+    } finally {
+      setTesting(false);
+    }
+  }
+
   const { data: stats } = useQuery({
     queryKey: ["admin-dashboard-stats"],
     queryFn: async () => {
