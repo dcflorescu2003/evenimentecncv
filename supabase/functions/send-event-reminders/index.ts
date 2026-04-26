@@ -88,7 +88,13 @@ async function sendFcmNotification(
             data: data || {},
             android: {
               priority: "high",
-              notification: { click_action: "FLUTTER_NOTIFICATION_CLICK" },
+              notification: {
+                channel_id: "default",
+                sound: "default",
+                default_sound: true,
+                default_vibrate_timings: true,
+                notification_priority: "PRIORITY_HIGH",
+              },
             },
           },
         }),

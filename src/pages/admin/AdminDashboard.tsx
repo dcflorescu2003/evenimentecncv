@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Ticket, AlertTriangle, TrendingUp, Clock, GraduationCap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, Users, Ticket, AlertTriangle, TrendingUp, Clock, GraduationCap, Bell } from "lucide-react";
 import {
   ChartContainer,
   ChartTooltip,
@@ -12,6 +13,9 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { useState } from "react";
 
 const STATUS_COLORS = {
   present: "hsl(160, 60%, 40%)",
@@ -63,6 +67,39 @@ async function countActiveByRole(roles: ("student" | "teacher" | "homeroom_teach
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [testing, setTesting] = useState(false);
+
+  async function sendTestPush() {
+    if (!user) return;
+    setTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-push-to-user", {
+        body: {
+          user_id: user.id,
+          title: "Test notificare push",
+          body: "Dacă vezi acest mesaj, push-ul funcționează!",
+          url: "/admin",
+        },
+      });
+      if (error) throw error;
+      console.log("[push test] response:", data);
+      const r = data as any;
+      const fcmDetails = r?.fcmStatuses?.length
+        ? r.fcmStatuses.map((s: any) => `${s.token_prefix}…→${s.status}${s.invalid ? " (invalid)" : ""}`).join(", ")
+        : "fără token-uri FCM";
+      toast.success(`Trimis: ${r?.fcmCount ?? 0} FCM, ${r?.webPushCount ?? 0} web. Project=${r?.fcmProjectId || "?"}`, {
+        description: fcmDetails,
+        duration: 12000,
+      });
+    } catch (e: any) {
+      console.error("[push test] error:", e);
+      toast.error("Eroare la trimiterea push-ului", { description: e.message });
+    } finally {
+      setTesting(false);
+    }
+  }
+
   const { data: stats } = useQuery({
     queryKey: ["admin-dashboard-stats"],
     queryFn: async () => {
@@ -194,6 +231,25 @@ export default function AdminDashboard() {
           )}
         </div>
       )}
+
+      {/* Test push notifications */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bell className="h-4 w-4 text-primary" />
+            Test notificări push
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Trimite o notificare push test către contul tău (web + Android).
+            Răspunsul afișează status-ul FCM per token.
+          </p>
+          <Button onClick={sendTestPush} disabled={testing} variant="outline">
+            {testing ? "Se trimite…" : "Trimite test"}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Charts */}
       <div className="grid gap-6 md:grid-cols-2">

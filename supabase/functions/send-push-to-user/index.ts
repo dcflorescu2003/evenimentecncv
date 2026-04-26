@@ -77,7 +77,16 @@ async function sendFcmNotification(
             token: deviceToken,
             notification: { title, body },
             data: data || {},
-            android: { priority: "high", notification: { click_action: "FLUTTER_NOTIFICATION_CLICK" } },
+            android: {
+              priority: "high",
+              notification: {
+                channel_id: "default",
+                sound: "default",
+                default_sound: true,
+                default_vibrate_timings: true,
+                notification_priority: "PRIORITY_HIGH",
+              },
+            },
           },
         }),
       }
@@ -253,17 +262,28 @@ Deno.serve(async (req) => {
     // FCM
     let fcmCount = 0;
     let fcmPruned = 0;
+    const fcmStatuses: Array<{ token_prefix: string; status: number; ok: boolean; invalid: boolean }> = [];
+    let fcmProjectId: string | null = null;
     if (firebaseSaJson) {
       try {
         const sa: ServiceAccount = JSON.parse(firebaseSaJson);
+        fcmProjectId = sa.project_id;
+        console.log(`[send-push-to-user] FCM project_id=${sa.project_id}, target user=${user_id}`);
         const accessToken = await getAccessToken(sa);
         const { data: tokens } = await admin
           .from("fcm_tokens").select("*").eq("user_id", user_id);
+        console.log(`[send-push-to-user] Found ${tokens?.length || 0} FCM tokens for user`);
         const invalidIds: string[] = [];
         for (const ft of (tokens || [])) {
           const res = await sendFcmNotification(
             accessToken, sa.project_id, ft.token, title, msgBody, { url: targetUrl }
           );
+          fcmStatuses.push({
+            token_prefix: ft.token.substring(0, 20),
+            status: res.status,
+            ok: res.ok,
+            invalid: res.invalid,
+          });
           if (res.ok) fcmCount++;
           if (res.invalid) invalidIds.push(ft.id);
         }
@@ -279,7 +299,15 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, webPushCount, fcmCount, webPushPruned, fcmPruned }),
+      JSON.stringify({
+        ok: true,
+        webPushCount,
+        fcmCount,
+        webPushPruned,
+        fcmPruned,
+        fcmProjectId,
+        fcmStatuses,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {

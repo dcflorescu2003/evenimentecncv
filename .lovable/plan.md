@@ -1,93 +1,24 @@
-## Obiectiv
+# Plan curent — Diagnostic notificări push Android
 
-Adăugare workflow complet pentru CSE de gestionare documente eveniment (Dosar/Cerere + Formulare) și tracking al submisiilor formularelor de la elevi/părinți, cu statusuri: încărcat / verificat / acceptat / respins.
+## Status: implementat
 
-CSE folosește deja `ProfEventDetailPage.tsx` (rute `/prof`), deci modificările se fac în această pagină comună, condiționat pe rol.
+### Modificări aplicate
+1. **`send-push-to-user`** + **`send-event-reminders`**: payload Android FCM îmbogățit cu `channel_id: "default"`, `sound`, `notification_priority: PRIORITY_HIGH`. Plus logare detaliată în `send-push-to-user` (project_id Firebase folosit, status HTTP per token, prefix token).
+2. **`AndroidManifest.xml`**: adăugate meta-data `default_notification_channel_id = "default"` și `default_notification_icon = ic_launcher`.
+3. **`useCapacitorPush.ts`**: 
+   - Cere și permisiune `LocalNotifications`.
+   - Creează canalul „default” pe Android (importance 5, sound, vibration).
+   - În foreground (când app e deschis), planifică o notificare locală nativă vizibilă în system tray (push-urile FCM cu payload `notification` NU se afișează singure pe Android când app e foreground).
+   - Listener pentru tap-ul pe notificarea locală navighează la URL-ul din extras.
+4. **AdminDashboard**: card „Test notificări push” cu buton care invocă `send-push-to-user` pe contul curent și afișează în toast `fcmProjectId` + statusurile per token (200 OK / 403 SENDER_ID_MISMATCH / 404 / etc.).
 
-## Modificări UI
+### Următorii pași pentru utilizator
+- **Web**: nimic; testează din `/admin` → buton „Trimite test”.
+- **Android (APK)**: git pull → `npm install` → `npx cap sync android` → rebuild APK → reinstalează pe device. Apoi loghează-te ca admin și apasă „Trimite test”.
 
-### 1. Tab "Dosar / Cerere" (CSE) vs "Dosar" (profesor)
-
-În `ProfEventDetailPage.tsx`, când `isCse === true`:
-- Eticheta tabului devine **"Dosar / Cerere"** (în loc de "Dosar eveniment")
-- Eticheta categoriei `event_dossier` în dialogul de upload devine **"Dosar / Cerere"**
-- Restul comportamentului identic (upload, listă, descărcare, ștergere)
-
-Pentru profesor rămâne neschimbat: "Dosar eveniment".
-
-### 2. Tab "Formulare" — extins cu tracking submisii
-
-Tabul existent "Formulare" (șabloane încărcate de organizator) primește o secțiune nouă dedesubt: **"Formulare primite de la elevi / părinți"**.
-
-Această secțiune este vizibilă pentru CSE, profesor coordonator și diriginte (creatorul evenimentului). Conține:
-- Listă agregată din `form_submissions` filtrată pe `event_id`
-- Coloane: Elev, Titlu formular, Fișier (download), Data încărcării, Status (badge colorat), Acțiuni
-- Buton de schimbare status pentru fiecare submisie:
-  - `uploaded` (gri) → "Marchează verificat"
-  - `reviewed` (albastru) → "Acceptă" / "Respinge"
-  - `accepted` (verde) / `rejected` (roșu) → "Resetează la verificat"
-- Câmp opțional pentru `admin_notes` la respingere
-
-### 3. Badge "Eveniment CSE" în tab Formulare
-
-Pentru claritate, dacă evenimentul este CSE, secțiunea Formulare afișează `<CseBadge />` lângă titlu.
-
-## Modificări baza de date
-
-### Migrație: extind enum `form_submission_status`
-
-Verific valorile existente — adaug `reviewed` dacă lipsește (există deja `uploaded`, `accepted`, `rejected` pe baza componentelor existente).
-
-```sql
-ALTER TYPE public.form_submission_status ADD VALUE IF NOT EXISTS 'reviewed';
-```
-
-### Migrație: RLS pentru `form_submissions`
-
-Politici noi pentru a permite organizatorului evenimentului (CSE / profesor / diriginte) să citească și să actualizeze submisiile elevilor pentru evenimentele lor:
-
-```sql
--- Citire submisii pentru creatorul evenimentului
-CREATE POLICY "CSE read event submissions" ON public.form_submissions
-FOR SELECT TO authenticated
-USING (has_role(auth.uid(), 'cse') AND is_event_creator(event_id, auth.uid()));
-
-CREATE POLICY "Teachers read event submissions" ON public.form_submissions
-FOR SELECT TO authenticated
-USING (has_role(auth.uid(), 'teacher') AND is_event_creator(event_id, auth.uid()));
-
-CREATE POLICY "Homeroom teachers read event submissions" ON public.form_submissions
-FOR SELECT TO authenticated
-USING (has_role(auth.uid(), 'homeroom_teacher') AND is_event_creator(event_id, auth.uid()));
-
--- Update status submisii pentru creatorul evenimentului
-CREATE POLICY "CSE update event submissions" ON public.form_submissions
-FOR UPDATE TO authenticated
-USING (has_role(auth.uid(), 'cse') AND is_event_creator(event_id, auth.uid()))
-WITH CHECK (has_role(auth.uid(), 'cse') AND is_event_creator(event_id, auth.uid()));
-
-CREATE POLICY "Teachers update event submissions" ON public.form_submissions
-FOR UPDATE TO authenticated
-USING (has_role(auth.uid(), 'teacher') AND is_event_creator(event_id, auth.uid()))
-WITH CHECK (has_role(auth.uid(), 'teacher') AND is_event_creator(event_id, auth.uid()));
-
-CREATE POLICY "Homeroom teachers update event submissions" ON public.form_submissions
-FOR UPDATE TO authenticated
-USING (has_role(auth.uid(), 'homeroom_teacher') AND is_event_creator(event_id, auth.uid()))
-WITH CHECK (has_role(auth.uid(), 'homeroom_teacher') AND is_event_creator(event_id, auth.uid()));
-```
-
-### Storage RLS
-
-Pentru ca CSE/profesor/diriginte să descarce fișierul submisiei din bucket-ul `event-files`, adaug politică pe `storage.objects` care verifică prin `form_submissions.event_id` că userul este creator. (Profesorul are deja acces prin politicile generice pe `event_files` — pentru `form_submissions` este bucket separat / același, verific la implementare.)
-
-## Fișiere afectate
-
-- **Edit** `src/pages/prof/ProfEventDetailPage.tsx` — etichete condiționate CSE, secțiune nouă "Formulare primite" cu query + mutații status
-- **Migrație nouă** — extind enum status + RLS pentru `form_submissions` + storage policy
-
-## Detalii de comportament
-
-- Statusurile rămân vizibile și elevului (acesta vede deja statusul submisiei sale în `StudentEventDetailPage.tsx`)
-- Modificarea statusului se loghează automat doar prin `updated_at` implicit; nu se cere audit suplimentar
-- Lista submisiilor este sortată cronologic descendent (cele mai noi sus)
+### Diagnostic așteptat
+Toast-ul de răspuns indică:
+- `Project=pyro-89b9f`: secretul Firebase e corect; dacă tot nu apare push, e probabil canal/permisiune device.
+- `Project=` alt nume: secret Firebase greșit → trebuie regenerat din Firebase Console pentru projectul `pyro-89b9f`.
+- `status=403`/`SENDER_ID_MISMATCH`: același caz — secret Firebase aparține altui project decât cel din `google-services.json`.
+- `status=404` / `invalid`: token expirat (se șterge automat la următoarea sincronizare a app-ului).

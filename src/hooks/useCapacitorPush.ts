@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -33,6 +34,28 @@ export function useCapacitorPush() {
           return;
         }
 
+        // Asigurăm și permisiune pentru notificări locale (foreground fallback)
+        try {
+          const localPerm = await LocalNotifications.checkPermissions();
+          if (localPerm.display === "prompt") {
+            await LocalNotifications.requestPermissions();
+          }
+          // Creează canalul "default" pe Android (idempotent)
+          if (Capacitor.getPlatform() === "android") {
+            await LocalNotifications.createChannel({
+              id: "default",
+              name: "Notificări",
+              description: "Notificări evenimente",
+              importance: 5,
+              visibility: 1,
+              sound: "default",
+              vibration: true,
+            });
+          }
+        } catch (e) {
+          console.warn("LocalNotifications setup warning:", e);
+        }
+
         await PushNotifications.addListener("registration", async (token) => {
           console.log("FCM token:", token.value);
           const platform = Capacitor.getPlatform(); // 'android' | 'ios'
@@ -52,11 +75,31 @@ export function useCapacitorPush() {
           console.error("Push registration error:", err);
         });
 
-        await PushNotifications.addListener("pushNotificationReceived", (notification) => {
-          console.log("Push received:", notification);
+        await PushNotifications.addListener("pushNotificationReceived", async (notification) => {
+          console.log("Push received (foreground):", notification);
           const title = notification.title || "Notificare";
-          const body = notification.body;
+          const body = notification.body || "";
           const url = notification.data?.url;
+
+          // Pe Android, push-urile primite în foreground NU sunt afișate automat în system tray.
+          // Afișăm o notificare locală nativă, ca să fie vizibilă chiar și când app e deschis.
+          try {
+            await LocalNotifications.schedule({
+              notifications: [
+                {
+                  id: Math.floor(Math.random() * 2_000_000_000),
+                  title,
+                  body,
+                  channelId: Capacitor.getPlatform() === "android" ? "default" : undefined,
+                  sound: undefined,
+                  smallIcon: "ic_launcher",
+                  extra: { url: url || "/student/tickets" },
+                },
+              ],
+            });
+          } catch (e) {
+            console.warn("LocalNotifications.schedule failed:", e);
+          }
 
           toast(title, {
             description: body,
@@ -70,6 +113,16 @@ export function useCapacitorPush() {
               : undefined,
           });
         });
+
+        // Tap pe notificarea locală (foreground)
+        try {
+          await LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
+            const url = action.notification?.extra?.url;
+            if (url) window.location.href = String(url);
+          });
+        } catch (e) {
+          console.warn("LocalNotifications listener warning:", e);
+        }
 
         await PushNotifications.addListener("pushNotificationActionPerformed", (notification) => {
           console.log("Push action:", notification);
