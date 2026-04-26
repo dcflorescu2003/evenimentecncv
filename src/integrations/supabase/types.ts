@@ -953,6 +953,7 @@ export type Database = {
         | "coordinator_teacher"
         | "teacher"
         | "manager"
+        | "cse"
       event_status: "draft" | "published" | "closed" | "cancelled"
       file_category: "event_dossier" | "form_template"
       form_submission_status: "uploaded" | "reviewed" | "accepted" | "rejected"
@@ -1100,6 +1101,7 @@ export const Constants = {
         "coordinator_teacher",
         "teacher",
         "manager",
+        "cse",
       ],
       event_status: ["draft", "published", "closed", "cancelled"],
       file_category: ["event_dossier", "form_template"],
