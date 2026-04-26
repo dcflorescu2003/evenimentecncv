@@ -17,6 +17,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Search, CalendarDays, Clock, MapPin, Users, Ticket, ChevronDown, ChevronRight } from "lucide-react";
+import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -292,7 +293,7 @@ export default function StudentEventsPage() {
         <CardContent className="p-4 space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1" onClick={() => navigate(`/student/events/${ev.id}`)} role="button">
-              <p className="font-medium">{ev.title}</p>
+              <div className="flex items-center gap-2 flex-wrap"><p className="font-medium">{ev.title}</p>{(ev as any).is_cse && <CseBadge short />}</div>
               <p className="mt-0.5 text-xs text-muted-foreground">{getSessionName(ev.session_id)}</p>
             </div>
             <Badge variant="secondary">{ev.counted_duration_hours}h</Badge>

@@ -322,6 +322,7 @@ export type Database = {
           eligible_grades: number[] | null
           end_time: string
           id: string
+          is_cse: boolean
           is_public: boolean
           location: string | null
           max_capacity: number
@@ -347,6 +348,7 @@ export type Database = {
           eligible_grades?: number[] | null
           end_time: string
           id?: string
+          is_cse?: boolean
           is_public?: boolean
           location?: string | null
           max_capacity: number
@@ -372,6 +374,7 @@ export type Database = {
           eligible_grades?: number[] | null
           end_time?: string
           id?: string
+          is_cse?: boolean
           is_public?: boolean
           location?: string | null
           max_capacity?: number
@@ -953,6 +956,7 @@ export type Database = {
         | "coordinator_teacher"
         | "teacher"
         | "manager"
+        | "cse"
       event_status: "draft" | "published" | "closed" | "cancelled"
       file_category: "event_dossier" | "form_template"
       form_submission_status: "uploaded" | "reviewed" | "accepted" | "rejected"
@@ -1100,6 +1104,7 @@ export const Constants = {
         "coordinator_teacher",
         "teacher",
         "manager",
+        "cse",
       ],
       event_status: ["draft", "published", "closed", "cancelled"],
       file_category: ["event_dossier", "form_template"],

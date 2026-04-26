@@ -9,7 +9,12 @@ export default function ProfLayout() {
   const location = useLocation();
 
   const isHomeroom = roles.includes("homeroom_teacher");
-  const title = isHomeroom && !roles.includes("teacher") ? "CNCV Diriginte" : "CNCV Profesor";
+  const isCse = roles.includes("cse");
+  const title = isCse
+    ? "CNCV CSE"
+    : isHomeroom && !roles.includes("teacher")
+    ? "CNCV Diriginte"
+    : "CNCV Profesor";
 
   const navItems = [
     { title: "Dashboard", icon: LayoutDashboard, path: "/prof" },

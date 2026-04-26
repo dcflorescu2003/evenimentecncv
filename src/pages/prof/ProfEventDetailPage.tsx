@@ -34,6 +34,7 @@ import {
   Upload, Download, Trash2, FolderOpen, FileText, Pencil, FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
+import { CseBadge } from "@/components/CseBadge";
 import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
 import { buildAttendancePdfRows } from "@/lib/attendance-rows";
 
@@ -116,7 +117,8 @@ export default function ProfEventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
+  const isCse = roles.includes("cse");
 
   const [coordDialogOpen, setCoordDialogOpen] = useState(false);
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
@@ -621,7 +623,11 @@ export default function ProfEventDetailPage() {
         max_capacity: values.max_capacity,
         status: values.status,
         eligible_grades: values.eligible_grades.length > 0 ? values.eligible_grades : null,
-        eligible_classes: values.eligible_classes.length > 0 ? values.eligible_classes : null,
+        eligible_classes: isCse
+          ? null
+          : values.eligible_classes.length > 0
+          ? values.eligible_classes
+          : null,
         booking_open_at: joinDatetime(values.booking_open_date, values.booking_open_time),
         booking_close_at: joinDatetime(values.booking_close_date, values.booking_close_time),
         notes_for_teachers: values.notes_for_teachers || null,
@@ -800,9 +806,10 @@ export default function ProfEventDetailPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="font-display text-2xl font-bold">{event.title}</h1>
             <Badge variant="secondary">{statusLabels[event.status]}</Badge>
+            {(event as any).is_cse && <CseBadge />}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1400,40 +1407,64 @@ export default function ProfEventDetailPage() {
             </div>
             {!editForm.is_public && (
               <div className="space-y-3">
-                <Label>Clase eligibile</Label>
-                <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-3">
-                  {Object.entries(classesByGrade).sort(([a], [b]) => Number(a) - Number(b)).map(([grade, gradeClasses]) => {
-                    const gradeNum = Number(grade);
-                    const allClassIds = gradeClasses.map((c) => c.id);
-                    const allSelected = allClassIds.every((cid) => editForm.eligible_classes.includes(cid));
-                    const someSelected = allClassIds.some((cid) => editForm.eligible_classes.includes(cid));
-                    return (
-                      <div key={grade}>
-                        <label className="flex items-center gap-1.5 text-sm font-medium cursor-pointer">
-                          <Checkbox
-                            checked={allSelected}
-                            onCheckedChange={() => toggleGrade(gradeNum)}
-                            className={someSelected && !allSelected ? "opacity-60" : ""}
-                          />
-                          Clasa {grade}
-                        </label>
-                        <div className="ml-6 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                          {gradeClasses.map((c) => (
-                            <label key={c.id} className="flex items-center gap-1 text-sm cursor-pointer">
-                              <Checkbox
-                                checked={editForm.eligible_classes.includes(c.id)}
-                                onCheckedChange={() => toggleClass(c.id, gradeNum)}
-                              />
-                              {c.display_name}
-                            </label>
-                          ))}
+                <Label>{isCse ? "Ani eligibili" : "Clase eligibile"}</Label>
+                {isCse ? (
+                  <div className="flex flex-wrap gap-3 rounded-md border p-3">
+                    {[9, 10, 11, 12].map((g) => (
+                      <label key={g} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={editForm.eligible_grades.includes(g)}
+                          onCheckedChange={(checked) => {
+                            setEditForm((f) => ({
+                              ...f,
+                              eligible_grades: checked
+                                ? [...f.eligible_grades, g].sort((a, b) => a - b)
+                                : f.eligible_grades.filter((x) => x !== g),
+                              eligible_classes: [],
+                            }));
+                          }}
+                        />
+                        Clasa a {["IX", "X", "XI", "XII"][g - 9]}-a
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto rounded-md border p-3">
+                    {Object.entries(classesByGrade).sort(([a], [b]) => Number(a) - Number(b)).map(([grade, gradeClasses]) => {
+                      const gradeNum = Number(grade);
+                      const allClassIds = gradeClasses.map((c) => c.id);
+                      const allSelected = allClassIds.every((cid) => editForm.eligible_classes.includes(cid));
+                      const someSelected = allClassIds.some((cid) => editForm.eligible_classes.includes(cid));
+                      return (
+                        <div key={grade}>
+                          <label className="flex items-center gap-1.5 text-sm font-medium cursor-pointer">
+                            <Checkbox
+                              checked={allSelected}
+                              onCheckedChange={() => toggleGrade(gradeNum)}
+                              className={someSelected && !allSelected ? "opacity-60" : ""}
+                            />
+                            Clasa {grade}
+                          </label>
+                          <div className="ml-6 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                            {gradeClasses.map((c) => (
+                              <label key={c.id} className="flex items-center gap-1 text-sm cursor-pointer">
+                                <Checkbox
+                                  checked={editForm.eligible_classes.includes(c.id)}
+                                  onCheckedChange={() => toggleClass(c.id, gradeNum)}
+                                />
+                                {c.display_name}
+                              </label>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
                 {editForm.eligible_classes.length === 0 && editForm.eligible_grades.length === 0 && (
-                  <p className="text-xs text-muted-foreground">Nicio selecție = toate clasele sunt eligibile</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isCse ? "Nicio selecție = toți elevii de liceu sunt eligibili" : "Nicio selecție = toate clasele sunt eligibile"}
+                  </p>
                 )}
               </div>
             )}

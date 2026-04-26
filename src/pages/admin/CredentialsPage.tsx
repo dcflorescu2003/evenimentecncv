@@ -26,6 +26,7 @@ const roleLabels: Record<string, string> = {
   coordinator_teacher: "Asistenți",
   teacher: "Profesori",
   manager: "Manageri",
+  cse: "Membri CSE",
 };
 
 interface CredentialResult {

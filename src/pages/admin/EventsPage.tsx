@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Copy, Eye, Search } from "lucide-react";
+import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { formatDate, isValidTime24h, normalizeTimeInput } from "@/lib/time";
@@ -429,7 +430,7 @@ export default function EventsPage() {
             ) : (
               filtered.map((ev) => (
                 <TableRow key={ev.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/admin/events/${ev.id}`)}>
-                  <TableCell className="font-medium">{ev.title}</TableCell>
+                  <TableCell className="font-medium"><div className="flex items-center gap-2"><span>{ev.title}</span>{(ev as any).is_cse && <CseBadge short />}</div></TableCell>
                   <TableCell className="text-sm text-muted-foreground">{getSessionName(ev.session_id)}</TableCell>
                   <TableCell>{formatDate(ev.date)}</TableCell>
                   <TableCell>{ev.start_time?.slice(0, 5)} – {ev.end_time?.slice(0, 5)}</TableCell>
@@ -477,7 +478,7 @@ export default function EventsPage() {
               onClick={() => navigate(`/admin/events/${ev.id}`)}
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="font-medium min-w-0 flex-1 truncate">{ev.title}</p>
+                <div className="min-w-0 flex-1 space-y-1"><p className="font-medium truncate">{ev.title}</p>{(ev as any).is_cse && <CseBadge short />}</div>
                 <Badge variant="secondary" className={`${statusColors[ev.status as EventStatus]} shrink-0`}>
                   {statusLabels[ev.status as EventStatus]}
                 </Badge>
