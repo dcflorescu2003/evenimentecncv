@@ -128,7 +128,13 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 async function importPrivateKey(base64url: string) {
   const raw = urlBase64ToUint8Array(base64url);
-  return await crypto.subtle.importKey("raw", raw, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+  return await crypto.subtle.importKey(
+    "raw",
+    raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength) as ArrayBuffer,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"],
+  );
 }
 
 async function createVapidJwt(audience: string, subject: string, privateKey: CryptoKey): Promise<string> {
