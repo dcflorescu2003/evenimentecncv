@@ -32,6 +32,7 @@ import {
 import {
   ArrowLeft, CalendarDays, Clock, MapPin, Users, UserPlus, X, ScanLine,
   Upload, Download, Trash2, FolderOpen, FileText, Pencil, FileDown,
+  Inbox, CheckCircle2, XCircle, Eye, RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { CseBadge } from "@/components/CseBadge";
