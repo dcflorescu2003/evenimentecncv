@@ -138,7 +138,7 @@ export default function ManagerLayout() {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-2 border-b px-3 sm:px-4 min-w-0">
+        <header className="header-safe sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background px-3 sm:px-4 min-w-0">
           <SidebarTrigger />
           <span className="text-xs sm:text-sm text-muted-foreground truncate min-w-0">
             <span className="hidden sm:inline">Sesiune: </span>

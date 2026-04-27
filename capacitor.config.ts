@@ -7,7 +7,17 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.evenimentecncv.app',
   appName: 'Evenimente',
-  webDir: 'dist'
+  webDir: 'dist',
+  plugins: {
+    // Status bar nu se mai suprapune peste WebView pe Android
+    // (sistemul rezervă spațiu, conținutul rămâne sub bara de status).
+    // Pe iOS, plugin-ul controlează doar stilul (fundalul vine din safe-area CSS).
+    StatusBar: {
+      overlaysWebView: false,
+      style: 'DEFAULT',
+      backgroundColor: '#ffffff',
+    },
+  },
 };
 
 export default config;

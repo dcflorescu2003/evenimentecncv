@@ -24,7 +24,7 @@ export default function ProfLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-3 sm:px-4 shadow-sm">
+      <header className="header-safe sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-3 sm:px-4 shadow-sm">
         <div className="flex items-center gap-2 min-w-0">
           <GraduationCap className="h-6 w-6 text-primary shrink-0" />
           <span className="font-display text-base sm:text-lg font-semibold truncate">{title}</span>
