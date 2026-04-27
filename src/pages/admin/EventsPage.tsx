@@ -90,6 +90,7 @@ const emptyForm: EventForm = {
   location: "",
   room_details: "",
   max_capacity: 30,
+  max_per_class: null,
   status: "draft",
   eligible_grades: [],
   eligible_classes: [],
