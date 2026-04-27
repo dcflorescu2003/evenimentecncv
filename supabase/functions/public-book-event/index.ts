@@ -174,8 +174,16 @@ Deno.serve(async (req) => {
       const dateStr = dateParts.length === 3 ? `${dateParts[2]}.${dateParts[1]}.${dateParts[0]}` : event.date;
       const timeStr = `${String(event.start_time).slice(0, 5)} – ${String(event.end_time).slice(0, 5)}`;
 
-      await supabase.functions.invoke("send-transactional-email", {
-        body: {
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const emailRes = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${serviceKey}`,
+          "apikey": serviceKey,
+        },
+        body: JSON.stringify({
           templateName: "public-booking-confirmation",
           recipientEmail: reservation.guest_email,
           idempotencyKey: `public-booking-${reservation.id}`,
@@ -189,8 +197,12 @@ Deno.serve(async (req) => {
             reservationCode: reservation.reservation_code,
             manageUrl,
           },
-        },
+        }),
       });
+      if (!emailRes.ok) {
+        const errText = await emailRes.text();
+        console.warn("send-transactional-email failed:", emailRes.status, errText);
+      }
     } catch (e) {
       console.warn("Failed to send confirmation email (non-fatal):", e);
     }

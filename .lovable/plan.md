@@ -1,33 +1,24 @@
-## Context
+## Problemă identificată
 
-Cele 2 evenimente (28.04 vs Tudor Vianu și 29.04 vs Dimitrie Bolintianu) au deja `max_per_class = 5` setat în baza de date. Funcția RPC `check_booking_eligibility` aplică deja generic această limită la auto-rezervările elevilor (exclude asistenții). Deci regula este deja activă pentru viitor — un elev care încearcă să rezerve va primi: *„Limita pentru clasa ta a fost atinsă (5 locuri per clasă)”*.
+La rezervarea publică din 27.04 (Florescu Cosmin) nu s-a trimis email pentru că:
 
-Totuși, există rezervări istorice făcute înainte de setarea limitei care depășesc 5/clasă. Acestea trebuie anulate (păstrând primii 5 după `created_at`).
+1. **401 Unauthorized**: `public-book-event` apelează `send-transactional-email`, dar aceasta din urmă are `verify_jwt = true` în `supabase/config.toml`. Apelul intern (cu service role) este respins înainte să ruleze codul. Logurile rețelei confirmă: `POST … /send-transactional-email → 401`.
+2. **Infrastructură email incompletă**: tabela `email_send_log` și cronul `process-email-queue` există, dar RPC-ul `enqueue_email` (și probabil `read_email_batch`, `delete_email`, `move_to_dlq` + cozile pgmq) lipsesc. Chiar dacă apelul ar trece de 401, trimiterea ar eșua la enqueue.
 
-## Rezervări care vor fi anulate
+## Plan
 
-**Meci 28.04 (vs Tudor Vianu)** — 12 rezervări de anulat:
-- IX B (2): RAREȘ VÂLCU, EDUARD-MIHAI VÂLCU
-- IX F (1): ANDREI-LUCA STĂMESCU
-- X A (5): IOAN-VLAD CIUREA, CONSTANTIN MORMENSCHI, ALESSIA-MARIA ILIE, DAVID-ȘTEFAN CALISPERA, CĂLIN-GEORGE MĂNĂILĂ
-- X E (4): TOMA ANDREI PRAȚA, MARIA FRUNTELATĂ, ŞTEFANIA-DENISA BORDEA, LAVINIA IVAN
+1. **Reinstalează infrastructura de email** (idempotent): cozi pgmq, RPC-urile `enqueue_email` / `read_email_batch` / `delete_email` / `move_to_dlq`, secret în Vault, cron `process-email-queue`. Folosesc `email_domain--setup_email_infra`.
 
-**Meci 29.04 (vs Dimitrie Bolintianu)** — 13 rezervări de anulat:
-- IX B (2): RAREȘ VÂLCU, EDUARD-MIHAI VÂLCU
-- IX F (1): PATRICIA-SOFIA NIȚĂ
-- X A (5): CEZAR ROTARU, IOAN-VLAD CIUREA, ALESSIA-MARIA ILIE, DAVID-ȘTEFAN CALISPERA, CĂLIN-GEORGE MĂNĂILĂ
-- X E (4): ION-MIRCEA DIMITRIU, TOMA ANDREI PRAȚA, MARIA FRUNTELATĂ, LAVINIA IVAN
-- X G (1): SOFIA-ELENA ȘTEFAN
+2. **Permite invocarea internă din `public-book-event`**: modific `supabase/config.toml` pentru `send-transactional-email` să folosească `verify_jwt = false` (funcția validează deja intern în cod prin idempotency + service role și e apelată server-to-server). Alternativ, păstrez verify_jwt și schimb apelul din `public-book-event` să folosească `fetch` cu `Authorization: Bearer SERVICE_ROLE_KEY` — dar e mai simplu și consistent cu restul funcțiilor `public-*` să dezactivez verify_jwt.
 
-Total: **25 rezervări** vor primi `status='cancelled'` și `cancelled_at=now()`. Asistenții sunt deja excluși din numărătoare.
+3. **Redeploy** `send-transactional-email`, `process-email-queue`, `handle-email-unsubscribe`, `handle-email-suppression`, `public-book-event`.
 
-## Acțiuni
+4. **Retrimite emailul pentru rezervarea Florescu Cosmin** (id `436289d1-…`) apelând manual `send-transactional-email` cu același payload ca în `public-book-event`, ca să nu rămână fără confirmare. Folosesc `idempotencyKey = public-booking-436289d1-…` pentru a evita duplicarea pe viitor.
 
-1. **UPDATE** pe `reservations` — anulez exact cele 25 ID-uri identificate mai sus (anularea include automat și ștergerea ticket-urilor asociate dacă există, prin logica existentă).
-2. **Verificare regulă viitoare**: confirm că `max_per_class=5` este setat pe ambele evenimente și că `check_booking_eligibility` o aplică (deja confirmat — vezi codul funcției). Nu sunt necesare modificări de cod.
-3. **Generare PDF actualizat** cu lista finală de participanți pe fiecare meci, după aplicarea regulii.
+5. **Verificare**: fac o rezervare publică de test sau verific `email_send_log` după pasul 4 ca să confirm `status = sent`.
 
 ## Note
 
-- Diriginții/admin-ii pot încă adăuga manual peste limită (cerință existentă) — doar auto-rezervarea elevilor este blocată.
-- Nu modific schema sau funcția RPC — totul funcționează deja generic.
+- Domeniul `notify.evenimentecncv.online` este verificat și activ.
+- Nu modific templatele existente.
+- Nu ating logica de business din `public-book-event` în afara comentariilor.
