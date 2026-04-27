@@ -1,41 +1,33 @@
-# Limită opțională de elevi per clasă pentru evenimente
+## Context
 
-Adăugăm o setare opțională per eveniment: **„Maxim X elevi per clasă”**. Implicit nelimitat. Când e setată, regula se aplică doar la auto-rezervarea elevilor — dirigintele/admin-ul o pot depăși manual, iar asistenții nu se contorizează.
+Cele 2 evenimente (28.04 vs Tudor Vianu și 29.04 vs Dimitrie Bolintianu) au deja `max_per_class = 5` setat în baza de date. Funcția RPC `check_booking_eligibility` aplică deja generic această limită la auto-rezervările elevilor (exclude asistenții). Deci regula este deja activă pentru viitor — un elev care încearcă să rezerve va primi: *„Limita pentru clasa ta a fost atinsă (5 locuri per clasă)”*.
 
-## 1. Bază de date (migrație)
+Totuși, există rezervări istorice făcute înainte de setarea limitei care depășesc 5/clasă. Acestea trebuie anulate (păstrând primii 5 după `created_at`).
 
-- Adăugăm coloana `events.max_per_class` (`integer`, nullable, default `NULL` = fără limită).
-- Actualizăm funcția RPC `check_booking_eligibility` astfel:
-  - **Eliminăm** hard-code-ul existent pentru cele 2 meciuri (28.04 / 29.04).
-  - **Înlocuim** cu o verificare generică: dacă `events.max_per_class IS NOT NULL`, numărăm rezervările active din clasa elevului pentru acel eveniment, **excluzând** elevii care apar în `event_student_assistants` pentru același eveniment. Dacă numărul `>= max_per_class`, întoarcem mesaj: *„Limita pentru clasa ta a fost atinsă (X locuri per clasă)”*.
-- Funcția RPC e folosită doar la auto-rezervările elevilor (din `StudentEventDetailPage`). Diriginții și adminii inserează direct în `reservations` fără să apeleze RPC-ul, deci automat ignoră limita — exact ce ne dorim.
+## Rezervări care vor fi anulate
 
-## 2. Formular creare/editare eveniment
+**Meci 28.04 (vs Tudor Vianu)** — 12 rezervări de anulat:
+- IX B (2): RAREȘ VÂLCU, EDUARD-MIHAI VÂLCU
+- IX F (1): ANDREI-LUCA STĂMESCU
+- X A (5): IOAN-VLAD CIUREA, CONSTANTIN MORMENSCHI, ALESSIA-MARIA ILIE, DAVID-ȘTEFAN CALISPERA, CĂLIN-GEORGE MĂNĂILĂ
+- X E (4): TOMA ANDREI PRAȚA, MARIA FRUNTELATĂ, ŞTEFANIA-DENISA BORDEA, LAVINIA IVAN
 
-Adăugăm câmpul în 2 locuri (același UX):
-- `src/pages/admin/EventsPage.tsx`
-- `src/pages/prof/ProfEventsPage.tsx`
+**Meci 29.04 (vs Dimitrie Bolintianu)** — 13 rezervări de anulat:
+- IX B (2): RAREȘ VÂLCU, EDUARD-MIHAI VÂLCU
+- IX F (1): PATRICIA-SOFIA NIȚĂ
+- X A (5): CEZAR ROTARU, IOAN-VLAD CIUREA, ALESSIA-MARIA ILIE, DAVID-ȘTEFAN CALISPERA, CĂLIN-GEORGE MĂNĂILĂ
+- X E (4): ION-MIRCEA DIMITRIU, TOMA ANDREI PRAȚA, MARIA FRUNTELATĂ, LAVINIA IVAN
+- X G (1): SOFIA-ELENA ȘTEFAN
 
-Câmp nou în formular: **„Maxim elevi per clasă (opțional)”** — input numeric, gol = fără limită. Plasat lângă „Capacitate maximă”. Salvăm `null` dacă e gol, altfel valoarea integer.
+Total: **25 rezervări** vor primi `status='cancelled'` și `cancelled_at=now()`. Asistenții sunt deja excluși din numărătoare.
 
-## 3. Afișare în interfața elevului
+## Acțiuni
 
-Când `max_per_class` e setat, afișăm sub detaliile evenimentului textul:
-> *„Maxim {X} elevi per clasă”*
+1. **UPDATE** pe `reservations` — anulez exact cele 25 ID-uri identificate mai sus (anularea include automat și ștergerea ticket-urilor asociate dacă există, prin logica existentă).
+2. **Verificare regulă viitoare**: confirm că `max_per_class=5` este setat pe ambele evenimente și că `check_booking_eligibility` o aplică (deja confirmat — vezi codul funcției). Nu sunt necesare modificări de cod.
+3. **Generare PDF actualizat** cu lista finală de participanți pe fiecare meci, după aplicarea regulii.
 
-Locații:
-- `src/pages/student/StudentEventDetailPage.tsx` (cardul de detalii)
-- `src/pages/student/StudentEventsPage.tsx` (lista cu evenimente, ca badge mic)
-- `src/components/student/EventsCalendar.tsx` (popover-ul evenimentului)
+## Note
 
-## 4. Detalii tehnice
-
-- Tipurile TypeScript pentru `events` se regenerează automat după migrație (`src/integrations/supabase/types.ts`).
-- Nu modificăm `public-book-event` (rezervări publice anonime — nu au clasă).
-- Mesajul de eroare în română, întors din RPC, este afișat de UI-ul existent fără modificări (folosește deja `result.reason`).
-
-## Rezumat schimbări
-
-- 1 migrație SQL (coloană nouă + actualizare funcție RPC)
-- 2 formulare (admin, prof) — câmp nou
-- 3 locații de afișare (elev) — text informativ
+- Diriginții/admin-ii pot încă adăuga manual peste limită (cerință existentă) — doar auto-rezervarea elevilor este blocată.
+- Nu modific schema sau funcția RPC — totul funcționează deja generic.
