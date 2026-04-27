@@ -96,9 +96,11 @@
     @apply border-border;
   }
 
+  /* IMPORTANT: NU adăugăm padding pe body — folosim utilități per-componentă
+     ca să putem controla precis fiecare zonă (header, nav, butoane). 
+     Pe Capacitor, plugin-ul StatusBar gestionează status bar-ul nativ. */
   body {
     @apply bg-background text-foreground font-sans;
-    padding-top: env(safe-area-inset-top);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
@@ -109,11 +111,19 @@
 }
 
 @layer utilities {
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+  }
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 1rem);
   }
   .pb-safe-nav {
     padding-bottom: calc(env(safe-area-inset-bottom) + 6rem);
+  }
+  /* Header lipit de marginea de sus a ecranului care trebuie să-și
+     extindă fundalul în zona safe-area (notch / Dynamic Island). */
+  .header-safe {
+    padding-top: env(safe-area-inset-top);
   }
   .overscroll-x-contain {
     overscroll-behavior-x: contain;
