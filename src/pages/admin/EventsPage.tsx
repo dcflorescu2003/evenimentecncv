@@ -588,6 +588,21 @@ export default function EventsPage() {
                 <Input id="ev-cap" type="number" min={1} value={form.max_capacity} onChange={(e) => setForm({ ...form, max_capacity: parseInt(e.target.value) || 1 })} />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="ev-mpc">Maxim elevi per clasă (opțional)</Label>
+                <Input
+                  id="ev-mpc"
+                  type="number"
+                  min={1}
+                  placeholder="Fără limită"
+                  value={form.max_per_class ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    setForm({ ...form, max_per_class: v === "" ? null : Math.max(1, parseInt(v) || 1) });
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">Asistenții nu se contorizează. Adminii și diriginții pot depăși manual.</p>
+              </div>
+              <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as EventStatus })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
