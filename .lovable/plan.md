@@ -1,51 +1,77 @@
-## Ce vom face
+## Obiectiv
 
-Email-ul este deja obligatoriu la rezervările publice. Adăugăm:
-1. Trimiterea automată a unui email de confirmare cu un **link unic** către pagina personală de bilete.
-2. Pe pagina de bilete: posibilitatea de **anulare** a unui bilet individual sau a întregii rezervări.
+Aplic regula „maxim 5 elevi rezervați per clasă” pentru cele 2 meciuri:
 
-## Flux pentru utilizator
+- **28.04** — Meci FC CANTEMIR vs TUDOR VIANU
+- **29.04** — Meci FC CANTEMIR vs DIMITRIE BOLINTIANU
 
-1. Vizitatorul rezervă bilete pe `/public/events/:id` → primește pe email un mesaj cu:
-   - Detaliile evenimentului
-   - Codul rezervării
-   - Un link direct: `https://.../public/tickets/<reservation_code>` (deschide pagina cu QR-uri și status)
-2. Pe pagina de bilete (link-ul din email), pe lângă printare apar butoane:
-   - „Anulează acest bilet” pe fiecare bilet (cu confirmare)
-   - „Anulează toată rezervarea” jos
-3. La anulare, locul devine din nou disponibil (ticketul trece pe `cancelled`, iar dacă toate sunt anulate, rezervarea trece pe `cancelled`).
+## Pasul 1 — Curățare rezervări existente (one-shot)
 
-## Ce schimbăm tehnic
+Pentru fiecare din cele 2 evenimente, pentru fiecare clasă (V, VI, VII, VIII, IX A...G, X A...G, XI ..., XII ...):
 
-### 1. Email de confirmare
-- Folosim infrastructura de email Lovable (deja configurată pe `notify.pyroskill.info`).
-- Modificăm `supabase/functions/public-book-event/index.ts` ca, după ce creează rezervarea, să **enqueue** un email către `guest_email` cu link-ul `/public/tickets/<reservation_code>` și sumar bilete.
-- Template HTML simplu, în română, cu logo-ul CNCV și link clar de management.
+- Păstrez primii 5 elevi din clasă cu `status='reserved'`, ordonați ascendent după `created_at` (cei mai vechi câștigă).
+- Restul rezervărilor primesc `status='cancelled'` și `cancelled_at=now()`.
 
-### 2. Anulare bilete (acces public, fără login)
-Pentru securitate, anularea trebuie să meargă prin edge function (RLS curent nu permite UPDATE pentru `anon` pe `public_tickets` / `public_reservations`). Cream o nouă edge function: `public-cancel-ticket`.
-- Input: `reservation_code` + opțional `ticket_id` (dacă lipsește → anulează toată rezervarea).
-- Validează că `reservation_code` există, marchează ticket(s) ca `cancelled`, iar dacă nu mai rămâne niciun ticket activ marchează și rezervarea ca `cancelled`.
-- Refuză anularea dacă evenimentul a trecut deja.
+Voi rula prin migration o operație tranzacțională care folosește `ROW_NUMBER() OVER (PARTITION BY class_id ORDER BY created_at)` pentru a marca rezervările peste poziția 5.
 
-### 3. UI pe `PublicTicketViewPage.tsx`
-- Adăugăm butoane „Anulează” cu `AlertDialog` de confirmare.
-- După anulare, refetch query.
-- Ascundem butoanele dacă status-ul e deja `cancelled` sau dacă evenimentul a trecut.
+Notă: regula se aplică pentru **toate** clasele (inclusiv XI și XII, care sunt mai puține) — interpretare uniformă, „per clasă individuală”. Dacă vrei să exclud XI/XII, spune-mi înainte de aprobare.
 
-### 4. (Opțional minor) UI pe pagina de confirmare după rezervare
-- Adăugăm un mesaj: „Ți-am trimis pe email un link cu biletele tale.”
+## Pasul 2 — Validare hard pentru rezervări noi
 
-## Fișiere atinse
+Modific funcția RPC `check_booking_eligibility` să adauge o verificare specifică:
 
-- `supabase/functions/public-book-event/index.ts` — enqueue email după succes
-- `supabase/functions/public-cancel-ticket/index.ts` — **nou**, anulare securizată
-- `supabase/config.toml` — declarare funcție nouă cu `verify_jwt = false`
-- `src/pages/public/PublicTicketViewPage.tsx` — butoane de anulare
-- `src/pages/public/PublicEventBookingPage.tsx` — mesaj „verifică emailul”
+- Dacă `event_id` este unul din cele 2 (hardcodat în funcție pentru aceste meciuri), număr câți elevi din aceeași clasă a elevului curent au deja `status='reserved'` la acel eveniment.
+- Dacă sunt deja ≥ 5, refuz cu mesajul: „Clasa ta a atins limita de 5 locuri pentru acest eveniment.”
 
-## Observații
+Validarea rămâne aplicabilă și prin RLS / UI normal (elevii nu pot rezerva direct dacă RPC respinge).
 
-- Email-ul deja este validat ca format și obligatoriu — nu e nevoie de migrație în baza de date.
-- Codul de rezervare (`reservation_code`) este UUID — suficient de greu de ghicit pentru a fi folosit ca „token” de management.
-- Nu modificăm structura tabelelor.
+## Pasul 3 — Raport participanți (după aplicarea regulii)
+
+Generez 2 fișiere CSV în `/mnt/documents/`:
+
+- `participanti-meci-28-04-tudor-vianu.csv`
+- `participanti-meci-29-04-dimitrie-bolintianu.csv`
+
+Coloane: Nume, Prenume, Clasă, Identificator elev, Data rezervării.
+Sortare: după clasă, apoi alfabetic după nume.
+
+Voi furniza tag-uri `<lov-artifact>` pentru download direct.
+
+## Detalii tehnice
+
+**Migration SQL** (Pasul 1):
+
+```sql
+WITH ranked AS (
+  SELECT r.id,
+    ROW_NUMBER() OVER (PARTITION BY r.event_id, sca.class_id ORDER BY r.created_at) AS rn
+  FROM reservations r
+  JOIN student_class_assignments sca ON sca.student_id = r.student_id
+  WHERE r.event_id IN ('753dea88-...', '5b975ee9-...')
+    AND r.status = 'reserved'
+)
+UPDATE reservations SET status='cancelled', cancelled_at=now()
+WHERE id IN (SELECT id FROM ranked WHERE rn > 5);
+```
+
+**RPC update** (Pasul 2): adaug un bloc în `check_booking_eligibility` înainte de `RETURN allowed=true`:
+
+```sql
+IF _event_id IN ('753dea88-...', '5b975ee9-...') AND _student_class_id IS NOT NULL THEN
+  SELECT count(*) INTO _class_count
+  FROM reservations r
+  JOIN student_class_assignments sca ON sca.student_id = r.student_id
+  WHERE r.event_id = _event_id AND r.status = 'reserved' AND sca.class_id = _student_class_id;
+  IF _class_count >= 5 THEN
+    RETURN jsonb_build_object('allowed', false, 'reason', 'Clasa ta a atins limita de 5 locuri pentru acest eveniment');
+  END IF;
+END IF;
+```
+
+**Raport CSV** (Pasul 3): query SQL care join-ează reservations + profiles + classes și export prin `psql COPY` în fișiere.
+
+## Rezumat
+
+1. Anulez rezervările peste primii 5 din fiecare clasă pentru meciurile 28.04 și 29.04.
+2. Blochez rezervări noi din clasele care au deja 5 locuri la aceste 2 evenimente.
+3. Generez 2 Pdf-uri descărcabile cu lista finală de participanți.
