@@ -321,6 +321,11 @@ export default function StudentEventDetailPage() {
         <Badge variant="outline" className="gap-1">
           <Users className="h-3 w-3" /> {spotsLeft} locuri libere
         </Badge>
+        {(event as any).max_per_class != null && (
+          <Badge variant="outline" className="gap-1">
+            Maxim {(event as any).max_per_class} elevi/clasă
+          </Badge>
+        )}
       </div>
 
       {/* Booking period */}

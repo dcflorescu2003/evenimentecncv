@@ -1,77 +1,41 @@
-## Obiectiv
+# Limită opțională de elevi per clasă pentru evenimente
 
-Aplic regula „maxim 5 elevi rezervați per clasă” pentru cele 2 meciuri:
+Adăugăm o setare opțională per eveniment: **„Maxim X elevi per clasă”**. Implicit nelimitat. Când e setată, regula se aplică doar la auto-rezervarea elevilor — dirigintele/admin-ul o pot depăși manual, iar asistenții nu se contorizează.
 
-- **28.04** — Meci FC CANTEMIR vs TUDOR VIANU
-- **29.04** — Meci FC CANTEMIR vs DIMITRIE BOLINTIANU
+## 1. Bază de date (migrație)
 
-## Pasul 1 — Curățare rezervări existente (one-shot)
+- Adăugăm coloana `events.max_per_class` (`integer`, nullable, default `NULL` = fără limită).
+- Actualizăm funcția RPC `check_booking_eligibility` astfel:
+  - **Eliminăm** hard-code-ul existent pentru cele 2 meciuri (28.04 / 29.04).
+  - **Înlocuim** cu o verificare generică: dacă `events.max_per_class IS NOT NULL`, numărăm rezervările active din clasa elevului pentru acel eveniment, **excluzând** elevii care apar în `event_student_assistants` pentru același eveniment. Dacă numărul `>= max_per_class`, întoarcem mesaj: *„Limita pentru clasa ta a fost atinsă (X locuri per clasă)”*.
+- Funcția RPC e folosită doar la auto-rezervările elevilor (din `StudentEventDetailPage`). Diriginții și adminii inserează direct în `reservations` fără să apeleze RPC-ul, deci automat ignoră limita — exact ce ne dorim.
 
-Pentru fiecare din cele 2 evenimente, pentru fiecare clasă (V, VI, VII, VIII, IX A...G, X A...G, XI ..., XII ...):
+## 2. Formular creare/editare eveniment
 
-- Păstrez primii 5 elevi din clasă cu `status='reserved'`, ordonați ascendent după `created_at` (cei mai vechi câștigă).
-- Restul rezervărilor primesc `status='cancelled'` și `cancelled_at=now()`.
+Adăugăm câmpul în 2 locuri (același UX):
+- `src/pages/admin/EventsPage.tsx`
+- `src/pages/prof/ProfEventsPage.tsx`
 
-Voi rula prin migration o operație tranzacțională care folosește `ROW_NUMBER() OVER (PARTITION BY class_id ORDER BY created_at)` pentru a marca rezervările peste poziția 5.
+Câmp nou în formular: **„Maxim elevi per clasă (opțional)”** — input numeric, gol = fără limită. Plasat lângă „Capacitate maximă”. Salvăm `null` dacă e gol, altfel valoarea integer.
 
-Notă: regula se aplică pentru **toate** clasele (inclusiv XI și XII, care sunt mai puține) — interpretare uniformă, „per clasă individuală”. Dacă vrei să exclud XI/XII, spune-mi înainte de aprobare.
+## 3. Afișare în interfața elevului
 
-## Pasul 2 — Validare hard pentru rezervări noi
+Când `max_per_class` e setat, afișăm sub detaliile evenimentului textul:
+> *„Maxim {X} elevi per clasă”*
 
-Modific funcția RPC `check_booking_eligibility` să adauge o verificare specifică:
+Locații:
+- `src/pages/student/StudentEventDetailPage.tsx` (cardul de detalii)
+- `src/pages/student/StudentEventsPage.tsx` (lista cu evenimente, ca badge mic)
+- `src/components/student/EventsCalendar.tsx` (popover-ul evenimentului)
 
-- Dacă `event_id` este unul din cele 2 (hardcodat în funcție pentru aceste meciuri), număr câți elevi din aceeași clasă a elevului curent au deja `status='reserved'` la acel eveniment.
-- Dacă sunt deja ≥ 5, refuz cu mesajul: „Clasa ta a atins limita de 5 locuri pentru acest eveniment.”
+## 4. Detalii tehnice
 
-Validarea rămâne aplicabilă și prin RLS / UI normal (elevii nu pot rezerva direct dacă RPC respinge).
+- Tipurile TypeScript pentru `events` se regenerează automat după migrație (`src/integrations/supabase/types.ts`).
+- Nu modificăm `public-book-event` (rezervări publice anonime — nu au clasă).
+- Mesajul de eroare în română, întors din RPC, este afișat de UI-ul existent fără modificări (folosește deja `result.reason`).
 
-## Pasul 3 — Raport participanți (după aplicarea regulii)
+## Rezumat schimbări
 
-Generez 2 fișiere CSV în `/mnt/documents/`:
-
-- `participanti-meci-28-04-tudor-vianu.csv`
-- `participanti-meci-29-04-dimitrie-bolintianu.csv`
-
-Coloane: Nume, Prenume, Clasă, Identificator elev, Data rezervării.
-Sortare: după clasă, apoi alfabetic după nume.
-
-Voi furniza tag-uri `<lov-artifact>` pentru download direct.
-
-## Detalii tehnice
-
-**Migration SQL** (Pasul 1):
-
-```sql
-WITH ranked AS (
-  SELECT r.id,
-    ROW_NUMBER() OVER (PARTITION BY r.event_id, sca.class_id ORDER BY r.created_at) AS rn
-  FROM reservations r
-  JOIN student_class_assignments sca ON sca.student_id = r.student_id
-  WHERE r.event_id IN ('753dea88-...', '5b975ee9-...')
-    AND r.status = 'reserved'
-)
-UPDATE reservations SET status='cancelled', cancelled_at=now()
-WHERE id IN (SELECT id FROM ranked WHERE rn > 5);
-```
-
-**RPC update** (Pasul 2): adaug un bloc în `check_booking_eligibility` înainte de `RETURN allowed=true`:
-
-```sql
-IF _event_id IN ('753dea88-...', '5b975ee9-...') AND _student_class_id IS NOT NULL THEN
-  SELECT count(*) INTO _class_count
-  FROM reservations r
-  JOIN student_class_assignments sca ON sca.student_id = r.student_id
-  WHERE r.event_id = _event_id AND r.status = 'reserved' AND sca.class_id = _student_class_id;
-  IF _class_count >= 5 THEN
-    RETURN jsonb_build_object('allowed', false, 'reason', 'Clasa ta a atins limita de 5 locuri pentru acest eveniment');
-  END IF;
-END IF;
-```
-
-**Raport CSV** (Pasul 3): query SQL care join-ează reservations + profiles + classes și export prin `psql COPY` în fișiere.
-
-## Rezumat
-
-1. Anulez rezervările peste primii 5 din fiecare clasă pentru meciurile 28.04 și 29.04.
-2. Blochez rezervări noi din clasele care au deja 5 locuri la aceste 2 evenimente.
-3. Generez 2 Pdf-uri descărcabile cu lista finală de participanți.
+- 1 migrație SQL (coloană nouă + actualizare funcție RPC)
+- 2 formulare (admin, prof) — câmp nou
+- 3 locații de afișare (elev) — text informativ

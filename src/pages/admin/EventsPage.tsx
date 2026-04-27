@@ -68,6 +68,7 @@ interface EventForm {
   location: string;
   room_details: string;
   max_capacity: number;
+  max_per_class: number | null;
   status: EventStatus;
   eligible_grades: number[];
   eligible_classes: string[];
@@ -89,6 +90,7 @@ const emptyForm: EventForm = {
   location: "",
   room_details: "",
   max_capacity: 30,
+  max_per_class: null,
   status: "draft",
   eligible_grades: [],
   eligible_classes: [],
@@ -181,6 +183,7 @@ export default function EventsPage() {
         location: values.location || null,
         room_details: values.room_details || null,
         max_capacity: values.max_capacity,
+        max_per_class: values.max_per_class,
         status: values.status,
         eligible_grades: values.eligible_grades.length > 0 ? values.eligible_grades : null,
         eligible_classes: values.eligible_classes.length > 0 ? values.eligible_classes : null,
@@ -240,6 +243,7 @@ export default function EventsPage() {
       location: ev.location || "",
       room_details: ev.room_details || "",
       max_capacity: ev.max_capacity,
+      max_per_class: (ev as any).max_per_class ?? null,
       status: ev.status as EventStatus,
       eligible_grades: (ev.eligible_grades as number[]) || [],
       eligible_classes: (ev.eligible_classes as string[]) || [],
@@ -265,6 +269,7 @@ export default function EventsPage() {
       location: ev.location || "",
       room_details: ev.room_details || "",
       max_capacity: ev.max_capacity,
+      max_per_class: (ev as any).max_per_class ?? null,
       status: "draft",
       eligible_grades: (ev.eligible_grades as number[]) || [],
       eligible_classes: (ev.eligible_classes as string[]) || [],
@@ -581,6 +586,21 @@ export default function EventsPage() {
               <div className="space-y-2">
                 <Label htmlFor="ev-cap">Capacitate maximă *</Label>
                 <Input id="ev-cap" type="number" min={1} value={form.max_capacity} onChange={(e) => setForm({ ...form, max_capacity: parseInt(e.target.value) || 1 })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ev-mpc">Maxim elevi per clasă (opțional)</Label>
+                <Input
+                  id="ev-mpc"
+                  type="number"
+                  min={1}
+                  placeholder="Fără limită"
+                  value={form.max_per_class ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    setForm({ ...form, max_per_class: v === "" ? null : Math.max(1, parseInt(v) || 1) });
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">Asistenții nu se contorizează. Adminii și diriginții pot depăși manual.</p>
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
