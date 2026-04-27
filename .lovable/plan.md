@@ -1,53 +1,51 @@
-## Problemă
+## Ce vom face
 
-Pe telefoane fără bară fizică (iPhone cu notch / Dynamic Island, Android cu gesture bar), conținutul aplicației se poate suprapune peste bara de status (sus) sau peste bara de gesturi/butoane (jos). Suportul actual e parțial: doar `StudentLayout` are bara de jos cu `safe-area-inset-bottom`, iar header-urile sunt `sticky top-0` care primesc padding global pe `body`, dar nu toate situațiile sunt acoperite.
+Email-ul este deja obligatoriu la rezervările publice. Adăugăm:
+1. Trimiterea automată a unui email de confirmare cu un **link unic** către pagina personală de bilete.
+2. Pe pagina de bilete: posibilitatea de **anulare** a unui bilet individual sau a întregii rezervări.
 
-## Ce e deja OK
+## Flux pentru utilizator
 
-- `<meta viewport viewport-fit=cover>` setat în `index.html` ✅
-- `body` are `padding-top/left/right: env(safe-area-inset-*)` în `index.css` ✅
-- `StudentLayout` (bottom nav) folosește `safe-area-inset-bottom` ✅
-- Utilitățile `.pb-safe` și `.pb-safe-nav` există ✅
+1. Vizitatorul rezervă bilete pe `/public/events/:id` → primește pe email un mesaj cu:
+   - Detaliile evenimentului
+   - Codul rezervării
+   - Un link direct: `https://.../public/tickets/<reservation_code>` (deschide pagina cu QR-uri și status)
+2. Pe pagina de bilete (link-ul din email), pe lângă printare apar butoane:
+   - „Anulează acest bilet” pe fiecare bilet (cu confirmare)
+   - „Anulează toată rezervarea” jos
+3. La anulare, locul devine din nou disponibil (ticketul trece pe `cancelled`, iar dacă toate sunt anulate, rezervarea trece pe `cancelled`).
 
-## Ce trebuie ajustat
+## Ce schimbăm tehnic
 
-1. **Status bar pe iOS (Capacitor)** — instalez `@capacitor/status-bar` și îl configurez să nu se suprapună peste WebView (`setOverlaysWebView({ overlay: false })` pe Android, stil corect pe iOS). Cu `viewport-fit=cover` lăsăm CSS-ul `env(safe-area-inset-*)` să gestioneze marginile, iar status bar-ul rămâne vizibil cu fundal transparent peste conținut.
+### 1. Email de confirmare
+- Folosim infrastructura de email Lovable (deja configurată pe `notify.pyroskill.info`).
+- Modificăm `supabase/functions/public-book-event/index.ts` ca, după ce creează rezervarea, să **enqueue** un email către `guest_email` cu link-ul `/public/tickets/<reservation_code>` și sumar bilete.
+- Template HTML simplu, în română, cu logo-ul CNCV și link clar de management.
 
-2. **Header-ele sticky** din toate layout-urile (Student, Admin, Manager, Prof, Teacher, Coordinator) — momentan `top-0` lipește header-ul de marginea WebView-ului. După `padding-top` pe body, header-ul sticky se „lipește" sub notch corect, dar trebuie verificat că nu pierde fundalul în zona safe-area. Adaug pe header un `bg` extins cu `margin-top: calc(-1 * env(safe-area-inset-top))` + `padding-top: env(safe-area-inset-top)` pentru ca fundalul header-ului să acopere și zona din spatele notch-ului (altfel se vede transparent).
+### 2. Anulare bilete (acces public, fără login)
+Pentru securitate, anularea trebuie să meargă prin edge function (RLS curent nu permite UPDATE pentru `anon` pe `public_tickets` / `public_reservations`). Cream o nouă edge function: `public-cancel-ticket`.
+- Input: `reservation_code` + opțional `ticket_id` (dacă lipsește → anulează toată rezervarea).
+- Validează că `reservation_code` există, marchează ticket(s) ca `cancelled`, iar dacă nu mai rămâne niciun ticket activ marchează și rezervarea ca `cancelled`.
+- Refuză anularea dacă evenimentul a trecut deja.
 
-3. **Pagini de login / public / scan** care folosesc `min-h-screen` fără layout — adaug clasa `pb-safe` pe containerele care au butoane jos (ex: `Login`, `PublicEventBookingPage`, `ChangePassword`).
+### 3. UI pe `PublicTicketViewPage.tsx`
+- Adăugăm butoane „Anulează” cu `AlertDialog` de confirmare.
+- După anulare, refetch query.
+- Ascundem butoanele dacă status-ul e deja `cancelled` sau dacă evenimentul a trecut.
 
-4. **Mărire safe-area** — utilitățile devin:
-   - `.pt-safe` = `max(env(safe-area-inset-top), 0.5rem)`
-   - `.pb-safe` = `max(env(safe-area-inset-bottom), 1rem)` (deja există)
-   - `.pb-safe-nav` rămâne pentru bottom nav
-   
-5. **Splash screen / status bar overlay pe Android** — pe Android cu gesture navigation, sistemul afișează un „pill" jos. Cu `overlaysWebView=false` (configurabil în `capacitor.config.ts` prin `StatusBar` plugin), sistemul rezervă spațiu automat și nu mai trebuie nimic special. Setez explicit acest comportament.
+### 4. (Opțional minor) UI pe pagina de confirmare după rezervare
+- Adăugăm un mesaj: „Ți-am trimis pe email un link cu biletele tale.”
 
-## Fișiere modificate
+## Fișiere atinse
 
-- `package.json` — adaug `@capacitor/status-bar`
-- `capacitor.config.ts` — adaug bloc `plugins.StatusBar` cu `overlaysWebView: false` (Android) și `style: 'default'`
-- `src/index.css` — adaug `.pt-safe`, ajustez `body` (păstrez padding) și adaug helper pentru header-e (`.header-safe` cu fundal extins)
-- `src/components/layouts/StudentLayout.tsx` — header primește `header-safe`
-- `src/components/layouts/AdminLayout.tsx` — header primește `header-safe`
-- `src/components/layouts/ManagerLayout.tsx` — header primește `header-safe`
-- `src/components/layouts/ProfLayout.tsx` — header primește `header-safe`, adaug `pb-safe` pe main dacă nu există nav fix
-- `src/components/layouts/TeacherLayout.tsx` — la fel
-- `src/components/layouts/CoordinatorLayout.tsx` — la fel
-- `src/main.tsx` (sau un init dedicat) — apel `StatusBar.setOverlaysWebView({ overlay: false })` pe native, ca să fim safe pe Android
+- `supabase/functions/public-book-event/index.ts` — enqueue email după succes
+- `supabase/functions/public-cancel-ticket/index.ts` — **nou**, anulare securizată
+- `supabase/config.toml` — declarare funcție nouă cu `verify_jwt = false`
+- `src/pages/public/PublicTicketViewPage.tsx` — butoane de anulare
+- `src/pages/public/PublicEventBookingPage.tsx` — mesaj „verifică emailul”
 
-## Pași pentru tine pe Mac (după pull)
+## Observații
 
-```bash
-npm install
-npx cap sync
-```
-
-Apoi rulezi pe device fizic — niciun pas suplimentar în Xcode (status bar plugin nu cere capabilities).
-
-## Cum verificăm
-
-- iPhone cu notch / Dynamic Island → header-ul are fundal sub notch, conținutul nu e tăiat
-- Android cu gesture bar → bottom nav (la elev) și butoanele de jos din pagini nu se ascund sub bara de gesturi
-- Telefoane vechi cu butoane fizice → niciun spațiu inutil (folosim `max(env(...), fallback)`)
+- Email-ul deja este validat ca format și obligatoriu — nu e nevoie de migrație în baza de date.
+- Codul de rezervare (`reservation_code`) este UUID — suficient de greu de ghicit pentru a fi folosit ca „token” de management.
+- Nu modificăm structura tabelelor.
