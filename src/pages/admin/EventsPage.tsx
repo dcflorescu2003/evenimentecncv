@@ -183,6 +183,7 @@ export default function EventsPage() {
         location: values.location || null,
         room_details: values.room_details || null,
         max_capacity: values.max_capacity,
+        max_per_class: values.max_per_class,
         status: values.status,
         eligible_grades: values.eligible_grades.length > 0 ? values.eligible_grades : null,
         eligible_classes: values.eligible_classes.length > 0 ? values.eligible_classes : null,
