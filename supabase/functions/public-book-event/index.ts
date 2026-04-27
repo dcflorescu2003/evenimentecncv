@@ -166,6 +166,35 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Best-effort: send confirmation email with management link
+    try {
+      const origin = req.headers.get("origin") || "https://evenimentecncv.online";
+      const manageUrl = `${origin}/public/tickets/${reservation.reservation_code}`;
+      const dateParts = String(event.date).split("-");
+      const dateStr = dateParts.length === 3 ? `${dateParts[2]}.${dateParts[1]}.${dateParts[0]}` : event.date;
+      const timeStr = `${String(event.start_time).slice(0, 5)} – ${String(event.end_time).slice(0, 5)}`;
+
+      await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "public-booking-confirmation",
+          recipientEmail: reservation.guest_email,
+          idempotencyKey: `public-booking-${reservation.id}`,
+          templateData: {
+            guestName: reservation.guest_name,
+            eventTitle: event.title,
+            eventDate: dateStr,
+            eventTime: timeStr,
+            eventLocation: event.location || "",
+            ticketCount: tickets.length,
+            reservationCode: reservation.reservation_code,
+            manageUrl,
+          },
+        },
+      });
+    } catch (e) {
+      console.warn("Failed to send confirmation email (non-fatal):", e);
+    }
+
     return new Response(JSON.stringify({
       reservation_code: reservation.reservation_code,
       reservation_id: reservation.id,
