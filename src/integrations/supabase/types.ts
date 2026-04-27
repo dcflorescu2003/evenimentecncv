@@ -413,6 +413,7 @@ export type Database = {
           is_public: boolean
           location: string | null
           max_capacity: number
+          max_per_class: number | null
           notes_for_teachers: string | null
           published: boolean
           room_details: string | null
@@ -439,6 +440,7 @@ export type Database = {
           is_public?: boolean
           location?: string | null
           max_capacity: number
+          max_per_class?: number | null
           notes_for_teachers?: string | null
           published?: boolean
           room_details?: string | null
@@ -465,6 +467,7 @@ export type Database = {
           is_public?: boolean
           location?: string | null
           max_capacity?: number
+          max_per_class?: number | null
           notes_for_teachers?: string | null
           published?: boolean
           room_details?: string | null
