@@ -1,49 +1,53 @@
-## Notificări automate planificate
+## Problemă
 
-### 1. Notificare elevi dimineața — la 09:30 (GMT+3)
+Pe telefoane fără bară fizică (iPhone cu notch / Dynamic Island, Android cu gesture bar), conținutul aplicației se poate suprapune peste bara de status (sus) sau peste bara de gesturi/butoane (jos). Suportul actual e parțial: doar `StudentLayout` are bara de jos cu `safe-area-inset-bottom`, iar header-urile sunt `sticky top-0` care primesc padding global pe `body`, dar nu toate situațiile sunt acoperite.
 
-Funcția `send-event-reminders` cu `mode: "morning"` deja există și funcționează (trimite notificare elevilor cu rezervare în ziua curentă).
+## Ce e deja OK
 
-**Schimbare:** mutăm cron job-ul `send-morning-reminders` din ora 07:00 UTC (= 10:00 GMT+3) la **06:30 UTC (= 09:30 GMT+3)**.
+- `<meta viewport viewport-fit=cover>` setat în `index.html` ✅
+- `body` are `padding-top/left/right: env(safe-area-inset-*)` în `index.css` ✅
+- `StudentLayout` (bottom nav) folosește `safe-area-inset-bottom` ✅
+- Utilitățile `.pb-safe` și `.pb-safe-nav` există ✅
 
-```text
-cron:  30 6 * * *   →  send-event-reminders { mode: "morning" }
+## Ce trebuie ajustat
+
+1. **Status bar pe iOS (Capacitor)** — instalez `@capacitor/status-bar` și îl configurez să nu se suprapună peste WebView (`setOverlaysWebView({ overlay: false })` pe Android, stil corect pe iOS). Cu `viewport-fit=cover` lăsăm CSS-ul `env(safe-area-inset-*)` să gestioneze marginile, iar status bar-ul rămâne vizibil cu fundal transparent peste conținut.
+
+2. **Header-ele sticky** din toate layout-urile (Student, Admin, Manager, Prof, Teacher, Coordinator) — momentan `top-0` lipește header-ul de marginea WebView-ului. După `padding-top` pe body, header-ul sticky se „lipește" sub notch corect, dar trebuie verificat că nu pierde fundalul în zona safe-area. Adaug pe header un `bg` extins cu `margin-top: calc(-1 * env(safe-area-inset-top))` + `padding-top: env(safe-area-inset-top)` pentru ca fundalul header-ului să acopere și zona din spatele notch-ului (altfel se vede transparent).
+
+3. **Pagini de login / public / scan** care folosesc `min-h-screen` fără layout — adaug clasa `pb-safe` pe containerele care au butoane jos (ex: `Login`, `PublicEventBookingPage`, `ChangePassword`).
+
+4. **Mărire safe-area** — utilitățile devin:
+   - `.pt-safe` = `max(env(safe-area-inset-top), 0.5rem)`
+   - `.pb-safe` = `max(env(safe-area-inset-bottom), 1rem)` (deja există)
+   - `.pb-safe-nav` rămâne pentru bottom nav
+   
+5. **Splash screen / status bar overlay pe Android** — pe Android cu gesture navigation, sistemul afișează un „pill" jos. Cu `overlaysWebView=false` (configurabil în `capacitor.config.ts` prin `StatusBar` plugin), sistemul rezervă spațiu automat și nu mai trebuie nimic special. Setez explicit acest comportament.
+
+## Fișiere modificate
+
+- `package.json` — adaug `@capacitor/status-bar`
+- `capacitor.config.ts` — adaug bloc `plugins.StatusBar` cu `overlaysWebView: false` (Android) și `style: 'default'`
+- `src/index.css` — adaug `.pt-safe`, ajustez `body` (păstrez padding) și adaug helper pentru header-e (`.header-safe` cu fundal extins)
+- `src/components/layouts/StudentLayout.tsx` — header primește `header-safe`
+- `src/components/layouts/AdminLayout.tsx` — header primește `header-safe`
+- `src/components/layouts/ManagerLayout.tsx` — header primește `header-safe`
+- `src/components/layouts/ProfLayout.tsx` — header primește `header-safe`, adaug `pb-safe` pe main dacă nu există nav fix
+- `src/components/layouts/TeacherLayout.tsx` — la fel
+- `src/components/layouts/CoordinatorLayout.tsx` — la fel
+- `src/main.tsx` (sau un init dedicat) — apel `StatusBar.setOverlaysWebView({ overlay: false })` pe native, ca să fim safe pe Android
+
+## Pași pentru tine pe Mac (după pull)
+
+```bash
+npm install
+npx cap sync
 ```
 
-### 2. Notificare diriginți seara — la 19:00 (GMT+3) după evenimente
+Apoi rulezi pe device fizic — niciun pas suplimentar în Xcode (status bar plugin nu cere capabilities).
 
-Creăm o funcție edge nouă: **`notify-homeroom-absences`**.
+## Cum verificăm
 
-**Logica:**
-1. Găsește toate evenimentele cu `date = azi` (în Europe/Bucharest).
-2. Pentru fiecare eveniment, identifică elevii cu rezervare care au absentat:
-   - `tickets.status = 'absent'` (sau `'reserved'` rămas neînregistrat — îl considerăm absent doar dacă ticket-ul e marcat absent; `close-past-events` rulează la 06:00 a doua zi, deci la 19:00 încă nu a marcat automat).
-   - **Important:** la 19:00 evenimentul s-a încheiat (verificăm `end_time < now()`), iar elevii încă neprezenți (`status IN ('reserved','absent')`) sunt considerați absenți.
-3. Grupează absenții pe diriginte (prin `student_class_assignments` → `classes.homeroom_teacher_id`).
-4. Pentru fiecare diriginte cu cel puțin un elev absent la un eveniment azi, creează o notificare:
-   - **Titlu:** „Eveniment încheiat — verifică prezența”
-   - **Body:** „Evenimentul «X» s-a încheiat. Ai N elev(i) din clasă marcat(i) absent(i). Verifică lista de prezență.”
-   - `related_event_id` = id-ul evenimentului
-   - `type = 'homeroom_absence_alert'`
-5. Trimite și push (Web Push + FCM) folosind aceleași helpere ca în `send-event-reminders`.
-6. Deduplicare: nu creează notificare dacă există deja una de același tip pentru același (`user_id`, `related_event_id`).
-
-**Cron nou:** rulează zilnic la **16:00 UTC (= 19:00 GMT+3)**.
-
-```text
-cron:  0 16 * * *  →  notify-homeroom-absences
-```
-
-### Fișiere
-
-- **Modificat:** `supabase/config.toml` — adaugă bloc `[functions.notify-homeroom-absences]` cu `verify_jwt = false`.
-- **Nou:** `supabase/functions/notify-homeroom-absences/index.ts` — logica descrisă mai sus.
-- **Migrare SQL:**
-  - `cron.unschedule('send-morning-reminders')` și re-schedule la `30 6 * * *`.
-  - `cron.schedule('notify-homeroom-absences-daily', '0 16 * * *', ...)`.
-
-### Note tehnice
-
-- Politica RLS pe `notifications` permite INSERT doar pentru admini. Funcția folosește `SUPABASE_SERVICE_ROLE_KEY` care bypass-uiește RLS — OK.
-- Detectarea „absent” la 19:00: tickets cu `status IN ('reserved','absent')` pentru rezervări la evenimente cu `date = azi` și `end_time <= now()`. Elevii prezenți (`present`/`late`) sunt excluși.
-- Cron-ul rulează în UTC; nu ținem cont de schimbarea oră de vară/iarnă (cum e și acum pentru celelalte joburi). 19:00 GMT+3 = 16:00 UTC vara, iarna devine 18:00 ora locală — acceptăm comportamentul actual al sistemului.
+- iPhone cu notch / Dynamic Island → header-ul are fundal sub notch, conținutul nu e tăiat
+- Android cu gesture bar → bottom nav (la elev) și butoanele de jos din pagini nu se ascund sub bara de gesturi
+- Telefoane vechi cu butoane fizice → niciun spațiu inutil (folosim `max(env(...), fallback)`)
