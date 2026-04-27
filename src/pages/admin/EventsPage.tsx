@@ -68,6 +68,7 @@ interface EventForm {
   location: string;
   room_details: string;
   max_capacity: number;
+  max_per_class: number | null;
   status: EventStatus;
   eligible_grades: number[];
   eligible_classes: string[];
