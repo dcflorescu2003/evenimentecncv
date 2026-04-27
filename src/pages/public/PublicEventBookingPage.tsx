@@ -108,12 +108,16 @@ export default function PublicEventBookingPage() {
           <div className="mb-6 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
             <h1 className="mt-3 font-display text-2xl font-bold">Rezervare confirmată!</h1>
+            <div className="mt-3 rounded-lg border border-green-300 bg-green-50 p-4 text-sm text-green-900 dark:border-green-600 dark:bg-green-950 dark:text-green-200">
+              <p className="font-semibold">📧 Verifică-ți emailul</p>
+              <p className="mt-1">Ți-am trimis un email cu un link unde poți vedea, printa sau anula biletele oricând.</p>
+            </div>
             <div className="mt-3 rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-900 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
               <p className="font-semibold">⚠️ Important!</p>
-              <p className="mt-1">Printează sau salvează ca PDF această pagină acum. Biletele <strong>nu pot fi recuperate ulterior</strong>.</p>
+              <p className="mt-1">Poți printa și acum biletele de pe această pagină.</p>
             </div>
             <div className="mt-3 rounded-lg border border-blue-300 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-200">
-              <p>În cazul în care nu puteți ajunge la ora programată, vă rugăm să ne anunțați la adresa <a href="mailto:cncvonline@gmail.com" className="font-semibold underline">cncvonline@gmail.com</a></p>
+              <p>Dacă nu mai poți ajunge, te rugăm să anulezi biletele din linkul primit pe email, ca alți participanți să poată ocupa locul. Mulțumim!</p>
             </div>
           </div>
 
