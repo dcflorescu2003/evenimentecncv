@@ -19,7 +19,7 @@ export default function StudentLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="header-safe sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-4 shadow-sm">
+      <header className="header-safe fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between border-b bg-card px-4 shadow-sm">
         <div className="flex items-center gap-2">
           <GraduationCap className="h-6 w-6 text-primary" />
           <span className="font-display text-lg font-semibold">CNCV</span>
@@ -33,6 +33,7 @@ export default function StudentLayout() {
           </Button>
         </div>
       </header>
+      <div className="h-header-safe shrink-0" aria-hidden="true" />
       <main className="flex-1 overflow-auto p-4 pb-safe-nav">
         <Outlet />
       </main>

@@ -24,7 +24,7 @@ export default function ProfLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="header-safe sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-card px-3 sm:px-4 shadow-sm">
+      <header className="header-safe fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between border-b bg-card px-3 sm:px-4 shadow-sm">
         <div className="flex items-center gap-2 min-w-0">
           <GraduationCap className="h-6 w-6 text-primary shrink-0" />
           <span className="font-display text-base sm:text-lg font-semibold truncate">{title}</span>
@@ -36,7 +36,8 @@ export default function ProfLayout() {
           </Button>
         </div>
       </header>
-      <div className="flex items-center gap-1 sm:gap-2 border-b bg-card px-2 sm:px-4 py-2 overflow-x-auto whitespace-nowrap">
+      <div className="h-header-safe shrink-0" aria-hidden="true" />
+      <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-30 flex items-center gap-1 sm:gap-2 border-b bg-card px-2 sm:px-4 py-2 overflow-x-auto whitespace-nowrap">
         {navItems.map((item) => (
           <Button
             key={item.path}
