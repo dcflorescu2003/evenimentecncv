@@ -314,6 +314,13 @@ serve(async (req) => {
         throw new Error("Selectați cel puțin un rol");
       }
 
+      const email = `${username}@school.local`;
+      const { error: authUpdateError } = await supabase.auth.admin.updateUserById(user_id, {
+        email,
+        email_confirm: true,
+      });
+      if (authUpdateError) throw authUpdateError;
+
       const profileUpdate: Record<string, string | number | null> = {
         first_name,
         last_name,
