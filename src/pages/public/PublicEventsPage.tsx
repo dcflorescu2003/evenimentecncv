@@ -21,7 +21,9 @@ export default function PublicEventsPage() {
         .eq("is_public", true)
         .eq("published", true)
         .eq("status", "published")
-        .order("date", { ascending: true });
+        .gte("date", new Date().toISOString().slice(0, 10))
+        .order("date", { ascending: true })
+        .order("start_time", { ascending: true });
       if (error) throw error;
       return data;
     },
