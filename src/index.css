@@ -125,6 +125,11 @@
   .header-safe {
     padding-top: env(safe-area-inset-top);
   }
+  /* Spacer care rezervă spațiul ocupat de un header `fixed` cu .header-safe.
+     3.5rem = h-14 (înălțimea header-ului). */
+  .h-header-safe {
+    height: calc(3.5rem + env(safe-area-inset-top));
+  }
   .overscroll-x-contain {
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
