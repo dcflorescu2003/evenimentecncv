@@ -95,6 +95,14 @@ export default function EventDetailPage() {
   const [enrollingClass, setEnrollingClass] = useState(false);
   const [enrollingStudentId, setEnrollingStudentId] = useState<string | null>(null);
 
+  // Admin add external participant (public events) state
+  const [addExternalDialogOpen, setAddExternalDialogOpen] = useState(false);
+  const [externalGuestName, setExternalGuestName] = useState("");
+  const [externalGuestEmail, setExternalGuestEmail] = useState("");
+  const [externalGuestPhone, setExternalGuestPhone] = useState("");
+  const [externalAttendees, setExternalAttendees] = useState<string[]>([""]);
+  const [savingExternal, setSavingExternal] = useState(false);
+
   // Queries
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ["event", id],
