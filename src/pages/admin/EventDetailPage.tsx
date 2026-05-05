@@ -1078,25 +1078,30 @@ export default function EventDetailPage() {
                     {publicParticipants.map((pr: any) => {
                       const ticketCount = (pr.public_tickets || []).filter((t: any) => t.status !== "cancelled").length;
                       return (
-                        <TableRow key={pr.id}>
+                        <TableRow key={pr.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setViewTicketsReservation(pr)}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
-                              <span>{pr.guest_name}</span>
+                              <span className="text-primary underline-offset-2 hover:underline">{pr.guest_name}</span>
                               {pr.added_by_admin && <Badge variant="secondary" className="text-xs">Adăugat de admin</Badge>}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             {pr.guest_email ? (
                               <a href={`mailto:${pr.guest_email}`} className="text-primary underline">{pr.guest_email}</a>
                             ) : "—"}
                           </TableCell>
                           <TableCell>{pr.guest_phone || "—"}</TableCell>
                           <TableCell>{ticketCount}</TableCell>
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             {ticketCount > 0 ? (
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCancelReservation({ id: pr.id, name: pr.guest_name, isPublic: true, cancelAll: true })}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewTicketsReservation(pr)} title="Vezi bilete">
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCancelReservation({ id: pr.id, name: pr.guest_name, isPublic: true, cancelAll: true })} title="Anulează">
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
                             ) : (
                               <Badge variant="secondary">Anulat</Badge>
                             )}
