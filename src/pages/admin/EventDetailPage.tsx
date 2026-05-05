@@ -39,6 +39,10 @@ import {
   SelectValue as StatusSelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
+import QRCode from "qrcode";
+import jsPDF from "jspdf";
+import { downloadFileMobileSafe } from "@/lib/download";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Event = Tables<"events">;
