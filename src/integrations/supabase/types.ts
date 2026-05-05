@@ -741,6 +741,7 @@ export type Database = {
       }
       public_reservations: {
         Row: {
+          added_by_admin: string | null
           created_at: string
           event_id: string
           guest_email: string | null
@@ -751,6 +752,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          added_by_admin?: string | null
           created_at?: string
           event_id: string
           guest_email?: string | null
@@ -761,6 +763,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          added_by_admin?: string | null
           created_at?: string
           event_id?: string
           guest_email?: string | null
