@@ -1571,6 +1571,89 @@ export default function EventDetailPage() {
         </DialogContent>
       </Dialog>
 
+      {/* View public tickets dialog */}
+      <Dialog open={!!viewTicketsReservation} onOpenChange={(o) => !o && setViewTicketsReservation(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Bilete rezervare</DialogTitle>
+            <DialogDescription>
+              {viewTicketsReservation?.guest_name} • Cod: <span className="font-mono">{viewTicketsReservation?.reservation_code}</span>
+            </DialogDescription>
+          </DialogHeader>
+          {viewTicketsReservation && (
+            <div className="space-y-3">
+              {(viewTicketsReservation.public_tickets || [])
+                .filter((t: any) => t.status !== "cancelled")
+                .map((t: any, i: number, arr: any[]) => (
+                  <Card key={t.id}>
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <QRCodeSVG value={t.qr_code_data} size={110} />
+                      <div className="flex-1 space-y-1 min-w-0">
+                        <p className="font-semibold">{t.attendee_name}</p>
+                        <p className="text-xs text-muted-foreground">Bilet {i + 1}/{arr.length}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono break-all">{t.qr_code_data}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              {(viewTicketsReservation.public_tickets || []).filter((t: any) => t.status !== "cancelled").length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Niciun bilet activ.</p>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setViewTicketsReservation(null)}>Închide</Button>
+            <Button
+              disabled={downloadingTicketsPdf || !viewTicketsReservation}
+              onClick={async () => {
+                if (!viewTicketsReservation || !event) return;
+                setDownloadingTicketsPdf(true);
+                try {
+                  const tickets = (viewTicketsReservation.public_tickets || []).filter((t: any) => t.status !== "cancelled");
+                  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+                  const pageW = 210;
+                  const pageH = 297;
+                  const stripDia = (s: string) => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ț/g, "t").replace(/Ț/g, "T").replace(/ș/g, "s").replace(/Ș/g, "S");
+                  for (let i = 0; i < tickets.length; i++) {
+                    if (i > 0) doc.addPage();
+                    const t = tickets[i];
+                    doc.setFontSize(16);
+                    doc.text(stripDia(event.title), pageW / 2, 20, { align: "center" });
+                    doc.setFontSize(10);
+                    doc.text(`${stripDia(formatDate(event.date))} • ${(event.start_time || "").slice(0, 5)} – ${(event.end_time || "").slice(0, 5)}`, pageW / 2, 28, { align: "center" });
+                    if (event.location) doc.text(stripDia(event.location), pageW / 2, 34, { align: "center" });
+                    const qrDataUrl = await QRCode.toDataURL(t.qr_code_data, { width: 600, margin: 1 });
+                    const qrSize = 80;
+                    doc.addImage(qrDataUrl, "PNG", (pageW - qrSize) / 2, 50, qrSize, qrSize);
+                    doc.setFontSize(14);
+                    doc.text(stripDia(t.attendee_name), pageW / 2, 145, { align: "center" });
+                    doc.setFontSize(10);
+                    doc.text(`Bilet ${i + 1}/${tickets.length}`, pageW / 2, 152, { align: "center" });
+                    doc.setFontSize(9);
+                    doc.text(`Cod rezervare: ${viewTicketsReservation.reservation_code}`, pageW / 2, 160, { align: "center" });
+                    doc.setFontSize(7);
+                    doc.text(t.qr_code_data, pageW / 2, 166, { align: "center" });
+                    doc.setFontSize(8);
+                    doc.text(stripDia(`Rezervat de: ${viewTicketsReservation.guest_name}`), pageW / 2, pageH - 15, { align: "center" });
+                  }
+                  const base64 = doc.output("datauristring").split(",")[1];
+                  const safeName = (viewTicketsReservation.reservation_code || "bilete").replace(/[^a-zA-Z0-9_-]/g, "_");
+                  await downloadFileMobileSafe(`bilete_${safeName}.pdf`, base64, "application/pdf");
+                  toast.success("PDF generat");
+                } catch (err: any) {
+                  toast.error(err.message || "Eroare la generarea PDF");
+                } finally {
+                  setDownloadingTicketsPdf(false);
+                }
+              }}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              {downloadingTicketsPdf ? "Se generează…" : "Descarcă PDF"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
