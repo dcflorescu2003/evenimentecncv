@@ -95,6 +95,10 @@ export default function EventDetailPage() {
   const [enrollingClass, setEnrollingClass] = useState(false);
   const [enrollingStudentId, setEnrollingStudentId] = useState<string | null>(null);
 
+  // View public tickets dialog
+  const [viewTicketsReservation, setViewTicketsReservation] = useState<any | null>(null);
+  const [downloadingTicketsPdf, setDownloadingTicketsPdf] = useState(false);
+
   // Admin add external participant (public events) state
   const [addExternalDialogOpen, setAddExternalDialogOpen] = useState(false);
   const [externalGuestName, setExternalGuestName] = useState("");
