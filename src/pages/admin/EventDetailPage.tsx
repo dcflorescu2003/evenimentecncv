@@ -1453,6 +1453,106 @@ export default function EventDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add External Participant (Public Events) */}
+      <Dialog open={addExternalDialogOpen} onOpenChange={(o) => { if (!o && !savingExternal) setAddExternalDialogOpen(false); }}>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Adaugă participant extern</DialogTitle>
+            <DialogDescription>
+              Participanții adăugați aici sunt peste capacitatea evenimentului și nu ocupă din locurile disponibile pentru rezervările publice.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="ext-name">Nume contact *</Label>
+              <Input id="ext-name" value={externalGuestName} onChange={(e) => setExternalGuestName(e.target.value)} placeholder="Numele complet" maxLength={120} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="ext-email">Email (opțional)</Label>
+                <Input id="ext-email" type="email" value={externalGuestEmail} onChange={(e) => setExternalGuestEmail(e.target.value)} maxLength={200} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ext-phone">Telefon (opțional)</Label>
+                <Input id="ext-phone" type="tel" value={externalGuestPhone} onChange={(e) => setExternalGuestPhone(e.target.value)} maxLength={40} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Participanți *</Label>
+              {externalAttendees.map((name, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <Input
+                    value={name}
+                    onChange={(e) => setExternalAttendees((prev) => prev.map((v, i) => i === idx ? e.target.value : v))}
+                    placeholder={`Participant ${idx + 1}`}
+                    maxLength={120}
+                  />
+                  {externalAttendees.length > 1 && (
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setExternalAttendees((prev) => prev.filter((_, i) => i !== idx))}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={() => setExternalAttendees((prev) => [...prev, ""])}>
+                + Adaugă participant
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddExternalDialogOpen(false)} disabled={savingExternal}>Anulează</Button>
+            <Button
+              disabled={savingExternal}
+              onClick={async () => {
+                const name = externalGuestName.trim();
+                const cleanAttendees = externalAttendees.map((n) => n.trim()).filter(Boolean);
+                if (!name) { toast.error("Numele contactului este obligatoriu"); return; }
+                if (cleanAttendees.length === 0) { toast.error("Adăugați cel puțin un participant"); return; }
+                setSavingExternal(true);
+                try {
+                  const { data: pr, error: prErr } = await supabase
+                    .from("public_reservations")
+                    .insert({
+                      event_id: id!,
+                      guest_name: name,
+                      guest_email: externalGuestEmail.trim() || null,
+                      guest_phone: externalGuestPhone.trim() || null,
+                      status: "reserved",
+                      added_by_admin: user?.id ?? null,
+                    })
+                    .select("id")
+                    .single();
+                  if (prErr) throw prErr;
+                  const ticketsPayload = cleanAttendees.map((n) => ({ public_reservation_id: pr.id, attendee_name: n, status: "reserved" }));
+                  const { error: tErr } = await supabase.from("public_tickets").insert(ticketsPayload);
+                  if (tErr) throw tErr;
+                  try {
+                    await supabase.from("audit_logs").insert({
+                      user_id: user?.id,
+                      action: "admin_public_enrollment",
+                      entity_type: "public_reservation",
+                      entity_id: pr.id,
+                      details: { event_id: id, count: cleanAttendees.length, over_capacity: true },
+                    });
+                  } catch { /* best-effort */ }
+                  toast.success(`${cleanAttendees.length} participant(i) adăugat(i) peste capacitate`);
+                  setAddExternalDialogOpen(false);
+                  queryClient.invalidateQueries({ queryKey: ["admin_event_public_participants", id] });
+                  queryClient.invalidateQueries({ queryKey: ["admin_event_participants", id] });
+                } catch (err: any) {
+                  toast.error(err.message || "Eroare la salvare");
+                } finally {
+                  setSavingExternal(false);
+                }
+              }}
+            >
+              {savingExternal ? "Se salvează…" : "Adaugă"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
