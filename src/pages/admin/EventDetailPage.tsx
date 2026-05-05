@@ -757,6 +757,16 @@ export default function EventDetailPage() {
                 <UserPlus className="mr-2 h-4 w-4" />
                 Adaugă elev asistent
               </Button>
+              {event?.is_public && (
+                <Button variant="outline" size="sm" onClick={() => {
+                  setAddExternalDialogOpen(true);
+                  setExternalGuestName(""); setExternalGuestEmail(""); setExternalGuestPhone("");
+                  setExternalAttendees([""]);
+                }}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Adaugă participant extern
+                </Button>
+              )}
               {(participants.length > 0 || assistants.length > 0) && (
                 <Button variant="outline" size="sm" onClick={handleDownloadAttendancePdf}>
                   <FileDown className="mr-2 h-4 w-4" />
