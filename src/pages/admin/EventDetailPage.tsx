@@ -1075,7 +1075,12 @@ export default function EventDetailPage() {
                       const ticketCount = (pr.public_tickets || []).filter((t: any) => t.status !== "cancelled").length;
                       return (
                         <TableRow key={pr.id}>
-                          <TableCell className="font-medium">{pr.guest_name}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <span>{pr.guest_name}</span>
+                              {pr.added_by_admin && <Badge variant="secondary" className="text-xs">Adăugat de admin</Badge>}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             {pr.guest_email ? (
                               <a href={`mailto:${pr.guest_email}`} className="text-primary underline">{pr.guest_email}</a>
