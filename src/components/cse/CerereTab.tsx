@@ -175,14 +175,20 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
       ], y);
       y += 6;
 
-      y = renderRuns([
-        { text: "Asigurându-vă de întreaga noastră considerație," },
-      ], y);
-      y = renderRuns([
-        { text: "Președintele Consiliului Școlar al Elevilor Colegiului Național \u201ECantemir-Vodă\u201D," },
-      ], y);
       doc.setFont("helvetica", "bold");
-      doc.text(stripDiacritics(president || "—"), marginL, y);
+      doc.setFontSize(11);
+      const closingLines = [
+        "Asigurandu-va de intreaga noastra consideratie,",
+        "Presedintele Consiliului Scolar al Elevilor Colegiului National „Cantemir-Voda\",",
+        stripDiacritics(president || "—"),
+      ];
+      for (const line of closingLines) {
+        const wrapped = doc.splitTextToSize(line, contentW);
+        for (const w of wrapped) {
+          doc.text(w, pageW / 2, y, { align: "center" });
+          y += 6;
+        }
+      }
 
       const safeName = stripDiacritics((title || "cerere").replace(/[^a-zA-Z0-9-_]+/g, "_")).slice(0, 60);
       const pdfOutput = doc.output("datauristring");
@@ -245,9 +251,11 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
           <h3 className="text-center text-base font-bold tracking-widest">C E R E R E</h3>
           <p>Stimate Domnule Director,</p>
           {previewBody}
-          <p>Asigurându-vă de întreaga noastră considerație,</p>
-          <p>Președintele Consiliului Școlar al Elevilor Colegiului Național „Cantemir-Vodă",</p>
-          <p className="font-semibold">{president || "—"}</p>
+          <div className="space-y-1 text-center font-bold">
+            <p>Asigurându-vă de întreaga noastră considerație,</p>
+            <p>Președintele Consiliului Școlar al Elevilor Colegiului Național „Cantemir-Vodă”,</p>
+            <p>{president || "—"}</p>
+          </div>
         </CardContent>
       </Card>
 
