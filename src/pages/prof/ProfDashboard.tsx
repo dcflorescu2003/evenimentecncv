@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CalendarDays, Clock, MapPin, ScanLine, Users, Plus } from "lucide-react";
+import AllEventsCalendarSection from "@/components/prof/AllEventsCalendarSection";
 
 export default function ProfDashboard() {
   const { user, profile } = useAuth();
@@ -217,6 +218,40 @@ export default function ProfDashboard() {
             </div>
           )}
 
+          {/* All published events calendar */}
+          <AllEventsCalendarSection />
+
+          {/* My created events */}
+          {activeCreated.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="font-display text-base sm:text-lg font-semibold">
+                Evenimentele mele ({activeCreated.length})
+              </h2>
+              {activeCreated.map((ev) => (
+                <Card key={ev.id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate(`/prof/events/${ev.id}`)}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium break-words">{ev.title}</p>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <CalendarDays className="h-3 w-3 shrink-0" /> {formatDate(ev.date)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3 shrink-0" /> {ev.start_time?.slice(0, 5)} – {ev.end_time?.slice(0, 5)}
+                          </span>
+                        </div>
+                      </div>
+                      <Badge variant={ev.status === "published" ? "default" : "secondary"} className="shrink-0">
+                        {ev.status === "draft" ? "Ciornă" : ev.status === "published" ? "Publicat" : ev.status}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
           {/* Past coordinator events (history) */}
           {pastCoord.length > 0 && (
             <div className="space-y-3">
@@ -251,37 +286,6 @@ export default function ProfDashboard() {
                   ... și încă {pastCoord.length - 10} evenimente coordonate
                 </p>
               )}
-            </div>
-          )}
-
-          {/* My created events */}
-          {activeCreated.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="font-display text-base sm:text-lg font-semibold">
-                Evenimentele mele ({activeCreated.length})
-              </h2>
-              {activeCreated.map((ev) => (
-                <Card key={ev.id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => navigate(`/prof/events/${ev.id}`)}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium break-words">{ev.title}</p>
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <CalendarDays className="h-3 w-3 shrink-0" /> {formatDate(ev.date)}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3 shrink-0" /> {ev.start_time?.slice(0, 5)} – {ev.end_time?.slice(0, 5)}
-                          </span>
-                        </div>
-                      </div>
-                      <Badge variant={ev.status === "published" ? "default" : "secondary"} className="shrink-0">
-                        {ev.status === "draft" ? "Ciornă" : ev.status === "published" ? "Publicat" : ev.status}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           )}
 

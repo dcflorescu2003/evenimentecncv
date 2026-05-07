@@ -17,6 +17,7 @@ interface Props {
   events: Event[];
   myReservationIds: Set<string>;
   reservationCounts: Record<string, number>;
+  onEventClick?: (ev: Event) => void;
 }
 
 const RO_DAYS_SHORT = ["L", "Ma", "Mi", "J", "V", "S", "D"];
@@ -100,12 +101,16 @@ function statusBadge(s: Status) {
   return <Badge variant="secondary" className="text-[10px]">Indisponibil</Badge>;
 }
 
-export default function EventsCalendar({ events, myReservationIds, reservationCounts }: Props) {
+export default function EventsCalendar({ events, myReservationIds, reservationCounts, onEventClick }: Props) {
   const navigate = useNavigate();
   const today = useMemo(() => startOfDay(new Date()), []);
   const [view, setView] = useState<View>("week");
   const [currentDate, setCurrentDate] = useState<Date>(today);
   const [dayDialogDate, setDayDialogDate] = useState<Date | null>(null);
+  const handleEventClick = (ev: Event) => {
+    if (onEventClick) onEventClick(ev);
+    else navigate(`/student/events/${ev.id}`);
+  };
 
   // Group events by date string YYYY-MM-DD
   const eventsByDate = useMemo(() => {
@@ -269,7 +274,7 @@ export default function EventsCalendar({ events, myReservationIds, reservationCo
                       <button
                         key={ev.id}
                         type="button"
-                        onClick={() => navigate(`/student/events/${ev.id}`)}
+                        onClick={() => handleEventClick(ev)}
                         className="text-left rounded border bg-card hover:bg-muted/60 p-1.5 transition-colors"
                       >
                         <div className="flex items-start gap-1">
@@ -312,7 +317,7 @@ export default function EventsCalendar({ events, myReservationIds, reservationCo
             <Card
               key={ev.id}
               className="cursor-pointer hover:bg-muted/40 transition-colors"
-              onClick={() => navigate(`/student/events/${ev.id}`)}
+              onClick={() => handleEventClick(ev)}
             >
               <CardContent className="p-3 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
@@ -416,7 +421,7 @@ export default function EventsCalendar({ events, myReservationIds, reservationCo
                       type="button"
                       onClick={() => {
                         setDayDialogDate(null);
-                        navigate(`/student/events/${ev.id}`);
+                        handleEventClick(ev);
                       }}
                       className="w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors"
                     >

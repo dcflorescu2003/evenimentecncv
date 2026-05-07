@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Users, CalendarDays, Clock, ChevronRight, Download, Printer, KeyRound } from "lucide-react";
 import { exportToCSV } from "@/lib/csv-export";
 import { toast } from "sonner";
+import AllEventsCalendarSection from "@/components/prof/AllEventsCalendarSection";
 
 interface StudentReport {
   id: string;
@@ -323,6 +324,11 @@ export default function TeacherDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* All published events calendar */}
+          <div className="print:hidden">
+            <AllEventsCalendarSection />
           </div>
 
           {/* Filters & Export */}
