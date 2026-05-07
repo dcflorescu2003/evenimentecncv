@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { CerereTab } from "@/components/cse/CerereTab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -118,7 +119,7 @@ export default function ProfEventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, roles } = useAuth();
+  const { user, roles, profile } = useAuth();
   const isCse = roles.includes("cse");
 
   const [coordDialogOpen, setCoordDialogOpen] = useState(false);
