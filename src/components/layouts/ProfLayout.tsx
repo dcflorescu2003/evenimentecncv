@@ -20,6 +20,7 @@ export default function ProfLayout() {
     { title: "Dashboard", icon: LayoutDashboard, path: "/prof" },
     { title: "Evenimentele mele", icon: CalendarDays, path: "/prof/events" },
     ...(isHomeroom ? [{ title: "Clasa mea", icon: Users2, path: "/teacher" }] : []),
+    ...(isHomeroom ? [{ title: "Rapoarte", icon: BarChart3, path: "/teacher/reports" }] : []),
   ];
 
   return (
