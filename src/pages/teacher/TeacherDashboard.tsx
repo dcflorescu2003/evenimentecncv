@@ -326,6 +326,11 @@ export default function TeacherDashboard() {
             </Card>
           </div>
 
+          {/* All published events calendar */}
+          <div className="print:hidden">
+            <AllEventsCalendarSection />
+          </div>
+
           {/* Filters & Export */}
           <div className="flex flex-wrap items-center gap-3 print:hidden">
             <div className="relative flex-1 min-w-[200px] max-w-sm">
