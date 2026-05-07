@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CalendarDays, Clock, MapPin, ScanLine, Users, Plus } from "lucide-react";
+import AllEventsCalendarSection from "@/components/prof/AllEventsCalendarSection";
 
 export default function ProfDashboard() {
   const { user, profile } = useAuth();
