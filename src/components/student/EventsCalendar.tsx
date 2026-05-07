@@ -17,6 +17,7 @@ interface Props {
   events: Event[];
   myReservationIds: Set<string>;
   reservationCounts: Record<string, number>;
+  onEventClick?: (ev: Event) => void;
 }
 
 const RO_DAYS_SHORT = ["L", "Ma", "Mi", "J", "V", "S", "D"];
