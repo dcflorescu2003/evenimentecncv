@@ -1042,47 +1042,114 @@ export default function ProfEventDetailPage() {
 
         {/* Dossier Tab */}
         <TabsContent value="dossier" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">{isCse ? "Documente interne / cereri pentru eveniment." : "Documente birocratice ale evenimentului."}</p>
-            <Button size="sm" onClick={() => { setUploadCategory("event_dossier"); setUploadDialogOpen(true); }}>
-              <Upload className="mr-2 h-4 w-4" /> Încarcă document
-            </Button>
-          </div>
-          {dossierFiles.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <FolderOpen className="mb-2 h-8 w-8" />
-                <p>Niciun document în dosar</p>
-              </CardContent>
-            </Card>
+          {isCse ? (
+            <Tabs defaultValue="docs" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="docs">Dosar</TabsTrigger>
+                <TabsTrigger value="cerere">Cerere</TabsTrigger>
+              </TabsList>
+              <TabsContent value="docs" className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Documente interne / cereri pentru eveniment.</p>
+                  <Button size="sm" onClick={() => { setUploadCategory("event_dossier"); setUploadDialogOpen(true); }}>
+                    <Upload className="mr-2 h-4 w-4" /> Încarcă document
+                  </Button>
+                </div>
+                {dossierFiles.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                      <FolderOpen className="mb-2 h-8 w-8" />
+                      <p>Niciun document în dosar</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Titlu</TableHead>
+                          <TableHead>Fișier</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead className="w-24">Acțiuni</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dossierFiles.map((f) => (
+                          <TableRow key={f.id}>
+                            <TableCell className="font-medium">{f.title}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{f.file_name}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{formatDateTime(f.uploaded_at)}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => setDeleteFileId(f.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="cerere">
+                <CerereTab
+                  event={{
+                    id: event.id,
+                    title: event.title,
+                    date: event.date,
+                    start_time: event.start_time,
+                    location: event.location,
+                  }}
+                  defaultPresident={profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() : ""}
+                />
+              </TabsContent>
+            </Tabs>
           ) : (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Titlu</TableHead>
-                    <TableHead>Fișier</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="w-24">Acțiuni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dossierFiles.map((f) => (
-                    <TableRow key={f.id}>
-                      <TableCell className="font-medium">{f.title}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{f.file_name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatDateTime(f.uploaded_at)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteFileId(f.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Documente birocratice ale evenimentului.</p>
+                <Button size="sm" onClick={() => { setUploadCategory("event_dossier"); setUploadDialogOpen(true); }}>
+                  <Upload className="mr-2 h-4 w-4" /> Încarcă document
+                </Button>
+              </div>
+              {dossierFiles.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <FolderOpen className="mb-2 h-8 w-8" />
+                    <p>Niciun document în dosar</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Titlu</TableHead>
+                        <TableHead>Fișier</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead className="w-24">Acțiuni</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dossierFiles.map((f) => (
+                        <TableRow key={f.id}>
+                          <TableCell className="font-medium">{f.title}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{f.file_name}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{formatDateTime(f.uploaded_at)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => downloadFile(f)}><Download className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => setDeleteFileId(f.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
