@@ -1,76 +1,51 @@
-# Sub-tab "Cerere" în Dosar — pentru contul CSE
+## Îmbunătățiri dashboard profesor & diriginte
 
-## Ce se schimbă
+### 1. Calendar evenimente în dashboard (prof + diriginte)
 
-În pagina de detalii eveniment (`ProfEventDetailPage.tsx`), pentru utilizatorii cu rol **CSE**, tab-ul existent **"Dosar / Cerere"** va conține două sub-taburi:
+Adaug componenta calendar (cea folosită la elev: `EventsCalendar`) în:
+- `src/pages/prof/ProfDashboard.tsx` (profesor & CSE)
+- `src/pages/teacher/TeacherDashboard.tsx` (diriginte)
 
-1. **Dosar** — exact conținutul actual (lista de documente încărcate + buton upload).
-2. **Cerere** — nou. Conține o cerere oficială editabilă, pre-completată cu datele evenimentului, plus buton **"Export PDF"**.
+Poziționare: **înainte de „Istoric coordonare"** la profesor, respectiv înainte de tabelul de elevi/istoric la diriginte.
 
-Pentru rolurile non-CSE, tab-ul rămâne neschimbat (doar Dosar).
+Calendarul va afișa **toate evenimentele publicate, non-publice** (la fel ca la elev, fără filtru — confirmat pentru prof; aplicăm la fel și pentru diriginte). Click pe eveniment → **doar dialog cu detalii** (fără navigare). Pentru asta:
+- Adaug în `EventsCalendar` o prop opțională `onEventClick?: (ev) => void` care, dacă e setată, înlocuiește `navigate(...)` cu un callback custom.
+- Dashboard-urile prof/diriginte trec un callback ce deschide un `Dialog` simplu cu titlu, dată, oră, locație, descriere, capacitate.
+- `myReservationIds` va fi `new Set()` gol (nu sunt rezervări de elev), iar `reservationCounts` se ia din RPC `get_events_reserved_counts` (deja folosit).
 
-## Conținutul cererii (editabil)
+### 2. Reordonare carduri Dashboard profesor
 
-Textul reproduce documentul atașat. Câmpurile **bold** sunt pre-completate automat din evenimentul curent, dar rămân editabile:
+În `ProfDashboard.tsx`, ordinea actuală e: Active coord → Istoric → Evenimentele mele.
+Noua ordine cerută: **Evenimentele mele înainte de Istoric**.
+Final: Active coord → **Calendar** → **Evenimentele mele** → Istoric coordonare.
 
-```
-R.N.E.B.                                                  Nr. ___
+(Pentru diriginte, dashboard-ul actual nu are secțiunea „Evenimentele mele", deci doar inserăm Calendarul înainte de tabelul cu elevi/„Istoric"-ul lor.)
 
-                                              APROB,
-                                              DOGARU GHEORGHE
-                                              DIRECTOR
+### 3. Buton „Rapoarte" la dreapta lui „Clasa mea" pentru diriginte
 
-                          C E R E R E
+În `src/components/layouts/TeacherLayout.tsx` ordinea actuală e: Dashboard, Evenimentele mele, Clasa mea, Rapoarte — deci Rapoarte e deja după „Clasa mea". Verific și mă asigur că pentru rolul de **doar diriginte** (fără teacher) butonul Rapoarte apare corect lângă „Clasa mea". Dacă layout-ul folosit pentru diriginte e `ProfLayout` în loc de `TeacherLayout` (când rolul e doar `homeroom_teacher`), îmi rezultă din `ProfLayout.tsx` că lipsește butonul „Rapoarte" — îl voi adăuga acolo, imediat după „Clasa mea", vizibil doar dacă `isHomeroom`.
 
-Stimate Domnule Director,
+### 4. Tab „Verificare prezență" — preselect și filtre relevante clasei
 
-Biroul Executiv al Consiliului Școlar al Elevilor din Colegiul
-Național „Cantemir-Vodă", vă adresează prezenta cerere prin care
-se solicită aprobarea organizării în cadrul colegiului nostru a
-unui eveniment cu titlul «{TITLU EVENIMENT}».
+În `src/pages/teacher/TeacherReportsPage.tsx`, componenta `VerificarePrezentaTab`:
 
-Propunerea este ca evenimentul să aibă loc în data de {DATA},
-ora {ORA}, locația fiind {LOCAȚIE}. Prezenți vor fi elevii care
-s-au înscris la eveniment prin intermediul platformei de
-evenimente CNCV.
+a) **Filtrarea evenimentelor relevante**: 
+- Pe lângă `sessionEvents`, voi face o interogare suplimentară pentru a determina evenimentele unde **există elevi din clasa diriginte înscriși** (prin `reservations` join `student_class_assignments` pe `classIds` și pe `event_id IN sessionEvents`).
+- Set rezultat = `relevantEventIds`. 
+- Lista din `Select` „Selectează evenimentul" va arăta **doar** evenimentele din `relevantEventIds`, sortate descrescător după dată.
+- `uniqueDates` se calculează **doar** din evenimentele relevante.
 
-Asigurându-vă de întreaga noastră considerație,
-Președintele Consiliului Școlar al Elevilor Colegiului Național
-„Cantemir-Vodă",
-{NUME PREȘEDINTE}
-```
+b) **Preselectare ultimul eveniment finalizat**:
+- După încărcare, dacă `selectedEventId` e gol, setez automat la primul eveniment cu `date <= today` din lista relevantă (sortată descrescător) — adică ultimul finalizat unde clasa a avut elevi înscriși.
+- Folosesc un `useEffect` care depinde de `relevantEvents` și `classIds`/`sessionId`. La schimbarea sesiunii sau clasei se resetează și recalculează.
 
-Câmpuri editabile separate (input-uri), pentru a evita probleme de formatare și a păstra bold-ul corect în PDF:
-- Număr înregistrare (R.N.E.B. Nr.)
-- Numele directorului (default: "DOGARU GHEORGHE")
-- Titlu eveniment (default: `event.title`)
-- Data (default: data evenimentului, format `zz.ll.aaaa`)
-- Ora (default: `HH:MM`)
-- Locația (default: `event.location`)
-- Numele președintelui CSE (default: `display_name` al utilizatorului curent)
+### Detalii tehnice
 
-Restul textului rămâne fix (afișat read-only în UI), pentru a păstra forma oficială.
+Files modificate:
+- `src/pages/prof/ProfDashboard.tsx` — query nou pentru evenimente publicate + counts, render `EventsCalendar` între active și istoric, mută „Evenimentele mele" deasupra istoricului, dialog detalii eveniment.
+- `src/pages/teacher/TeacherDashboard.tsx` — același calendar + dialog, plasat înainte de tabelul de elevi.
+- `src/components/student/EventsCalendar.tsx` — adaug prop opțional `onEventClick` care, dacă există, e apelat în loc de `navigate(...)` în cele 3 locuri (linii ~272, 315, 419).
+- `src/components/layouts/ProfLayout.tsx` — adaug item „Rapoarte" pentru `isHomeroom` lângă „Clasa mea".
+- `src/pages/teacher/TeacherReportsPage.tsx` — în `VerificarePrezentaTab`: query nou pentru `relevantEventIds`, filtrez `sessionEvents` și `uniqueDates`, `useEffect` pentru preselect ultimul finalizat.
 
-## Export PDF
-
-Buton **"Export PDF"** generează un PDF A4 portrait cu:
-- **Antet**: cele două logouri pe un singur rând — **Consiliul Elevilor** (stânga) și **CNCV** (dreapta), cu o linie separator dedesubt.
-- Conținutul cererii cu marcajele bold păstrate pentru titlu, dată, oră, locație și numele evenimentului.
-- Font implicit jsPDF + `stripDiacritics` (consistent cu `report-pdf.ts`).
-- Numele fișierului: `Cerere_{titlu_event}_{data}.pdf`.
-- Descărcare prin `downloadFileMobileSafe` (compatibil mobil).
-
-## Detalii tehnice
-
-**Fișiere modificate:**
-- `src/pages/prof/ProfEventDetailPage.tsx` — adaugă sub-Tabs în `TabsContent value="dossier"` (doar dacă `isCse`). Componenta nouă inline pentru formularul cererii.
-- `public/cerere-header/consiliul-elevilor.png` — logo Consiliul Elevilor (din `user-uploads://Picture1.png`).
-- `public/cerere-header/cncv.png` — logo CNCV (din `user-uploads://Picture2.png`).
-
-**Generare PDF:** folosim `jsPDF` (deja instalat). Logourile sunt încărcate ca `dataURL` (fetch + FileReader) și inserate prin `doc.addImage` în antet la coordonate fixe (~25mm înălțime, alinate stânga/dreapta cu margini de 15mm). Textul cererii este randat cu `doc.text` + `splitTextToSize` pentru wrap. Cuvintele bold sunt randate separat cu `doc.setFont("helvetica","bold")` în linie cu restul (calculând offset-ul cu `getTextWidth`).
-
-**Persistență:** câmpurile sunt locale în component state (nu salvate în DB) — se resetează la valorile prefilled la fiecare deschidere. Dacă vrei să le salvăm pentru a fi păstrate între sesiuni, spune-mi și adaug o tabelă/coloană dedicată.
-
-## Întrebare rapidă
-
-Vrei ca cererea generată să fie și **salvată automat în Dosar** după export PDF (uploadată în `event_dossier`), sau doar descărcată local pe dispozitiv?
+Nu sunt necesare migrații DB sau modificări de RLS — toate datele sunt deja accesibile diriginților prin politicile existente (`Homeroom teachers read event reservations` & `read class assignments`).
