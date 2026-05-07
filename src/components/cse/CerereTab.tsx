@@ -158,7 +158,7 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
       }
 
       y = renderRuns([
-        { text: "    Biroul Executiv al Consiliului Școlar al Elevilor din Colegiul Național „Cantemir-Vodă", vă adresează prezenta cerere prin care se solicită aprobarea organizării în cadrul colegiului nostru a unui eveniment cu titlul " },
+        { text: "    Biroul Executiv al Consiliului Școlar al Elevilor din Colegiul Național \u201ECantemir-Vodă\u201D, vă adresează prezenta cerere prin care se solicită aprobarea organizării în cadrul colegiului nostru a unui eveniment cu titlul " },
         { text: title || "—", bold: true },
         { text: "." },
       ], y);
@@ -179,7 +179,7 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
         { text: "Asigurându-vă de întreaga noastră considerație," },
       ], y);
       y = renderRuns([
-        { text: "Președintele Consiliului Școlar al Elevilor Colegiului Național „Cantemir-Vodă"," },
+        { text: "Președintele Consiliului Școlar al Elevilor Colegiului Național \u201ECantemir-Vodă\u201D," },
       ], y);
       doc.setFont("helvetica", "bold");
       doc.text(stripDiacritics(president || "—"), marginL, y);
