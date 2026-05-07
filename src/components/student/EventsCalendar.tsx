@@ -101,12 +101,16 @@ function statusBadge(s: Status) {
   return <Badge variant="secondary" className="text-[10px]">Indisponibil</Badge>;
 }
 
-export default function EventsCalendar({ events, myReservationIds, reservationCounts }: Props) {
+export default function EventsCalendar({ events, myReservationIds, reservationCounts, onEventClick }: Props) {
   const navigate = useNavigate();
   const today = useMemo(() => startOfDay(new Date()), []);
   const [view, setView] = useState<View>("week");
   const [currentDate, setCurrentDate] = useState<Date>(today);
   const [dayDialogDate, setDayDialogDate] = useState<Date | null>(null);
+  const handleEventClick = (ev: Event) => {
+    if (onEventClick) onEventClick(ev);
+    else navigate(`/student/events/${ev.id}`);
+  };
 
   // Group events by date string YYYY-MM-DD
   const eventsByDate = useMemo(() => {
