@@ -274,7 +274,7 @@ export default function EventsCalendar({ events, myReservationIds, reservationCo
                       <button
                         key={ev.id}
                         type="button"
-                        onClick={() => navigate(`/student/events/${ev.id}`)}
+                        onClick={() => handleEventClick(ev)}
                         className="text-left rounded border bg-card hover:bg-muted/60 p-1.5 transition-colors"
                       >
                         <div className="flex items-start gap-1">
@@ -317,7 +317,7 @@ export default function EventsCalendar({ events, myReservationIds, reservationCo
             <Card
               key={ev.id}
               className="cursor-pointer hover:bg-muted/40 transition-colors"
-              onClick={() => navigate(`/student/events/${ev.id}`)}
+              onClick={() => handleEventClick(ev)}
             >
               <CardContent className="p-3 space-y-1.5">
                 <div className="flex items-start justify-between gap-2">
