@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, Users2, LogOut } from "lucide-react";
+import { GraduationCap, LayoutDashboard, CalendarDays, Users2, BarChart3, LogOut } from "lucide-react";
 
 export default function ProfLayout() {
   const { profile, roles, signOut } = useAuth();
