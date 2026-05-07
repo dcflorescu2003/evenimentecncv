@@ -421,7 +421,7 @@ export default function EventsCalendar({ events, myReservationIds, reservationCo
                       type="button"
                       onClick={() => {
                         setDayDialogDate(null);
-                        navigate(`/student/events/${ev.id}`);
+                        handleEventClick(ev);
                       }}
                       className="w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors"
                     >
