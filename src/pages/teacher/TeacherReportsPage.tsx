@@ -586,7 +586,9 @@ function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: 
               <SelectValue placeholder="Selectează evenimentul" />
             </SelectTrigger>
             <SelectContent>
-              {sessionEvents?.map(e => (
+              {relevantEvents.length === 0 ? (
+                <div className="px-2 py-4 text-xs text-muted-foreground text-center">Niciun eveniment cu elevi din clasă.</div>
+              ) : relevantEvents.map(e => (
                 <SelectItem key={e.id} value={e.id}>{e.title} ({formatDate(e.date)})</SelectItem>
               ))}
             </SelectContent>
