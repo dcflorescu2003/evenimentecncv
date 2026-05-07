@@ -432,16 +432,61 @@ function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: 
     enabled: !!sessionId,
   });
 
+  // Events where students from my class(es) are enrolled
+  const { data: relevantEventIds = [] } = useQuery({
+    queryKey: ["teacher-relevant-event-ids", sessionId, classIds, (sessionEvents ?? []).map(e => e.id).join(",")],
+    queryFn: async () => {
+      if (classIds.length === 0 || !sessionEvents?.length) return [] as string[];
+      const { data: assignments } = await supabase
+        .from("student_class_assignments").select("student_id").in("class_id", classIds);
+      const studentIds = [...new Set((assignments ?? []).map(a => a.student_id))];
+      if (studentIds.length === 0) return [];
+      const eventIds = sessionEvents.map(e => e.id);
+      const { data: reservations } = await supabase
+        .from("reservations").select("event_id")
+        .in("student_id", studentIds).in("event_id", eventIds).eq("status", "reserved");
+      const { data: assistants } = await supabase
+        .from("event_student_assistants").select("event_id")
+        .in("student_id", studentIds).in("event_id", eventIds);
+      const set = new Set<string>();
+      (reservations ?? []).forEach(r => set.add(r.event_id));
+      (assistants ?? []).forEach(a => set.add(a.event_id));
+      return [...set];
+    },
+    enabled: !!sessionId && classIds.length > 0 && (sessionEvents?.length ?? 0) > 0,
+  });
+
+  const relevantEvents = useMemo(() => {
+    const set = new Set(relevantEventIds);
+    return (sessionEvents ?? []).filter(e => set.has(e.id))
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  }, [sessionEvents, relevantEventIds]);
+
   const uniqueDates = useMemo(() => {
-    const dates = [...new Set((sessionEvents ?? []).map(e => e.date))];
-    return dates.sort();
-  }, [sessionEvents]);
+    const dates = [...new Set(relevantEvents.map(e => e.date))];
+    return dates.sort((a, b) => b.localeCompare(a));
+  }, [relevantEvents]);
+
+  // Auto-preselect last finished event from relevant list
+  useEffect(() => {
+    if (filterType !== "event" || selectedEventId) return;
+    if (relevantEvents.length === 0) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const lastFinished = relevantEvents.find(e => (e.date || "") <= today);
+    if (lastFinished) setSelectedEventId(lastFinished.id);
+  }, [relevantEvents, filterType, selectedEventId]);
+
+  // Reset selection when session/class changes
+  useEffect(() => {
+    setSelectedEventId("");
+    setSelectedDate("");
+  }, [sessionId, classIds.join(",")]);
 
   const filteredEventIds = useMemo(() => {
     if (filterType === "event" && selectedEventId) return [selectedEventId];
-    if (filterType === "date" && selectedDate) return (sessionEvents ?? []).filter(e => e.date === selectedDate).map(e => e.id);
+    if (filterType === "date" && selectedDate) return relevantEvents.filter(e => e.date === selectedDate).map(e => e.id);
     return [];
-  }, [filterType, selectedEventId, selectedDate, sessionEvents]);
+  }, [filterType, selectedEventId, selectedDate, relevantEvents]);
 
   const { data: checkData, isLoading } = useQuery({
     queryKey: ["teacher-report-prezenta", classIds, filteredEventIds],
