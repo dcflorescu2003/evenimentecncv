@@ -49,6 +49,21 @@ export default function PublicEventBookingPage() {
     enabled: !!id,
   });
 
+  const { data: reservedCount = 0 } = useQuery({
+    queryKey: ["public_event_reserved_count", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_events_reserved_counts", {
+        _event_ids: [id!],
+      });
+      if (error) throw error;
+      return ((data as Record<string, number>) || {})[id!] || 0;
+    },
+    enabled: !!id,
+  });
+
+  const spotsLeft = event ? Math.max(0, event.max_capacity - reservedCount) : 0;
+  const isFull = !!event && spotsLeft <= 0;
+
   function handleNumChange(val: string) {
     const n = parseInt(val);
     setNumTickets(n);
