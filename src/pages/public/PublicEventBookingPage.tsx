@@ -182,7 +182,7 @@ export default function PublicEventBookingPage() {
               <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" />{formatDate(event.date)}</span>
               <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</span>
               {event.location && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{event.location}</span>}
-              <span className="flex items-center gap-1"><Users className="h-4 w-4" />{event.max_capacity} locuri</span>
+              <span className="flex items-center gap-1"><Users className="h-4 w-4" />{spotsLeft} / {event.max_capacity} locuri libere</span>
             </div>
           </CardContent>
         </Card>
@@ -190,6 +190,11 @@ export default function PublicEventBookingPage() {
         <Card>
           <CardHeader><CardTitle>Rezervare locuri</CardTitle></CardHeader>
           <CardContent>
+            {isFull ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Eveniment complet — nu mai sunt locuri disponibile.
+              </p>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Honeypot - hidden from humans */}
               <div className="absolute opacity-0 -z-10" aria-hidden="true" tabIndex={-1}>
@@ -214,7 +219,7 @@ export default function PublicEventBookingPage() {
                 <Select value={String(numTickets)} onValueChange={handleNumChange}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 32 }, (_, i) => i + 1).map((n) => (
+                    {Array.from({ length: Math.min(32, spotsLeft) }, (_, i) => i + 1).map((n) => (
                       <SelectItem key={n} value={String(n)}>{n} {n === 1 ? "loc" : "locuri"}</SelectItem>
                     ))}
                   </SelectContent>
@@ -228,10 +233,11 @@ export default function PublicEventBookingPage() {
                   </div>
                 ))}
               </div>
-              <Button type="submit" className="w-full" disabled={submitting}>
+              <Button type="submit" className="w-full" disabled={submitting || isFull || numTickets > spotsLeft}>
                 {submitting ? "Se procesează…" : `Rezervă ${numTickets} ${numTickets === 1 ? "loc" : "locuri"}`}
               </Button>
             </form>
+            )}
           </CardContent>
         </Card>
 
