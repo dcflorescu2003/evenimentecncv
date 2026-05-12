@@ -469,6 +469,20 @@ export default function EventDetailPage() {
       })),
     });
 
+    // Add public (external) participants
+    publicParticipants.forEach((pr: any) => {
+      const tickets = Array.isArray(pr.public_tickets) ? pr.public_tickets : [];
+      tickets
+        .filter((t: any) => t.status !== "cancelled")
+        .forEach((t: any) => {
+          rows.push({
+            className: "Vizitator",
+            fullName: (t.attendee_name || "").trim(),
+            status: t.status === "present" || t.status === "late" ? "Prezent" : "Absent",
+          });
+        });
+    });
+
     await exportSimpleAttendancePdf(
       event.title,
       formatDate(event.date),
