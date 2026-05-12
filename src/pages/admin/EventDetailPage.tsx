@@ -789,7 +789,7 @@ export default function EventDetailPage() {
                   Adaugă participant extern
                 </Button>
               )}
-              {(participants.length > 0 || assistants.length > 0) && (
+              {(participants.length > 0 || assistants.length > 0 || publicParticipants.length > 0) && (
                 <Button variant="outline" size="sm" onClick={handleDownloadAttendancePdf}>
                   <FileDown className="mr-2 h-4 w-4" />
                   Descarcă PDF prezență
