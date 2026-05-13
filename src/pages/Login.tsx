@@ -144,7 +144,7 @@ export default function Login() {
                       <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatDate(e.date)}</span>
                       <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{e.start_time?.slice(0, 5)} – {e.end_time?.slice(0, 5)}</span>
                       {e.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{e.location}</span>}
-                      <span className="flex items-center gap-1"><Users className="h-3 w-3" />{availableSeats} / {e.max_capacity} locuri libere</span>
+                      <span className="flex items-center gap-1"><Users className="h-3 w-3" />{availableSeats} locuri libere</span>
                     </div>
                     <Button size="sm" className="mt-2 w-full" onClick={() => navigate(`/public/events/${e.id}`)}>Rezervă</Button>
                   </CardContent>
