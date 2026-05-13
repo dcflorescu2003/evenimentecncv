@@ -26,7 +26,7 @@ import {
 import { Plus, Pencil, Trash2, Eye, Search } from "lucide-react";
 import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
-import { formatDate, isValidTime24h, normalizeTimeInput } from "@/lib/time";
+import { formatDate, isValidTime24h, normalizeTimeInput, joinDatetime, splitDatetime } from "@/lib/time";
 
 type EventStatus = "draft" | "published" | "closed" | "cancelled";
 
@@ -83,21 +83,6 @@ const emptyForm: EventForm = {
   notes_for_teachers: "", is_public: false,
 };
 
-function splitDatetime(dt: string | null): { date: string; time: string } {
-  if (!dt) return { date: "", time: "" };
-  const d = new Date(dt);
-  if (isNaN(d.getTime())) return { date: "", time: "" };
-  return {
-    date: d.toISOString().slice(0, 10),
-    time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
-  };
-}
-
-function joinDatetime(date: string, time: string): string | null {
-  if (!date) return null;
-  const t = time || "00:00";
-  return `${date}T${t}:00`;
-}
 
 export default function ProfEventsPage() {
   const { user, roles } = useAuth();
