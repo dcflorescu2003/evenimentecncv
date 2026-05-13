@@ -26,7 +26,7 @@ import { Plus, Pencil, Trash2, Copy, Eye, Search } from "lucide-react";
 import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
-import { formatDate, isValidTime24h, normalizeTimeInput } from "@/lib/time";
+import { formatDate, isValidTime24h, normalizeTimeInput, joinDatetime, splitDatetime } from "@/lib/time";
 
 type Event = Tables<"events">;
 type Session = Tables<"program_sessions">;
