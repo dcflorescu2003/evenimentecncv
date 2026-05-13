@@ -182,7 +182,7 @@ export default function PublicEventBookingPage() {
               <span className="flex items-center gap-1"><CalendarDays className="h-4 w-4" />{formatDate(event.date)}</span>
               <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</span>
               {event.location && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{event.location}</span>}
-              <span className="flex items-center gap-1"><Users className="h-4 w-4" />{spotsLeft} / {event.max_capacity} locuri libere</span>
+              <span className="flex items-center gap-1"><Users className="h-4 w-4" />{spotsLeft} locuri libere</span>
             </div>
           </CardContent>
         </Card>
