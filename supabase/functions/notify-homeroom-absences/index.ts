@@ -355,9 +355,10 @@ Deno.serve(async (req) => {
           const body = eids.length === 1
             ? `Evenimentul „${eventMap[eids[0]]?.title}” s-a încheiat. Verifică lista de prezență.`
             : `${eids.length} evenimente s-au încheiat. Verifică listele de prezență.`;
+          const url = eids.length === 1 ? `/prof/events/${eids[0]}` : "/teacher/reports";
           const payload = JSON.stringify({
             title: pushTitle, body, icon: "/favicon.ico",
-            data: { url: "/teacher/reports" },
+            data: { url },
           });
           const r = await sendWebPush(sub, payload, vapidPublic, vapidKey);
           if (r.ok) webPushCount++;
@@ -384,7 +385,8 @@ Deno.serve(async (req) => {
           const body = eids.length === 1
             ? `Evenimentul „${eventMap[eids[0]]?.title}” s-a încheiat. Verifică lista de prezență.`
             : `${eids.length} evenimente s-au încheiat. Verifică listele de prezență.`;
-          const r = await sendFcm(accessToken, sa.project_id, ft.token, pushTitle, body, { url: "/teacher/reports" });
+          const url = eids.length === 1 ? `/prof/events/${eids[0]}` : "/teacher/reports";
+          const r = await sendFcm(accessToken, sa.project_id, ft.token, pushTitle, body, { url });
           if (r.ok) fcmCount++;
           if (r.invalid) invalidIds.push(ft.id);
         }
