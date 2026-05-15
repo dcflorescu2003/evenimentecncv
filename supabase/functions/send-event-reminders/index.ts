@@ -334,11 +334,12 @@ Deno.serve(async (req) => {
           const evts = studentEvents[sub.user_id] || [];
           if (evts.length === 0) continue;
           const names = evts.map((eid: string) => eventMap[eid]?.title).filter(Boolean);
+          const pushUrl = evts.length === 1 ? `/student/events/${evts[0]}` : "/student/events";
           const pushPayload = JSON.stringify({
             title: notifTitle,
             body: names.length === 1 ? names[0] : `Ai ${names.length} evenimente ${mode === "morning" ? "astăzi" : "mâine"}`,
             icon: "/favicon.ico",
-            data: { url: "/student/tickets" },
+            data: { url: pushUrl },
           });
           const res = await sendWebPush(sub, pushPayload, vapidPublicKey, vapidKey);
           if (res.ok) webPushCount++;
@@ -375,9 +376,10 @@ Deno.serve(async (req) => {
             ? names[0]
             : `Ai ${names.length} evenimente ${mode === "morning" ? "astăzi" : "mâine"}`;
 
+          const fcmUrl = evts.length === 1 ? `/student/events/${evts[0]}` : "/student/events";
           const res = await sendFcmNotification(
             accessToken, sa.project_id, ft.token,
-            notifTitle, body, { url: "/student/tickets" }
+            notifTitle, body, { url: fcmUrl }
           );
           if (res.ok) fcmCount++;
           if (res.invalid) invalidIds.push(ft.id);

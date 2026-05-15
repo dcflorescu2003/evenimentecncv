@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,9 +11,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { formatDate } from "@/lib/time";
+import { getNotificationUrl } from "@/lib/notification-routing";
 
 export default function NotificationBell() {
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
@@ -44,6 +47,19 @@ export default function NotificationBell() {
     queryClient.invalidateQueries({ queryKey: ["notifications"] });
   }
 
+  async function handleClick(n: any) {
+    if (!n.is_read && user) {
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", n.id);
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    }
+    const url = getNotificationUrl(n, roles);
+    setOpen(false);
+    if (url) navigate(url);
+  }
+
   return (
     <Popover open={open} onOpenChange={(o) => {
       setOpen(o);
@@ -67,16 +83,25 @@ export default function NotificationBell() {
           {notifications.length === 0 ? (
             <p className="p-4 text-center text-sm text-muted-foreground">Nicio notificare</p>
           ) : (
-            notifications.map((n: any) => (
-              <div
-                key={n.id}
-                className={`border-b px-4 py-3 text-sm last:border-b-0 ${!n.is_read ? "bg-accent/30" : ""}`}
-              >
-                <p className="font-medium">{n.title}</p>
-                <p className="text-muted-foreground text-xs mt-0.5">{n.body}</p>
-                <p className="text-muted-foreground text-[10px] mt-1">{formatDate(n.created_at)}</p>
-              </div>
-            ))
+            notifications.map((n: any) => {
+              const url = getNotificationUrl(n, roles);
+              const clickable = !!url;
+              return (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => handleClick(n)}
+                  disabled={!clickable}
+                  className={`block w-full border-b px-4 py-3 text-left text-sm last:border-b-0 ${
+                    !n.is_read ? "bg-accent/30" : ""
+                  } ${clickable ? "cursor-pointer hover:bg-accent/60 transition-colors" : "cursor-default"}`}
+                >
+                  <p className="font-medium">{n.title}</p>
+                  <p className="text-muted-foreground text-xs mt-0.5">{n.body}</p>
+                  <p className="text-muted-foreground text-[10px] mt-1">{formatDate(n.created_at)}</p>
+                </button>
+              );
+            })
           )}
         </div>
       </PopoverContent>
