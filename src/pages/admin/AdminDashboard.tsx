@@ -52,14 +52,19 @@ async function countActiveByRole(roles: ("student" | "teacher" | "homeroom_teach
   if (ids.size === 0) return 0;
 
   const idArr = Array.from(ids);
+  const CHUNK = 100;
   let active = 0;
-  for (let i = 0; i < idArr.length; i += PAGE) {
-    const chunk = idArr.slice(i, i + PAGE);
-    const { data } = await supabase
+  for (let i = 0; i < idArr.length; i += CHUNK) {
+    const chunk = idArr.slice(i, i + CHUNK);
+    const { data, error } = await supabase
       .from("profiles")
       .select("id")
       .in("id", chunk)
       .eq("is_active", true);
+    if (error) {
+      console.error("[countActiveByRole] profiles query failed:", error);
+      continue;
+    }
     active += data?.length ?? 0;
   }
   return active;
