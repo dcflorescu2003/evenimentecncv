@@ -37,19 +37,40 @@ export default function IncompleteNormPage() {
       const sessionEventIds = (sessionEvents || []).map((e) => e.id);
       const eventHoursMap = Object.fromEntries((sessionEvents || []).map((e) => [e.id, e.counted_duration_hours]));
 
-      // Get scanned ticket counts per event
-      const { data: reservations } = sessionEventIds.length
-        ? await supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds)
-        : { data: [] };
-      const resIds = (reservations || []).map((r) => r.id);
-      const { data: tickets } = resIds.length
-        ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds)
-        : { data: [] };
-      const resEventMap = Object.fromEntries((reservations || []).map((r) => [r.id, r.event_id]));
+      // Get scanned ticket counts per event (chunked + paginated to bypass
+      // PostgREST URL-length truncation and 1000-row response cap).
+      const reservations = await fetchInChunks<{ id: string; event_id: string }>(
+        sessionEventIds, 200,
+        (chunk, from, to) => supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", chunk).range(from, to),
+      );
+      const resIds = reservations.map((r) => r.id);
+      const tickets = await fetchInChunks<{ reservation_id: string; status: string }>(
+        resIds, 200,
+        (chunk, from, to) => supabase.from("tickets").select("reservation_id, status").in("reservation_id", chunk).range(from, to),
+      );
+      const resEventMap = Object.fromEntries(reservations.map((r) => [r.id, r.event_id]));
       const ticketsByEvent: Record<string, number> = {};
-      (tickets || []).forEach((t) => {
+      tickets.forEach((t) => {
         if (t.status === "present" || t.status === "late") {
           const eid = resEventMap[t.reservation_id];
+          if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
+        }
+      });
+
+      // Include public tickets in held detection (chunked + paginated)
+      const pubRes = await fetchInChunks<{ id: string; event_id: string }>(
+        sessionEventIds, 200,
+        (chunk, from, to) => supabase.from("public_reservations").select("id, event_id").eq("status", "reserved").in("event_id", chunk).range(from, to),
+      );
+      const pubResIds = pubRes.map((r) => r.id);
+      const pubTickets = await fetchInChunks<{ public_reservation_id: string; status: string }>(
+        pubResIds, 200,
+        (chunk, from, to) => supabase.from("public_tickets").select("public_reservation_id, status").in("public_reservation_id", chunk).range(from, to),
+      );
+      const pubResEventMap = Object.fromEntries(pubRes.map((r) => [r.id, r.event_id]));
+      pubTickets.forEach((t) => {
+        if (t.status === "present" || t.status === "late") {
+          const eid = pubResEventMap[t.public_reservation_id];
           if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
         }
       });
