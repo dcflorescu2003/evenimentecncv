@@ -69,12 +69,28 @@ export default function TeacherReportPage() {
       const { data: tickets } = resIds.length
         ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds)
         : { data: [] };
-      
+
       const ticketsByEvent: Record<string, number> = {};
       const resEventMap = Object.fromEntries((reservations || []).map((r) => [r.id, r.event_id]));
       (tickets || []).forEach((t) => {
         if (t.status === "present" || t.status === "late") {
           const eid = resEventMap[t.reservation_id];
+          if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
+        }
+      });
+
+      // Include public tickets in held detection
+      const { data: pubRes } = sessionEventIds.length
+        ? await supabase.from("public_reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds)
+        : { data: [] };
+      const pubResIds = (pubRes || []).map((r) => r.id);
+      const { data: pubTickets } = pubResIds.length
+        ? await supabase.from("public_tickets").select("public_reservation_id, status").in("public_reservation_id", pubResIds)
+        : { data: [] };
+      const pubResEventMap = Object.fromEntries((pubRes || []).map((r) => [r.id, r.event_id]));
+      (pubTickets || []).forEach((t: any) => {
+        if (t.status === "present" || t.status === "late") {
+          const eid = pubResEventMap[t.public_reservation_id];
           if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
         }
       });
@@ -130,6 +146,21 @@ export default function TeacherReportPage() {
         if (t.status === "present" || t.status === "late") {
           const eid = resEventMap[t.reservation_id];
           if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
+        }
+      });
+
+      // Include public reservations/tickets in counts and held detection
+      const { data: pubRes } = sessionEventIds.length ? await supabase.from("public_reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds) : { data: [] };
+      const pubResIds = (pubRes || []).map((r) => r.id);
+      const { data: pubTickets } = pubResIds.length ? await supabase.from("public_tickets").select("public_reservation_id, status").in("public_reservation_id", pubResIds) : { data: [] };
+      const pubResEventMap = Object.fromEntries((pubRes || []).map((r) => [r.id, r.event_id]));
+      (pubTickets || []).forEach((t: any) => {
+        if (t.status === 'cancelled') return;
+        const eid = pubResEventMap[t.public_reservation_id];
+        if (!eid) return;
+        countMap[eid] = (countMap[eid] || 0) + 1;
+        if (t.status === "present" || t.status === "late") {
+          ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
         }
       });
 
