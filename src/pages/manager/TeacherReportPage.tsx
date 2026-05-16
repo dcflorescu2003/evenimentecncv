@@ -149,6 +149,21 @@ export default function TeacherReportPage() {
         }
       });
 
+      // Include public reservations/tickets in counts and held detection
+      const { data: pubRes } = sessionEventIds.length ? await supabase.from("public_reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds) : { data: [] };
+      const pubResIds = (pubRes || []).map((r) => r.id);
+      const { data: pubTickets } = pubResIds.length ? await supabase.from("public_tickets").select("public_reservation_id, status").in("public_reservation_id", pubResIds) : { data: [] };
+      const pubResEventMap = Object.fromEntries((pubRes || []).map((r) => [r.id, r.event_id]));
+      (pubTickets || []).forEach((t: any) => {
+        if (t.status === 'cancelled') return;
+        const eid = pubResEventMap[t.public_reservation_id];
+        if (!eid) return;
+        countMap[eid] = (countMap[eid] || 0) + 1;
+        if (t.status === "present" || t.status === "late") {
+          ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
+        }
+      });
+
       const heldIds = getHeldEventIds(events || [], ticketsByEvent, minParticipants);
 
       const totalHours = (events || []).filter(e => heldIds.has(e.id)).reduce((s, e) => s + e.counted_duration_hours, 0);
