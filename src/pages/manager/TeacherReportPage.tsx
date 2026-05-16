@@ -12,6 +12,23 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 import { getHeldEventIds } from "@/lib/held-events";
 
+// Fetch rows whose ID column is in a large array, by chunking to avoid
+// PostgREST URL-length truncation (silently returning empty/partial data).
+async function fetchInChunks<T>(
+  ids: string[],
+  chunkSize: number,
+  fetcher: (chunk: string[]) => Promise<{ data: T[] | null }>,
+): Promise<T[]> {
+  if (!ids.length) return [];
+  const out: T[] = [];
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    const { data } = await fetcher(chunk);
+    if (data) out.push(...data);
+  }
+  return out;
+}
+
 export default function TeacherReportPage() {
   const { sessionId, sessionName } = useManagerSession();
   const [searchParams] = useSearchParams();

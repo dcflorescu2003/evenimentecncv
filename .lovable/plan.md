@@ -1,48 +1,45 @@
-## Obiectiv
+# Problem
 
-Click pe o notificare (în clopoțelul aplicației sau pe push-ul de sistem) duce utilizatorul direct la pagina relevantă, în funcție de rolul lui și de tipul notificării.
+În "Raport pe profesori" pentru Florescu Cosmin:
+- Summary: 13 evenimente desfășurate / 13h (greșit — ar trebui ~20+ evenimente desfășurate)
+- Detail: primele 9 evenimente (Marian Tudor, JORGE, Cătălin Oprișan, etc.) apar cu "—" la "Desfășurat", deși au zeci de elevi prezenți (19, 63, 34, 48, 29, 115, 48, 52, 53 prezenți confirmați în DB)
+- Doar evenimentele "Ziua Porților deschise" apar marcate ✓
 
-## Cum se mapează notificările → rute
+# Cauza reală
 
-| Tip notificare | Cine o primește | Rută destinație |
-|---|---|---|
-| `morning_reminder`, `event_reminder` | Elev | `/student/events/:related_event_id` |
-| `homeroom_absence_alert` | Diriginte | `/prof/events/:related_event_id` (detalii eveniment + tab prezență) |
-| Orice altă notificare cu `related_event_id` | Admin | `/admin/events/:related_event_id` |
-| | Profesor / CSE | `/prof/events/:related_event_id` |
-| | Coordonator | `/coordinator/event/:related_event_id` |
-| | Manager | `/manager/events` |
-| Notificare fără `related_event_id` | toți | rămâne pe pagina curentă, doar marchează citită |
+Florescu coordonează 23 de evenimente cu ~671 de rezervări interne în total. În `TeacherReportPage.tsx`, atât query-ul de summary cât și cel de detail fac:
 
-Mapping-ul se face într-un helper `getNotificationUrl(notification, roles)` în `src/lib/notification-routing.ts`, ca să fie reutilizat și pe web, și în payload-ul push.
+```ts
+const { data: tickets } = await supabase
+  .from("tickets")
+  .select("reservation_id, status")
+  .in("reservation_id", resIds); // resIds = 671 UUID-uri
+```
 
-## Schimbări UI (in-app: clopoțelul)
+URL-ul rezultat (`?reservation_id=in.(uuid1,uuid2,...671 uuids)`) depășește limita PostgREST și request-ul fie eșuează silențios, fie întoarce un set gol/trunchiat. De aceea biletele interne nu sunt numărate deloc, și singurele evenimente care apar "desfășurate" sunt cele care au și `public_tickets` (Ziua Porților deschise).
 
-`src/components/NotificationBell.tsx`:
-- Folosește `useAuth()` pentru roluri și `useNavigate()`.
-- Fiecare item devine `<button>` clickabil. La click:
-  1. Marchează notificarea ca citită (`update notifications set is_read=true where id=…`).
-  2. Calculează URL-ul cu `getNotificationUrl()`.
-  3. Închide popover-ul și navighează (`navigate(url)`).
-- Cursor pointer + hover state pentru feedback vizual.
+Acest pattern este documentat în memoria proiectului ("UI Query Pattern: 2-step ID chunking for large searchable dataset filters") — trebuie aplicat aici.
 
-## Schimbări push (notificări de sistem)
+# Soluție
 
-Infrastructura există deja: `public/sw.js` și `useCapacitorPush.ts` deschid `data.url` la click. Trebuie doar să trimitem `url` în payload.
+În `src/pages/manager/TeacherReportPage.tsx`, în ambele query-uri (`mgr-teacher-summary` și `mgr-teacher-detail`):
 
-- `supabase/functions/send-event-reminders/index.ts`: la trimiterea Web Push și FCM, adaugă `url: "/student/events/<eventId>"` în `data`.
-- `supabase/functions/notify-homeroom-absences/index.ts`: la trimiterea push către diriginți, adaugă `url: "/prof/events/<eventId>"`.
-- `supabase/functions/send-push-to-user/index.ts`: deja acceptă `url` în body (verificat în dashboard test) — păstrăm.
+1. Adaug un helper local `fetchInChunks(ids, chunkSize=200, fetcher)` care apelează `fetcher(chunk)` în paralel pe bucăți și concatenează rezultatele.
+2. Înlocuiesc apelurile `.in("reservation_id", resIds)` pentru `tickets` cu chunking (chunks de ~200).
+3. La fel pentru `.in("public_reservation_id", pubResIds)` pentru `public_tickets`.
+4. Preventiv, aplic chunking și pentru `reservations` / `public_reservations` când `sessionEventIds` e mare (același risc dacă un profesor are sute de evenimente).
 
-## Detalii tehnice
+Restul logicii (agregare în `ticketsByEvent` / `countMap`, `getHeldEventIds`, `totalHours`) rămâne neschimbată — output-ul va deveni corect automat odată ce datele sunt complete.
 
-- Helper-ul `getNotificationUrl` primește `{ type, related_event_id }` + array de roluri (în ordinea priorității: admin → manager → coordinator_teacher → teacher/homeroom_teacher/cse → student) și returnează un string sau `null`.
-- Pentru diriginți, ruta `/prof/events/:id` afișează deja detalii + listă prezență, deci e suficientă (nu e nevoie de o rută nouă "scan/prezență directă").
-- Nu modificăm schema DB — folosim coloanele existente `type` și `related_event_id`.
+# Verificare
 
-## Fișiere atinse
+După fix, pentru Florescu Cosmin:
+- Toate cele 9 evenimente cu prezență internă (Marian Tudor, JORGE, Meci FC etc.) vor apărea ✓ Desfășurat
+- Summary va arăta totalul corect de evenimente și ore (≈ 20 evenimente, ≈ 24h în loc de 13h)
+- Detail va include și evenimentele care nu apăreau în screenshot (există 23 în total)
 
-- `src/lib/notification-routing.ts` (nou)
-- `src/components/NotificationBell.tsx`
-- `supabase/functions/send-event-reminders/index.ts`
-- `supabase/functions/notify-homeroom-absences/index.ts`
+Confirm vizual în preview pe pagina manager → Raport profesori → Florescu Cosmin.
+
+# Fișiere modificate
+
+- `src/pages/manager/TeacherReportPage.tsx` (singurul fișier; nu se ating RLS-uri sau schema)
