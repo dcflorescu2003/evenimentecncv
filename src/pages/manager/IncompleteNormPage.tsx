@@ -9,6 +9,7 @@ import { exportReportPdf } from "@/lib/report-pdf";
 import { useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 import { getHeldEventIds } from "@/lib/held-events";
+import { fetchInChunks } from "@/lib/supabase-chunk";
 import { formatHoursVsRequired } from "@/lib/hours-format";
 
 export default function IncompleteNormPage() {
