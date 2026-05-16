@@ -17,7 +17,7 @@ import { getHeldEventIds } from "@/lib/held-events";
 async function fetchInChunks<T>(
   ids: string[],
   chunkSize: number,
-  fetcher: (chunk: string[]) => Promise<{ data: T[] | null }>,
+  fetcher: (chunk: string[]) => PromiseLike<{ data: T[] | null }>,
 ): Promise<T[]> {
   if (!ids.length) return [];
   const out: T[] = [];
