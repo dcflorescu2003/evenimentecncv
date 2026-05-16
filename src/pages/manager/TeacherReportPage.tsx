@@ -12,6 +12,33 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 import { getHeldEventIds } from "@/lib/held-events";
 
+// Fetch rows whose ID column is in a large array, by chunking to avoid
+// PostgREST URL-length truncation (silently returning empty/partial data).
+// Fetch rows whose ID column is in a large array. Chunks input IDs to avoid
+// PostgREST URL-length truncation, and paginates per chunk via .range() to
+// bypass the 1000-row response cap.
+async function fetchInChunks<T>(
+  ids: string[],
+  chunkSize: number,
+  fetcher: (chunk: string[], from: number, to: number) => PromiseLike<{ data: T[] | null }>,
+): Promise<T[]> {
+  if (!ids.length) return [];
+  const out: T[] = [];
+  const PAGE = 1000;
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    let from = 0;
+    while (true) {
+      const { data } = await fetcher(chunk, from, from + PAGE - 1);
+      const rows = data || [];
+      out.push(...rows);
+      if (rows.length < PAGE) break;
+      from += PAGE;
+    }
+  }
+  return out;
+}
+
 export default function TeacherReportPage() {
   const { sessionId, sessionName } = useManagerSession();
   const [searchParams] = useSearchParams();
@@ -61,33 +88,37 @@ export default function TeacherReportPage() {
       const { data: sessionData } = await supabase.from("program_sessions").select("min_participants").eq("id", sessionId).single();
       const minParticipants = (sessionData as any)?.min_participants;
 
-      // Get scanned ticket counts per event
-      const { data: reservations } = sessionEventIds.length
-        ? await supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds)
-        : { data: [] };
-      const resIds = (reservations || []).map((r) => r.id);
-      const { data: tickets } = resIds.length
-        ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds)
-        : { data: [] };
+      // Get scanned ticket counts per event (chunked to avoid URL-length truncation)
+      const reservations = await fetchInChunks<{ id: string; event_id: string }>(
+        sessionEventIds, 200,
+        (chunk, from, to) => supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", chunk).range(from, to),
+      );
+      const resIds = reservations.map((r) => r.id);
+      const tickets = await fetchInChunks<{ reservation_id: string; status: string }>(
+        resIds, 200,
+        (chunk, from, to) => supabase.from("tickets").select("reservation_id, status").in("reservation_id", chunk).range(from, to),
+      );
 
       const ticketsByEvent: Record<string, number> = {};
-      const resEventMap = Object.fromEntries((reservations || []).map((r) => [r.id, r.event_id]));
-      (tickets || []).forEach((t) => {
+      const resEventMap = Object.fromEntries(reservations.map((r) => [r.id, r.event_id]));
+      tickets.forEach((t) => {
         if (t.status === "present" || t.status === "late") {
           const eid = resEventMap[t.reservation_id];
           if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
         }
       });
 
-      // Include public tickets in held detection
-      const { data: pubRes } = sessionEventIds.length
-        ? await supabase.from("public_reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds)
-        : { data: [] };
-      const pubResIds = (pubRes || []).map((r) => r.id);
-      const { data: pubTickets } = pubResIds.length
-        ? await supabase.from("public_tickets").select("public_reservation_id, status").in("public_reservation_id", pubResIds)
-        : { data: [] };
-      const pubResEventMap = Object.fromEntries((pubRes || []).map((r) => [r.id, r.event_id]));
+      // Include public tickets in held detection (chunked)
+      const pubRes = await fetchInChunks<{ id: string; event_id: string }>(
+        sessionEventIds, 200,
+        (chunk, from, to) => supabase.from("public_reservations").select("id, event_id").eq("status", "reserved").in("event_id", chunk).range(from, to),
+      );
+      const pubResIds = pubRes.map((r) => r.id);
+      const pubTickets = await fetchInChunks<{ public_reservation_id: string; status: string }>(
+        pubResIds, 200,
+        (chunk, from, to) => supabase.from("public_tickets").select("public_reservation_id, status").in("public_reservation_id", chunk).range(from, to),
+      );
+      const pubResEventMap = Object.fromEntries(pubRes.map((r) => [r.id, r.event_id]));
       (pubTickets || []).forEach((t: any) => {
         if (t.status === "present" || t.status === "late") {
           const eid = pubResEventMap[t.public_reservation_id];
@@ -133,27 +164,39 @@ export default function TeacherReportPage() {
       const { data: sessionData } = await supabase.from("program_sessions").select("min_participants").eq("id", sessionId).single();
       const minParticipants = (sessionData as any)?.min_participants;
 
-      // Get scanned ticket counts
-      const { data: reservations } = sessionEventIds.length ? await supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds) : { data: [] };
-      const resIds = (reservations || []).map((r) => r.id);
-      const { data: tickets } = resIds.length ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds) : { data: [] };
+      // Get scanned ticket counts (chunked to avoid URL-length truncation)
+      const reservations = await fetchInChunks<{ id: string; event_id: string }>(
+        sessionEventIds, 200,
+        (chunk, from, to) => supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", chunk).range(from, to),
+      );
+      const resIds = reservations.map((r) => r.id);
+      const tickets = await fetchInChunks<{ reservation_id: string; status: string }>(
+        resIds, 200,
+        (chunk, from, to) => supabase.from("tickets").select("reservation_id, status").in("reservation_id", chunk).range(from, to),
+      );
 
-      const resEventMap = Object.fromEntries((reservations || []).map((r) => [r.id, r.event_id]));
+      const resEventMap = Object.fromEntries(reservations.map((r) => [r.id, r.event_id]));
       const ticketsByEvent: Record<string, number> = {};
       const countMap: Record<string, number> = {};
-      (reservations || []).forEach((r) => { countMap[r.event_id] = (countMap[r.event_id] || 0) + 1; });
-      (tickets || []).forEach((t) => {
+      reservations.forEach((r) => { countMap[r.event_id] = (countMap[r.event_id] || 0) + 1; });
+      tickets.forEach((t) => {
         if (t.status === "present" || t.status === "late") {
           const eid = resEventMap[t.reservation_id];
           if (eid) ticketsByEvent[eid] = (ticketsByEvent[eid] || 0) + 1;
         }
       });
 
-      // Include public reservations/tickets in counts and held detection
-      const { data: pubRes } = sessionEventIds.length ? await supabase.from("public_reservations").select("id, event_id").eq("status", "reserved").in("event_id", sessionEventIds) : { data: [] };
-      const pubResIds = (pubRes || []).map((r) => r.id);
-      const { data: pubTickets } = pubResIds.length ? await supabase.from("public_tickets").select("public_reservation_id, status").in("public_reservation_id", pubResIds) : { data: [] };
-      const pubResEventMap = Object.fromEntries((pubRes || []).map((r) => [r.id, r.event_id]));
+      // Include public reservations/tickets in counts and held detection (chunked)
+      const pubRes = await fetchInChunks<{ id: string; event_id: string }>(
+        sessionEventIds, 200,
+        (chunk, from, to) => supabase.from("public_reservations").select("id, event_id").eq("status", "reserved").in("event_id", chunk).range(from, to),
+      );
+      const pubResIds = pubRes.map((r) => r.id);
+      const pubTickets = await fetchInChunks<{ public_reservation_id: string; status: string }>(
+        pubResIds, 200,
+        (chunk, from, to) => supabase.from("public_tickets").select("public_reservation_id, status").in("public_reservation_id", chunk).range(from, to),
+      );
+      const pubResEventMap = Object.fromEntries(pubRes.map((r) => [r.id, r.event_id]));
       (pubTickets || []).forEach((t: any) => {
         if (t.status === 'cancelled') return;
         const eid = pubResEventMap[t.public_reservation_id];
