@@ -1492,7 +1492,21 @@ export default function ProfEventDetailPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="file-input">Fișier *</Label>
-              <Input id="file-input" type="file" ref={fileInputRef} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" />
+              <Input
+                id="file-input"
+                type="file"
+                ref={fileInputRef}
+                accept={
+                  uploadCategory === "event_dossier"
+                    ? ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    : ".pdf,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                {uploadCategory === "event_dossier"
+                  ? "Sunt acceptate doar fișiere PDF și DOCX."
+                  : "Sunt acceptate fișiere PDF, DOCX și imagini."}
+              </p>
             </div>
           </div>
           <DialogFooter>
