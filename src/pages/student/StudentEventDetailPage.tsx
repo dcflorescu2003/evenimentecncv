@@ -246,10 +246,18 @@ export default function StudentEventDetailPage() {
       toast.error("Fișierul depășește 10MB");
       return;
     }
+    const lowerName = file.name.toLowerCase();
+    const isPdf = file.type === "application/pdf" || lowerName.endsWith(".pdf");
+    const isDocx = file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || lowerName.endsWith(".docx");
+    const isImage = file.type.startsWith("image/");
+    if (!isPdf && !isDocx && !isImage) {
+      toast.error("Sunt acceptate doar fișiere PDF, DOCX sau imagini");
+      return;
+    }
 
     setUploading(true);
     try {
-      const path = `submissions/${id}/${user.id}/${Date.now()}_${file.name}`;
+      const path = `${id}/form-submissions/${user.id}/${Date.now()}_${file.name}`;
       const { error: storageError } = await supabase.storage.from("event-files").upload(path, file);
       if (storageError) throw storageError;
 

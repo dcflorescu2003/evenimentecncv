@@ -1,73 +1,67 @@
-## Context (diagnostic)
+## Diagnostic
 
-1. **Eroare „new row violates row-level security policy"** la upload CSE: bucket-ul `event-files` are politică `INSERT/ALL` doar pentru `admin`. Nu există politici de storage pentru `cse`, `teacher` sau `homeroom_teacher` — deci nici profesorii nu pot încărca în prezent, doar adminul. RLS-ul pe tabela `event_files` este OK pentru CSE (există deja policy "CSE manage event files"), problema e exclusiv la `storage.objects`.
-2. **Cerere needitabilă**: textul de bază din `CerereTab.tsx` (paragrafele „Biroul Executiv…" și „Propunerea este ca evenimentul…" + formula de încheiere) e hardcodat. Doar câmpurile (titlu, data, ora, locație, președinte, R.N.E.B., director) sunt editabile.
-3. **Validare tip fișier la upload**: actualmente în `ProfEventDetailPage.handleFileUpload` nu există nicio restricție pe tip — input-ul `<input type="file">` nu are `accept`, iar logica nu verifică extensia/MIME.
+Am verificat fluxurile de upload pentru cele trei roluri.
+
+### 1. Profesori (teacher / homeroom_teacher) — la Dosar și Formulare
+- Cod: `src/pages/prof/ProfEventDetailPage.tsx` (linia 607) → path `${event_id}/${category}/...`
+- RLS storage: politica nouă `Event creators manage event files storage` (migrația din 21.05) acoperă `cse`, `teacher`, `homeroom_teacher` pe baza `is_event_creator(folder[1], auth.uid())`.
+- **Status: funcționează** (după migrația deja aplicată).
+
+### 2. Elevi — încărcare formular completat
+- Cod: `src/pages/student/StudentEventDetailPage.tsx` (linia 252) → path `submissions/${event_id}/${user_id}/...`
+- RLS storage existent (migrația inițială, linia 623): permite INSERT doar dacă `folder[1] = 'form-submissions'` ȘI `folder[2] = auth.uid()`.
+- **Bug 1**: prefixul folosit în cod (`submissions/`) NU se potrivește cu prefixul cerut de policy (`form-submissions/`), iar ordinea (event_id înainte de user_id) e inversă față de policy. → elevii **nu pot încărca** (RLS error).
+- **Bug 2**: profesorii citesc submisiile elevilor prin `createSignedUrl` pe `event-files` (`ProfEventDetailPage` linia 263). Cu path-ul actual `submissions/<event_id>/<user_id>/...`, politica „Event creators manage" cere `folder[1]` să fie un UUID de eveniment — nu este. → profesorii **nu pot descărca** formularele completate de elevi.
 
 ---
 
 ## Plan
 
-### 1. Permisiuni storage pentru CSE (și profesori)
+### A. Unificare convenție de path pentru `event-files`
 
-Migrație nouă cu politici pe `storage.objects` pentru bucket-ul `event-files`, care permit `INSERT/UPDATE/DELETE/SELECT` dacă:
+Schimb path-ul folosit la încărcarea formularelor de către elevi în:
 
-- user-ul are rol `cse`, `teacher` sau `homeroom_teacher`, ȘI
-- primul segment din path este `<event_id>` al unui eveniment creat de el (folosind `is_event_creator`).
+```
+<event_id>/form-submissions/<student_id>/<timestamp>_<filename>
+```
 
-Path-ul folosit deja în cod (`${id}/${uploadCategory}/${Date.now()}_${file.name}`) se potrivește perfect — `(storage.foldername(name))[1] = event_id`.
+Avantaje:
+- `folder[1] = event_id` → politica existentă „Event creators manage event files storage" îi lasă pe profesori (creatorul evenimentului) să citească/descarce automat formularele elevilor.
+- Folderul de submission e clar grupat sub eveniment, ca restul fișierelor (dosar, formulare-template).
 
-Asta rezolvă atât upload-ul CSE (cerere + dosar + formulare), cât și un bug similar pentru profesori (dacă apare).
+### B. Migrație nouă — politici storage pentru elevi
 
-### 2. Validare tip fișier (client-side)
+Adaug pe `storage.objects` (bucket `event-files`):
 
-În `ProfEventDetailPage.handleFileUpload` și pe input-ul `<input type="file">` din dialog:
+1. **Students upload own form submissions** (INSERT, role student): permite dacă `folder[1] = event_id`, `folder[2] = 'form-submissions'`, `folder[3] = auth.uid()`, iar `event_id` aparține unui eveniment publicat (`events.published = true AND status = 'published'`).
+2. **Students read own form submissions** (SELECT, role student): aceleași condiții pe folder.
+3. **Students read form templates** — politica existentă (`folder[1] = 'form-templates'`) rămâne, dar nu mai e folosită — formularele-template sunt urcate de profesori la `<event_id>/form_template/...` și sunt deja acoperite de „Event creators manage" pentru read. Pentru ca elevii să le poată descărca, adaug o politică suplimentară:
+   - **Students read form template files** (SELECT, role student): permite dacă `folder[2] = 'form_template'` și `event_id = folder[1]` ține de un eveniment publicat.
 
-- **Dosar / Cerere** (`uploadCategory === "event_dossier"`): acceptă doar `.pdf` și `.docx`
-  - `accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"`
-  - validare în handler: respinge cu toast clar dacă tipul nu se potrivește.
-- **Formulare** (`uploadCategory === "form_template"`): acceptă PDF, DOCX **și imagini** (`.pdf,.docx,image/*`).
-  - validare similară.
+> Politicile vechi „Students upload form submissions to storage" / „Students read own submissions from storage" (cu prefix `form-submissions/`) le las pe loc (compatibilitate retroactivă) sau le pot șterge la cerere — recomand să le **șterg** ca să nu existe confuzie.
 
-`accept` se setează dinamic în funcție de `uploadCategory`, care e deja în state.
+### C. Cod — schimbări
 
-### 3. Cerere — text editabil + persistat în DB
+- `src/pages/student/StudentEventDetailPage.tsx` (linia 252): schimb path-ul în
+  ```ts
+  const path = `${id}/form-submissions/${user.id}/${Date.now()}_${file.name}`;
+  ```
+  Plus validare client-side de tip fișier (PDF / DOCX / imagini), aliniat cu profesorii.
 
-Două opțiuni; recomandare: **opțiunea A** (mai simplu, fără DB).
+- Niciun alt cod nu se schimbă — RLS pe tabela `form_submissions` e deja corect (elevii pot INSERT propriile rânduri, profesorii citesc prin `is_event_creator`).
 
-**A. Doar editare locală (recomandat)**
+### D. Verificări după aplicare
 
-Înlocuim paragrafele hardcodate în `CerereTab` cu 2 `<Textarea>`-uri pre-completate cu textul default și interpolate cu placeholderi `{titlu}`, `{data}`, `{ora}`, `{locatie}`:
-
-- `Textarea` „Corp introductiv" — default:
-  > „Biroul Executiv al Consiliului Școlar al Elevilor din Colegiul Național „Cantemir-Vodă", vă adresează prezenta cerere prin care se solicită aprobarea organizării în cadrul colegiului nostru a unui eveniment cu titlul {titlu}."
-- `Textarea` „Corp propunere" — default:
-  > „Propunerea este ca evenimentul să aibă loc în data de {data}, ora {ora}, locația fiind {locatie}. Prezenți vor fi elevii care s-au înscris la eveniment prin intermediul platformei de evenimente CNCV."
-- `Textarea` „Formula de încheiere" (opțional) cu cele 2 linii bold de final.
-
-La preview și la generarea PDF, fac `replace` pe placeholderi cu valorile curente (păstrând bold doar pentru valorile interpolate, ca acum). Toate cele 3 textarea-uri devin parametri pentru `renderRuns(...)` în PDF — sparg textul pe `{placeholder}` ca să mențin bold pe valorile dinamice.
-
-**Avantaje**: zero schimbări de schemă, zero migrații.
-**Dezavantaj**: dacă schimbă pagina, textul revine la default. Pentru cazul nostru (generezi PDF imediat) e acceptabil.
-
-**B. Persistă per eveniment** (dacă vrei să rețină textul între sesiuni): tabelă nouă `event_cerere` (event_id PK, intro_text, body_text, closing_text, president, reg_number, director) cu RLS identic ca `event_files` pentru CSE. Mai multă muncă; spune dacă vrei B.
-
-### 4. Acceptare CSE și pentru tab-ul „Dosar / Cerere"
-
-Verificare rapidă a logicii: `isCse` controlează deja afișarea sub-tab-ului „Cerere" lângă „Dosar". După ce storage primește politicile noi, butonul „Încarcă document" din sub-tab-ul „Dosar" și din „Formulare" va funcționa pentru CSE.
-
----
+- Cu cont CSE / profesor / diriginte: upload la „Dosar" (PDF/DOCX) și „Formulare" (PDF/DOCX/imagine) — trebuie să meargă.
+- Cu cont elev înscris: descarcă formular-template, urcă formular completat, vede signed URL.
+- Cu cont profesor: deschide submisiile elevilor și descarcă fișierul.
 
 ## Fișiere modificate
 
-- **Migrație nouă** `supabase/migrations/...add_storage_policies_event_files_non_admin.sql` — 4 politici pe `storage.objects` (INSERT/UPDATE/DELETE/SELECT) pentru roluri `cse`, `teacher`, `homeroom_teacher`, restrânse la `event_id` propriu.
-- `**src/components/cse/CerereTab.tsx**` — 3 Textarea-uri noi (intro/body/closing) cu defaulturi și placeholderi `{titlu}`, `{data}`, `{ora}`, `{locatie}`; preview + export PDF folosesc textul editat (split pe placeholderi pentru a păstra bold pe valori).
-- `**src/pages/prof/ProfEventDetailPage.tsx**` — `accept` dinamic pe input fișier + validare MIME/extensie în `handleFileUpload` + mesaje toast clare.
+- **Migrație nouă** `supabase/migrations/...add_storage_policies_student_submissions.sql` — 2 politici INSERT/SELECT pentru elevi pe submisii, 1 politică SELECT pentru elevi pe form templates legate de evenimente publicate. Opțional: drop politicile vechi cu prefix `form-submissions/`.
+- `src/pages/student/StudentEventDetailPage.tsx` — path unificat `<event_id>/form-submissions/<user_id>/...` + validare tip fișier (PDF/DOCX/imagini, max 10MB — deja există).
 
 ## Întrebări
 
-1. Pentru text editabil pe cerere: **A** (doar local, fără persistare) sau **B** (persistă în DB)?
-2. La formulare, „inclusiv poze" înseamnă **PDF + DOCX + imagini**, sau **orice tip** (PDF, DOCX, imagini, XLSX, etc.)?  
-  
-1. Doar local  
-2. **PDF + DOCX + imagini**
+1. Pentru elevi, la „formular completat" accept **PDF + DOCX + imagini** (consistent cu profesorii la formulare), sau doar PDF + DOCX?
+2. Șterg politicile vechi „Students upload/read form submissions to storage" (prefix `form-submissions/`), care nu mai sunt folosite, sau le las pentru compatibilitate?
