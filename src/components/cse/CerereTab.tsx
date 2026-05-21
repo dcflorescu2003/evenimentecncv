@@ -3,10 +3,20 @@ import jsPDF from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download } from "lucide-react";
+import { Download, RotateCcw } from "lucide-react";
 import { downloadFileMobileSafe } from "@/lib/download";
 import { formatDate } from "@/lib/time";
+
+const DEFAULT_INTRO =
+  "Biroul Executiv al Consiliului Școlar al Elevilor din Colegiul Național „Cantemir-Vodă\", vă adresează prezenta cerere prin care se solicită aprobarea organizării în cadrul colegiului nostru a unui eveniment cu titlul {titlu}.";
+
+const DEFAULT_BODY =
+  "Propunerea este ca evenimentul să aibă loc în data de {data}, ora {ora}, locația fiind {locatie}. Prezenți vor fi elevii care s-au înscris la eveniment prin intermediul platformei de evenimente CNCV.";
+
+const DEFAULT_CLOSING =
+  "Asigurându-vă de întreaga noastră considerație,\nPreședintele Consiliului Școlar al Elevilor Colegiului Național „Cantemir-Vodă\",\n{presedinte}";
 
 function stripDiacritics(str: string): string {
   return str
@@ -35,6 +45,32 @@ async function loadImageDataUrl(url: string): Promise<{ data: string; w: number;
   return { data: dataUrl, w: dims.w, h: dims.h };
 }
 
+type Run = { text: string; bold?: boolean };
+
+/**
+ * Sparte textul în runs pe baza placeholderelor {key}.
+ * Valorile placeholderelor devin runs bold; restul rămâne normal.
+ */
+function tokenize(template: string, values: Record<string, string>): Run[] {
+  const regex = /\{([a-zA-Z_]+)\}/g;
+  const runs: Run[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(template)) !== null) {
+    if (match.index > lastIndex) {
+      runs.push({ text: template.slice(lastIndex, match.index) });
+    }
+    const key = match[1];
+    const value = values[key] ?? `{${key}}`;
+    runs.push({ text: value || "—", bold: true });
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < template.length) {
+    runs.push({ text: template.slice(lastIndex) });
+  }
+  return runs;
+}
+
 interface CerereTabProps {
   event: {
     id: string;
@@ -54,6 +90,9 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
   const [time, setTime] = useState((event.start_time || "").slice(0, 5));
   const [location, setLocation] = useState(event.location || "");
   const [president, setPresident] = useState(defaultPresident);
+  const [introText, setIntroText] = useState(DEFAULT_INTRO);
+  const [bodyText, setBodyText] = useState(DEFAULT_BODY);
+  const [closingText, setClosingText] = useState(DEFAULT_CLOSING);
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
@@ -67,13 +106,27 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
     if (defaultPresident && !president) setPresident(defaultPresident);
   }, [defaultPresident]);
 
-  const previewBody = useMemo(() => (
-    <p className="text-sm leading-relaxed">
-      Biroul Executiv al Consiliului Școlar al Elevilor din Colegiul Național „Cantemir-Vodă", vă adresează prezenta cerere prin care se solicită aprobarea organizării în cadrul colegiului nostru a unui eveniment cu titlul <strong>{title || "—"}</strong>.
-      <br /><br />
-      Propunerea este ca evenimentul să aibă loc în data de <strong>{date || "—"}</strong>, ora <strong>{time || "—"}</strong>, locația fiind <strong>{location || "—"}</strong>. Prezenți vor fi elevii care s-au înscris la eveniment prin intermediul platformei de evenimente CNCV.
-    </p>
-  ), [title, date, time, location]);
+  const values = useMemo<Record<string, string>>(() => ({
+    titlu: title,
+    data: date,
+    ora: time,
+    locatie: location,
+    presedinte: president,
+    director,
+  }), [title, date, time, location, president, director]);
+
+  const introRuns = useMemo(() => tokenize(introText, values), [introText, values]);
+  const bodyRuns = useMemo(() => tokenize(bodyText, values), [bodyText, values]);
+  const closingLines = useMemo(
+    () => closingText.split("\n").map((line) => tokenize(line, values)),
+    [closingText, values],
+  );
+
+  function resetTexts() {
+    setIntroText(DEFAULT_INTRO);
+    setBodyText(DEFAULT_BODY);
+    setClosingText(DEFAULT_CLOSING);
+  }
 
   async function handleExport() {
     try {
@@ -84,7 +137,6 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
       const marginR = 20;
       const contentW = pageW - marginL - marginR;
 
-      // Header logos
       const [leftLogo, rightLogo] = await Promise.all([
         loadImageDataUrl("/cerere-header/consiliul-elevilor.png"),
         loadImageDataUrl("/cerere-header/cncv.png"),
@@ -95,20 +147,17 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
       doc.addImage(leftLogo.data, "PNG", marginL, 12, leftW, headerH);
       doc.addImage(rightLogo.data, "PNG", pageW - marginR - rightW, 12, rightW, headerH);
 
-      // Separator
       const sepY = 12 + headerH + 4;
       doc.setLineWidth(0.4);
       doc.line(marginL, sepY, pageW - marginR, sepY);
 
       let y = sepY + 8;
 
-      // R.N.E.B. Nr.
       doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
       doc.text(stripDiacritics(`R.N.E.B.   Nr. ${regNumber || "____"}`), marginL, y);
       y += 12;
 
-      // APROB block (right aligned)
       doc.setFont("helvetica", "bold");
       const aprobLines = ["APROB,", stripDiacritics(director || ""), "DIRECTOR"];
       aprobLines.forEach((line, i) => {
@@ -116,7 +165,6 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
       });
       y += aprobLines.length * 5 + 10;
 
-      // Title
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
       doc.text("C E R E R E", pageW / 2, y, { align: "center" });
@@ -127,8 +175,7 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
       doc.text("Stimate Domnule Director,", marginL, y);
       y += 8;
 
-      // Helper: render paragraph with bold runs.
-      function renderRuns(runs: { text: string; bold?: boolean }[], startY: number, indent = 0): number {
+      function renderRuns(runs: Run[], startY: number, indent = 0): number {
         const lineH = 6;
         const maxW = contentW - indent;
         let cursorX = marginL + indent;
@@ -138,8 +185,8 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
           return doc.getTextWidth(" ");
         };
         for (const run of runs) {
-          const words = stripDiacritics(run.text).split(/(\s+)/).filter(w => w.length > 0);
-          for (const token of words) {
+          const tokens = stripDiacritics(run.text).split(/(\s+)/).filter((w) => w.length > 0);
+          for (const token of tokens) {
             if (/^\s+$/.test(token)) {
               cursorX += spaceWidth(!!run.bold);
               continue;
@@ -157,37 +204,36 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
         return cursorY + lineH;
       }
 
-      y = renderRuns([
-        { text: "    Biroul Executiv al Consiliului Școlar al Elevilor din Colegiul Național \u201ECantemir-Vodă\u201D, vă adresează prezenta cerere prin care se solicită aprobarea organizării în cadrul colegiului nostru a unui eveniment cu titlul " },
-        { text: title || "—", bold: true },
-        { text: "." },
-      ], y);
-      y += 2;
+      // Indent paragraphs with 4-space prefix
+      const introWithIndent: Run[] = [{ text: "    " }, ...introRuns];
+      const bodyWithIndent: Run[] = [{ text: "    " }, ...bodyRuns];
 
-      y = renderRuns([
-        { text: "    Propunerea este ca evenimentul să aibă loc în data de " },
-        { text: date || "—", bold: true },
-        { text: ", ora " },
-        { text: time || "—", bold: true },
-        { text: ", locația fiind " },
-        { text: location || "—", bold: true },
-        { text: ". Prezenți vor fi elevii care s-au înscris la eveniment prin intermediul platformei de evenimente CNCV." },
-      ], y);
+      y = renderRuns(introWithIndent, y);
+      y += 2;
+      y = renderRuns(bodyWithIndent, y);
       y += 6;
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
-      const closingLines = [
-        "Asigurandu-va de intreaga noastra consideratie,",
-        "Presedintele Consiliului Scolar al Elevilor Colegiului National „Cantemir-Voda\",",
-        stripDiacritics(president || "—"),
-      ];
-      for (const line of closingLines) {
-        const wrapped = doc.splitTextToSize(line, contentW);
+
+      function renderCenteredRuns(runs: Run[], startY: number): number {
+        // Compute full width by concatenating text, render centered as one line (wrap if needed).
+        const fullText = stripDiacritics(runs.map((r) => r.text).join(""));
+        const wrapped = doc.splitTextToSize(fullText, contentW);
+        let cy = startY;
         for (const w of wrapped) {
-          doc.text(w, pageW / 2, y, { align: "center" });
-          y += 6;
+          doc.text(w, pageW / 2, cy, { align: "center" });
+          cy += 6;
         }
+        return cy;
+      }
+
+      for (const lineRuns of closingLines) {
+        if (lineRuns.length === 0) {
+          y += 6;
+          continue;
+        }
+        y = renderCenteredRuns(lineRuns, y);
       }
 
       const safeName = stripDiacritics((title || "cerere").replace(/[^a-zA-Z0-9-_]+/g, "_")).slice(0, 60);
@@ -197,6 +243,12 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
     } finally {
       setGenerating(false);
     }
+  }
+
+  function renderPreviewRuns(runs: Run[]) {
+    return runs.map((r, i) => (
+      r.bold ? <strong key={i}>{r.text}</strong> : <span key={i}>{r.text}</span>
+    ));
   }
 
   return (
@@ -237,6 +289,36 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
       </Card>
 
       <Card>
+        <CardContent className="space-y-3 pt-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-semibold">Conținutul cererii</h4>
+              <p className="text-xs text-muted-foreground">
+                Poți edita textul. Folosește <code>{"{titlu}"}</code>, <code>{"{data}"}</code>, <code>{"{ora}"}</code>, <code>{"{locatie}"}</code>, <code>{"{presedinte}"}</code>, <code>{"{director}"}</code> pentru a insera automat valorile din formular.
+              </p>
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={resetTexts}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Resetează
+            </Button>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Paragraf introductiv</Label>
+            <Textarea rows={4} value={introText} onChange={(e) => setIntroText(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label>Paragraf propunere</Label>
+            <Textarea rows={4} value={bodyText} onChange={(e) => setBodyText(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <Label>Formula de încheiere</Label>
+            <Textarea rows={4} value={closingText} onChange={(e) => setClosingText(e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardContent className="space-y-3 pt-4 text-sm leading-relaxed">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -250,11 +332,12 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
           </div>
           <h3 className="text-center text-base font-bold tracking-widest">C E R E R E</h3>
           <p>Stimate Domnule Director,</p>
-          {previewBody}
+          <p className="indent-8">{renderPreviewRuns(introRuns)}</p>
+          <p className="indent-8">{renderPreviewRuns(bodyRuns)}</p>
           <div className="space-y-1 text-center font-bold">
-            <p>Asigurându-vă de întreaga noastră considerație,</p>
-            <p>Președintele Consiliului Școlar al Elevilor Colegiului Național „Cantemir-Vodă”,</p>
-            <p>{president || "—"}</p>
+            {closingLines.map((lineRuns, i) => (
+              <p key={i}>{renderPreviewRuns(lineRuns)}</p>
+            ))}
           </div>
         </CardContent>
       </Card>

@@ -583,6 +583,25 @@ export default function ProfEventDetailPage() {
     if (!uploadTitle.trim()) { toast.error("Introduceți un titlu"); return; }
     if (file.size > 10 * 1024 * 1024) { toast.error("Fișierul depășește 10MB"); return; }
 
+    // Validare tip fișier în funcție de categorie
+    const lowerName = file.name.toLowerCase();
+    const mime = (file.type || "").toLowerCase();
+    const isPdf = lowerName.endsWith(".pdf") || mime === "application/pdf";
+    const isDocx = lowerName.endsWith(".docx") || mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const isImage = mime.startsWith("image/") || /\.(png|jpe?g|webp|gif|heic|heif)$/i.test(lowerName);
+
+    if (uploadCategory === "event_dossier") {
+      if (!isPdf && !isDocx) {
+        toast.error("La dosar / cerere sunt acceptate doar fișiere PDF sau DOCX");
+        return;
+      }
+    } else if (uploadCategory === "form_template") {
+      if (!isPdf && !isDocx && !isImage) {
+        toast.error("La formulare sunt acceptate doar fișiere PDF, DOCX sau imagini");
+        return;
+      }
+    }
+
     setUploading(true);
     try {
       const path = `${id}/${uploadCategory}/${Date.now()}_${file.name}`;
@@ -1473,7 +1492,21 @@ export default function ProfEventDetailPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="file-input">Fișier *</Label>
-              <Input id="file-input" type="file" ref={fileInputRef} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" />
+              <Input
+                id="file-input"
+                type="file"
+                ref={fileInputRef}
+                accept={
+                  uploadCategory === "event_dossier"
+                    ? ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    : ".pdf,.docx,image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                {uploadCategory === "event_dossier"
+                  ? "Sunt acceptate doar fișiere PDF și DOCX."
+                  : "Sunt acceptate fișiere PDF, DOCX și imagini."}
+              </p>
             </div>
           </div>
           <DialogFooter>
