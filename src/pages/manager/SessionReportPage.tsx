@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileDown } from "lucide-react";
-import { exportReportPdf } from "@/lib/report-pdf";
+import { exportReportPdfSections } from "@/lib/report-pdf";
 import { useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 
