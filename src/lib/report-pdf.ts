@@ -28,11 +28,40 @@ export async function exportReportPdf({
   filename,
   orientation = "portrait",
 }: ExportReportOptions) {
+  await exportReportPdfSections({
+    title,
+    subtitle,
+    filename,
+    orientation,
+    sections: [{ headers, rows }],
+  });
+}
+
+interface ReportSection {
+  title?: string;
+  headers: string[];
+  rows: string[][];
+}
+
+interface ExportReportSectionsOptions {
+  title: string;
+  subtitle?: string;
+  sections: ReportSection[];
+  filename: string;
+  orientation?: "portrait" | "landscape";
+}
+
+export async function exportReportPdfSections({
+  title,
+  subtitle,
+  sections,
+  filename,
+  orientation = "portrait",
+}: ExportReportSectionsOptions) {
   const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
   const pageWidth = orientation === "landscape" ? 297 : 210;
   const center = pageWidth / 2;
 
-  // Header
   doc.setFontSize(16);
   doc.text(stripDiacritics(title), center, 15, { align: "center" });
 
@@ -48,18 +77,27 @@ export async function exportReportPdf({
   doc.text(`Generat: ${new Date().toLocaleDateString("ro-RO")}`, center, startY, { align: "center" });
   startY += 6;
 
-  // Table
-  const safeHeaders = headers.map(h => stripDiacritics(h));
-  const safeRows = rows.map(row => row.map(cell => stripDiacritics(String(cell ?? ""))));
-
-  autoTable(doc, {
-    startY,
-    head: [safeHeaders],
-    body: safeRows,
-    styles: { fontSize: 8, cellPadding: 2 },
-    headStyles: { fillColor: [41, 65, 122], textColor: 255, fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [245, 247, 250] },
-  });
+  for (const section of sections) {
+    if (!section.rows.length) continue;
+    if (section.title) {
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(stripDiacritics(section.title), 14, startY + 4);
+      doc.setFont("helvetica", "normal");
+      startY += 7;
+    }
+    const safeHeaders = section.headers.map((h) => stripDiacritics(h));
+    const safeRows = section.rows.map((row) => row.map((cell) => stripDiacritics(String(cell ?? ""))));
+    autoTable(doc, {
+      startY,
+      head: [safeHeaders],
+      body: safeRows,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 65, 122], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+    });
+    startY = (doc as any).lastAutoTable.finalY + 8;
+  }
 
   const pdfOutput = doc.output("datauristring");
   const base64Data = pdfOutput.split(",")[1];
