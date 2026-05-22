@@ -28,6 +28,7 @@ export default function SessionReportPage() {
         .from("events")
         .select("id, title, date, start_time, end_time, counted_duration_hours, status, is_cse")
         .eq("session_id", sessionId)
+        .neq("status", "draft")
         .order("date")
         .order("start_time");
       if (!data) return [];
