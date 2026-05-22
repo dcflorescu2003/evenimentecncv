@@ -69,35 +69,28 @@ export default function SessionReportPage() {
 
   const handleExport = () => {
     if (!events?.length) return;
-    const rows: string[][] = [];
-    let idx = 0;
-    const pushSection = (title: string, list: typeof events) => {
-      if (!list || !list.length) return;
-      rows.push([`— ${title} —`, "", "", "", "", "", ""]);
-      list.forEach((e) => {
-        idx += 1;
-        rows.push([
-          String(idx),
-          e.date,
-          `${e.start_time?.slice(0, 5)} - ${e.end_time?.slice(0, 5)}`,
-          e.title,
-          String(e.counted_duration_hours),
-          String(e.participants),
-          statusLabel(e.status),
-          e.coordinators.map((c: any) => c.name).join(", "),
-        ]);
-      });
-    };
-    pushSection("Evenimente organizate de profesori", profEvents);
-    pushSection("Evenimente CSE", cseEvents);
+    const headers = ["Nr.", "Data", "Interval orar", "Eveniment", "Durata (h)", "Participanți", "Status", "Profesori coordonatori"];
+    const buildRows = (list: typeof events) =>
+      (list || []).map((e, i) => [
+        String(i + 1),
+        e.date,
+        `${e.start_time?.slice(0, 5)} - ${e.end_time?.slice(0, 5)}`,
+        e.title,
+        String(e.counted_duration_hours),
+        String(e.participants),
+        statusLabel(e.status),
+        e.coordinators.map((c: any) => c.name).join(", "),
+      ]);
 
-    exportReportPdf({
+    exportReportPdfSections({
       title: "Raport sesiune",
       subtitle: sessionName,
-      headers: ["Nr.", "Data", "Interval orar", "Eveniment", "Durata (h)", "Participanți", "Status", "Profesori coordonatori"],
-      rows,
       filename: `raport-sesiune-${sessionName}`,
       orientation: "landscape",
+      sections: [
+        { title: "Evenimente organizate de profesori", headers, rows: buildRows(profEvents) },
+        { title: "Evenimente CSE", headers, rows: buildRows(cseEvents) },
+      ],
     });
   };
 
