@@ -259,6 +259,13 @@ export default function SchedulesPage() {
             />
           </CardContent>
         </Card>
+
+        <ImportOrarXmlDialog
+          open={xmlDialogOpen}
+          onOpenChange={setXmlDialogOpen}
+          defaultClassName={selected.display_name.replace(/^Clasa\s+/i, "").trim()}
+          onImport={(rows) => setEntries(rows)}
+        />
       </div>
     );
   }
