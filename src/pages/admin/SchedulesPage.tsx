@@ -4,16 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Upload, Download, FileCode2 } from "lucide-react";
+import { ArrowLeft, Upload, Download, FileCode2, FilePlus2 } from "lucide-react";
 import { toast } from "sonner";
 import ScheduleGridEditor, { type EditorEntry } from "@/components/schedule/ScheduleGridEditor";
 import ImportOrarXmlDialog from "@/components/schedule/ImportOrarXmlDialog";
+import ImportOrarXmlBulkDialog, { type BulkImportResult } from "@/components/schedule/ImportOrarXmlBulkDialog";
 import { DAYS, PERIODS } from "@/lib/schedule-periods";
 
 interface ClassRow {
   id: string;
   display_name: string;
   academic_year: string;
+  grade_number: number;
+  section: string | null;
   has_schedule: boolean;
 }
 
