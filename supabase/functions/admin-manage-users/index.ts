@@ -51,7 +51,7 @@ serve(async (req) => {
 
     if (action === "create_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
-      const { first_name, last_name, username, role, teaching_norm } = body;
+      const { first_name, last_name, username, role, teaching_norm, initials } = body;
       const password = DEFAULT_PASSWORD;
       const email = `${username}@school.local`;
 
