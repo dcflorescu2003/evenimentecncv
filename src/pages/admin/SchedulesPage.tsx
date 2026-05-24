@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Upload } from "lucide-react";
+import { ArrowLeft, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import ScheduleGridEditor, { type EditorEntry } from "@/components/schedule/ScheduleGridEditor";
-import { DAYS } from "@/lib/schedule-periods";
+import { DAYS, PERIODS } from "@/lib/schedule-periods";
 
 interface ClassRow {
   id: string;
