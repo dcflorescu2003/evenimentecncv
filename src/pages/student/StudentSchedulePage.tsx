@@ -74,13 +74,14 @@ export default function StudentSchedulePage() {
 
   const renderCell = (e: Entry | undefined) => {
     if (!e) return <span className="text-xs text-muted-foreground/40">—</span>;
+    const teacherDisplay = resolveTeacherDisplay(e.teacher_name, initialsMap);
     return (
       <div className="flex flex-col gap-0.5 text-left">
         <span className="text-sm font-medium leading-tight">{e.subject}</span>
-        {e.teacher_name && (
+        {teacherDisplay && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <User className="h-3 w-3" />
-            {e.teacher_name}
+            {teacherDisplay}
           </span>
         )}
         {e.room && (
