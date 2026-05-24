@@ -395,6 +395,20 @@ export default function SchedulesPage() {
           </CardContent>
         </Card>
       )}
+
+      <ImportOrarXmlBulkDialog
+        open={xmlBulkOpen}
+        onOpenChange={setXmlBulkOpen}
+        classes={classes.map((c) => ({
+          id: c.id,
+          display_name: c.display_name,
+          grade_number: c.grade_number,
+          section: c.section,
+          academic_year: c.academic_year,
+        }))}
+        onImport={handleBulkImport}
+      />
     </div>
   );
 }
+
