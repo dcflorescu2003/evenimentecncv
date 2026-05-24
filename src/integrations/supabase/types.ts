@@ -82,6 +82,24 @@ export type Database = {
         }
         Relationships: []
       }
+      cantina_menu_cache: {
+        Row: {
+          fetched_at: string
+          id: number
+          payload: Json
+        }
+        Insert: {
+          fetched_at?: string
+          id?: number
+          payload: Json
+        }
+        Update: {
+          fetched_at?: string
+          id?: number
+          payload?: Json
+        }
+        Relationships: []
+      }
       class_participation_rules: {
         Row: {
           class_id: string
@@ -132,6 +150,41 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "program_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_schedules: {
+        Row: {
+          academic_year: string
+          class_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          class_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          class_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_schedules_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
             referencedColumns: ["id"]
           },
         ]
@@ -889,6 +942,47 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_entries: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          id: string
+          period: number
+          room: string | null
+          schedule_id: string
+          subject: string
+          teacher_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          id?: string
+          period: number
+          room?: string | null
+          schedule_id: string
+          subject: string
+          teacher_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          period?: number
+          room?: string | null
+          schedule_id?: string
+          subject?: string
+          teacher_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_entries_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "class_schedules"
             referencedColumns: ["id"]
           },
         ]
