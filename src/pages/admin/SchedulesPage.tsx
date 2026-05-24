@@ -124,6 +124,29 @@ export default function SchedulesPage() {
     }
   };
 
+  const downloadModelCsv = () => {
+    const header = "day,period,subject,teacher_name,room";
+    const examples = [
+      "1,1,Matematică,Popescu Ion,Sala 101",
+      "1,2,Limba română,Ionescu Maria,Sala 102",
+      "2,3,Fizică,Georgescu Andrei,Laborator Fizică",
+      "3,5,Chimie,Petrescu Ana,Laborator Chimie",
+      "4,7,Istorie,Dumitrescu Mihai,Sala 205",
+      "5,9,Geografie,Stan Elena,Sala 108",
+    ];
+    const lines = [header, ...examples];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "model_orar.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Model CSV descărcat");
+  };
+
   const handleCsvUpload = async (file: File) => {
     const text = await file.text();
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
