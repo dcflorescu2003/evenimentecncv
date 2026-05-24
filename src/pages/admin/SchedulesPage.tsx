@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Upload } from "lucide-react";
+import { ArrowLeft, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import ScheduleGridEditor, { type EditorEntry } from "@/components/schedule/ScheduleGridEditor";
-import { DAYS } from "@/lib/schedule-periods";
+import { DAYS, PERIODS } from "@/lib/schedule-periods";
 
 interface ClassRow {
   id: string;
@@ -124,6 +124,29 @@ export default function SchedulesPage() {
     }
   };
 
+  const downloadModelCsv = () => {
+    const header = "day,period,subject,teacher_name,room";
+    const examples = [
+      "1,1,Matematică,Popescu Ion,Sala 101",
+      "1,2,Limba română,Ionescu Maria,Sala 102",
+      "2,3,Fizică,Georgescu Andrei,Laborator Fizică",
+      "3,5,Chimie,Petrescu Ana,Laborator Chimie",
+      "4,7,Istorie,Dumitrescu Mihai,Sala 205",
+      "5,9,Geografie,Stan Elena,Sala 108",
+    ];
+    const lines = [header, ...examples];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "model_orar.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Model CSV descărcat");
+  };
+
   const handleCsvUpload = async (file: File) => {
     const text = await file.text();
     const lines = text.split(/\r?\n/).filter((l) => l.trim());
@@ -183,6 +206,13 @@ export default function SchedulesPage() {
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
             <CardTitle className="text-base">Editor orar</CardTitle>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={downloadModelCsv}
+              >
+                <Download className="mr-1 h-4 w-4" /> Model CSV
+              </Button>
               <input
                 id="csv-upload"
                 type="file"
@@ -204,9 +234,14 @@ export default function SchedulesPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Format CSV: <code>day,period,subject,teacher_name,room</code> — <code>day</code> = 1-5 sau Luni/Marți/.../Vineri. Importul înlocuiește toate orele afișate până la următoarea salvare.
-            </p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>
+                Format CSV: <code>day,period,subject,teacher_name,room</code> — <code>day</code> = 1-5 sau Luni/Marți/.../Vineri. Importul înlocuiește toate orele afișate până la următoarea salvare.
+              </p>
+              <p>
+                Ore disponibile: {PERIODS.map((p) => `Ora ${p.period} (${p.start}-${p.end})`).join(", ")}
+              </p>
+            </div>
             <ScheduleGridEditor
               key={selected.id + (scheduleId ?? "")}
               initial={entries}
