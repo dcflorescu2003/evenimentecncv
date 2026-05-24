@@ -70,20 +70,20 @@ export default function SchedulesPage() {
       .eq("academic_year", c.academic_year)
       .maybeSingle();
     if (schedule) {
-      setScheduleId(schedule.id);
       const { data: rows } = await supabase
         .from("schedule_entries")
         .select("day_of_week, period, subject, teacher_name, room")
         .eq("schedule_id", schedule.id);
-      setEntries(
-        (rows ?? []).map((r) => ({
-          day_of_week: r.day_of_week,
-          period: r.period,
-          subject: r.subject ?? "",
-          teacher_name: r.teacher_name ?? "",
-          room: r.room ?? "",
-        })),
-      );
+      const mapped = (rows ?? []).map((r) => ({
+        day_of_week: r.day_of_week,
+        period: r.period,
+        subject: r.subject ?? "",
+        teacher_name: r.teacher_name ?? "",
+        room: r.room ?? "",
+      }));
+      // Setăm împreună ca remount-ul (key depinde de scheduleId) să vadă deja entries populate.
+      setEntries(mapped);
+      setScheduleId(schedule.id);
     }
   };
 
