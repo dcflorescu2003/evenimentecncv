@@ -1,107 +1,82 @@
-# Modulul „Orar & Meniu" — Etapa 1: elevi
+## Concluzie analiză fișier `orar_elevi_S7.xml`
 
-Implementare orar pe clasă (vizibil elevilor) + meniu cantină preluat automat din API extern. Profesorii (orar individual) și sălile rămân pentru etape ulterioare.
+Fișierul este un export PDF→XML din aplicația **aSc Orare**. Structura este parsabilă programatic și se mapează aproape 1:1 pe schema actuală `class_schedules` / `schedule_entries`.
 
-## A. Bază de date
+### Ce am găsit pentru Clasa V A (prima clasă, liniile 54-266)
 
-Migrație nouă cu 2 tabele:
+- **Header pagină**: `<P>Clasa V A Clasa VII A ...</P>` — paginile grupează 5 clase per pagină.
+- **Antet tabel ore**: 12 ore (07:30-08:20 ... 18:30-19:20), cu o **coloană fantomă** între ora 1 și ora 2 (artefact PDF — trebuie ignorată la parsare).
+- **Rânduri zile**: `Lu, Ma, Mi, Jo, Vi` (L-V, fără sâmbătă) — se mapează direct la `day_of_week` 1-5.
+- **Celule** de forma `Mate 5 RC` / `L.rom 5 GL` / `Info AEL DC` / `Ef sport MN`:
+  - **Materie abreviată**: Mate, L.rom, Ist, Rel, Et/TI, Geo, Dirig, Bio, Info AEL, Le, Lf, Ef sport, St.s-u, Em, Ep…
+  - **Cifră intermediară** (ex. "5") — pare să fie indicator de grupă/an, nu sală.
+  - **Inițiale profesor**: RC, GL, IE, VON, CIS, MN, NM, DC…
+- **Numele dirigintelui** apare în antetul *următorului* tabel: `<TD>Diriginte : GAVRILA RALUCA </TD>` (l.282).
+- **Sala lipsește** din XML — câmpul `room` va rămâne gol.
 
-`**class_schedules**` — un orar per clasă per an academic
+### Exemplu extras (Clasa V A, Luni)
 
-- `class_id` → `classes.id`
-- `academic_year` (text, ex: `2025-2026`)
-- `notes` (text, opțional)
-- UNIQUE(`class_id`, `academic_year`)
 
-`**schedule_entries**` — sloturi individuale
+| Ora | Materie  | Prof |
+| --- | -------- | ---- |
+| 1   | Mate     | RC   |
+| 2   | Le       | VON  |
+| 3   | Lf       | CIS  |
+| 4   | Ef sport | MN   |
+| 5   | St.s-u   | NM   |
 
-- `schedule_id` → `class_schedules.id` ON DELETE CASCADE
-- `day_of_week` (int 1-5, Luni-Vineri)
-- `period` (int 1-8, ora din zi)
-- `subject` (text)
-- `teacher_name` (text, opțional — text liber acum; legare cu `profiles` rămâne pentru viitor)
-- `room` (text, opțional)
-- UNIQUE(`schedule_id`, `day_of_week`, `period`)
 
-**RLS**:
+---
 
-- Admin: ALL
-- Authenticated read: `true` (orice user autentificat citește orice orar — util pentru profesori să-și vadă propriile ore mai târziu; pentru elev vom filtra în UI după clasa lui)
+## Plan implementare: Import XML orar
 
-**Intervale ore — hardcodate** în `src/lib/schedule-periods.ts`:
+### A. Dicționare de mapare (`src/lib/schedule-aliases.ts`)
 
-```ts
-export const PERIODS = [
-  { period: 1, start: "08:00", end: "08:50" },
-  { period: 2, start: "09:00", end: "09:50" },
-  // … până la 8
-];
-```
+Două hărți editabile:
 
-Vom confirma intervalele reale CNCV înainte de finalizare (placeholder: pauze de 10 min, 8 ore).
+1. **Materii** — abreviere → nume complet (`Mate`→`Matematică`, `L.rom`→`Limba română`, `Ef sport`→`Educație fizică`, `St.s-u`→`Studii sociale`, `Info AEL`→`Informatică AEL`, `Le`→`Limba engleză`, `Lf`→`Limba franceză`, `Et/TI`→`Etică / TIC`, `Dirig`→`Dirigenție`, `Em`→`Educație muzicală`, `Ep`→`Educație plastică`, `Rel`→`Religie`, `Bio`→`Biologie`, `Ist`→`Istorie`, `Geo`→`Geografie`).
+2. **Profesori** — inițiale → nume complet (gol inițial; completat manual sau prin matching cu tabela `profiles` pe baza inițialelor `first_name`/`last_name`).
 
-## B. Edge function meniu cantină
+Necunoscute → se stochează abrevierea așa cum apare, marcată vizual în UI pentru completare ulterioară.
 
-`supabase/functions/get-cantina-menu/index.ts`:
+### B. Parser XML (`src/lib/import-orar-xml.ts`)
 
-- GET către `https://flashcantemir.onrender.com/api/menu`
-- Cache simplu in-memory în edge runtime (10 min TTL) — pentru cache mai robust folosim un singur rând în tabel nou `cantina_menu_cache (id=1, payload jsonb, fetched_at timestamptz)` cu RLS doar service_role.
-- Răspuns: array filtrat/sortat după dată + `dish_type` (fel1 înainte de fel2).
-- Verifică JWT (orice user autentificat poate apela), CORS standard.
+- Acceptă `File` (text/xml), parsează cu `DOMParser` în browser.
+- Iterează `<Table>`-urile cu structura orar (13 coloane TH = ora). Ignoră coloana fantomă cu index 2.
+- Pentru fiecare tabel:
+  - Citește din `<P>` sau `<TD>Clasa …</TD>` precedent numele clasei (`Clasa V A` → `V A`).
+  - Pentru fiecare TR cu `<TH>Lu|Ma|Mi|Jo|Vi`, extrage 12 celule (1 per oră).
+  - Tokenizează celula: ultimul token = inițiale profesor, restul = materie (păstrând `L.rom`, `Ef sport`, `Info AEL`, `Et/TI` ca tokens multi-cuvânt prin lookup în dicționar înainte de split).
+- Returnează: `{ className: string, dirigName?: string, entries: EditorEntry[] }[]`.
 
-## C. Module registry (minim viabil)
+### C. UI admin în `SchedulesPage.tsx`
 
-Nu implementăm acum hub-ul `/app` complet — îl ținem pentru un task separat. Adăugăm doar:
+Lângă butoanele **Model CSV** / **Import CSV** se adaugă:
 
-- Rută nouă `/student/orar` în `App.tsx` sub `StudentLayout`.
-- Item nou în navbar-ul `StudentLayout` ("Orar & Meniu", icon `CalendarRange`).
+- **Import XML aSc** — selector de fișier `.xml`.
+- După parsare, dialog cu:
+  - listă clase detectate (ex. „21 clase găsite în fișier")
+  - mapare automată la `classes.display_name` din DB (match exact pe "V A", "VI A" etc.) — clasele fără match sunt evidențiate și se pot ignora
+  - preview cu nr. de ore/clasă și lista abrevierilor de profesori necunoscute
+  - checkbox „Suprascrie orarul existent" (default ON)
+  - buton **Importă selectate** — pentru fiecare clasă selectată: upsert `class_schedules` + ștergere + insert `schedule_entries` (același flux ca `persist()`).
 
-(Când vom face hub-ul `/app`, modulul Orar e deja gata să fie listat acolo.)
+### D. Out of scope (etapă viitoare, dacă se cere)
 
-## D. Pagina elev: `src/pages/student/StudentSchedulePage.tsx`
+- Mapare automată inițiale → `profiles` (poate fi adăugată ulterior cu o tabelă `teacher_initials_map`).
+- Import sală — nu există în XML.
+- Sâmbătă — XML-ul nu o conține pentru această sesiune.
+- Orar profesori / orar săli — etape separate ale modulului (cum era planificat).
 
-Layout:
+### Fișiere de creat/modificat
 
-1. **Header**: numele clasei elevului (din `student_class_assignments` → `classes.display_name`).
-2. **Tabel orar** — desktop: coloane Zi×Oră (Luni-Vineri) × periods 1-8, fiecare celulă afișează materie / profesor / sală. Mobile: tabs pe zi cu listă verticală de ore.
-3. **Indicator „acum"**: highlight pe slotul curent (calcul din `new Date()` + `PERIODS`).
-4. **Secțiune Meniu cantină** sub orar — grupat pe dată (azi, mâine, restul săptămânii), separat fel1/fel2.
+- **Create**: `src/lib/schedule-aliases.ts`, `src/lib/import-orar-xml.ts`, `src/components/schedule/ImportOrarXmlDialog.tsx`.
+- **Modify**: `src/pages/admin/SchedulesPage.tsx` (buton + dialog).
 
-Loading: skeleton. Empty state: „Clasa ta nu are încă orar setat" / „Meniul nu este disponibil".
+### Întrebare deschisă
 
-## E. Admin: management orar
+Pentru cazurile **„Info AEL DC"** (3 tokens) sau **„L.rom 5 GL"** (cu cifră intermediară), confirmi că:
 
-Rută nouă `/admin/schedules` + item în `AdminLayout`:
-
-- Listă clase cu badge „Are orar / Nu are orar".
-- Click pe clasă → editor grilă 8×5 (period × day) cu input inline (subject, teacher_name, room) + buton **Salvează**.
-- Buton **Import CSV** (deasupra grilei): upload fișier cu header `day,period,subject,teacher_name,room`. Validare + preview înainte de salvare. Înlocuiește integral orarul clasei.
-- Format CSV documentat lângă buton.
-
-## F. Fișiere
-
-**Create**:
-
-- migrație: 2 tabele + RLS
-- `supabase/functions/get-cantina-menu/index.ts`
-- `src/lib/schedule-periods.ts`
-- `src/pages/student/StudentSchedulePage.tsx`
-- `src/pages/admin/SchedulesPage.tsx`
-- `src/components/schedule/ScheduleGridEditor.tsx`
-- `src/components/schedule/CantinaMenuSection.tsx`
-
-**Modificate**:
-
-- `src/App.tsx` — 2 rute noi
-- `src/components/layouts/StudentLayout.tsx` — item navbar
-- `src/components/layouts/AdminLayout.tsx` — item navbar
-- `mem://architecture/modules-plan` — notez că Orar (varianta elev) e implementată
-
-## Întrebări înainte de implementare
-
-1. **Intervale ore CNCV**: care sunt orele exacte (start-end ale fiecărei perioade 1-8)? Dacă nu le ai la îndemână, folosesc placeholder 08:00→16:00 cu sloturi de 50 min + pauze 10 min și vei ajusta în `schedule-periods.ts`.
-2. **Sâmbătă**: au cursuri sâmbăta sau strict L-V?
-3. **Câte ore maxim pe zi**: 8 e suficient sau e nevoie de mai mult (ex. 9-10 pentru profil seral)?  
-1) Intervalul ore este 07:30 - 8:20, ultima ora este la 19:20  
-2)L-V  
-In orar o sa vreau sa avem si materia, sala si profesorul 
+- cifra intermediară (5, 9, 10 etc.) e indicator grupă/sală virtuală și o **ignorăm** (nu o salvăm în `room`)?
+- sau o stocăm în `room` ca placeholder până clarificăm cu personalul școlii?  
+L.rom e limba romana (materia), 5 este sala si GL sunt initialele profesorilor. Salvam sala
