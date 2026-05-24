@@ -24,6 +24,7 @@ export default function StudentSchedulePage() {
   const [loading, setLoading] = useState(true);
   const [className, setClassName] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [initialsMap, setInitialsMap] = useState<TeacherInitialsMap>(new Map());
   const current = getCurrentPeriod();
 
   useEffect(() => {
