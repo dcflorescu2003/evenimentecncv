@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
+import { ModulesButton } from "@/components/ModulesButton";
 
 
 const navItems = [
