@@ -233,6 +233,13 @@ export default function SchedulesPage() {
               >
                 <Upload className="mr-1 h-4 w-4" /> Import CSV
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setXmlDialogOpen(true)}
+              >
+                <FileCode2 className="mr-1 h-4 w-4" /> Import XML aSc
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
