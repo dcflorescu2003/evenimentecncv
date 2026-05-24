@@ -57,15 +57,17 @@ export default function CantinaMenuSection() {
     };
   }, []);
 
-  // Group by date, keep only today + future dates
+  // Group by date. Prefer today + future; fall back to most recent past dates if none.
   const todayISO = new Date().toISOString().slice(0, 10);
-  const grouped = (items ?? [])
-    .filter((i) => i.date >= todayISO)
-    .reduce<Record<string, MenuItem[]>>((acc, item) => {
-      (acc[item.date] ??= []).push(item);
-      return acc;
-    }, {});
-  const dates = Object.keys(grouped).sort();
+  const allGrouped = (items ?? []).reduce<Record<string, MenuItem[]>>((acc, item) => {
+    (acc[item.date] ??= []).push(item);
+    return acc;
+  }, {});
+  const allDates = Object.keys(allGrouped).sort();
+  const futureDates = allDates.filter((d) => d >= todayISO);
+  const dates = futureDates.length > 0 ? futureDates.slice(0, 5) : allDates.slice(-2);
+  const grouped = allGrouped;
+  const showStaleHint = futureDates.length === 0 && dates.length > 0;
 
   return (
     <Card>
@@ -89,7 +91,13 @@ export default function CantinaMenuSection() {
           </div>
         )}
         {!loading && !error && dates.length === 0 && (
-          <p className="text-sm text-muted-foreground">Niciun meniu disponibil pentru zilele următoare.</p>
+          <p className="text-sm text-muted-foreground">Niciun meniu disponibil momentan.</p>
+        )}
+        {!loading && !error && dates.length > 0 && showStaleHint && (
+          <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <AlertCircle className="h-3.5 w-3.5" />
+            Meniul pentru zilele următoare nu a fost încă publicat. Afișăm ultimul meniu disponibil.
+          </div>
         )}
         {!loading && !error && dates.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
