@@ -8,6 +8,7 @@ import { CalendarRange, MapPin, User } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import CantinaMenuSection from "@/components/schedule/CantinaMenuSection";
+import { fetchTeacherInitialsMap, resolveTeacherDisplay, type TeacherInitialsMap } from "@/lib/teacher-initials";
 
 interface Entry {
   day_of_week: number;
