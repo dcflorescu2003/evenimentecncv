@@ -15,6 +15,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { ModulesButton } from "@/components/ModulesButton";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
@@ -110,6 +111,9 @@ export default function AdminLayout() {
           <span className="truncate text-sm font-medium text-foreground/80 sm:hidden">
             {menuItems.find((m) => m.path === location.pathname)?.title ?? "Admin"}
           </span>
+          <div className="ml-auto">
+            <ModulesButton variant="labeled" />
+          </div>
         </header>
         <main className="flex-1 overflow-auto p-3 pb-safe sm:p-4 md:p-6">
           <Outlet />
