@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
+import { ModulesButton } from "@/components/ModulesButton";
 
 
 const navItems = [
@@ -26,6 +27,7 @@ export default function StudentLayout() {
           <span className="font-display text-lg font-semibold">CNCV</span>
         </div>
         <div className="flex items-center gap-1">
+          <ModulesButton />
           <PushNotificationToggle />
           <NotificationBell />
           <span className="text-sm text-muted-foreground hidden sm:inline">{profile?.display_name}</span>
