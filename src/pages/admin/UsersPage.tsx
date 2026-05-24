@@ -212,6 +212,9 @@ export default function UsersPage() {
         ? (values.teaching_norm ? Number(values.teaching_norm) : null)
         : null;
 
+      const hasTeacherRole = values.roles.some((r) => r === "teacher" || r === "homeroom_teacher" || r === "coordinator_teacher");
+      bodyData.initials = hasTeacherRole ? (values.initials?.trim() || null) : null;
+
       const { data, error } = await supabase.functions.invoke("admin-manage-users", {
         body: bodyData,
       });
