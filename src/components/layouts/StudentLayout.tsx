@@ -4,20 +4,26 @@ import { Button } from "@/components/ui/button";
 import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
-import { ModulesButton } from "@/components/ModulesButton";
+import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 
 
-const navItems = [
+const eventsNav = [
   { title: "Panou", icon: LayoutDashboard, path: "/student" },
   { title: "Evenimente", icon: CalendarDays, path: "/student/events" },
-  { title: "Orar", icon: CalendarRange, path: "/student/orar" },
   { title: "Bilete", icon: Ticket, path: "/student/tickets" },
+];
+
+const scheduleNav = [
+  { title: "Orar", icon: CalendarRange, path: "/student/orar" },
 ];
 
 export default function StudentLayout() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isSchedule = location.pathname.startsWith("/student/orar");
+  const navItems = isSchedule ? scheduleNav : eventsNav;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -27,7 +33,7 @@ export default function StudentLayout() {
           <span className="font-display text-lg font-semibold">CNCV</span>
         </div>
         <div className="flex items-center gap-1">
-          <ModulesButton />
+          <ModuleSwitcher variant="labeled" />
           <PushNotificationToggle />
           <NotificationBell />
           <span className="text-sm text-muted-foreground hidden sm:inline">{profile?.display_name}</span>

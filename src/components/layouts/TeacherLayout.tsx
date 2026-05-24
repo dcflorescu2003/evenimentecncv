@@ -2,7 +2,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, LayoutDashboard, BarChart3, CalendarDays, LogOut, Users2 } from "lucide-react";
-import { ModulesButton } from "@/components/ModulesButton";
+import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 
 export default function TeacherLayout() {
   const { profile, roles, signOut } = useAuth();
@@ -26,7 +26,7 @@ export default function TeacherLayout() {
           <span className="font-display text-base sm:text-lg font-semibold truncate">CNCV Diriginte</span>
         </div>
         <div className="flex items-center gap-2">
-          <ModulesButton />
+          <ModuleSwitcher />
           <span className="hidden sm:inline text-sm text-muted-foreground truncate max-w-[160px]">{profile?.display_name}</span>
           <Button variant="ghost" size="icon" onClick={signOut}>
             <LogOut className="h-4 w-4" />

@@ -11,7 +11,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, BarChart3, CalendarDays, CalendarRange, FileText, GraduationCap, LayoutDashboard, LogOut, User, Users } from "lucide-react";
-import { ModulesButton } from "@/components/ModulesButton";
+import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 
 const menuItems = [
   { title: "Panou principal", icon: LayoutDashboard, path: "/manager" },
@@ -146,7 +146,7 @@ export default function ManagerLayout() {
             <span className="font-medium text-foreground">{sessionName || "—"}</span>
           </span>
           <div className="ml-auto">
-            <ModulesButton variant="labeled" />
+            <ModuleSwitcher variant="labeled" />
           </div>
         </header>
         <main className="flex-1 overflow-auto p-3 sm:p-6 pb-safe">
