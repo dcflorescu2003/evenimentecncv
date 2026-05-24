@@ -1,56 +1,29 @@
-## Hub de module post-login
+## Problemă
 
-După login, în loc să trimitem direct utilizatorul la dashboard-ul rolului său, îl ducem la o pagină nouă **`/app`** cu carduri mari pentru fiecare modul disponibil:
+Pe `/student/orar` apare „Niciun meniu disponibil pentru zilele următoare." deși API-ul `https://flashcantemir.onrender.com/api/menu` întoarce date. Cauza: în `CantinaMenuSection.tsx` filtrăm strict `i.date >= todayISO`, iar API-ul nu are intrări pentru ziua curentă / viitoare (ultima intrare e 22.05.2026, azi 24.05.2026 — weekend, cantina nu a publicat încă meniul săptămânii viitoare).
 
-- **Evenimente** — duce la dashboard-ul rolului (echivalentul actual: `/admin`, `/student`, `/prof`, `/manager`, `/coordinator`).
-- **Orar & Meniu** — duce la pagina de orar a rolului (`/student/orar`, `/admin/schedules`). Pentru rolurile fără pagină dedicată încă (manager, prof, coordinator), cardul nu apare în această etapă.
+## Soluție
 
-Restul aplicației rămâne neschimbat — toate rutele, layout-urile și meniurile existente funcționează identic. Adăugăm doar un nivel deasupra lor.
+Modific `src/components/schedule/CantinaMenuSection.tsx`:
 
-## Comportament
-
-- La login (sau accesul rădăcinii `/`), utilizatorul autentificat aterizează pe `/app`.
-- Utilizatorul nelogat → `/login` (ca acum).
-- În `/app`:
-  - Salut scurt cu numele utilizatorului + logo CNCV.
-  - Grilă responsive de carduri (1 col mobil, 2 col tablet+). Fiecare card: iconiță, titlu, descriere scurtă, click → intră în modul.
-  - Doar 2 carduri acum: Evenimente + Orar & Meniu. Structura permite adăugarea ușoară a altora (Feedback, Comunicare etc.).
-- În layout-urile rolurilor (Admin/Student/Prof/etc.), în header, adăugăm un buton mic „Module" / iconiță grid care duce înapoi la `/app`, ca să poată comuta între module.
-- Logo-ul / titlul din header continuă să ducă la dashboard-ul modulului curent (comportament neschimbat).
-
-## Registry de module
-
-Definim într-un singur fișier (`src/modules/registry.ts`) ce module există și cum se mapează pe roluri:
-
-```text
-modules = [
-  { key: "events",   label: "Evenimente",     icon: Calendar, pathByRole: { admin: "/admin", student: "/student", ... } },
-  { key: "schedule", label: "Orar & Meniu",   icon: BookOpen, pathByRole: { admin: "/admin/schedules", student: "/student/orar" } },
-]
-```
-
-Hub-ul iterează registry-ul și afișează doar cardurile pentru care rolul curent are o cale definită. Astfel adăugarea unui modul nou înseamnă o singură linie în registry.
-
-## Scope / non-scope acum
-
-- **Da**: hub `/app`, registry, redirect post-login, buton „Module" în header-ele existente.
-- **Nu acum** (rămân pentru viitor, conform planului aprobat):
-  - tabela `module_access` pentru activare per-rol din UI admin (doar 2 module, suficient registry hardcodat),
-  - pagină admin de matrice rol × modul,
-  - mutarea rutelor sub prefix `/app/events/...`.
+1. **Schimb logica de filtrare**: dacă există intrări pentru azi sau viitor → le arăt pe acelea (max 7 zile înainte). Dacă nu există → fallback la ultimele 1–2 zile disponibile (cele mai recente date din API), cu un mic indicator vizual „Ultimul meniu publicat" pentru a fi clar că nu e meniul de azi.
+2. **Mesaj gol doar dacă API-ul nu returnează absolut nimic.**
+3. Limita la maximum 5 zile afișate, sortate cronologic.
 
 ## Detalii tehnice
 
-Fișiere noi:
-- `src/modules/registry.ts` — definițiile modulelor + helper `getEnabledModules(roles)`.
-- `src/pages/AppHub.tsx` — pagina cu carduri (folosește `Card` din shadcn, semantic tokens, fără culori hardcodate).
-- `src/components/ModulesButton.tsx` — buton mic cu iconiță `LayoutGrid` care navighează la `/app`, reutilizabil în toate header-ele de layout.
+```text
+dates = items.map(i => i.date) unique, sorted asc
+future = dates.filter(d => d >= todayISO)
+display = future.length > 0 ? future.slice(0, 5)
+                            : dates.slice(-2)   // ultimele 2 zile disponibile
+showStaleHint = future.length === 0 && display.length > 0
+```
 
-Fișiere modificate:
-- `src/App.tsx` — adaugă ruta `/app` protejată (orice rol autentificat), cu propriul layout minim (header simplu).
-- `src/pages/Login.tsx` — toate redirect-urile post-login → `/app` (în loc de `/admin`, `/student` etc.).
-- `src/components/layouts/{AdminLayout,StudentLayout,ProfLayout,ManagerLayout,CoordinatorLayout,TeacherLayout}.tsx` — inserează `<ModulesButton />` în header (lângă notificări / meniul user).
+Restul randării rămâne identic; doar adaug un badge mic „Ultimul meniu publicat" deasupra grilei când `showStaleHint`.
 
-Stil: design existent (Burgundy `#7A1F2E`, Inter/Plus Jakarta Sans), carduri cu `hover:shadow-md transition`, iconițe `lucide-react`, UI în română.
+Nu modific edge function-ul `get-cantina-menu` — cache-ul și fetch-ul funcționează corect.
 
-Niciun impact pe DB, RLS, edge functions sau auth — schimbare strict de UI + routing.
+## Fișiere modificate
+
+- `src/components/schedule/CantinaMenuSection.tsx`
