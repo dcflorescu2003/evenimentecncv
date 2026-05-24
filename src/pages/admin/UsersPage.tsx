@@ -392,6 +392,9 @@ export default function UsersPage() {
                             </button>
                           )
                         )}
+                        {userRoles.some((r) => r === "teacher" || r === "homeroom_teacher" || r === "coordinator_teacher") && (p as any).initials && (
+                          <Badge variant="outline" className="text-xs">{(p as any).initials}</Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
