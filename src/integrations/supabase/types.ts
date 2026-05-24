@@ -1138,6 +1138,14 @@ export type Database = {
         Args: { _session_id: string; _student_id: string }
         Returns: Json
       }
+      get_teacher_initials_map: {
+        Args: never
+        Returns: {
+          first_name: string
+          initials: string
+          last_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
