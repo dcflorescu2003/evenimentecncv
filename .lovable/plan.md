@@ -1,67 +1,107 @@
-## Diagnostic
+# Modulul „Orar & Meniu" — Etapa 1: elevi
 
-Am verificat fluxurile de upload pentru cele trei roluri.
+Implementare orar pe clasă (vizibil elevilor) + meniu cantină preluat automat din API extern. Profesorii (orar individual) și sălile rămân pentru etape ulterioare.
 
-### 1. Profesori (teacher / homeroom_teacher) — la Dosar și Formulare
-- Cod: `src/pages/prof/ProfEventDetailPage.tsx` (linia 607) → path `${event_id}/${category}/...`
-- RLS storage: politica nouă `Event creators manage event files storage` (migrația din 21.05) acoperă `cse`, `teacher`, `homeroom_teacher` pe baza `is_event_creator(folder[1], auth.uid())`.
-- **Status: funcționează** (după migrația deja aplicată).
+## A. Bază de date
 
-### 2. Elevi — încărcare formular completat
-- Cod: `src/pages/student/StudentEventDetailPage.tsx` (linia 252) → path `submissions/${event_id}/${user_id}/...`
-- RLS storage existent (migrația inițială, linia 623): permite INSERT doar dacă `folder[1] = 'form-submissions'` ȘI `folder[2] = auth.uid()`.
-- **Bug 1**: prefixul folosit în cod (`submissions/`) NU se potrivește cu prefixul cerut de policy (`form-submissions/`), iar ordinea (event_id înainte de user_id) e inversă față de policy. → elevii **nu pot încărca** (RLS error).
-- **Bug 2**: profesorii citesc submisiile elevilor prin `createSignedUrl` pe `event-files` (`ProfEventDetailPage` linia 263). Cu path-ul actual `submissions/<event_id>/<user_id>/...`, politica „Event creators manage" cere `folder[1]` să fie un UUID de eveniment — nu este. → profesorii **nu pot descărca** formularele completate de elevi.
+Migrație nouă cu 2 tabele:
 
----
+`**class_schedules**` — un orar per clasă per an academic
 
-## Plan
+- `class_id` → `classes.id`
+- `academic_year` (text, ex: `2025-2026`)
+- `notes` (text, opțional)
+- UNIQUE(`class_id`, `academic_year`)
 
-### A. Unificare convenție de path pentru `event-files`
+`**schedule_entries**` — sloturi individuale
 
-Schimb path-ul folosit la încărcarea formularelor de către elevi în:
+- `schedule_id` → `class_schedules.id` ON DELETE CASCADE
+- `day_of_week` (int 1-5, Luni-Vineri)
+- `period` (int 1-8, ora din zi)
+- `subject` (text)
+- `teacher_name` (text, opțional — text liber acum; legare cu `profiles` rămâne pentru viitor)
+- `room` (text, opțional)
+- UNIQUE(`schedule_id`, `day_of_week`, `period`)
 
+**RLS**:
+
+- Admin: ALL
+- Authenticated read: `true` (orice user autentificat citește orice orar — util pentru profesori să-și vadă propriile ore mai târziu; pentru elev vom filtra în UI după clasa lui)
+
+**Intervale ore — hardcodate** în `src/lib/schedule-periods.ts`:
+
+```ts
+export const PERIODS = [
+  { period: 1, start: "08:00", end: "08:50" },
+  { period: 2, start: "09:00", end: "09:50" },
+  // … până la 8
+];
 ```
-<event_id>/form-submissions/<student_id>/<timestamp>_<filename>
-```
 
-Avantaje:
-- `folder[1] = event_id` → politica existentă „Event creators manage event files storage" îi lasă pe profesori (creatorul evenimentului) să citească/descarce automat formularele elevilor.
-- Folderul de submission e clar grupat sub eveniment, ca restul fișierelor (dosar, formulare-template).
+Vom confirma intervalele reale CNCV înainte de finalizare (placeholder: pauze de 10 min, 8 ore).
 
-### B. Migrație nouă — politici storage pentru elevi
+## B. Edge function meniu cantină
 
-Adaug pe `storage.objects` (bucket `event-files`):
+`supabase/functions/get-cantina-menu/index.ts`:
 
-1. **Students upload own form submissions** (INSERT, role student): permite dacă `folder[1] = event_id`, `folder[2] = 'form-submissions'`, `folder[3] = auth.uid()`, iar `event_id` aparține unui eveniment publicat (`events.published = true AND status = 'published'`).
-2. **Students read own form submissions** (SELECT, role student): aceleași condiții pe folder.
-3. **Students read form templates** — politica existentă (`folder[1] = 'form-templates'`) rămâne, dar nu mai e folosită — formularele-template sunt urcate de profesori la `<event_id>/form_template/...` și sunt deja acoperite de „Event creators manage" pentru read. Pentru ca elevii să le poată descărca, adaug o politică suplimentară:
-   - **Students read form template files** (SELECT, role student): permite dacă `folder[2] = 'form_template'` și `event_id = folder[1]` ține de un eveniment publicat.
+- GET către `https://flashcantemir.onrender.com/api/menu`
+- Cache simplu in-memory în edge runtime (10 min TTL) — pentru cache mai robust folosim un singur rând în tabel nou `cantina_menu_cache (id=1, payload jsonb, fetched_at timestamptz)` cu RLS doar service_role.
+- Răspuns: array filtrat/sortat după dată + `dish_type` (fel1 înainte de fel2).
+- Verifică JWT (orice user autentificat poate apela), CORS standard.
 
-> Politicile vechi „Students upload form submissions to storage" / „Students read own submissions from storage" (cu prefix `form-submissions/`) le las pe loc (compatibilitate retroactivă) sau le pot șterge la cerere — recomand să le **șterg** ca să nu existe confuzie.
+## C. Module registry (minim viabil)
 
-### C. Cod — schimbări
+Nu implementăm acum hub-ul `/app` complet — îl ținem pentru un task separat. Adăugăm doar:
 
-- `src/pages/student/StudentEventDetailPage.tsx` (linia 252): schimb path-ul în
-  ```ts
-  const path = `${id}/form-submissions/${user.id}/${Date.now()}_${file.name}`;
-  ```
-  Plus validare client-side de tip fișier (PDF / DOCX / imagini), aliniat cu profesorii.
+- Rută nouă `/student/orar` în `App.tsx` sub `StudentLayout`.
+- Item nou în navbar-ul `StudentLayout` ("Orar & Meniu", icon `CalendarRange`).
 
-- Niciun alt cod nu se schimbă — RLS pe tabela `form_submissions` e deja corect (elevii pot INSERT propriile rânduri, profesorii citesc prin `is_event_creator`).
+(Când vom face hub-ul `/app`, modulul Orar e deja gata să fie listat acolo.)
 
-### D. Verificări după aplicare
+## D. Pagina elev: `src/pages/student/StudentSchedulePage.tsx`
 
-- Cu cont CSE / profesor / diriginte: upload la „Dosar" (PDF/DOCX) și „Formulare" (PDF/DOCX/imagine) — trebuie să meargă.
-- Cu cont elev înscris: descarcă formular-template, urcă formular completat, vede signed URL.
-- Cu cont profesor: deschide submisiile elevilor și descarcă fișierul.
+Layout:
 
-## Fișiere modificate
+1. **Header**: numele clasei elevului (din `student_class_assignments` → `classes.display_name`).
+2. **Tabel orar** — desktop: coloane Zi×Oră (Luni-Vineri) × periods 1-8, fiecare celulă afișează materie / profesor / sală. Mobile: tabs pe zi cu listă verticală de ore.
+3. **Indicator „acum"**: highlight pe slotul curent (calcul din `new Date()` + `PERIODS`).
+4. **Secțiune Meniu cantină** sub orar — grupat pe dată (azi, mâine, restul săptămânii), separat fel1/fel2.
 
-- **Migrație nouă** `supabase/migrations/...add_storage_policies_student_submissions.sql` — 2 politici INSERT/SELECT pentru elevi pe submisii, 1 politică SELECT pentru elevi pe form templates legate de evenimente publicate. Opțional: drop politicile vechi cu prefix `form-submissions/`.
-- `src/pages/student/StudentEventDetailPage.tsx` — path unificat `<event_id>/form-submissions/<user_id>/...` + validare tip fișier (PDF/DOCX/imagini, max 10MB — deja există).
+Loading: skeleton. Empty state: „Clasa ta nu are încă orar setat" / „Meniul nu este disponibil".
 
-## Întrebări
+## E. Admin: management orar
 
-1. Pentru elevi, la „formular completat" accept **PDF + DOCX + imagini** (consistent cu profesorii la formulare), sau doar PDF + DOCX?
-2. Șterg politicile vechi „Students upload/read form submissions to storage" (prefix `form-submissions/`), care nu mai sunt folosite, sau le las pentru compatibilitate?
+Rută nouă `/admin/schedules` + item în `AdminLayout`:
+
+- Listă clase cu badge „Are orar / Nu are orar".
+- Click pe clasă → editor grilă 8×5 (period × day) cu input inline (subject, teacher_name, room) + buton **Salvează**.
+- Buton **Import CSV** (deasupra grilei): upload fișier cu header `day,period,subject,teacher_name,room`. Validare + preview înainte de salvare. Înlocuiește integral orarul clasei.
+- Format CSV documentat lângă buton.
+
+## F. Fișiere
+
+**Create**:
+
+- migrație: 2 tabele + RLS
+- `supabase/functions/get-cantina-menu/index.ts`
+- `src/lib/schedule-periods.ts`
+- `src/pages/student/StudentSchedulePage.tsx`
+- `src/pages/admin/SchedulesPage.tsx`
+- `src/components/schedule/ScheduleGridEditor.tsx`
+- `src/components/schedule/CantinaMenuSection.tsx`
+
+**Modificate**:
+
+- `src/App.tsx` — 2 rute noi
+- `src/components/layouts/StudentLayout.tsx` — item navbar
+- `src/components/layouts/AdminLayout.tsx` — item navbar
+- `mem://architecture/modules-plan` — notez că Orar (varianta elev) e implementată
+
+## Întrebări înainte de implementare
+
+1. **Intervale ore CNCV**: care sunt orele exacte (start-end ale fiecărei perioade 1-8)? Dacă nu le ai la îndemână, folosesc placeholder 08:00→16:00 cu sloturi de 50 min + pauze 10 min și vei ajusta în `schedule-periods.ts`.
+2. **Sâmbătă**: au cursuri sâmbăta sau strict L-V?
+3. **Câte ore maxim pe zi**: 8 e suficient sau e nevoie de mai mult (ex. 9-10 pentru profil seral)?  
+1) Intervalul ore este 07:30 - 8:20, ultima ora este la 19:20  
+2)L-V  
+In orar o sa vreau sa avem si materia, sala si profesorul 
