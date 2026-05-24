@@ -276,14 +276,86 @@ export default function SchedulesPage() {
     );
   }
 
+  const handleBulkImport = async (results: BulkImportResult[]) => {
+    setBulkImporting(true);
+    try {
+      let okClasses = 0;
+      let totalRows = 0;
+      const errors: string[] = [];
+
+      for (const r of results) {
+        const cls = classes.find((c) => c.id === r.classId);
+        if (!cls) continue;
+        try {
+          let sid: string | null = null;
+          const { data: existing } = await supabase
+            .from("class_schedules")
+            .select("id")
+            .eq("class_id", cls.id)
+            .eq("academic_year", cls.academic_year)
+            .maybeSingle();
+          if (existing) {
+            sid = existing.id;
+            await supabase.from("schedule_entries").delete().eq("schedule_id", sid);
+          } else {
+            const { data: created, error } = await supabase
+              .from("class_schedules")
+              .insert({ class_id: cls.id, academic_year: cls.academic_year })
+              .select("id")
+              .single();
+            if (error) throw error;
+            sid = created.id;
+          }
+          if (r.entries.length > 0) {
+            const payload = r.entries.map((e) => ({
+              schedule_id: sid,
+              day_of_week: e.day_of_week,
+              period: e.period,
+              subject: e.subject.trim(),
+              teacher_name: e.teacher_name.trim() || null,
+              room: e.room.trim() || null,
+            }));
+            const { error: insErr } = await supabase.from("schedule_entries").insert(payload);
+            if (insErr) throw insErr;
+          }
+          okClasses += 1;
+          totalRows += r.entries.length;
+        } catch (e: any) {
+          errors.push(`${cls.display_name}: ${e?.message ?? "eroare"}`);
+        }
+      }
+
+      if (errors.length === 0) {
+        toast.success(`Import reușit: ${okClasses} clase, ${totalRows} ore`);
+      } else {
+        toast.warning(
+          `Import parțial: ${okClasses} clase, ${totalRows} ore. Erori: ${errors.slice(0, 3).join("; ")}${errors.length > 3 ? "…" : ""}`,
+        );
+      }
+      await loadClasses();
+    } finally {
+      setBulkImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="font-display text-2xl font-semibold">Orare clase</h1>
-        <p className="text-sm text-muted-foreground">
-          Selectează o clasă pentru a edita orarul ei. Zilele sunt L-V, până la 12 ore pe zi.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-semibold">Orare clase</h1>
+          <p className="text-sm text-muted-foreground">
+            Selectează o clasă pentru a edita orarul ei. Zilele sunt L-V, până la 12 ore pe zi.
+          </p>
+        </div>
+        <Button
+          onClick={() => setXmlBulkOpen(true)}
+          disabled={loading || bulkImporting || classes.length === 0}
+        >
+          <FilePlus2 className="mr-2 h-4 w-4" />
+          Import XML — toate clasele
+        </Button>
       </div>
+
 
       {loading ? (
         <Skeleton className="h-32 w-full" />
