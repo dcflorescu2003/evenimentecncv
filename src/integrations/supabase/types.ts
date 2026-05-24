@@ -718,6 +718,7 @@ export type Database = {
           email: string | null
           first_name: string
           id: string
+          initials: string | null
           is_active: boolean
           last_name: string
           must_change_password: boolean
@@ -732,6 +733,7 @@ export type Database = {
           email?: string | null
           first_name: string
           id: string
+          initials?: string | null
           is_active?: boolean
           last_name: string
           must_change_password?: boolean
@@ -746,6 +748,7 @@ export type Database = {
           email?: string | null
           first_name?: string
           id?: string
+          initials?: string | null
           is_active?: boolean
           last_name?: string
           must_change_password?: boolean
@@ -1134,6 +1137,14 @@ export type Database = {
       get_student_progress: {
         Args: { _session_id: string; _student_id: string }
         Returns: Json
+      }
+      get_teacher_initials_map: {
+        Args: never
+        Returns: {
+          first_name: string
+          initials: string
+          last_name: string
+        }[]
       }
       has_role: {
         Args: {

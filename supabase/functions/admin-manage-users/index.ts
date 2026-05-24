@@ -51,7 +51,7 @@ serve(async (req) => {
 
     if (action === "create_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
-      const { first_name, last_name, username, role, teaching_norm } = body;
+      const { first_name, last_name, username, role, teaching_norm, initials } = body;
       const password = DEFAULT_PASSWORD;
       const email = `${username}@school.local`;
 
@@ -73,6 +73,10 @@ serve(async (req) => {
       };
       if (teaching_norm !== undefined && teaching_norm !== null && teaching_norm !== "") {
         profileData.teaching_norm = Number(teaching_norm);
+      }
+      if (initials !== undefined) {
+        const v = typeof initials === "string" ? initials.trim() : "";
+        profileData.initials = v ? v : null;
       }
 
       const { error: profileError } = await supabase.from("profiles").insert(profileData);
@@ -306,7 +310,7 @@ serve(async (req) => {
 
     if (action === "update_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
-      const { user_id, first_name, last_name, username, teaching_norm, roles } = body;
+      const { user_id, first_name, last_name, username, teaching_norm, roles, initials } = body;
       if (!user_id || !first_name || !last_name || !username) {
         throw new Error("user_id, first_name, last_name și username sunt obligatorii");
       }
@@ -327,6 +331,10 @@ serve(async (req) => {
         username,
         teaching_norm: teaching_norm === "" || teaching_norm === undefined ? null : Number(teaching_norm),
       };
+      if (initials !== undefined) {
+        const v = typeof initials === "string" ? initials.trim() : "";
+        profileUpdate.initials = v ? v : null;
+      }
 
       const { error: profileError } = await supabase
         .from("profiles")

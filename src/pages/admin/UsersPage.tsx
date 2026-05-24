@@ -47,12 +47,12 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [createDialog, setCreateDialog] = useState(false);
   const [createForm, setCreateForm] = useState({
-    first_name: "", last_name: "", username: "", role: "student" as string, teaching_norm: "" as string,
+    first_name: "", last_name: "", username: "", role: "student" as string, teaching_norm: "" as string, initials: "" as string,
   });
   const [editNormId, setEditNormId] = useState<string | null>(null);
   const [editNormValue, setEditNormValue] = useState("");
   const [editUser, setEditUser] = useState<Profile | null>(null);
-  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "", roles: [] as string[] });
+  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "", initials: "", roles: [] as string[] });
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["profiles"],
@@ -166,6 +166,9 @@ export default function UsersPage() {
       if ((values.role === "teacher" || values.role === "homeroom_teacher") && values.teaching_norm) {
         bodyData.teaching_norm = Number(values.teaching_norm);
       }
+      if (values.role === "teacher" || values.role === "homeroom_teacher" || values.role === "coordinator_teacher") {
+        bodyData.initials = values.initials?.trim() || null;
+      }
       const { data, error } = await supabase.functions.invoke("admin-manage-users", { body: bodyData });
       if (error) throw error;
       return data;
@@ -174,7 +177,7 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user_roles"] });
       setCreateDialog(false);
-      setCreateForm({ first_name: "", last_name: "", username: "", role: "student", teaching_norm: "" });
+      setCreateForm({ first_name: "", last_name: "", username: "", role: "student", teaching_norm: "", initials: "" });
       setNewPassword(data.password);
       toast.success("Utilizator creat");
     },
@@ -209,6 +212,9 @@ export default function UsersPage() {
         ? (values.teaching_norm ? Number(values.teaching_norm) : null)
         : null;
 
+      const hasTeacherRole = values.roles.some((r) => r === "teacher" || r === "homeroom_teacher" || r === "coordinator_teacher");
+      bodyData.initials = hasTeacherRole ? (values.initials?.trim() || null) : null;
+
       const { data, error } = await supabase.functions.invoke("admin-manage-users", {
         body: bodyData,
       });
@@ -232,6 +238,7 @@ export default function UsersPage() {
       last_name: p.last_name,
       username: p.username,
       teaching_norm: (p as any).teaching_norm?.toString() || "",
+      initials: (p as any).initials || "",
       roles: getRoles(p.id),
     });
   }
@@ -384,6 +391,9 @@ export default function UsersPage() {
                               {(p as any).teaching_norm ? `· ${(p as any).teaching_norm}h` : "· fără normă"}
                             </button>
                           )
+                        )}
+                        {userRoles.some((r) => r === "teacher" || r === "homeroom_teacher" || r === "coordinator_teacher") && (p as any).initials && (
+                          <Badge variant="outline" className="text-xs">{(p as any).initials}</Badge>
                         )}
                       </div>
                     </TableCell>
@@ -643,6 +653,20 @@ export default function UsersPage() {
                 <Input type="number" min="0" placeholder="ex: 12" value={editForm.teaching_norm} onChange={(e) => setEditForm({ ...editForm, teaching_norm: e.target.value })} />
               </div>
             )}
+            {editForm.roles.some((r) => r === "teacher" || r === "homeroom_teacher" || r === "coordinator_teacher") && (
+              <div className="space-y-2">
+                <Label>Inițiale (pentru orar)</Label>
+                <Input
+                  maxLength={8}
+                  placeholder="ex: GL"
+                  value={editForm.initials}
+                  onChange={(e) => setEditForm({ ...editForm, initials: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
+                </p>
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Anulează</Button>
               <Button type="submit" disabled={editUserMutation.isPending}>
@@ -690,6 +714,20 @@ export default function UsersPage() {
               <div className="space-y-2">
                 <Label>Norma (ore)</Label>
                 <Input type="number" min="0" placeholder="ex: 12" value={createForm.teaching_norm} onChange={(e) => setCreateForm({ ...createForm, teaching_norm: e.target.value })} />
+              </div>
+            )}
+            {(createForm.role === "teacher" || createForm.role === "homeroom_teacher" || createForm.role === "coordinator_teacher") && (
+              <div className="space-y-2">
+                <Label>Inițiale (pentru orar)</Label>
+                <Input
+                  maxLength={8}
+                  placeholder="ex: GL"
+                  value={createForm.initials}
+                  onChange={(e) => setCreateForm({ ...createForm, initials: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
+                </p>
               </div>
             )}
             <DialogFooter>
