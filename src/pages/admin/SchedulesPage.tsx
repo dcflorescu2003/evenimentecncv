@@ -44,9 +44,10 @@ export default function SchedulesPage() {
     setLoading(true);
     const { data: classRows } = await supabase
       .from("classes")
-      .select("id, display_name, academic_year")
+      .select("id, display_name, academic_year, grade_number, section")
       .eq("is_active", true)
-      .order("display_name");
+      .order("grade_number")
+      .order("section");
     const { data: schedules } = await supabase
       .from("class_schedules")
       .select("class_id, academic_year");
