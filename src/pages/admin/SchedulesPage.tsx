@@ -33,6 +33,7 @@ export default function SchedulesPage() {
   const [entries, setEntries] = useState<EditorEntry[]>([]);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [xmlDialogOpen, setXmlDialogOpen] = useState(false);
 
   const loadClasses = async () => {
     setLoading(true);
