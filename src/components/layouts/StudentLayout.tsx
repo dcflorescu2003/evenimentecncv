@@ -1,15 +1,16 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut } from "lucide-react";
+import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 
 
 const navItems = [
-  { title: "Panou principal", icon: LayoutDashboard, path: "/student" },
+  { title: "Panou", icon: LayoutDashboard, path: "/student" },
   { title: "Evenimente", icon: CalendarDays, path: "/student/events" },
-  { title: "Biletele mele", icon: Ticket, path: "/student/tickets" },
+  { title: "Orar", icon: CalendarRange, path: "/student/orar" },
+  { title: "Bilete", icon: Ticket, path: "/student/tickets" },
 ];
 
 export default function StudentLayout() {
