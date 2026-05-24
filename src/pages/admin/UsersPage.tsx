@@ -166,6 +166,9 @@ export default function UsersPage() {
       if ((values.role === "teacher" || values.role === "homeroom_teacher") && values.teaching_norm) {
         bodyData.teaching_norm = Number(values.teaching_norm);
       }
+      if (values.role === "teacher" || values.role === "homeroom_teacher" || values.role === "coordinator_teacher") {
+        bodyData.initials = values.initials?.trim() || null;
+      }
       const { data, error } = await supabase.functions.invoke("admin-manage-users", { body: bodyData });
       if (error) throw error;
       return data;
@@ -174,7 +177,7 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user_roles"] });
       setCreateDialog(false);
-      setCreateForm({ first_name: "", last_name: "", username: "", role: "student", teaching_norm: "" });
+      setCreateForm({ first_name: "", last_name: "", username: "", role: "student", teaching_norm: "", initials: "" });
       setNewPassword(data.password);
       toast.success("Utilizator creat");
     },
