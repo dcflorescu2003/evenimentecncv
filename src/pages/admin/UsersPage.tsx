@@ -650,6 +650,20 @@ export default function UsersPage() {
                 <Input type="number" min="0" placeholder="ex: 12" value={editForm.teaching_norm} onChange={(e) => setEditForm({ ...editForm, teaching_norm: e.target.value })} />
               </div>
             )}
+            {editForm.roles.some((r) => r === "teacher" || r === "homeroom_teacher" || r === "coordinator_teacher") && (
+              <div className="space-y-2">
+                <Label>Inițiale (pentru orar)</Label>
+                <Input
+                  maxLength={8}
+                  placeholder="ex: GL"
+                  value={editForm.initials}
+                  onChange={(e) => setEditForm({ ...editForm, initials: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
+                </p>
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Anulează</Button>
               <Button type="submit" disabled={editUserMutation.isPending}>
