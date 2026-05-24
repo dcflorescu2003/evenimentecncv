@@ -41,8 +41,8 @@ export default function StudentSchedulePage() {
         setLoading(false);
         return;
       }
-      // @ts-expect-error nested
-      setClassName(assignment.classes?.display_name ?? null);
+      const cls = (assignment as { classes?: { display_name?: string } | null }).classes;
+      setClassName(cls?.display_name ?? null);
 
       const { data: schedule } = await supabase
         .from("class_schedules")
