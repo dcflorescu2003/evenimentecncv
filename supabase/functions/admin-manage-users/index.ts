@@ -74,6 +74,10 @@ serve(async (req) => {
       if (teaching_norm !== undefined && teaching_norm !== null && teaching_norm !== "") {
         profileData.teaching_norm = Number(teaching_norm);
       }
+      if (initials !== undefined) {
+        const v = typeof initials === "string" ? initials.trim() : "";
+        profileData.initials = v ? v : null;
+      }
 
       const { error: profileError } = await supabase.from("profiles").insert(profileData);
       if (profileError) throw profileError;
