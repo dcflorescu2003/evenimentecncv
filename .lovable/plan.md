@@ -1,29 +1,58 @@
-## Problemă
+## Obiectiv
 
-Pe `/student/orar` apare „Niciun meniu disponibil pentru zilele următoare." deși API-ul `https://flashcantemir.onrender.com/api/menu` întoarce date. Cauza: în `CantinaMenuSection.tsx` filtrăm strict `i.date >= todayISO`, iar API-ul nu are intrări pentru ziua curentă / viitoare (ultima intrare e 22.05.2026, azi 24.05.2026 — weekend, cantina nu a publicat încă meniul săptămânii viitoare).
+Adăugare buton "Import XML — toate clasele" în pagina admin `/admin/schedules` care preia un singur fișier XML aSc (cum este `orar_elevi_S7-2.xml`) și importă orarul pentru toate cele 32 de clase într-o singură operație.
 
-## Soluție
+## Maparea numelor de clase XML → DB
 
-Modific `src/components/schedule/CantinaMenuSection.tsx`:
-
-1. **Schimb logica de filtrare**: dacă există intrări pentru azi sau viitor → le arăt pe acelea (max 7 zile înainte). Dacă nu există → fallback la ultimele 1–2 zile disponibile (cele mai recente date din API), cu un mic indicator vizual „Ultimul meniu publicat" pentru a fi clar că nu e meniul de azi.
-2. **Mesaj gol doar dacă API-ul nu returnează absolut nimic.**
-3. Limita la maximum 5 zile afișate, sortate cronologic.
-
-## Detalii tehnice
+XML conține etichete `Clasa <roman> <litera>`. Mapare folosind `grade_number` + `section` din `classes`:
 
 ```text
-dates = items.map(i => i.date) unique, sorted asc
-future = dates.filter(d => d >= todayISO)
-display = future.length > 0 ? future.slice(0, 5)
-                            : dates.slice(-2)   // ultimele 2 zile disponibile
-showStaleHint = future.length === 0 && display.length > 0
+roman(grade_number) + " " + (section ?? "A")  →  caută în XML eticheta "Clasa <roman> <section|A>"
 ```
 
-Restul randării rămâne identic; doar adaug un badge mic „Ultimul meniu publicat" deasupra grilei când `showStaleHint`.
+- Gimnaziu (grade 5–8, section NULL) → "Clasa V A", "Clasa VI A", "Clasa VII A", "Clasa VIII A" (XML are doar varianta A pentru gimnaziu)
+- Liceu (grade 9–12, section A–G) → "Clasa IX A" … "Clasa XII G"
 
-Nu modific edge function-ul `get-cantina-menu` — cache-ul și fetch-ul funcționează corect.
+Funcția existentă `extractClassSchedule(xmlText, "V A")` returnează deja `EditorEntry[]`. O refolosesc pentru fiecare clasă.
 
-## Fișiere modificate
+## Modificări
 
-- `src/components/schedule/CantinaMenuSection.tsx`
+### 1. `src/components/schedule/ImportOrarXmlDialog.tsx`
+Adaug un mod nou „Toate clasele" (toggle / tab nou în dialog, sau buton separat — vezi pct. 2). Acesta:
+- Parsează XML-ul o singură dată.
+- Pentru fiecare `ClassRow` primit prin prop (sau o listă încărcată intern), calculează numele așteptat în XML, apelează `extractClassSchedule`, și agregă rezultatele.
+- Arată un preview: tabel cu clasa, etichetă XML, nr. ore găsite, status (✓ găsită / ⚠️ lipsă / ⛔ 0 ore).
+- La confirmare apelează un nou prop `onBulkImport(results)` care primește `{ classId, entries }[]`.
+
+Sau, mai curat: creez un dialog separat `ImportOrarXmlBulkDialog.tsx` ca să nu complic UI-ul existent.
+
+### 2. `src/pages/admin/SchedulesPage.tsx`
+- Adaug în antetul listei de clase un buton „Import XML — toate clasele" (lângă titlul „Orare clase").
+- La click → deschide noul dialog bulk.
+- La confirmare:
+  - Pentru fiecare clasă cu entries găsite:
+    - Upsert în `class_schedules` (creează dacă nu există, păstrează id-ul existent).
+    - Șterge `schedule_entries` existente pentru acel `schedule_id`.
+    - Inserează entries noi.
+  - Folosesc batching (un singur `insert` cu toate entries-urile concatenate per schedule, sau toate într-un singur insert global cu `schedule_id` pe rând).
+  - Toast: „X clase importate, Y ore în total, Z clase fără date".
+  - Reîncarcă lista (`loadClasses`).
+
+### 3. Roman conversion
+Adaug helper local în dialog/page:
+```ts
+const ROMAN: Record<number,string> = {5:"V",6:"VI",7:"VII",8:"VIII",9:"IX",10:"X",11:"XI",12:"XII"};
+const xmlKey = (grade:number, section:string|null) => `${ROMAN[grade]} ${section ?? "A"}`;
+```
+
+## Fără modificări la
+
+- `src/lib/import-orar-xml.ts` (folosesc funcțiile existente)
+- Schema DB
+- Tabela `class_schedules` / `schedule_entries`
+
+## Edge cases
+
+- Clase fără orar găsit în XML → raportate în preview și sărite, fără eroare.
+- Clase deja cu orar în DB → suprascriere completă (la fel ca importul individual existent), cu un checkbox „Suprascrie orarele existente" implicit bifat.
+- Erori parțiale: continuă cu următoarea clasă, raportează la final.
