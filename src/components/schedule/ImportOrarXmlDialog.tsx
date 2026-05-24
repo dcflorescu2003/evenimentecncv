@@ -63,13 +63,13 @@ export default function ImportOrarXmlDialog({
       return;
     }
     if (!className.trim()) {
-      toast.error("Introdu numele clasei (ex. „V A").");
+      toast.error('Introdu numele clasei (ex. „V A”).');
       return;
     }
     try {
       const { entries, matchedLabel } = extractClassSchedule(xmlText, className);
       if (!matchedLabel) {
-        toast.error(`Eticheta „Clasa ${className}" nu a fost găsită în XML.`);
+        toast.error(`Eticheta „Clasa ${className}” nu a fost găsită în XML.`);
         return;
       }
       if (entries.length === 0) {
@@ -77,7 +77,7 @@ export default function ImportOrarXmlDialog({
         return;
       }
       onImport(entries);
-      toast.success(`${entries.length} ore încărcate. Verifică și apasă „Salvează".`);
+      toast.success(`${entries.length} ore încărcate. Verifică și apasă „Salvează”.`);
       onOpenChange(false);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "necunoscută";
@@ -128,7 +128,7 @@ export default function ImportOrarXmlDialog({
               placeholder="ex. V A, IX C, XII G"
             />
             <p className="text-xs text-muted-foreground">
-              Format: număr roman + spațiu + literă secțiune (fără cuvântul „Clasa").
+              Format: număr roman + spațiu + literă secțiune (fără cuvântul „Clasa”).
             </p>
           </div>
 
