@@ -103,6 +103,7 @@ const App = () => (
               <Route path="/admin/audit" element={<AuditPage />} />
               <Route path="/admin/credentials" element={<CredentialsPage />} />
               <Route path="/admin/scan" element={<AdminScanPage />} />
+              <Route path="/admin/schedules" element={<SchedulesPage />} />
             </Route>
 
             {/* Student routes */}
@@ -118,6 +119,7 @@ const App = () => (
               <Route path="/student/events/:id" element={<StudentEventDetailPage />} />
               <Route path="/student/tickets" element={<StudentTicketsPage />} />
               <Route path="/student/scan/:eventId" element={<StudentScanPage />} />
+              <Route path="/student/orar" element={<StudentSchedulePage />} />
             </Route>
 
             {/* Teacher (profesor) routes */}
