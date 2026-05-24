@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Upload, Download } from "lucide-react";
+import { ArrowLeft, Upload, Download, FileCode2 } from "lucide-react";
 import { toast } from "sonner";
 import ScheduleGridEditor, { type EditorEntry } from "@/components/schedule/ScheduleGridEditor";
+import ImportOrarXmlDialog from "@/components/schedule/ImportOrarXmlDialog";
 import { DAYS, PERIODS } from "@/lib/schedule-periods";
 
 interface ClassRow {
@@ -32,6 +33,7 @@ export default function SchedulesPage() {
   const [entries, setEntries] = useState<EditorEntry[]>([]);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [xmlDialogOpen, setXmlDialogOpen] = useState(false);
 
   const loadClasses = async () => {
     setLoading(true);
@@ -231,6 +233,13 @@ export default function SchedulesPage() {
               >
                 <Upload className="mr-1 h-4 w-4" /> Import CSV
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setXmlDialogOpen(true)}
+              >
+                <FileCode2 className="mr-1 h-4 w-4" /> Import XML aSc
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -250,6 +259,13 @@ export default function SchedulesPage() {
             />
           </CardContent>
         </Card>
+
+        <ImportOrarXmlDialog
+          open={xmlDialogOpen}
+          onOpenChange={setXmlDialogOpen}
+          defaultClassName={selected.display_name.replace(/^Clasa\s+/i, "").trim()}
+          onImport={(rows) => setEntries(rows)}
+        />
       </div>
     );
   }
