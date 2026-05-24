@@ -31,6 +31,7 @@ export default function StudentSchedulePage() {
     if (!user) return;
     (async () => {
       setLoading(true);
+      fetchTeacherInitialsMap().then(setInitialsMap).catch(() => setInitialsMap(new Map()));
       const { data: assignment } = await supabase
         .from("student_class_assignments")
         .select("class_id, academic_year, classes(display_name)")
