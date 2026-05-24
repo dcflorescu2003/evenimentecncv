@@ -24,6 +24,7 @@ import ReportsPage from "./pages/admin/ReportsPage";
 import AuditPage from "./pages/admin/AuditPage";
 import CredentialsPage from "./pages/admin/CredentialsPage";
 import AdminScanPage from "./pages/admin/AdminScanPage";
+import SchedulesPage from "./pages/admin/SchedulesPage";
 
 import StudentLayout from "./components/layouts/StudentLayout";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -31,6 +32,7 @@ import StudentEventsPage from "./pages/student/StudentEventsPage";
 import StudentEventDetailPage from "./pages/student/StudentEventDetailPage";
 import StudentTicketsPage from "./pages/student/StudentTicketsPage";
 import StudentScanPage from "./pages/student/StudentScanPage";
+import StudentSchedulePage from "./pages/student/StudentSchedulePage";
 
 import TeacherLayout from "./components/layouts/TeacherLayout";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
