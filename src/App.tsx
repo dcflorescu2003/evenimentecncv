@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
 import DeleteAccountPage from "./pages/DeleteAccountPage";
 import NotFound from "./pages/NotFound";
+import AppHub from "./pages/AppHub";
 
 import AdminLayout from "./components/layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -82,7 +83,17 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/delete-account" element={<DeleteAccountPage />} />
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/app" replace />} />
+
+            {/* App hub — post-login landing for all roles */}
+            <Route
+              path="/app"
+              element={
+                <ProtectedRoute>
+                  <AppHub />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Admin routes */}
             <Route
