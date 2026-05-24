@@ -1,58 +1,32 @@
 ## Obiectiv
 
-Adăugare buton "Import XML — toate clasele" în pagina admin `/admin/schedules` care preia un singur fișier XML aSc (cum este `orar_elevi_S7-2.xml`) și importă orarul pentru toate cele 32 de clase într-o singură operație.
-
-## Maparea numelor de clase XML → DB
-
-XML conține etichete `Clasa <roman> <litera>`. Mapare folosind `grade_number` + `section` din `classes`:
-
-```text
-roman(grade_number) + " " + (section ?? "A")  →  caută în XML eticheta "Clasa <roman> <section|A>"
-```
-
-- Gimnaziu (grade 5–8, section NULL) → "Clasa V A", "Clasa VI A", "Clasa VII A", "Clasa VIII A" (XML are doar varianta A pentru gimnaziu)
-- Liceu (grade 9–12, section A–G) → "Clasa IX A" … "Clasa XII G"
-
-Funcția existentă `extractClassSchedule(xmlText, "V A")` returnează deja `EditorEntry[]`. O refolosesc pentru fiecare clasă.
+Bottom nav-ul elevului devine specific modulului curent, iar comutarea între module se face dintr-un dropdown în header (în locul butonului care duce la `/app`).
 
 ## Modificări
 
-### 1. `src/components/schedule/ImportOrarXmlDialog.tsx`
-Adaug un mod nou „Toate clasele" (toggle / tab nou în dialog, sau buton separat — vezi pct. 2). Acesta:
-- Parsează XML-ul o singură dată.
-- Pentru fiecare `ClassRow` primit prin prop (sau o listă încărcată intern), calculează numele așteptat în XML, apelează `extractClassSchedule`, și agregă rezultatele.
-- Arată un preview: tabel cu clasa, etichetă XML, nr. ore găsite, status (✓ găsită / ⚠️ lipsă / ⛔ 0 ore).
-- La confirmare apelează un nou prop `onBulkImport(results)` care primește `{ classId, entries }[]`.
+### 1. `src/components/ModuleSwitcher.tsx` (nou)
+Înlocuiește `ModulesButton` în header. Dropdown (shadcn `DropdownMenu`) care:
+- afișează iconiță `LayoutGrid` + label scurt cu numele modulului curent
+- listează toate modulele activate pentru rolurile userului (din `getEnabledModules`)
+- marchează modulul curent (check)
+- la click navighează direct la path-ul modulului (fără a mai trece prin `/app`)
+- păstrează intrare „Toate modulele” → `/app` (opțional, pentru hub-ul de carduri)
 
-Sau, mai curat: creez un dialog separat `ImportOrarXmlBulkDialog.tsx` ca să nu complic UI-ul existent.
+### 2. `src/components/layouts/StudentLayout.tsx`
+- Detectează modulul curent din `location.pathname`:
+  - `schedule` dacă path-ul începe cu `/student/orar`
+  - `events` altfel
+- Două seturi de `navItems`:
+  - **Evenimente**: Panou (`/student`), Evenimente (`/student/events`), Bilete (`/student/tickets`)  — fără Orar
+  - **Orar & Meniu**: Orar (`/student/orar`) — fără cele 3 butoane de evenimente
+- În header înlocuiește `<ModulesButton />` cu `<ModuleSwitcher />`.
 
-### 2. `src/pages/admin/SchedulesPage.tsx`
-- Adaug în antetul listei de clase un buton „Import XML — toate clasele" (lângă titlul „Orare clase").
-- La click → deschide noul dialog bulk.
-- La confirmare:
-  - Pentru fiecare clasă cu entries găsite:
-    - Upsert în `class_schedules` (creează dacă nu există, păstrează id-ul existent).
-    - Șterge `schedule_entries` existente pentru acel `schedule_id`.
-    - Inserează entries noi.
-  - Folosesc batching (un singur `insert` cu toate entries-urile concatenate per schedule, sau toate într-un singur insert global cu `schedule_id` pe rând).
-  - Toast: „X clase importate, Y ore în total, Z clase fără date".
-  - Reîncarcă lista (`loadClasses`).
+Bottom nav-ul cu un singur item (Orar) e ok vizual; dacă vrei mai târziu împărțim pagina în „Orar” și „Meniu cantină” ca rute separate.
 
-### 3. Roman conversion
-Adaug helper local în dialog/page:
-```ts
-const ROMAN: Record<number,string> = {5:"V",6:"VI",7:"VII",8:"VIII",9:"IX",10:"X",11:"XI",12:"XII"};
-const xmlKey = (grade:number, section:string|null) => `${ROMAN[grade]} ${section ?? "A"}`;
-```
+### 3. Restul layout-urilor (`AdminLayout`, `CoordinatorLayout`, `ManagerLayout`, `ProfLayout`, `TeacherLayout`)
+Înlocuim `ModulesButton` cu `ModuleSwitcher` în header pentru consistență (acelea n-au bottom nav, deci nu se schimbă altceva).
 
-## Fără modificări la
-
-- `src/lib/import-orar-xml.ts` (folosesc funcțiile existente)
-- Schema DB
-- Tabela `class_schedules` / `schedule_entries`
-
-## Edge cases
-
-- Clase fără orar găsit în XML → raportate în preview și sărite, fără eroare.
-- Clase deja cu orar în DB → suprascriere completă (la fel ca importul individual existent), cu un checkbox „Suprascrie orarele existente" implicit bifat.
-- Erori parțiale: continuă cu următoarea clasă, raportează la final.
+## Ce NU se atinge
+- `src/modules/registry.ts` rămâne neschimbat.
+- `/app` (AppHub-ul cu carduri) rămâne ca pagină accesibilă, dar nu mai e ecranul implicit de comutare.
+- Logica paginilor (Orar, Evenimente, Bilete) nu se modifică.
