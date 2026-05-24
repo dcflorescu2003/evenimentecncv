@@ -206,6 +206,13 @@ export default function SchedulesPage() {
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
             <CardTitle className="text-base">Editor orar</CardTitle>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={downloadModelCsv}
+              >
+                <Download className="mr-1 h-4 w-4" /> Model CSV
+              </Button>
               <input
                 id="csv-upload"
                 type="file"
@@ -227,9 +234,14 @@ export default function SchedulesPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Format CSV: <code>day,period,subject,teacher_name,room</code> — <code>day</code> = 1-5 sau Luni/Marți/.../Vineri. Importul înlocuiește toate orele afișate până la următoarea salvare.
-            </p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>
+                Format CSV: <code>day,period,subject,teacher_name,room</code> — <code>day</code> = 1-5 sau Luni/Marți/.../Vineri. Importul înlocuiește toate orele afișate până la următoarea salvare.
+              </p>
+              <p>
+                Ore disponibile: {PERIODS.map((p) => `Ora ${p.period} (${p.start}-${p.end})`).join(", ")}
+              </p>
+            </div>
             <ScheduleGridEditor
               key={selected.id + (scheduleId ?? "")}
               initial={entries}
