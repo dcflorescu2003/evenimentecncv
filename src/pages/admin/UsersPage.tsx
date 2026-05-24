@@ -713,6 +713,20 @@ export default function UsersPage() {
                 <Input type="number" min="0" placeholder="ex: 12" value={createForm.teaching_norm} onChange={(e) => setCreateForm({ ...createForm, teaching_norm: e.target.value })} />
               </div>
             )}
+            {(createForm.role === "teacher" || createForm.role === "homeroom_teacher" || createForm.role === "coordinator_teacher") && (
+              <div className="space-y-2">
+                <Label>Inițiale (pentru orar)</Label>
+                <Input
+                  maxLength={8}
+                  placeholder="ex: GL"
+                  value={createForm.initials}
+                  onChange={(e) => setCreateForm({ ...createForm, initials: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
+                </p>
+              </div>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateDialog(false)}>Anulează</Button>
               <Button type="submit" disabled={createUserMutation.isPending}>
