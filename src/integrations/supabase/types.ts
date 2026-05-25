@@ -1177,6 +1177,7 @@ export type Database = {
         Args: { _student_id: string; _teacher_id: string }
         Returns: boolean
       }
+      lookup_public_reservation: { Args: { p_code: string }; Returns: Json }
       move_to_dlq: {
         Args: {
           dlq_name: string
