@@ -37,21 +37,18 @@ export default function PublicTicketViewPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["public_tickets_view", searchCode],
     queryFn: async () => {
-      const { data: reservations, error } = await supabase
-        .from("public_reservations")
-        .select("*, public_tickets(*)")
-        .eq("reservation_code", searchCode);
+      const { data: result, error } = await supabase.rpc("lookup_public_reservation", {
+        p_code: searchCode,
+      });
       if (error) throw error;
-      if (!reservations || reservations.length === 0) return null;
-      
-      const reservation = reservations[0] as any;
-      const { data: event } = await supabase
-        .from("events")
-        .select("title, date, start_time, end_time, location")
-        .eq("id", reservation.event_id)
-        .single();
-      
-      return { reservation, tickets: reservation.public_tickets || [], event };
+      if (!result) return null;
+      const payload = result as { reservation: any; tickets: any[]; event: any } | null;
+      if (!payload) return null;
+      return {
+        reservation: payload.reservation,
+        tickets: payload.tickets || [],
+        event: payload.event,
+      };
     },
     enabled: !!searchCode && searchCode.length > 5,
   });
