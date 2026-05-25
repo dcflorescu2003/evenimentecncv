@@ -1,42 +1,26 @@
-## Obiectiv
+## Vizualizare pe zile în orar
 
-Permite afișarea numelui complet al profesorului în orar atunci când inițialele din XML coincid cu inițialele unui profesor înregistrat. La coliziuni (2+ profesori cu aceleași inițiale) se păstrează inițialele și le ajustezi manual.
+Adăugăm la `StudentSchedulePage.tsx` un comutator între două moduri de vizualizare:
 
-## Modificări
+1. **Săptămână** (curent) — tabel cu toate zilele.
+2. **Zi** — o singură zi afișată, cu butoane `‹ Ziua anterioară` / `Ziua următoare ›` și indicator (Luni / Marți / ...).
 
-### 1. Bază de date
+### UI
 
-Migrație: adaug coloana `initials text` (nullable, max 8 caractere) pe `profiles`. Index parțial pentru lookup rapid pe inițiale ne-nule.
+- Sus, în header-ul cardului „Orarul clasei", două butoane (sau `Tabs`): `Săptămână` | `Zi`.
+- În modul Zi:
+  - Bară de navigație: `‹`  **Luni**  `›` (centrat), cu numele zilei curente.
+  - Listă verticală a orelor (similar cu varianta mobile actuală), evidențiind ora curentă dacă e azi.
+  - Default: ziua de azi dacă e Lu–Vi, altfel Luni.
+  - Navigarea ciclică Lu↔Vi (nu sare în weekend).
+- Pe mobile, tab-urile L/Ma/Mi/J/V existente rămân ca atare (modul Zi e implicit oricum pe mobile, comutatorul Săptămână/Zi poate fi ascuns sub `md`).
 
-### 2. Edge function `admin-manage-users`
+### Implementare
 
-- `create_user` și `update_user`: accept un câmp opțional `initials` (string sau null) care se salvează în `profiles.initials`.
+- State nou `viewMode: "week" | "day"` și `selectedDay: number` (1–5).
+- Refactor minim: extragem randarea unei zile (lista de ore) într-un helper local, reutilizat de varianta mobile actuală și de noul mod Zi pe desktop.
+- Fără modificări de logică / DB / API. Doar prezentare.
 
-### 3. UI Admin Utilizatori (`src/pages/admin/UsersPage.tsx`)
+### Fișiere
 
-- În dialogurile de creare/editare utilizator: câmp text "Inițiale" vizibil pentru rolurile `teacher`, `coordinator_teacher`, `homeroom_teacher`.
-- Afișare inițialelor în tabelul de profesori (coloană nouă sau lângă nume).
-
-### 4. Rezolvare nume profesor la afișare orar
-
-- Helper nou `src/lib/teacher-initials.ts` cu funcția `resolveTeacherDisplay(initials, teacherMap)`:
-  - construiește un `Map<string, string[]>` (inițiale → listă nume complete)
-  - dacă există exact 1 match → întoarce numele complet ("Nume Prenume")
-  - dacă 0 sau ≥2 match-uri → întoarce inițialele neschimbate
-- În `StudentSchedulePage.tsx` și oriunde se afișează orarul: încarc `profiles` cu `initials` ne-nule + roluri profesor, construiesc map-ul, înlocuiesc `teacher_name` la randare (fără a modifica datele salvate în DB).
-
-### 5. Editor grilă (`ScheduleGridEditor.tsx`)
-
-- Câmpul rămâne `teacher_name` (text liber, conține inițialele importate). Nu schimb logica de import.
-- Sub câmp: badge mic care arată numele rezolvat dacă există match unic, sau "Inițiale duplicate" la coliziune (doar indicativ pentru admin).
-
-## Ce NU se schimbă
-
-- Importul XML continuă să salveze inițialele ca text în `teacher_name`.
-- Nu se face matching la import (rezolvare strict la afișare) — astfel dacă adaugi inițiale ulterior, numele apar automat fără reimport.
-- Datele existente rămân valabile.
-
-## Întrebare rapidă
-
-Câmpul "Inițiale" îl vrei doar pentru profesori (teacher/coordinator_teacher/homeroom_teacher) sau și pentru admin/manager? Plan curent: doar profesori.  
-Doar profesori
+- `src/pages/student/StudentSchedulePage.tsx` — singura modificare.

@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { PERIODS, DAYS, getCurrentPeriod } from "@/lib/schedule-periods";
-import { CalendarRange, MapPin, User } from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight, MapPin, User } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import CantinaMenuSection from "@/components/schedule/CantinaMenuSection";
@@ -26,6 +27,13 @@ export default function StudentSchedulePage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [initialsMap, setInitialsMap] = useState<TeacherInitialsMap>(new Map());
   const current = getCurrentPeriod();
+  const [viewMode, setViewMode] = useState<"week" | "day">("week");
+  const [selectedDay, setSelectedDay] = useState<number>(() => {
+    const c = getCurrentPeriod();
+    if (c) return c.day;
+    const d = new Date().getDay();
+    return d >= 1 && d <= 5 ? d : 1;
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -68,7 +76,6 @@ export default function StudentSchedulePage() {
   const byKey = new Map<string, Entry>();
   entries.forEach((e) => byKey.set(`${e.day_of_week}-${e.period}`, e));
 
-  // Determine active period rows (only those used)
   const usedPeriods = new Set(entries.map((e) => e.period));
   const visiblePeriods = PERIODS.filter((p) => usedPeriods.has(p.period));
 
@@ -94,6 +101,34 @@ export default function StudentSchedulePage() {
     );
   };
 
+  const renderDayList = (day: number) => (
+    <div className="space-y-2">
+      {visiblePeriods.map((p) => {
+        const e = byKey.get(`${day}-${p.period}`);
+        const isNow = current?.day === day && current?.period === p.period;
+        return (
+          <div
+            key={p.period}
+            className={`flex gap-3 rounded-md border p-2 ${
+              isNow ? "border-primary bg-primary/5" : ""
+            }`}
+          >
+            <div className="w-16 shrink-0 text-xs text-muted-foreground">
+              <div className="font-medium text-foreground">Ora {p.period}</div>
+              <div>{p.start}</div>
+              <div>{p.end}</div>
+            </div>
+            <div className="flex-1">{renderCell(e)}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const goPrevDay = () => setSelectedDay((d) => (d <= 1 ? 5 : d - 1));
+  const goNextDay = () => setSelectedDay((d) => (d >= 5 ? 1 : d + 1));
+  const selectedDayLabel = DAYS.find((d) => d.value === selectedDay)?.label ?? "";
+
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <div>
@@ -105,10 +140,20 @@ export default function StudentSchedulePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <CalendarRange className="h-5 w-5 text-primary" />
-            Orarul clasei
-          </CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CalendarRange className="h-5 w-5 text-primary" />
+              Orarul clasei
+            </CardTitle>
+            {!isMobile && entries.length > 0 && (
+              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "week" | "day")}>
+                <TabsList>
+                  <TabsTrigger value="week">Săptămână</TabsTrigger>
+                  <TabsTrigger value="day">Zi</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -129,30 +174,38 @@ export default function StudentSchedulePage() {
                 ))}
               </TabsList>
               {DAYS.map((d) => (
-                <TabsContent key={d.value} value={String(d.value)} className="space-y-2 pt-3">
-                  {visiblePeriods.map((p) => {
-                    const e = byKey.get(`${d.value}-${p.period}`);
-                    const isNow =
-                      current?.day === d.value && current?.period === p.period;
-                    return (
-                      <div
-                        key={p.period}
-                        className={`flex gap-3 rounded-md border p-2 ${
-                          isNow ? "border-primary bg-primary/5" : ""
-                        }`}
-                      >
-                        <div className="w-16 shrink-0 text-xs text-muted-foreground">
-                          <div className="font-medium text-foreground">Ora {p.period}</div>
-                          <div>{p.start}</div>
-                          <div>{p.end}</div>
-                        </div>
-                        <div className="flex-1">{renderCell(e)}</div>
-                      </div>
-                    );
-                  })}
+                <TabsContent key={d.value} value={String(d.value)} className="pt-3">
+                  {renderDayList(d.value)}
                 </TabsContent>
               ))}
             </Tabs>
+          ) : viewMode === "day" ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <Button variant="outline" size="sm" onClick={goPrevDay}>
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  Ziua anterioară
+                </Button>
+                <div className="text-base font-semibold">{selectedDayLabel}</div>
+                <Button variant="outline" size="sm" onClick={goNextDay}>
+                  Ziua următoare
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap justify-center gap-1">
+                {DAYS.map((d) => (
+                  <Button
+                    key={d.value}
+                    variant={d.value === selectedDay ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setSelectedDay(d.value)}
+                  >
+                    {d.label}
+                  </Button>
+                ))}
+              </div>
+              {renderDayList(selectedDay)}
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
