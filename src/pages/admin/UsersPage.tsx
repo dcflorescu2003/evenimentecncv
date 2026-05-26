@@ -688,19 +688,29 @@ export default function UsersPage() {
                 <Input type="number" min="0" placeholder="ex: 12" value={editForm.teaching_norm} onChange={(e) => setEditForm({ ...editForm, teaching_norm: e.target.value })} />
               </div>
             )}
-            {editForm.roles.some((r) => r === "teacher" || r === "homeroom_teacher" || r === "coordinator_teacher") && (
-              <div className="space-y-2">
-                <Label>Inițiale (pentru orar)</Label>
-                <Input
-                  maxLength={8}
-                  placeholder="ex: GL"
-                  value={editForm.initials}
-                  onChange={(e) => setEditForm({ ...editForm, initials: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
-                </p>
-              </div>
+            {editForm.roles.some((r) => TEACHER_ROLES.has(r)) && (
+              <>
+                <div className="space-y-2">
+                  <Label>Inițiale (pentru orar)</Label>
+                  <Input
+                    maxLength={8}
+                    placeholder="ex: GL"
+                    value={editForm.initials}
+                    onChange={(e) => setEditForm({ ...editForm, initials: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Materii predate</Label>
+                  <SubjectsMultiSelect
+                    subjects={subjects}
+                    value={editForm.subject_ids}
+                    onChange={(ids) => setEditForm({ ...editForm, subject_ids: ids })}
+                  />
+                </div>
+              </>
             )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Anulează</Button>
@@ -751,19 +761,29 @@ export default function UsersPage() {
                 <Input type="number" min="0" placeholder="ex: 12" value={createForm.teaching_norm} onChange={(e) => setCreateForm({ ...createForm, teaching_norm: e.target.value })} />
               </div>
             )}
-            {(createForm.role === "teacher" || createForm.role === "homeroom_teacher" || createForm.role === "coordinator_teacher") && (
-              <div className="space-y-2">
-                <Label>Inițiale (pentru orar)</Label>
-                <Input
-                  maxLength={8}
-                  placeholder="ex: GL"
-                  value={createForm.initials}
-                  onChange={(e) => setCreateForm({ ...createForm, initials: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
-                </p>
-              </div>
+            {TEACHER_ROLES.has(createForm.role) && (
+              <>
+                <div className="space-y-2">
+                  <Label>Inițiale (pentru orar)</Label>
+                  <Input
+                    maxLength={8}
+                    placeholder="ex: GL"
+                    value={createForm.initials}
+                    onChange={(e) => setCreateForm({ ...createForm, initials: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Materii predate</Label>
+                  <SubjectsMultiSelect
+                    subjects={subjects}
+                    value={createForm.subject_ids}
+                    onChange={(ids) => setCreateForm({ ...createForm, subject_ids: ids })}
+                  />
+                </div>
+              </>
             )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateDialog(false)}>Anulează</Button>
