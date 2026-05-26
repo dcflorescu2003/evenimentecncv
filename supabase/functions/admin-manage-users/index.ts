@@ -51,7 +51,7 @@ serve(async (req) => {
 
     if (action === "create_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
-      const { first_name, last_name, username, role, teaching_norm, initials } = body;
+      const { first_name, last_name, username, role, teaching_norm, initials, subject_ids } = body;
       const password = DEFAULT_PASSWORD;
       const email = `${username}@school.local`;
 
@@ -87,6 +87,16 @@ serve(async (req) => {
         role,
       });
       if (roleError) throw roleError;
+
+      if (Array.isArray(subject_ids) && subject_ids.length > 0) {
+        const rows = subject_ids
+          .filter((id: unknown) => typeof id === "string" && id.length > 0)
+          .map((subject_id: string) => ({ teacher_id: userId, subject_id }));
+        if (rows.length > 0) {
+          const { error: tsError } = await supabase.from("teacher_subjects").insert(rows);
+          if (tsError) throw tsError;
+        }
+      }
 
       return new Response(JSON.stringify({ password, username }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
