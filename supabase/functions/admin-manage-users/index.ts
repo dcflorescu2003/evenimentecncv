@@ -320,7 +320,7 @@ serve(async (req) => {
 
     if (action === "update_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
-      const { user_id, first_name, last_name, username, teaching_norm, roles, initials } = body;
+      const { user_id, first_name, last_name, username, teaching_norm, roles, initials, subject_ids } = body;
       if (!user_id || !first_name || !last_name || !username) {
         throw new Error("user_id, first_name, last_name și username sunt obligatorii");
       }
@@ -358,6 +358,18 @@ serve(async (req) => {
       const roleRows = roles.map((role: string) => ({ user_id, role }));
       const { error: roleError } = await supabase.from("user_roles").insert(roleRows);
       if (roleError) throw roleError;
+
+      if (Array.isArray(subject_ids)) {
+        const { error: delTsError } = await supabase.from("teacher_subjects").delete().eq("teacher_id", user_id);
+        if (delTsError) throw delTsError;
+        const rows = subject_ids
+          .filter((id: unknown) => typeof id === "string" && id.length > 0)
+          .map((subject_id: string) => ({ teacher_id: user_id, subject_id }));
+        if (rows.length > 0) {
+          const { error: insTsError } = await supabase.from("teacher_subjects").insert(rows);
+          if (insTsError) throw insTsError;
+        }
+      }
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
