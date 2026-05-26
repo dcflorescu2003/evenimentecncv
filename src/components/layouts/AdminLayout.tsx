@@ -30,6 +30,7 @@ import {
   LogOut,
   KeyRound,
   QrCode,
+  BookOpen,
 } from "lucide-react";
 
 const menuItems = [
@@ -37,6 +38,7 @@ const menuItems = [
   { title: "Sesiuni program", icon: Calendar, path: "/admin/sessions" },
   { title: "Clase", icon: GraduationCap, path: "/admin/classes" },
   { title: "Orare clase", icon: CalendarRange, path: "/admin/schedules" },
+  { title: "Materii", icon: BookOpen, path: "/admin/subjects" },
   { title: "Import CSV", icon: FileUp, path: "/admin/import" },
   { title: "Evenimente", icon: CalendarDays, path: "/admin/events" },
   { title: "Scanare bilete", icon: QrCode, path: "/admin/scan" },
