@@ -196,8 +196,9 @@ export default function UsersPage() {
       if ((values.role === "teacher" || values.role === "homeroom_teacher") && values.teaching_norm) {
         bodyData.teaching_norm = Number(values.teaching_norm);
       }
-      if (values.role === "teacher" || values.role === "homeroom_teacher" || values.role === "coordinator_teacher") {
+      if (TEACHER_ROLES.has(values.role)) {
         bodyData.initials = values.initials?.trim() || null;
+        bodyData.subject_ids = values.subject_ids ?? [];
       }
       const { data, error } = await supabase.functions.invoke("admin-manage-users", { body: bodyData });
       if (error) throw error;
@@ -206,8 +207,9 @@ export default function UsersPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user_roles"] });
+      queryClient.invalidateQueries({ queryKey: ["teacher_subjects"] });
       setCreateDialog(false);
-      setCreateForm({ first_name: "", last_name: "", username: "", role: "student", teaching_norm: "", initials: "" });
+      setCreateForm({ first_name: "", last_name: "", username: "", role: "student", teaching_norm: "", initials: "", subject_ids: [] });
       setNewPassword(data.password);
       toast.success("Utilizator creat");
     },
@@ -242,8 +244,9 @@ export default function UsersPage() {
         ? (values.teaching_norm ? Number(values.teaching_norm) : null)
         : null;
 
-      const hasTeacherRole = values.roles.some((r) => r === "teacher" || r === "homeroom_teacher" || r === "coordinator_teacher");
+      const hasTeacherRole = values.roles.some((r) => TEACHER_ROLES.has(r));
       bodyData.initials = hasTeacherRole ? (values.initials?.trim() || null) : null;
+      bodyData.subject_ids = hasTeacherRole ? (values.subject_ids ?? []) : [];
 
       const { data, error } = await supabase.functions.invoke("admin-manage-users", {
         body: bodyData,
@@ -255,6 +258,7 @@ export default function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user_roles"] });
+      queryClient.invalidateQueries({ queryKey: ["teacher_subjects"] });
       setEditUser(null);
       toast.success("Utilizator actualizat");
     },
