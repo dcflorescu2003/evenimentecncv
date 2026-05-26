@@ -105,8 +105,34 @@ export default function UsersPage() {
     },
   });
 
+  const { data: subjects = [] } = useQuery({
+    queryKey: ["subjects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subjects")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as Subject[];
+    },
+  });
+
+  const { data: allTeacherSubjects = [] } = useQuery({
+    queryKey: ["teacher_subjects"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("teacher_subjects").select("*");
+      if (error) throw error;
+      return (data ?? []) as TeacherSubject[];
+    },
+  });
+
   function getRoles(userId: string) {
     return allRoles.filter((r) => r.user_id === userId).map((r) => r.role);
+  }
+
+  function getTeacherSubjectIds(userId: string) {
+    return allTeacherSubjects.filter((t) => t.teacher_id === userId).map((t) => t.subject_id);
   }
 
   const filteredProfiles = profiles.filter((p) => {
