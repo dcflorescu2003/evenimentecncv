@@ -797,3 +797,39 @@ export default function UsersPage() {
     </div>
   );
 }
+
+function SubjectsMultiSelect({
+  subjects,
+  value,
+  onChange,
+}: {
+  subjects: Subject[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const selected = new Set(value);
+  function toggle(id: string) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange(Array.from(next));
+  }
+  return (
+    <div className="max-h-48 overflow-auto rounded-md border p-2 space-y-1">
+      {subjects.length === 0 ? (
+        <p className="px-1 py-2 text-xs text-muted-foreground">
+          Nicio materie definită. Adăugați materii din meniul „Materii".
+        </p>
+      ) : (
+        subjects.map((s) => (
+          <label key={s.id} className="flex items-center gap-2 rounded px-1 py-1 text-sm cursor-pointer hover:bg-muted">
+            <Checkbox checked={selected.has(s.id)} onCheckedChange={() => toggle(s.id)} />
+            <span className="truncate">{s.name}</span>
+            {s.short_name && <span className="ml-auto text-xs text-muted-foreground">{s.short_name}</span>}
+          </label>
+        ))
+      )}
+    </div>
+  );
+}
+
