@@ -25,6 +25,10 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
 type UserRole = Tables<"user_roles">;
+type Subject = Tables<"subjects">;
+type TeacherSubject = Tables<"teacher_subjects">;
+
+const TEACHER_ROLES = new Set(["teacher", "homeroom_teacher", "coordinator_teacher"]);
 
 const roleLabels: Record<string, string> = {
   admin: "Administrator",
@@ -47,12 +51,12 @@ export default function UsersPage() {
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [createDialog, setCreateDialog] = useState(false);
   const [createForm, setCreateForm] = useState({
-    first_name: "", last_name: "", username: "", role: "student" as string, teaching_norm: "" as string, initials: "" as string,
+    first_name: "", last_name: "", username: "", role: "student" as string, teaching_norm: "" as string, initials: "" as string, subject_ids: [] as string[],
   });
   const [editNormId, setEditNormId] = useState<string | null>(null);
   const [editNormValue, setEditNormValue] = useState("");
   const [editUser, setEditUser] = useState<Profile | null>(null);
-  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "", initials: "", roles: [] as string[] });
+  const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "", initials: "", roles: [] as string[], subject_ids: [] as string[] });
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["profiles"],
@@ -101,8 +105,34 @@ export default function UsersPage() {
     },
   });
 
+  const { data: subjects = [] } = useQuery({
+    queryKey: ["subjects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subjects")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as Subject[];
+    },
+  });
+
+  const { data: allTeacherSubjects = [] } = useQuery({
+    queryKey: ["teacher_subjects"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("teacher_subjects").select("*");
+      if (error) throw error;
+      return (data ?? []) as TeacherSubject[];
+    },
+  });
+
   function getRoles(userId: string) {
     return allRoles.filter((r) => r.user_id === userId).map((r) => r.role);
+  }
+
+  function getTeacherSubjectIds(userId: string) {
+    return allTeacherSubjects.filter((t) => t.teacher_id === userId).map((t) => t.subject_id);
   }
 
   const filteredProfiles = profiles.filter((p) => {
@@ -166,8 +196,9 @@ export default function UsersPage() {
       if ((values.role === "teacher" || values.role === "homeroom_teacher") && values.teaching_norm) {
         bodyData.teaching_norm = Number(values.teaching_norm);
       }
-      if (values.role === "teacher" || values.role === "homeroom_teacher" || values.role === "coordinator_teacher") {
+      if (TEACHER_ROLES.has(values.role)) {
         bodyData.initials = values.initials?.trim() || null;
+        bodyData.subject_ids = values.subject_ids ?? [];
       }
       const { data, error } = await supabase.functions.invoke("admin-manage-users", { body: bodyData });
       if (error) throw error;
@@ -176,8 +207,9 @@ export default function UsersPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user_roles"] });
+      queryClient.invalidateQueries({ queryKey: ["teacher_subjects"] });
       setCreateDialog(false);
-      setCreateForm({ first_name: "", last_name: "", username: "", role: "student", teaching_norm: "", initials: "" });
+      setCreateForm({ first_name: "", last_name: "", username: "", role: "student", teaching_norm: "", initials: "", subject_ids: [] });
       setNewPassword(data.password);
       toast.success("Utilizator creat");
     },
@@ -212,8 +244,9 @@ export default function UsersPage() {
         ? (values.teaching_norm ? Number(values.teaching_norm) : null)
         : null;
 
-      const hasTeacherRole = values.roles.some((r) => r === "teacher" || r === "homeroom_teacher" || r === "coordinator_teacher");
+      const hasTeacherRole = values.roles.some((r) => TEACHER_ROLES.has(r));
       bodyData.initials = hasTeacherRole ? (values.initials?.trim() || null) : null;
+      bodyData.subject_ids = hasTeacherRole ? (values.subject_ids ?? []) : [];
 
       const { data, error } = await supabase.functions.invoke("admin-manage-users", {
         body: bodyData,
@@ -225,6 +258,7 @@ export default function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user_roles"] });
+      queryClient.invalidateQueries({ queryKey: ["teacher_subjects"] });
       setEditUser(null);
       toast.success("Utilizator actualizat");
     },
@@ -240,6 +274,7 @@ export default function UsersPage() {
       teaching_norm: (p as any).teaching_norm?.toString() || "",
       initials: (p as any).initials || "",
       roles: getRoles(p.id),
+      subject_ids: getTeacherSubjectIds(p.id),
     });
   }
 
@@ -653,19 +688,29 @@ export default function UsersPage() {
                 <Input type="number" min="0" placeholder="ex: 12" value={editForm.teaching_norm} onChange={(e) => setEditForm({ ...editForm, teaching_norm: e.target.value })} />
               </div>
             )}
-            {editForm.roles.some((r) => r === "teacher" || r === "homeroom_teacher" || r === "coordinator_teacher") && (
-              <div className="space-y-2">
-                <Label>Inițiale (pentru orar)</Label>
-                <Input
-                  maxLength={8}
-                  placeholder="ex: GL"
-                  value={editForm.initials}
-                  onChange={(e) => setEditForm({ ...editForm, initials: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
-                </p>
-              </div>
+            {editForm.roles.some((r) => TEACHER_ROLES.has(r)) && (
+              <>
+                <div className="space-y-2">
+                  <Label>Inițiale (pentru orar)</Label>
+                  <Input
+                    maxLength={8}
+                    placeholder="ex: GL"
+                    value={editForm.initials}
+                    onChange={(e) => setEditForm({ ...editForm, initials: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Materii predate</Label>
+                  <SubjectsMultiSelect
+                    subjects={subjects}
+                    value={editForm.subject_ids}
+                    onChange={(ids) => setEditForm({ ...editForm, subject_ids: ids })}
+                  />
+                </div>
+              </>
             )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Anulează</Button>
@@ -716,19 +761,29 @@ export default function UsersPage() {
                 <Input type="number" min="0" placeholder="ex: 12" value={createForm.teaching_norm} onChange={(e) => setCreateForm({ ...createForm, teaching_norm: e.target.value })} />
               </div>
             )}
-            {(createForm.role === "teacher" || createForm.role === "homeroom_teacher" || createForm.role === "coordinator_teacher") && (
-              <div className="space-y-2">
-                <Label>Inițiale (pentru orar)</Label>
-                <Input
-                  maxLength={8}
-                  placeholder="ex: GL"
-                  value={createForm.initials}
-                  onChange={(e) => setCreateForm({ ...createForm, initials: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
-                </p>
-              </div>
+            {TEACHER_ROLES.has(createForm.role) && (
+              <>
+                <div className="space-y-2">
+                  <Label>Inițiale (pentru orar)</Label>
+                  <Input
+                    maxLength={8}
+                    placeholder="ex: GL"
+                    value={createForm.initials}
+                    onChange={(e) => setCreateForm({ ...createForm, initials: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Dacă inițialele se potrivesc cu cele din orarul importat, numele complet va înlocui inițialele.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Materii predate</Label>
+                  <SubjectsMultiSelect
+                    subjects={subjects}
+                    value={createForm.subject_ids}
+                    onChange={(ids) => setCreateForm({ ...createForm, subject_ids: ids })}
+                  />
+                </div>
+              </>
             )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateDialog(false)}>Anulează</Button>
@@ -742,3 +797,39 @@ export default function UsersPage() {
     </div>
   );
 }
+
+function SubjectsMultiSelect({
+  subjects,
+  value,
+  onChange,
+}: {
+  subjects: Subject[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const selected = new Set(value);
+  function toggle(id: string) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange(Array.from(next));
+  }
+  return (
+    <div className="max-h-48 overflow-auto rounded-md border p-2 space-y-1">
+      {subjects.length === 0 ? (
+        <p className="px-1 py-2 text-xs text-muted-foreground">
+          Nicio materie definită. Adăugați materii din meniul „Materii".
+        </p>
+      ) : (
+        subjects.map((s) => (
+          <label key={s.id} className="flex items-center gap-2 rounded px-1 py-1 text-sm cursor-pointer hover:bg-muted">
+            <Checkbox checked={selected.has(s.id)} onCheckedChange={() => toggle(s.id)} />
+            <span className="truncate">{s.name}</span>
+            {s.short_name && <span className="ml-auto text-xs text-muted-foreground">{s.short_name}</span>}
+          </label>
+        ))
+      )}
+    </div>
+  );
+}
+
