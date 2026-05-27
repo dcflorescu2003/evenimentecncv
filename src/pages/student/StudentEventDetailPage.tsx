@@ -228,12 +228,23 @@ export default function StudentEventDetailPage() {
   });
 
   async function downloadTemplate(file: Tables<"event_files">) {
-    const { data, error } = await supabase.storage.from("event-files").createSignedUrl(file.storage_path, 60);
-    if (error) {
-      toast.error("Nu s-a putut genera link-ul");
-      return;
+    try {
+      const { data, error } = await supabase.storage.from("event-files").download(file.storage_path);
+      if (error || !data) {
+        toast.error("Nu s-a putut descărca fișierul");
+        return;
+      }
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = file.file_name || "formular";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e?.message || "Eroare la descărcare");
     }
-    window.open(data.signedUrl, "_blank");
   }
 
   async function handleSubmissionUpload() {
