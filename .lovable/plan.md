@@ -1,48 +1,66 @@
-## Obiectiv
-Admin gestionează o listă de materii și atribuie 1+ materii fiecărui profesor.
+## Diagnostic
 
-## Bază de date (migrare)
+Contul **CSE** folosește `ProfEventDetailPage`. Permisiunile sunt setate parțial:
 
-1. **`subjects`** — listă materii
-   - `id uuid pk`, `name text unique not null`, `short_name text` (opțional, pt. abrevieri tip aSc), `is_active boolean default true`, `created_at`, `updated_at`
-   - RLS: `authenticated` read; doar `admin` insert/update/delete
-   - Seed inițial: extragere `DISTINCT subject` din `schedule_entries` + din `SUBJECT_ALIASES` (denumiri complete)
+| Funcționalitate | Stare actuală |
+|---|---|
+| 1. Upload fișiere dosar / cerere (`event_files` + bucket `event-files`) | ✅ funcționează — există politică `CSE manage event files` + `Event creators manage event files storage` |
+| 1. Upload șablon formular | ✅ funcționează (aceeași politică) |
+| 1. Elevi descarcă șablonul (`Students read form templates` pe tabel + storage) | ✅ funcționează |
+| 1. Elevi încarcă formular completat (`form-submissions/<student_id>/...`) | ✅ funcționează |
+| 2. Lista de participanți: numele elevilor și clasa lor | ❌ **nu se afișează** — nu există politică CSE pe `profiles` și `student_class_assignments` |
+| 2. Tickets (status prezență) la participanți | ✅ există `CSE read event tickets` |
+| 3. Dialog „Adaugă elev asistent" — căutare elevi | ❌ **listă goală** — nu există politică CSE pe `user_roles` și pe `profiles` |
+| 3. Insert în `event_student_assistants` | ✅ există `CSE manage assistants for own events` |
 
-2. **`teacher_subjects`** — many-to-many profesor ↔ materie
-   - `id uuid pk`, `teacher_id uuid` (referință profil), `subject_id uuid`, `created_at`
-   - UNIQUE `(teacher_id, subject_id)`
-   - RLS: `authenticated` read; doar `admin` manage
-   - Profesorul își poate citi propriile materii (deja prin authenticated read)
+**Cauza** problemelor 2 și 3: politicile RLS pentru `profiles`, `student_class_assignments` și `user_roles` au cazuri pentru `teacher`, `homeroom_teacher`, `coordinator_teacher`, `manager`, `admin`, dar **lipsește `cse`**.
 
-## Pagini admin
+## Soluție — o singură migrare
 
-3. **Nouă pagină `src/pages/admin/SubjectsPage.tsx`** (rută `/admin/subjects`)
-   - Tabel materii cu căutare (sortat alfabetic RO)
-   - Buton „Adaugă materie" (dialog: nume + short_name opțional)
-   - Editare inline / dialog edit
-   - Toggle activ / inactiv (soft delete) și ștergere reală dacă nu e folosită
-   - Link adăugat în `AdminLayout` sidebar
+Adaug 3 politici noi, simetrice cu cele existente pentru profesori, scopate la evenimentele al căror creator este utilizatorul CSE (funcția existentă `is_event_creator`).
 
-4. **`UsersPage.tsx`** — la editarea unui utilizator cu rol profesor (`teacher`, `homeroom_teacher`, `coordinator_teacher`)
-   - Câmp nou „Materii predate" — multi-select (Combobox cu căutare, suportă scalare)
-   - Sincronizare via edge function `admin-manage-users` (acțiuni `create_user` / `update_user`): primește `subject_ids: string[]`, face delete + insert în `teacher_subjects`
+### 1) `public.profiles` — CSE citește profilurile participanților la propriile evenimente
+```sql
+CREATE POLICY "CSE read event participant profiles"
+ON public.profiles FOR SELECT TO authenticated
+USING (
+  has_role(auth.uid(),'cse'::app_role)
+  AND id IN (
+    SELECT r.student_id FROM reservations r
+    WHERE is_event_creator(r.event_id, auth.uid())
+  )
+);
+```
 
-## Edge function
+### 2) `public.profiles` — CSE citește profilurile elevilor pentru căutarea de asistenți
+```sql
+CREATE POLICY "CSE read student profiles for assistant assignment"
+ON public.profiles FOR SELECT TO authenticated
+USING (
+  has_role(auth.uid(),'cse'::app_role)
+  AND id IN (SELECT user_id FROM user_roles WHERE role = 'student'::app_role)
+);
+```
 
-5. **`supabase/functions/admin-manage-users/index.ts`**
-   - Extinde `create_user` și `update_user` să accepte `subject_ids?: string[]`
-   - După insert profile/roles: șterge `teacher_subjects` pentru `user_id` și inserează noile rânduri
+### 3) `public.user_roles` — CSE citește rolurile (necesar pentru filtrul `role = student` din dialog)
+```sql
+CREATE POLICY "CSE read roles for assignment"
+ON public.user_roles FOR SELECT TO authenticated
+USING (has_role(auth.uid(),'cse'::app_role));
+```
 
-## Cod existent — fără modificări funcționale
-- Orarul (`StudentSchedulePage`, `resolveTeacherDisplay`) rămâne la fel: matching pe `initials` din `profiles`. Materiile în `schedule_entries` rămân text liber (mapate prin `SUBJECT_ALIASES`).
-- Lista de materii e doar pentru evidența admin + atribuire profesor → materie (folosibilă ulterior în rapoarte/normă).
+### 4) `public.student_class_assignments` — CSE citește clasa elevilor (pentru afișarea „Clasa" în lista de participanți și în dialogul de asistenți)
+```sql
+CREATE POLICY "CSE read student class assignments"
+ON public.student_class_assignments FOR SELECT TO authenticated
+USING (has_role(auth.uid(),'cse'::app_role));
+```
 
-## Fișiere
+## Cod aplicație
+Nu sunt necesare modificări — `ProfEventDetailPage.tsx` deja gestionează rolul `cse` (`isCse = roles.includes("cse")`), butoanele de upload, dialogul de asistenți și fetch-urile sunt deja scrise; pur și simplu RLS le bloca.
 
-- **Migrare nouă**: `subjects`, `teacher_subjects`, RLS, seed din existent
-- **Nou**: `src/pages/admin/SubjectsPage.tsx`
-- **Modificat**: `src/App.tsx` (rută), `src/components/layouts/AdminLayout.tsx` (meniu), `src/pages/admin/UsersPage.tsx` (multi-select materii), `supabase/functions/admin-manage-users/index.ts`
-
-## De clarificat (opțional, pot decide implicit)
-- Folosim **soft-delete** (`is_active`) ca default, cu opțiune de ștergere reală când materia nu e referențiată.
-- `short_name` rămâne opțional, nu îl folosim încă în orar (poate fi etapa următoare pentru a înlocui hardcoded `SUBJECT_ALIASES`).
+## Verificare după aplicare
+1. Login cu cont CSE → eveniment propriu → tab **Fișiere** → upload dosar / cerere ✓
+2. Tab **Formulare** → upload șablon → login elev cu rezervare → descărcare + upload formular completat ✓
+3. Tab **Participanți** → se văd numele și clasa elevilor ✓
+4. Buton **Adaugă elev asistent** → căutare returnează elevi cu nume + clasă ✓
