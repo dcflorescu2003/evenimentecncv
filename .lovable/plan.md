@@ -1,137 +1,66 @@
+## Obiectiv
 
-# Plan: Modul „Feedback"
+Sincronizez datele din cele două PDF-uri (`orar_elevi_S7.pdf` cu inițiale + `Orar Cosmin.pdf` cu nume complete) astfel încât:
 
-Modul nou în registry (`/app` → „Feedback"), cu acces pentru Admin, CSE, Profesor, Diriginte, Elev. Reia pattern-urile din modulul „Cluburi & Voluntariat" (eligibilitate clasă/an, RLS prin security definer, navigare jos cu 2 butoane).
+1. Toate cele 29 de clase (V A … XII E) să aibă orarul corect importat în `class_schedules` + `schedule_entries`.
+2. Inițialele din orar (RC, GL, VON, BAI etc.) să fie legate de conturile reale din `profiles.initials`, ca Feedback Profesori să afișeze pe fiecare clasă **exact profesorii ei**.
+3. Să primești un raport clar cu profesorii care apar în PDF dar nu au cont în aplicație, ca să decizi tu cum îi adaugi.
 
----
+## Ce am extras deja din PDF-uri
 
-## 1. Tipuri de chestionare
+- **29 diriginți** identificați cu nume complet (ground truth, din antetul fiecărei pagini).
+- **57 inițiale** distincte apărute în celulele tabelelor.
+- **811 perechi (clasă, zi, oră) → celulă** aliniate poziție-cu-poziție între cele două PDF-uri.
 
-- `general` — chestionar standard pentru elevi (anonim sau non-anonim).
-- `teacher_feedback` — elevul alege un profesor din **orarul clasei sale** și completează chestionarul; un răspuns per (chestionar, profesor); rezultatele vizibile profesorului evaluat (+ Admin).
-- `teacher_survey` — chestionar pentru profesori (doar Admin îl poate crea), profesorii răspund, rapoarte centralizate la Admin.
+Datorită modului în care PDF-ul Cosmin „rupe" numele lungi pe două rânduri, ~15 din cele 57 mapări inițiale→nume vor avea nevoie de reparare deterministă (combin cu lista diriginților + materie + secțiune ca disambiguator).
 
-Anonimat:
-- `anonymous` (default pentru `teacher_feedback`): nu se salvează `respondent_id`; banner explicit „Răspuns anonim".
-- `identified`: se salvează `respondent_id`; banner „Identitatea ta este vizibilă creatorului".
-- `anonymous_optional`: implicit anonim, dar respondentul poate bifa „Vreau să fiu identificat" la trimitere.
+## Pași (în această ordine)
 
-Editare după trimitere:
-- Anonim → final, fără editare.
-- Non-anonim (sau anonim cu identificare bifată) → editabil până la `closes_at`.
+### 1. Script de extracție definitivă (offline, în sandbox)
 
----
+Generez un singur CSV `teachers_mapping.csv` cu coloanele:
 
-## 2. Schema DB (migration unic)
+```
+initials, full_name, source, classes_taught, subjects_taught, match_status
+```
 
-Enums:
-- `feedback_type`: `general | teacher_feedback | teacher_survey`
-- `feedback_anonymity`: `anonymous | identified | anonymous_optional`
-- `feedback_audience`: `students | teachers`
-- `feedback_status`: `draft | active | closed`
-- `feedback_question_type`: `single_choice | multi_choice | dropdown | scale | open_text`
+unde `match_status` ∈ {`diriginte_confirmat`, `nume_complet_extras`, `nume_partial_de_reparat`, `fara_match_in_profiles`}. Folosesc:
+- antetul de pagină pentru diriginți (sigur);
+- comparația celulă-cu-celulă pentru restul;
+- fallback: caut în text numele complet care conține cel mai des fragmentul rupt.
 
-Tabele (toate cu GRANT pentru `authenticated` + `service_role`, RLS activat):
+Apoi încrucișez cu `profiles` (rol teacher/homeroom_teacher/coordinator_teacher) după (a) `initials` deja completate, (b) potrivire fuzzy pe `last_name + first_name`. Output: două raporte CSV în `/mnt/documents/`:
+- `mapare_initiale_profesori.csv` — toate cele 57 cu nume + status match;
+- `profesori_lipsa_din_aplicatie.csv` — cei care nu au cont încă (cu lista claselor/materiilor predate).
 
-- `feedback_forms` — `title`, `description`, `type`, `anonymity`, `audience`, `status`, `session_id`, `opens_at`, `closes_at`, `eligible_grades int[]`, `eligible_classes uuid[]`, `created_by`, `created_at`, `updated_at`.
-- `feedback_questions` — `form_id`, `position`, `question_type`, `text`, `required bool`, `options jsonb` (variante pentru choice/dropdown), `scale_min int`, `scale_max int`, `scale_min_label`, `scale_max_label`.
-- `feedback_responses` — `form_id`, `respondent_id` (nullable când anonim), `subject_teacher_id` (nullable, doar la `teacher_feedback`), `submitted_at`, `is_identified bool`, `class_id` (snapshot pentru rapoarte agregate). Unique: `(form_id, respondent_id, subject_teacher_id)` când `respondent_id IS NOT NULL`.
-- `feedback_answers` — `response_id`, `question_id`, `value jsonb` (text, număr, sau array de opțiuni).
+**Te opresc aici** ca să confirmi/corectezi CSV-urile înainte să scriu în DB.
 
-Security definer functions:
-- `is_feedback_creator(_form_id, _user)`, `is_feedback_eligible_student(_form_id, _user)`, `is_feedback_target_teacher(_response_id, _user)`, `check_feedback_submission(_form_id, _user, _teacher_id)` (verifică status, fereastră, eligibilitate clasă/an, anti-duplicat).
+### 2. Backfill `profiles.initials` (după confirmarea ta)
 
-Vizibilitate rezultate (confirmat: doar creator + Admin):
-- `general` / `teacher_survey`: read pentru `created_by` și `admin`.
-- `teacher_feedback`: read pentru `admin`, `created_by` și profesorul evaluat (`subject_teacher_id = auth.uid()` prin security definer).
-- Elev: vede propriul răspuns (dacă non-anonim sau identificat opțional).
+Migrare simplă (`UPDATE profiles SET initials = ... WHERE id = ...`) sau, dacă e mai practic, o pagină Admin nouă „Mapare inițiale" cu tabel editabil — alegerea o facem după ce vezi CSV-ul.
 
----
+Pentru profesorii fără cont: rămân doar în raport, nu îi creez automat. Îi adaugi tu manual din Admin → Utilizatori, iar apoi le completezi inițialele.
 
-## 3. Editor de chestionare (stil Google Forms)
+### 3. Import orar pentru toate 29 clasele
 
-Componentă `FeedbackFormEditor` cu listă de întrebări drag-to-reorder. Tipuri:
+Reutilizez componenta existentă `ImportOrarXmlBulkDialog` + parserul `extractClassSchedule`. Dar:
+- PDF-ul S7 nu este XML aSc, e PDF tipărit. **Nu pot folosi direct importerul XML** — am nevoie ca tu să exporți același orar ca XML din aSc (format identic cu `Orar_Cosmin.xml` pe care l-ai dat ieri), sau îmi confirmi că folosesc XML-ul aSc deja încărcat (`Orar_Cosmin.xml`) care conține inițialele.
+- Alternativ, scriu un parser dedicat care extrage celulele din PDF-ul S7 (logica e deja prototipată — 811 celule deja parsate corect) și produce același `EditorEntry[]` ca importerul XML, apoi rulez importul în bulk pentru toate clasele într-un singur ecran de confirmare.
 
-- **Single choice** — listă de opțiuni, radio la răspuns.
-- **Multiple choice** — listă de opțiuni, checkbox la răspuns.
-- **Dropdown** — listă de opțiuni, Select.
-- **Scale** — min/max (ex. 1–5, 1–10) + etichete capete; Slider sau buline numerotate.
-- **Open text** — Textarea cu limită de caractere.
+Recomand: **scriu parserul de PDF** (extragere prin pdfplumber pe server nu merge — fac varianta browser cu `pdfjs-dist` care e deja disponibilă în proiect, sau accept XML-ul aSc dacă îl ai). Confirmă-mi una din variante când răspunzi.
 
-Fiecare întrebare are toggle „obligatoriu". Salvare normalizată în `feedback_questions` cu `options jsonb`.
+### 4. Verificare Feedback Profesori
 
-Setări form: titlu, descriere, tip, anonimat, perioadă (`opens_at`/`closes_at` cu `DateInput`), filtre clase/ani (reutilizez `ClassEligibilityPicker`), audiență.
+După import, `FeedbackFillPage` rezolvă deja profesorii unei clase din `schedule_entries` + `get_teacher_initials_map`. Verific manual pe 2-3 clase (V A, IX A, XII C) că lista profesorilor afișați este corectă (nume complete, fără duplicate, fără inițiale neasignate).
 
----
+## Detalii tehnice
 
-## 4. UI — Rute & layout
+- Maparea inițialelor → nume e dependentă de PDF; o salvez ca date, nu ca cod hardcodat. Sursa unică de adevăr rămâne `profiles.initials`.
+- Materiile sunt normalizate prin `applySubjectAlias` (există deja).
+- Nu modific `schedule_entries.teacher_name` automat: orarul stochează inițialele, iar UI-ul afișează numele complet prin lookup la render (mecanismul existent „Teacher Initials").
+- Nu creez conturi de teacher automat (per răspunsul tău). Raportul îți spune exact pe cine să adaugi.
+- Toate scrierile în DB se fac doar după confirmarea ta a CSV-ului.
 
-Înregistrare modul în `src/modules/registry.ts` (key `feedback`, label „Feedback", icon `MessageSquare`).
+## Întrebare blocantă înainte de implementare
 
-Rute noi:
-- `/admin/feedback`, `/admin/feedback/new`, `/admin/feedback/:id`, `/admin/feedback/:id/report`
-- `/prof/feedback`, `/prof/feedback/new`, `/prof/feedback/:id`, `/prof/feedback/:id/report`
-- `/student/feedback`, `/student/feedback/:id/respond`, `/student/feedback/:id/respond/:teacherId`
-
-Navigare bottom (asemănător `StudentLayout` pentru Cluburi):
-- **Elev**: când `/student/feedback*` → 2 butoane: `Dashboard` (chestionare deschise + istoric), `Feedback-ul meu` (răspunsurile mele).
-- **Profesor/Diriginte/CSE**: când `/prof/feedback*` → 2 butoane: `Dashboard` (chestionarele pe care le văd / la care răspund), `Feedback-ul meu` (chestionarele create de mine + buton „Creează chestionar"). Pentru profesori, aici apar și rapoartele pe `teacher_feedback` unde sunt subiect.
-
-Componente principale:
-- `FeedbackDashboardStudent` — carduri „Deschise" și „Istoric".
-- `FeedbackFillPage` — randează întrebările pe baza `question_type`; pentru `teacher_feedback` precedat de selector profesor (Combobox cu profesorii din orarul clasei elevului → query pe `class_schedules` + `teacher_initials`/`profiles`).
-- `FeedbackMineStudent` — lista răspunsurilor proprii (cu badge anonim/identificat); editabil doar non-anonim, înainte de `closes_at`.
-- `FeedbackListAdminLike` — listă chestionare proprii cu acțiuni (publică/închide/duplică/șterge, vezi rapoarte).
-- `FeedbackReportPage` — agregare per întrebare (bare/donut pentru choice, histogramă/medie pentru scale, listă răspunsuri text) + tab „Răspunsuri individuale" (doar non-anonim) + filtre (clasă, perioadă, profesor pentru `teacher_feedback`). Buton „Export PDF" via `lib/report-pdf.ts` (jsPDF).
-
----
-
-## 5. Reguli & validări
-
-- O dată per chestionar (anti-duplicat prin unique key). La `teacher_feedback`: o dată per (chestionar, profesor) — elevul poate completa pentru fiecare profesor al său.
-- Filtre clase/ani aplicate exact ca la evenimente (`eligible_classes` / `eligible_grades`).
-- `check_feedback_submission` RPC verifică: status `active`, fereastra `opens_at/closes_at`, eligibilitate clasă, anti-duplicat, iar la `teacher_feedback` că profesorul ales chiar predă clasei elevului.
-- Anonim: edge function `submit-feedback` inserează cu `respondent_id = NULL` chiar dacă este apelată cu JWT (folosește service role doar pentru insert; verifică eligibilitate prin RPC înainte). Asta protejează identitatea chiar și în log-urile DB.
-
----
-
-## 6. Notificări
-
-- La publicarea unui chestionar `general` / `teacher_feedback` → notificare in-app + push elevilor din clasele eligibile (refolosesc pattern-ul din notifications).
-- La `teacher_survey` publicat → notificare profesorilor eligibili.
-- Reminder cu 24h înainte de `closes_at` pentru cei care n-au răspuns (cron zilnic, similar `send-event-reminders`).
-
----
-
-## 7. Export PDF
-
-`lib/feedback-pdf.ts` (jsPDF) — header CNCV, titlu chestionar, perioada, filtrele aplicate, pentru fiecare întrebare: enunț + grafic/tabel + statistici (n, %, medie, mediană la scale). La final, anexă cu răspunsuri individuale (doar dacă non-anonim și user-ul a cerut-o).
-
----
-
-## 8. Memorie
-
-După implementare, adaug `mem://features/feedback` cu rezumat (tipuri, anonimat, vizibilitate creator+admin, anti-duplicat, navigare bottom 2 butoane) și update la `mem://index.md`.
-
----
-
-## 9. Etapizare livrare
-
-1. **Schema DB**: enums, tabele, GRANTs, RLS, security definer functions, `check_feedback_submission` RPC.
-2. **Module registry + rute + layout bottom-nav** (2 butoane elev / profesor).
-3. **Editor de chestionare** (toate cele 5 tipuri de întrebări) + listă chestionare proprii.
-4. **Răspunsuri**: `FeedbackFillPage` (cu selector profesor la `teacher_feedback`), edge function `submit-feedback` cu logica de anonimat.
-5. **Rapoarte** agregate + individuale, filtrare, export PDF.
-6. **Notificări** la publicare + reminder zilnic prin cron.
-7. **Memory update**.
-
----
-
-## Întrebări deschise / sugestii
-
-- **Reminder de răspuns**: ok să trimit auto la 24h înainte de `closes_at` (push + in-app) doar celor care n-au răspuns?
-- **Duplicare chestionar**: util de avut buton „Duplică" pentru reutilizare anuală — îl includ implicit.
-- **Template-uri**: să prevăd o bibliotecă mică de chestionare standard (ex. „Evaluare semestrială profesor", „Feedback eveniment") pe care Adminul le poate clona? Recomand să le adăugăm în etapa 3.
-- **Răspunsuri text deschise la chestionare anonime**: rămân vizibile creatorului ca text, fără asociere — confirmi?
-
-Confirmă planul (și răspunsurile la cele 4 puncte de mai sus) și trec la etapa 1.
+Pentru pasul 3 (importul orarului): ai disponibil **XML-ul aSc cu orarul cu inițiale** (echivalentul lui `Orar_Cosmin.xml` dar pentru S7)? Dacă da, importul devine trivial cu unealta existentă. Dacă nu, scriu un parser PDF dedicat — funcționează, dar adaugă cod nou.
