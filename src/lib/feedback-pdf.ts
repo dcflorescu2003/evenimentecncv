@@ -29,11 +29,17 @@ export interface FbResponse {
   answers: FbAnswer[];
 }
 
+export interface FbSection {
+  label: string;
+  responses: FbResponse[];
+}
+
 interface ExportArgs {
   title: string;
   subtitle?: string;
   questions: FbQuestion[];
-  responses: FbResponse[];
+  responses?: FbResponse[];
+  sections?: FbSection[];
 }
 
 function aggregate(q: FbQuestion, responses: FbResponse[]) {
