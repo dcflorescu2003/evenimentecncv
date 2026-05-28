@@ -480,6 +480,7 @@ function CreateProjectDialog({
       enrollment_close_at: combineDateTime(enrollCloseDate, enrollCloseTime),
       status,
       created_by: userId,
+      is_cse: isCse,
     });
     setSaving(false);
     if (error) return toast.error("Eroare: " + error.message);
