@@ -210,193 +210,158 @@ Deno.serve(async (req) => {
     eventBlock: do {
       if (endedEvents.length === 0) break eventBlock;
 
-    const eventMap: Record<string, any> = {};
-    for (const e of endedEvents) eventMap[e.id] = e;
+      const eventIds = endedEvents.map((e: any) => e.id);
+      const eventMap: Record<string, any> = {};
+      for (const e of endedEvents) eventMap[e.id] = e;
 
-    // Get reservations for these events
-    const { data: reservations } = await supabase
-      .from("reservations")
-      .select("id, student_id, event_id")
-      .in("event_id", eventIds)
-      .eq("status", "reserved");
+      const { data: reservations } = await supabase
+        .from("reservations").select("id, student_id, event_id")
+        .in("event_id", eventIds).eq("status", "reserved");
 
-    if (!reservations || reservations.length === 0) {
-      return new Response(JSON.stringify({ message: "No reservations" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+      if (!reservations || reservations.length === 0) break eventBlock;
 
-    const reservationIds = reservations.map((r: any) => r.id);
-    const resById: Record<string, any> = {};
-    for (const r of reservations) resById[r.id] = r;
+      const reservationIds = reservations.map((r: any) => r.id);
+      const resById: Record<string, any> = {};
+      for (const r of reservations) resById[r.id] = r;
 
-    // Get tickets — absent or still reserved (= didn't attend)
-    const { data: tickets } = await supabase
-      .from("tickets")
-      .select("reservation_id, status")
-      .in("reservation_id", reservationIds);
+      const { data: tickets } = await supabase
+        .from("tickets").select("reservation_id, status")
+        .in("reservation_id", reservationIds);
 
-    const absentByEvent: Record<string, Set<string>> = {}; // event_id -> set of student_id
-    for (const t of (tickets || [])) {
-      if (t.status === "absent" || t.status === "reserved") {
-        const r = resById[t.reservation_id];
-        if (!r) continue;
-        if (!absentByEvent[r.event_id]) absentByEvent[r.event_id] = new Set();
-        absentByEvent[r.event_id].add(r.student_id);
+      const absentByEvent: Record<string, Set<string>> = {};
+      for (const t of (tickets || [])) {
+        if (t.status === "absent" || t.status === "reserved") {
+          const r = resById[t.reservation_id];
+          if (!r) continue;
+          if (!absentByEvent[r.event_id]) absentByEvent[r.event_id] = new Set();
+          absentByEvent[r.event_id].add(r.student_id);
+        }
       }
-    }
 
-    // Also include reservations without ticket rows (treat as absent)
-    const ticketResIds = new Set((tickets || []).map((t: any) => t.reservation_id));
-    for (const r of reservations) {
-      if (!ticketResIds.has(r.id)) {
-        if (!absentByEvent[r.event_id]) absentByEvent[r.event_id] = new Set();
-        absentByEvent[r.event_id].add(r.student_id);
+      const ticketResIds = new Set((tickets || []).map((t: any) => t.reservation_id));
+      for (const r of reservations) {
+        if (!ticketResIds.has(r.id)) {
+          if (!absentByEvent[r.event_id]) absentByEvent[r.event_id] = new Set();
+          absentByEvent[r.event_id].add(r.student_id);
+        }
       }
-    }
 
-    // Collect all absent student ids
-    const allAbsentStudentIds = new Set<string>();
-    for (const set of Object.values(absentByEvent)) {
-      for (const sid of set) allAbsentStudentIds.add(sid);
-    }
-    if (allAbsentStudentIds.size === 0) {
-      return new Response(JSON.stringify({ message: "No absent students" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // Map student -> homeroom_teacher_id via classes (most recent assignment)
-    const { data: assignments } = await supabase
-      .from("student_class_assignments")
-      .select("student_id, class_id, created_at")
-      .in("student_id", Array.from(allAbsentStudentIds))
-      .order("created_at", { ascending: false });
-
-    const studentClass: Record<string, string> = {};
-    for (const a of (assignments || [])) {
-      if (!studentClass[a.student_id]) studentClass[a.student_id] = a.class_id;
-    }
-
-    const classIds = Array.from(new Set(Object.values(studentClass)));
-    const { data: classes } = await supabase
-      .from("classes")
-      .select("id, display_name, homeroom_teacher_id")
-      .in("id", classIds);
-
-    const classMap: Record<string, any> = {};
-    for (const c of (classes || [])) classMap[c.id] = c;
-
-    // Build: teacher_id -> event_id -> count of absent students from teacher's class
-    const teacherEventCount: Record<string, Record<string, number>> = {};
-    for (const [eventId, studentSet] of Object.entries(absentByEvent)) {
-      for (const sid of studentSet) {
-        const cid = studentClass[sid];
-        if (!cid) continue;
-        const cls = classMap[cid];
-        if (!cls?.homeroom_teacher_id) continue;
-        const tid = cls.homeroom_teacher_id;
-        if (!teacherEventCount[tid]) teacherEventCount[tid] = {};
-        teacherEventCount[tid][eventId] = (teacherEventCount[tid][eventId] || 0) + 1;
+      const allAbsentStudentIds = new Set<string>();
+      for (const set of Object.values(absentByEvent)) {
+        for (const sid of set) allAbsentStudentIds.add(sid);
       }
-    }
+      if (allAbsentStudentIds.size === 0) break eventBlock;
 
-    const teacherIds = Object.keys(teacherEventCount);
-    if (teacherIds.length === 0) {
-      return new Response(JSON.stringify({ message: "No homeroom teachers to notify" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+      const { data: assignments } = await supabase
+        .from("student_class_assignments").select("student_id, class_id, created_at")
+        .in("student_id", Array.from(allAbsentStudentIds))
+        .order("created_at", { ascending: false });
 
-    // Deduplicate against existing notifications
-    const { data: existing } = await supabase
-      .from("notifications")
-      .select("user_id, related_event_id")
-      .in("user_id", teacherIds)
-      .in("related_event_id", eventIds)
-      .eq("type", "homeroom_absence_alert");
-    const existingSet = new Set((existing || []).map((n: any) => `${n.user_id}_${n.related_event_id}`));
-
-    const toInsert: any[] = [];
-    const teacherEvents: Record<string, string[]> = {}; // for push
-    for (const tid of teacherIds) {
-      for (const [eid, cnt] of Object.entries(teacherEventCount[tid])) {
-        if (existingSet.has(`${tid}_${eid}`)) continue;
-        const ev = eventMap[eid];
-        toInsert.push({
-          user_id: tid,
-          title: "Eveniment încheiat — verifică prezența",
-          body: `Evenimentul „${ev.title}” s-a încheiat. Ai ${cnt} elev${cnt === 1 ? "" : "i"} din clasă marca${cnt === 1 ? "t" : "ți"} absen${cnt === 1 ? "t" : "ți"}. Verifică lista de prezență.`,
-          type: "homeroom_absence_alert",
-          related_event_id: eid,
-        });
-        if (!teacherEvents[tid]) teacherEvents[tid] = [];
-        teacherEvents[tid].push(eid);
+      const studentClass: Record<string, string> = {};
+      for (const a of (assignments || [])) {
+        if (!studentClass[a.student_id]) studentClass[a.student_id] = a.class_id;
       }
-    }
 
-    let inserted = 0;
-    if (toInsert.length > 0) {
-      const { error: insErr } = await supabase.from("notifications").insert(toInsert);
-      if (insErr) console.error("Insert error:", insErr);
-      else inserted = toInsert.length;
-    }
+      const classIds = Array.from(new Set(Object.values(studentClass)));
+      const { data: classes } = await supabase
+        .from("classes").select("id, display_name, homeroom_teacher_id").in("id", classIds);
+      const classMap: Record<string, any> = {};
+      for (const c of (classes || [])) classMap[c.id] = c;
 
-    // ── Push notifications ──
-    let webPushCount = 0, fcmCount = 0;
-    const pushTitle = "Eveniment încheiat — verifică prezența";
+      const teacherEventCount: Record<string, Record<string, number>> = {};
+      for (const [eventId, studentSet] of Object.entries(absentByEvent)) {
+        for (const sid of studentSet) {
+          const cid = studentClass[sid];
+          if (!cid) continue;
+          const cls = classMap[cid];
+          if (!cls?.homeroom_teacher_id) continue;
+          const tid = cls.homeroom_teacher_id;
+          if (!teacherEventCount[tid]) teacherEventCount[tid] = {};
+          teacherEventCount[tid][eventId] = (teacherEventCount[tid][eventId] || 0) + 1;
+        }
+      }
 
-    if (vapidPrivateB64 && Object.keys(teacherEvents).length > 0) {
-      try {
-        const vapidKey = await importVapidKey(vapidPrivateB64);
-        const { data: subs } = await supabase
-          .from("push_subscriptions").select("*").in("user_id", Object.keys(teacherEvents));
-        const invalidIds: string[] = [];
-        for (const sub of (subs || [])) {
-          const eids = teacherEvents[sub.user_id] || [];
-          if (eids.length === 0) continue;
-          const body = eids.length === 1
-            ? `Evenimentul „${eventMap[eids[0]]?.title}” s-a încheiat. Verifică lista de prezență.`
-            : `${eids.length} evenimente s-au încheiat. Verifică listele de prezență.`;
-          const url = eids.length === 1 ? `/prof/events/${eids[0]}` : "/teacher/reports";
-          const payload = JSON.stringify({
-            title: pushTitle, body, icon: "/favicon.ico",
-            data: { url },
+      teacherIds = Object.keys(teacherEventCount);
+      if (teacherIds.length === 0) break eventBlock;
+
+      const { data: existing } = await supabase
+        .from("notifications").select("user_id, related_event_id")
+        .in("user_id", teacherIds).in("related_event_id", eventIds)
+        .eq("type", "homeroom_absence_alert");
+      const existingSet = new Set((existing || []).map((n: any) => `${n.user_id}_${n.related_event_id}`));
+
+      const toInsert: any[] = [];
+      const teacherEvents: Record<string, string[]> = {};
+      for (const tid of teacherIds) {
+        for (const [eid, cnt] of Object.entries(teacherEventCount[tid])) {
+          if (existingSet.has(`${tid}_${eid}`)) continue;
+          const ev = eventMap[eid];
+          toInsert.push({
+            user_id: tid,
+            title: "Eveniment încheiat — verifică prezența",
+            body: `Evenimentul „${ev.title}” s-a încheiat. Ai ${cnt} elev${cnt === 1 ? "" : "i"} din clasă marca${cnt === 1 ? "t" : "ți"} absen${cnt === 1 ? "t" : "ți"}. Verifică lista de prezență.`,
+            type: "homeroom_absence_alert",
+            related_event_id: eid,
           });
-          const r = await sendWebPush(sub, payload, vapidPublic, vapidKey);
-          if (r.ok) webPushCount++;
-          if (r.invalid) invalidIds.push(sub.id);
+          if (!teacherEvents[tid]) teacherEvents[tid] = [];
+          teacherEvents[tid].push(eid);
         }
-        if (invalidIds.length > 0) {
-          await supabase.from("push_subscriptions").delete().in("id", invalidIds);
-        }
-      } catch (e) {
-        console.error("Web push error:", e);
       }
-    }
 
-    if (firebaseSaJson && Object.keys(teacherEvents).length > 0) {
-      try {
-        const sa: ServiceAccount = JSON.parse(firebaseSaJson);
-        const accessToken = await getAccessToken(sa);
-        const { data: tokens } = await supabase
-          .from("fcm_tokens").select("*").in("user_id", Object.keys(teacherEvents));
-        const invalidIds: string[] = [];
-        for (const ft of (tokens || [])) {
-          const eids = teacherEvents[ft.user_id] || [];
-          if (eids.length === 0) continue;
-          const body = eids.length === 1
-            ? `Evenimentul „${eventMap[eids[0]]?.title}” s-a încheiat. Verifică lista de prezență.`
-            : `${eids.length} evenimente s-au încheiat. Verifică listele de prezență.`;
-          const url = eids.length === 1 ? `/prof/events/${eids[0]}` : "/teacher/reports";
-          const r = await sendFcm(accessToken, sa.project_id, ft.token, pushTitle, body, { url });
-          if (r.ok) fcmCount++;
-          if (r.invalid) invalidIds.push(ft.id);
-        }
-        if (invalidIds.length > 0) {
-          await supabase.from("fcm_tokens").delete().in("id", invalidIds);
-        }
-      } catch (e) {
-        console.error("FCM error:", e);
+      if (toInsert.length > 0) {
+        const { error: insErr } = await supabase.from("notifications").insert(toInsert);
+        if (insErr) console.error("Insert error:", insErr);
+        else inserted = toInsert.length;
       }
-    }
+
+      const pushTitle = "Eveniment încheiat — verifică prezența";
+
+      if (vapidPrivateB64 && Object.keys(teacherEvents).length > 0) {
+        try {
+          const vapidKey = await importVapidKey(vapidPrivateB64);
+          const { data: subs } = await supabase
+            .from("push_subscriptions").select("*").in("user_id", Object.keys(teacherEvents));
+          const invalidIds: string[] = [];
+          for (const sub of (subs || [])) {
+            const eids = teacherEvents[sub.user_id] || [];
+            if (eids.length === 0) continue;
+            const body = eids.length === 1
+              ? `Evenimentul „${eventMap[eids[0]]?.title}” s-a încheiat. Verifică lista de prezență.`
+              : `${eids.length} evenimente s-au încheiat. Verifică listele de prezență.`;
+            const url = eids.length === 1 ? `/prof/events/${eids[0]}` : "/teacher/reports";
+            const payload = JSON.stringify({ title: pushTitle, body, icon: "/favicon.ico", data: { url } });
+            const r = await sendWebPush(sub, payload, vapidPublic, vapidKey);
+            if (r.ok) webPushCount++;
+            if (r.invalid) invalidIds.push(sub.id);
+          }
+          if (invalidIds.length > 0) await supabase.from("push_subscriptions").delete().in("id", invalidIds);
+        } catch (e) { console.error("Web push error:", e); }
+      }
+
+      if (firebaseSaJson && Object.keys(teacherEvents).length > 0) {
+        try {
+          const sa: ServiceAccount = JSON.parse(firebaseSaJson);
+          const accessToken = await getAccessToken(sa);
+          const { data: tokens } = await supabase
+            .from("fcm_tokens").select("*").in("user_id", Object.keys(teacherEvents));
+          const invalidIds: string[] = [];
+          for (const ft of (tokens || [])) {
+            const eids = teacherEvents[ft.user_id] || [];
+            if (eids.length === 0) continue;
+            const body = eids.length === 1
+              ? `Evenimentul „${eventMap[eids[0]]?.title}” s-a încheiat. Verifică lista de prezență.`
+              : `${eids.length} evenimente s-au încheiat. Verifică listele de prezență.`;
+            const url = eids.length === 1 ? `/prof/events/${eids[0]}` : "/teacher/reports";
+            const r = await sendFcm(accessToken, sa.project_id, ft.token, pushTitle, body, { url });
+            if (r.ok) fcmCount++;
+            if (r.invalid) invalidIds.push(ft.id);
+          }
+          if (invalidIds.length > 0) await supabase.from("fcm_tokens").delete().in("id", invalidIds);
+        } catch (e) { console.error("FCM error:", e); }
+      }
+    } while (false);
+
+
 
     // ════════════════════════════════════════════════════════════
     // VOLUNTEER PROJECTS — notify when a project ends (end_date = today)
