@@ -15,7 +15,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange, Trash2 } from "lucide-react";
+import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange, Trash2, Megaphone } from "lucide-react";
+import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
 import { DateInput } from "@/components/ui/date-input";
