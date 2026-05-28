@@ -1,59 +1,53 @@
-## 1. Buton „Module" în bara de navigare (profesori + diriginți)
+## 1. Extindere `EventsCalendar` cu Proiecte de voluntariat
 
-În `ProfLayout.tsx` și `TeacherLayout.tsx`, adaug un buton dedicat „Module" în bara de tab-uri (sub header), care folosește `ModuleSwitcher` (varianta labeled). Iconul rămâne și în header, dar va apărea și ca tab vizibil în nav.
+Generalizez `src/components/student/EventsCalendar.tsx` să accepte și „itemi" de tip volunteer day pe lângă evenimente:
 
-## 2. Unificarea barei de navigare în `ProfLayout`
+- Nouă prop `volunteerDays?: VolunteerDayItem[]` cu `{ id, project_id, project_name, date, start_time, end_time, location, status }` și opțional `myEnrollment: boolean`.
+- Combin internă: un singur `itemsByDate` cu discriminator `kind: "event" | "volunteer"`.
+- În **lună**: pe lângă bulina existentă, dacă ziua are voluntariat → adaug litera **V** mică (badge text `V` în loc/peste bulină) folosind o nuanță secundară (ex. `bg-secondary text-secondary-foreground`).
+- În **săptămână** și **zi**: cardul pentru voluntariat afișează un prefix `V` (badge mic) + numele proiectului + interval orar; click → navighează la pagina read-only a proiectului (vezi §3).
+- Status afișat:
+  - `enrolled` → verde (similar „Rezervat").
+  - viitor & eligibil → primary.
+  - trecut → estompat (vezi §2).
 
-Bara de nav actuală variază în funcție de pagina curentă (`isClubs` / `isFeedback`). O simplific la o listă unică, mereu aceeași:
-- Dashboard → `/prof`
-- Evenimentele mele → `/prof/events`
-- Cluburi & Voluntariat → `/prof/clubs`
-- Feedback → `/prof/feedback`
-- Clasa mea → `/teacher` (doar diriginte)
-- Rapoarte → `/teacher/reports` (doar diriginte)
-- Module (selector) — întotdeauna
+## 2. Evenimente/zile trecute afișate „mai șters"
 
-Același set și în `TeacherLayout.tsx` ca să nu mai existe diferențe între pagini.
+În prezent, evenimentele trecute sunt incluse doar dacă utilizatorul are rezervare/înrolare. Schimbări:
 
-## 3. Proiecte de voluntariat în Rapoarte (`TeacherReportsPage`)
+- **Sursă date**: scot filtrul implicit „doar viitoare" (în `StudentDashboard` și `AllEventsCalendarSection` query-ul deja aduce toate published; ok). Dar `calendarEvents` filtrează după eligibilitate — păstrez ca atare, doar îi reduc opacitatea în UI.
+- Adaug clasă `opacity-50` (sau `text-muted-foreground` + `bg-muted/40`) pentru:
+  - cardurile din week/day view când `status === "past_or_full"` și data < azi
+  - bulinele month-view rămân `bg-muted-foreground/40`
+  - itemii volunteer cu `date < today` → același tratament
 
-Sub-tabul „Situație elevi" și „Verificare prezență" deja includ proiectele de voluntariat. Modific „Sumar" ca să fie aliniat:
-- Adaug interogare pe `volunteer_enrollments` + `volunteer_projects` (filtrate pe `session_id`) + `volunteer_days` + `volunteer_attendance` pentru elevii claselor dirigintelui.
-- Calculez ore rezervate / validate din voluntariat (zile cu status `present`/`late`, folosind durata zilei din `start_time`/`end_time` rotunjit la oră întreagă, conform regulilor existente) și le însumez cu cele din evenimente în coloanele „Ore rezervate" / „Ore validate".
-- Coloana „Rezervări" cumulează numărul de evenimente + zile de voluntariat.
-- Exportul PDF rămâne cu aceleași coloane (totalurile sunt deja unificate).
+Astfel toate evenimentele/zilele trecute sunt mereu vizibile dar discrete.
 
-## 4. Vizibilitate restrânsă cluburi/voluntariat pentru non-creatori
+## 3. Pagină nouă read-only pentru detalii eveniment
 
-Modific `ClubDetailPage.tsx` și `VolunteerProjectDetailPage.tsx`:
+Rută nouă: `/events/preview/:id` (accesibilă rolurilor `teacher`, `homeroom_teacher`, `coordinator_teacher`, `admin`, `manager`, `student` ca fallback).
 
-**Pentru profesor (`teacher` fără `homeroom_teacher`) care NU este creator/coordonator:**
-- Vede DOAR tabul „General" (read-only). Tab-urile Coordonatori, Membri, Întâlniri/Zile sunt ascunse.
+Componentă nouă: `src/pages/shared/EventPreviewPage.tsx` — vizual identică cu `StudentEventDetailPage` (titlu, descriere, dată, interval, locație, clase eligibile, fereastră rezervare, locuri rămase, CSE badge, fișiere `form_template` dacă există), dar:
+- Fără secțiunea „Rezervă loc" / `bookMutation` / `bookingConfirm`.
+- Fără secțiunea de rezervare/anulare proprie.
+- Buton „Înapoi" întors la `history.back()`.
 
-**Pentru diriginte (`homeroom_teacher`) care NU este creator/coordonator:**
-- Vede tab „General" (read-only)
-- Vede tab „Întâlniri" / „Zile & prezență", DAR lista de membri și grila de prezență sunt filtrate la elevii claselor pe care le conduce (`homeroom_teacher_id = auth.uid()`).
-- Nu vede Coordonatori sau lista globală de Membri.
+Pentru voluntariat: rută `/volunteer-projects/preview/:id` cu o pagină simetrică (`VolunteerProjectPreviewPage`) care arată descriere, perioadă, zile programate (read-only) și echipa.
 
-**Admin / CSE / creator / coordonator:** comportamentul actual (acces complet).
+## 4. Routing & click handlers
 
-### Detalii tehnice
+- `AllEventsCalendarSection` (prof/diriginte): înlocuiesc dialogul actual cu `navigate("/events/preview/:id")` sau `volunteer-projects/preview/:id` în `onEventClick`.
+- `StudentDashboard` calendar: click pe item volunteer → `/student/volunteer-projects/:id` existent (dacă există) sau `/volunteer-projects/preview/:id` ca fallback când nu e înrolat. Pentru evenimente păstrez `/student/events/:id`.
 
-Adaug un flag `viewMode` calculat în detail page:
-- `full` — admin/creator/coordonator (canManage actual)
-- `homeroom_filtered` — diriginte non-creator → vede General + Întâlniri/Zile filtrate
-- `general_only` — profesor non-creator → vede doar General
+## 5. Sursă date voluntariat în dashboarduri
 
-În `MeetingsTab` / `DaysTab`, dacă `viewMode === "homeroom_filtered"`:
-- Încarc `student_class_assignments` pentru `homeroom_teacher_id = auth.uid()` ca să obțin lista `myStudentIds`
-- Filtrez `enrollments` (membrii afișați în grila de prezență) și `club_attendance` / `volunteer_attendance` doar la acei studenți
-- Ascund butoanele de adăugare/modificare; totul este read-only
+- Hook nou `useCalendarVolunteerDays(role, userId, classId, grade)` în `src/hooks/`:
+  - SELECT `volunteer_days` JOIN `volunteer_projects` unde `status='active'` și (eligibil pentru elev / fără restricție pentru profesori).
+  - Pentru elev: include și zile unde există `volunteer_enrollments` activ (similar logicii event).
+- Folosit în `StudentDashboard` și `AllEventsCalendarSection`.
 
-RLS-urile existente permit dirigintelui să citească `club_enrollments`, `club_attendance`, `volunteer_enrollments`, `volunteer_attendance` pentru elevii săi (politici `Homeroom read class …` deja existente). RLS-ul pentru `clubs`/`volunteer_projects` permite oricărui authenticated să citească cele cu `status = 'active'`. Nu e nevoie de migrare SQL.
+## 6. Detalii tehnice
 
-### Fișiere modificate
-- `src/components/layouts/ProfLayout.tsx` — bară unificată + tab Module
-- `src/components/layouts/TeacherLayout.tsx` — bară unificată + tab Module
-- `src/pages/teacher/TeacherReportsPage.tsx` — voluntariat în tab „Sumar"
-- `src/components/clubs/ClubDetailPage.tsx` — viewMode + filtrare prezență
-- `src/components/clubs/VolunteerProjectDetailPage.tsx` — viewMode + filtrare prezență
+- Niciun schema change. RLS existent pe `volunteer_projects` (active) și `volunteer_days` (creator/coordinator/admin) — pentru elevi va trebui o policy nouă „read days of active projects" dacă nu există deja; verific la implementare și adaug doar dacă lipsește.
+- Badge „V": componentă inline `<span className="inline-flex h-4 w-4 items-center justify-center rounded-sm bg-secondary text-secondary-foreground text-[9px] font-bold">V</span>`.
+- Tipuri: extind `Props` din `EventsCalendar` fără a sparge call site-urile existente (`volunteerDays` opțional, default `[]`).
