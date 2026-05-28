@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake } from "lucide-react";
+import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake, Users } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
