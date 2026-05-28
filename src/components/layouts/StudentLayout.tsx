@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake } from "lucide-react";
+import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake, Users } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
@@ -18,7 +18,9 @@ const scheduleNav = [
 ];
 
 const clubsNav = [
-  { title: "Cluburi & Voluntariat", icon: HeartHandshake, path: "/student/clubs" },
+  { title: "Dashboard", icon: LayoutDashboard, path: "/student/clubs", tab: "dashboard" },
+  { title: "Cluburile mele", icon: Users, path: "/student/clubs", tab: "my-clubs" },
+  { title: "Voluntariat", icon: HeartHandshake, path: "/student/clubs", tab: "volunteer" },
 ];
 
 export default function StudentLayout() {
@@ -29,6 +31,7 @@ export default function StudentLayout() {
   const isSchedule = location.pathname.startsWith("/student/orar");
   const isClubs = location.pathname.startsWith("/student/clubs") || location.pathname.startsWith("/student/volunteer");
   const navItems = isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
+  const currentTab = new URLSearchParams(location.search).get("tab") ?? "dashboard";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -56,21 +59,25 @@ export default function StudentLayout() {
         className="fixed left-0 right-0 z-30 flex items-center justify-around border-t bg-card px-2 pt-2"
         style={{ bottom: 0, paddingBottom: "max(env(safe-area-inset-bottom), 1.25rem)" }}
       >
-        {navItems.map((item) => (
-          <Button
-            key={item.path}
-            variant="ghost"
-            className={`flex flex-col items-center gap-1 h-auto py-2 px-3 ${
-              location.pathname === item.path
-                ? "text-primary"
-                : "text-muted-foreground"
-            }`}
-            onClick={() => navigate(item.path)}
-          >
-            <item.icon className="h-5 w-5" />
-            <span className="text-xs">{item.title}</span>
-          </Button>
-        ))}
+        {navItems.map((item: any) => {
+          const isActive = isClubs && "tab" in item
+            ? location.pathname === item.path && currentTab === item.tab
+            : location.pathname === item.path;
+          const target = "tab" in item ? `${item.path}?tab=${item.tab}` : item.path;
+          return (
+            <Button
+              key={`${item.path}-${item.title}`}
+              variant="ghost"
+              className={`flex flex-col items-center gap-1 h-auto py-2 px-3 ${
+                isActive ? "text-primary" : "text-muted-foreground"
+              }`}
+              onClick={() => navigate(target)}
+            >
+              <item.icon className="h-5 w-5" />
+              <span className="text-xs">{item.title}</span>
+            </Button>
+          );
+        })}
       </nav>
     </div>
   );
