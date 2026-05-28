@@ -204,10 +204,12 @@ Deno.serve(async (req) => {
       return endTime <= localTimeStr;
     });
 
-    // (Removed early return — fall through so volunteer notifications still run if no events ended.)
+    let inserted = 0, webPushCount = 0, fcmCount = 0;
+    let teacherIds: string[] = [];
 
+    eventBlock: do {
+      if (endedEvents.length === 0) break eventBlock;
 
-    const eventIds = endedEvents.map((e: any) => e.id);
     const eventMap: Record<string, any> = {};
     for (const e of endedEvents) eventMap[e.id] = e;
 
