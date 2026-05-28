@@ -59,21 +59,25 @@ export default function StudentLayout() {
         className="fixed left-0 right-0 z-30 flex items-center justify-around border-t bg-card px-2 pt-2"
         style={{ bottom: 0, paddingBottom: "max(env(safe-area-inset-bottom), 1.25rem)" }}
       >
-        {navItems.map((item) => (
-          <Button
-            key={item.path}
-            variant="ghost"
-            className={`flex flex-col items-center gap-1 h-auto py-2 px-3 ${
-              location.pathname === item.path
-                ? "text-primary"
-                : "text-muted-foreground"
-            }`}
-            onClick={() => navigate(item.path)}
-          >
-            <item.icon className="h-5 w-5" />
-            <span className="text-xs">{item.title}</span>
-          </Button>
-        ))}
+        {navItems.map((item: any) => {
+          const isActive = isClubs && "tab" in item
+            ? location.pathname === item.path && currentTab === item.tab
+            : location.pathname === item.path;
+          const target = "tab" in item ? `${item.path}?tab=${item.tab}` : item.path;
+          return (
+            <Button
+              key={`${item.path}-${item.title}`}
+              variant="ghost"
+              className={`flex flex-col items-center gap-1 h-auto py-2 px-3 ${
+                isActive ? "text-primary" : "text-muted-foreground"
+              }`}
+              onClick={() => navigate(target)}
+            >
+              <item.icon className="h-5 w-5" />
+              <span className="text-xs">{item.title}</span>
+            </Button>
+          );
+        })}
       </nav>
     </div>
   );
