@@ -52,6 +52,7 @@ export default function StudentEventDetailPage() {
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ["event_detail", id],
