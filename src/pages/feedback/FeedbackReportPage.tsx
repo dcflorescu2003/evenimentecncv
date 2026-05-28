@@ -63,7 +63,7 @@ export default function FeedbackReportPage({ mode }: Props) {
         byResp.get(a.response_id)!.push({ question_id: a.question_id, value: a.value });
       });
 
-      // Fetch respondent names separately (no FK -> can't embed via PostgREST)
+      // Fetch respondent + teacher names separately (no FK -> can't embed via PostgREST)
       const respondentIds = Array.from(
         new Set(
           (resp ?? [])
@@ -71,12 +71,16 @@ export default function FeedbackReportPage({ mode }: Props) {
             .map((r: any) => r.respondent_id as string)
         )
       );
+      const teacherIds = Array.from(
+        new Set((resp ?? []).map((r: any) => r.subject_teacher_id).filter(Boolean) as string[])
+      );
+      const allIds = Array.from(new Set([...respondentIds, ...teacherIds]));
       const nameMap = new Map<string, string>();
-      if (respondentIds.length) {
+      if (allIds.length) {
         const { data: profs } = await supabase
           .from("profiles")
           .select("id, first_name, last_name")
-          .in("id", respondentIds);
+          .in("id", allIds);
         (profs ?? []).forEach((p: any) => {
           nameMap.set(p.id, `${p.last_name ?? ""} ${p.first_name ?? ""}`.trim());
         });
@@ -87,6 +91,8 @@ export default function FeedbackReportPage({ mode }: Props) {
         submitted_at: r.submitted_at,
         is_identified: r.is_identified,
         respondent_name: r.is_identified && r.respondent_id ? nameMap.get(r.respondent_id) ?? null : null,
+        subject_teacher_id: r.subject_teacher_id ?? null,
+        subject_teacher_name: r.subject_teacher_id ? nameMap.get(r.subject_teacher_id) ?? null : null,
         answers: byResp.get(r.id) ?? [],
       }));
     },
