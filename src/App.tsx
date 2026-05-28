@@ -139,6 +139,9 @@ const App = () => (
               <Route path="/student/tickets" element={<StudentTicketsPage />} />
               <Route path="/student/scan/:eventId" element={<StudentScanPage />} />
               <Route path="/student/orar" element={<StudentSchedulePage />} />
+              <Route path="/student/clubs" element={<ClubsVolunteerHub mode="student" />} />
+              <Route path="/student/clubs/:id" element={<ClubDetailPage mode="student" />} />
+              <Route path="/student/volunteer/:id" element={<VolunteerProjectDetailPage mode="student" />} />
             </Route>
 
             {/* Teacher (profesor) routes */}
@@ -154,6 +157,9 @@ const App = () => (
               <Route path="/prof/events/:id" element={<ProfEventDetailPage />} />
               <Route path="/prof/scan/:eventId" element={<ProfScanPage />} />
               <Route path="/prof/event/:eventId" element={<ProfEventParticipantsPage />} />
+              <Route path="/prof/clubs" element={<ClubsVolunteerHub mode="cse" />} />
+              <Route path="/prof/clubs/:id" element={<ClubDetailPage mode="cse" />} />
+              <Route path="/prof/volunteer/:id" element={<VolunteerProjectDetailPage mode="cse" />} />
             </Route>
 
             {/* Homeroom teacher routes */}
