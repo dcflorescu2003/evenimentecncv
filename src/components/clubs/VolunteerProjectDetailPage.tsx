@@ -27,7 +27,9 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
   const qc = useQueryClient();
   const isAdmin = roles.includes("admin");
   const isCse = roles.includes("cse");
-  const isTeacher = roles.includes("teacher") || roles.includes("homeroom_teacher");
+  const isHomeroom = roles.includes("homeroom_teacher");
+  const isPlainTeacher = roles.includes("teacher") && !isHomeroom;
+  const isTeacher = roles.includes("teacher") || isHomeroom;
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["volunteer", projectId],
@@ -73,6 +75,35 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
   const canManage = isAdmin || ((isCse || isTeacher) && isCreator);
   const myEnrollment = enrollments.find((e: any) => e.student_id === user?.id);
 
+  const viewMode: "full" | "homeroom_filtered" | "general_only" | "student" =
+    mode === "student" ? "student"
+    : canManage ? "full"
+    : isHomeroom ? "homeroom_filtered"
+    : (isPlainTeacher || isCse) ? "general_only"
+    : "full";
+
+  const { data: myStudentIds = [] } = useQuery({
+    queryKey: ["homeroom-my-students", user?.id],
+    enabled: viewMode === "homeroom_filtered" && !!user,
+    queryFn: async () => {
+      const { data: classes } = await supabase
+        .from("classes").select("id").eq("homeroom_teacher_id", user!.id).eq("is_active", true);
+      const cids = (classes ?? []).map((c: any) => c.id);
+      if (!cids.length) return [] as string[];
+      const { data } = await supabase
+        .from("student_class_assignments").select("student_id").in("class_id", cids);
+      return [...new Set((data ?? []).map((a: any) => a.student_id))] as string[];
+    },
+  });
+
+  const visibleEnrollments = useMemo(() => {
+    if (viewMode === "homeroom_filtered") {
+      const mine = new Set(myStudentIds);
+      return enrollments.filter((e: any) => mine.has(e.student_id));
+    }
+    return enrollments;
+  }, [enrollments, viewMode, myStudentIds]);
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Se încarcă…</p>;
   if (!project) return <p className="text-sm text-muted-foreground">Proiect inexistent.</p>;
 
@@ -99,6 +130,9 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
     toast.success("Retras");
     qc.invalidateQueries({ queryKey: ["volunteer-enroll", projectId] });
   }
+
+  const showMembersTab = canManage;
+  const showDaysTab = viewMode !== "general_only";
 
   return (
     <div className="space-y-4">
@@ -137,14 +171,14 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
       <Tabs defaultValue="general">
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
-          {canManage && <TabsTrigger value="members">Înscriși ({enrollments.length})</TabsTrigger>}
-          <TabsTrigger value="days">Zile & prezență</TabsTrigger>
+          {showMembersTab && <TabsTrigger value="members">Înscriși ({enrollments.length})</TabsTrigger>}
+          {showDaysTab && <TabsTrigger value="days">Zile & prezență</TabsTrigger>}
         </TabsList>
         <TabsContent value="general" className="pt-3">
           <ProjectGeneralTab project={project} canEdit={canManage}
             onSaved={() => qc.invalidateQueries({ queryKey: ["volunteer", projectId] })} />
         </TabsContent>
-        {canManage && (
+        {showMembersTab && (
           <TabsContent value="members" className="pt-3">
             <MembersTab
               projectId={projectId!}
@@ -154,11 +188,15 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
             />
           </TabsContent>
         )}
-        <TabsContent value="days" className="pt-3">
-          <DaysTab projectId={projectId!} days={days} enrollments={enrollments}
-            canManage={canManage} userId={user!.id}
-            onChange={() => qc.invalidateQueries({ queryKey: ["volunteer-days", projectId] })} />
-        </TabsContent>
+        {showDaysTab && (
+          <TabsContent value="days" className="pt-3">
+            <DaysTab projectId={projectId!} days={days} enrollments={visibleEnrollments}
+              canManage={canManage}
+              readOnlyAttendance={viewMode === "homeroom_filtered"}
+              userId={user!.id}
+              onChange={() => qc.invalidateQueries({ queryKey: ["volunteer-days", projectId] })} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
@@ -353,7 +391,7 @@ function MembersTab({
   );
 }
 
-function DaysTab({ projectId, days, enrollments, canManage, userId, onChange }: any) {
+function DaysTab({ projectId, days, enrollments, canManage, readOnlyAttendance, userId, onChange }: any) {
   const today = new Date().toISOString().slice(0, 10);
   const [d, setD] = useState(today); const [s, setS] = useState(""); const [e, setE] = useState("");
   const [loc, setLoc] = useState("");
@@ -395,7 +433,7 @@ function DaysTab({ projectId, days, enrollments, canManage, userId, onChange }: 
               {day.location && <p className="text-xs text-muted-foreground">{day.location}</p>}
             </div>
             <div className="flex items-center gap-1">
-              {canManage && (
+              {(canManage || readOnlyAttendance) && (
                 <Button size="sm" variant="outline" onClick={() => setOpen(open === day.id ? null : day.id)}>
                   {open === day.id ? "Închide" : "Prezență"}
                 </Button>
@@ -410,8 +448,43 @@ function DaysTab({ projectId, days, enrollments, canManage, userId, onChange }: 
           {open === day.id && canManage && (
             <DayAttendancePanel dayId={day.id} enrollments={enrollments} userId={userId} />
           )}
+          {open === day.id && !canManage && readOnlyAttendance && (
+            <ReadOnlyDayAttendancePanel dayId={day.id} enrollments={enrollments} />
+          )}
         </CardContent></Card>
       ))}
+    </div>
+  );
+}
+
+function ReadOnlyDayAttendancePanel({ dayId, enrollments }: { dayId: string; enrollments: any[] }) {
+  const { data: attendance = [] } = useQuery({
+    queryKey: ["v-att-ro", dayId],
+    queryFn: async () => {
+      const { data } = await supabase.from("volunteer_attendance")
+        .select("student_id, status").eq("day_id", dayId);
+      return data ?? [];
+    },
+  });
+  const labelFor = (s?: string) =>
+    s === "present" ? "Prezent" : s === "late" ? "Întârziat" : s === "absent" ? "Absent" : "—";
+  const variantFor = (s?: string): "default" | "secondary" | "outline" | "destructive" =>
+    s === "present" || s === "late" ? "default" : s === "absent" ? "destructive" : "outline";
+  if (enrollments.length === 0) {
+    return <p className="mt-3 text-xs text-muted-foreground border-t pt-3">Niciun elev din clasa ta nu este înscris la acest proiect.</p>;
+  }
+  return (
+    <div className="mt-3 space-y-1 border-t pt-3">
+      <p className="text-xs text-muted-foreground mb-2">Doar elevii clasei tale (vizualizare).</p>
+      {enrollments.map((e: any) => {
+        const a = attendance.find((x: any) => x.student_id === e.student_id);
+        return (
+          <div key={e.id} className="flex items-center justify-between rounded border px-2 py-1.5">
+            <span className="text-sm">{e.profile ? `${e.profile.last_name} ${e.profile.first_name}` : e.student_id}</span>
+            <Badge variant={variantFor(a?.status)}>{labelFor(a?.status)}</Badge>
+          </div>
+        );
+      })}
     </div>
   );
 }
