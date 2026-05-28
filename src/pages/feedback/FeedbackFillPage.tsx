@@ -155,51 +155,20 @@ export default function FeedbackFillPage() {
 
     setSubmitting(true);
     try {
-      // Eligibility / anti-duplicate via RPC (skip when editing)
-      if (!existingResponseId) {
-        const { data: check } = await supabase.rpc("check_feedback_submission", {
-          _user_id: user.id,
-          _form_id: form.id,
-          _teacher_id: form.type === "teacher_feedback" ? teacherId : null,
-        });
-        if (check && !(check as any).allowed) {
-          toast.error((check as any).reason ?? "Nu poți trimite acest răspuns");
-          setSubmitting(false); return;
-        }
-      }
-
-      const isAnonymous = form.anonymity === "anonymous" || (form.anonymity === "anonymous_optional" && !identify);
-
-      let responseId = existingResponseId;
-      if (responseId) {
-        const { error } = await supabase
-          .from("feedback_responses")
-          .update({ is_identified: !isAnonymous, updated_at: new Date().toISOString() })
-          .eq("id", responseId);
-        if (error) throw error;
-        await supabase.from("feedback_answers").delete().eq("response_id", responseId);
-      } else {
-        const { data, error } = await supabase
-          .from("feedback_responses")
-          .insert({
-            form_id: form.id,
-            respondent_id: isAnonymous ? null : user.id,
-            subject_teacher_id: form.type === "teacher_feedback" ? teacherId : null,
-            is_identified: !isAnonymous,
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-        responseId = data.id;
-      }
-
-      const rows = Object.entries(answers)
+      const answersArray = Object.entries(answers)
         .filter(([_, v]) => v !== undefined && v !== null && v !== "")
-        .map(([qid, v]) => ({ response_id: responseId!, question_id: qid, value: v as any }));
-      if (rows.length) {
-        const { error } = await supabase.from("feedback_answers").insert(rows);
-        if (error) throw error;
-      }
+        .map(([qid, v]) => ({ question_id: qid, value: v }));
+
+      const { data, error } = await supabase.rpc("submit_feedback_response", {
+        _form_id: form.id,
+        _teacher_id: form.type === "teacher_feedback" ? teacherId : null,
+        _identified:
+          form.anonymity === "identified" ||
+          (form.anonymity === "anonymous_optional" && identify),
+        _answers: answersArray as any,
+        _response_id: existingResponseId,
+      });
+      if (error) throw error;
 
       toast.success("Răspunsul a fost trimis");
       navigate(-1);
