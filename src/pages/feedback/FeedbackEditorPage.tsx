@@ -112,14 +112,14 @@ export default function FeedbackEditorPage({ mode }: Props) {
 
     setSaving(true);
     try {
-      const audience = type === "teacher_survey" ? "teachers" : "students";
+      const audience: "students" | "teachers" = type === "teacher_survey" ? "teachers" : "students";
       const payload = {
         title: title.trim(),
         description: description.trim() || null,
         type,
         anonymity,
         audience,
-        status: publish ? "active" : "draft",
+        status: (publish ? "active" : "draft") as "active" | "draft",
         session_id: activeSession?.id ?? null,
         opens_at: opensAt ? new Date(opensAt + "T00:00:00").toISOString() : null,
         closes_at: closesAt ? new Date(closesAt + "T23:59:59").toISOString() : null,
