@@ -41,7 +41,9 @@ export default function ClubDetailPage({ mode }: Props) {
 
   const isAdmin = roles.includes("admin");
   const isCse = roles.includes("cse");
-  const isTeacher = roles.includes("teacher") || roles.includes("homeroom_teacher");
+  const isHomeroom = roles.includes("homeroom_teacher");
+  const isPlainTeacher = roles.includes("teacher") && !isHomeroom;
+  const isTeacher = roles.includes("teacher") || isHomeroom;
 
   const { data: club, isLoading } = useQuery({
     queryKey: ["club", clubId],
@@ -84,6 +86,29 @@ export default function ClubDetailPage({ mode }: Props) {
   const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator;
   const canManageCoords = isAdmin || ((isCse || isTeacher) && isCreator);
 
+  // View mode for non-creator, non-coordinator, non-admin teachers
+  const viewMode: "full" | "homeroom_filtered" | "general_only" | "student" =
+    mode === "student" ? "student"
+    : canManage ? "full"
+    : isHomeroom ? "homeroom_filtered"
+    : (isPlainTeacher || isCse) ? "general_only"
+    : "full";
+
+  // For homeroom_filtered: load own students
+  const { data: myStudentIds = [] } = useQuery({
+    queryKey: ["homeroom-my-students", user?.id],
+    enabled: viewMode === "homeroom_filtered" && !!user,
+    queryFn: async () => {
+      const { data: classes } = await supabase
+        .from("classes").select("id").eq("homeroom_teacher_id", user!.id).eq("is_active", true);
+      const cids = (classes ?? []).map((c: any) => c.id);
+      if (!cids.length) return [] as string[];
+      const { data } = await supabase
+        .from("student_class_assignments").select("student_id").in("class_id", cids);
+      return [...new Set((data ?? []).map((a: any) => a.student_id))] as string[];
+    },
+  });
+
   const { data: enrollments = [] } = useQuery({
     queryKey: ["club-enrollments", clubId],
     enabled: !!clubId,
@@ -107,6 +132,14 @@ export default function ClubDetailPage({ mode }: Props) {
         );
     },
   });
+
+  const visibleEnrollments = useMemo(() => {
+    if (viewMode === "homeroom_filtered") {
+      const mine = new Set(myStudentIds);
+      return enrollments.filter((e: any) => mine.has(e.student_id));
+    }
+    return enrollments;
+  }, [enrollments, viewMode, myStudentIds]);
 
   const { data: meetings = [] } = useQuery({
     queryKey: ["club-meetings", clubId],
@@ -133,6 +166,10 @@ export default function ClubDetailPage({ mode }: Props) {
   const backPath =
     mode === "admin" ? "/admin/clubs" : mode === "cse" ? "/prof/clubs" : "/student/clubs";
 
+  const showCoordsTab = canManage;
+  const showMembersTab = canManage;
+  const showMeetingsTab = viewMode !== "general_only";
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
@@ -158,16 +195,16 @@ export default function ClubDetailPage({ mode }: Props) {
       <Tabs defaultValue="general">
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="general">General</TabsTrigger>
-          {canManage && <TabsTrigger value="coords">Coordonatori</TabsTrigger>}
-          {canManage && <TabsTrigger value="members">Membri ({enrollments.length})</TabsTrigger>}
-          <TabsTrigger value="meetings">Întâlniri</TabsTrigger>
+          {showCoordsTab && <TabsTrigger value="coords">Coordonatori</TabsTrigger>}
+          {showMembersTab && <TabsTrigger value="members">Membri ({enrollments.length})</TabsTrigger>}
+          {showMeetingsTab && <TabsTrigger value="meetings">Întâlniri</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="general" className="space-y-3 pt-3">
           <GeneralTab club={club} canEdit={canManage} onSaved={() => qc.invalidateQueries({ queryKey: ["club", clubId] })} />
         </TabsContent>
 
-        {canManage && (
+        {showCoordsTab && (
           <TabsContent value="coords" className="space-y-3 pt-3">
             <CoordinatorsTab
               clubId={clubId!}
@@ -179,7 +216,7 @@ export default function ClubDetailPage({ mode }: Props) {
           </TabsContent>
         )}
 
-        {canManage && (
+        {showMembersTab && (
           <TabsContent value="members" className="space-y-3 pt-3">
             <MembersTab
               clubId={clubId!}
@@ -190,17 +227,20 @@ export default function ClubDetailPage({ mode }: Props) {
           </TabsContent>
         )}
 
-        <TabsContent value="meetings" className="space-y-3 pt-3">
-          <MeetingsTab
-            clubId={clubId!}
-            meetings={meetings}
-            enrollments={enrollments}
-            canManage={canManage}
-            userId={user!.id}
-            isStudent={mode === "student"}
-            onChange={() => qc.invalidateQueries({ queryKey: ["club-meetings", clubId] })}
-          />
-        </TabsContent>
+        {showMeetingsTab && (
+          <TabsContent value="meetings" className="space-y-3 pt-3">
+            <MeetingsTab
+              clubId={clubId!}
+              meetings={meetings}
+              enrollments={visibleEnrollments}
+              canManage={canManage}
+              readOnlyAttendance={viewMode === "homeroom_filtered"}
+              userId={user!.id}
+              isStudent={mode === "student"}
+              onChange={() => qc.invalidateQueries({ queryKey: ["club-meetings", clubId] })}
+            />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
