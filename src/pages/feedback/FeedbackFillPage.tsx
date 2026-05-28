@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { ArrowLeft, Eye, EyeOff, Send } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Check, ChevronsUpDown, Eye, EyeOff, Send } from "lucide-react";
 import { toast } from "sonner";
 import { QuestionRenderer, type RenderQuestion } from "@/components/feedback/QuestionRenderer";
 
