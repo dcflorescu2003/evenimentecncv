@@ -540,7 +540,7 @@ function MeetingsTab({
     setCreating(false);
     if (error) return toast.error(error.message);
     toast.success("Întâlnire adăugată");
-    setNewDate(""); setNewStart(""); setNewEnd(""); setNewLoc("");
+    setNewDate(new Date().toISOString().slice(0, 10)); setNewStart(""); setNewEnd(""); setNewLoc("");
     onChange();
   }
 
