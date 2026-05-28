@@ -51,7 +51,6 @@ export default function TeacherLayout() {
             <span className="hidden sm:inline">{item.title}</span>
           </Button>
         ))}
-        <ModuleSwitcher variant="labeled" />
       </div>
       <main className="flex-1 overflow-auto p-3 sm:p-4 pb-safe">
         <Outlet />
