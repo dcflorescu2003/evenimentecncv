@@ -150,7 +150,10 @@ export default function ClubsVolunteerHub({ mode }: Props) {
               <Card key={p.id} className="flex flex-col">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base">{p.name}</CardTitle>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <CardTitle className="text-base truncate">{p.name}</CardTitle>
+                      {(p as any).is_cse && <CseBadge short />}
+                    </div>
                     <StatusBadge status={p.status} />
                   </div>
                   <CardDescription className="text-xs">
