@@ -518,7 +518,8 @@ function MeetingsTab({
   isStudent: boolean;
   onChange: () => void;
 }) {
-  const [newDate, setNewDate] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [newDate, setNewDate] = useState(today);
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
   const [newLoc, setNewLoc] = useState("");
