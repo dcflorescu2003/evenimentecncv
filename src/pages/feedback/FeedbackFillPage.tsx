@@ -188,23 +188,43 @@ export default function FeedbackFillPage() {
           {form.type === "teacher_feedback" && (
             <div>
               <Label>Profesor</Label>
-              <Select value={teacherId} onValueChange={setTeacherId} disabled={!!existingResponseId}>
-                <SelectTrigger><SelectValue placeholder="Alege profesorul…" /></SelectTrigger>
-                <SelectContent>
-                  {classTeachers.length === 0 && (
-                    <div className="px-2 py-3 text-sm text-muted-foreground">
-                      Niciun profesor disponibil din orar.
-                    </div>
-                  )}
-                  {classTeachers.map((t: any) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}{t.subjects ? ` — ${t.subjects}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between"
+                    disabled={!!existingResponseId}
+                  >
+                    {teacherId
+                      ? allTeachers.find((t: any) => t.id === teacherId)?.name ?? "Alege profesorul…"
+                      : "Alege profesorul…"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Caută profesor..." />
+                    <CommandList>
+                      <CommandEmpty>Niciun profesor găsit.</CommandEmpty>
+                      <CommandGroup>
+                        {allTeachers.map((t: any) => (
+                          <CommandItem
+                            key={t.id}
+                            value={t.name}
+                            onSelect={() => setTeacherId(t.id)}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", teacherId === t.id ? "opacity-100" : "opacity-0")} />
+                            {t.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <p className="text-xs text-muted-foreground mt-1">
-                Vezi doar profesorii din orarul clasei tale. Poți răspunde o singură dată per profesor.
+                Poți răspunde o singură dată per profesor.
               </p>
             </div>
           )}
