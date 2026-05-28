@@ -184,6 +184,10 @@ export default function ClubsVolunteerHub({ mode }: Props) {
         )}
       </section>
 
+      </section>
+
+      <Separator />
+
       {/* === CLUBURI === */}
       <section className="space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
