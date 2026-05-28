@@ -108,6 +108,9 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
         </Button>
         <h1 className="font-display text-xl font-semibold flex-1 truncate">{project.name}</h1>
         {(project as any).is_cse && <CseBadge short />}
+        {(project as any).is_private && (
+          <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" />Privat</Badge>
+        )}
         <Badge variant={project.status === "active" ? "default" : "outline"}>{project.status}</Badge>
       </div>
 
