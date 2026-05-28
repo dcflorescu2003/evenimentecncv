@@ -791,6 +791,196 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_answers: {
+        Row: {
+          created_at: string
+          id: string
+          question_id: string
+          response_id: string
+          value: Json | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          question_id: string
+          response_id: string
+          value?: Json | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          question_id?: string
+          response_id?: string
+          value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_answers_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_forms: {
+        Row: {
+          anonymity: Database["public"]["Enums"]["feedback_anonymity"]
+          audience: Database["public"]["Enums"]["feedback_audience"]
+          closes_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          eligible_classes: string[] | null
+          eligible_grades: number[] | null
+          id: string
+          opens_at: string | null
+          session_id: string | null
+          status: Database["public"]["Enums"]["feedback_form_status"]
+          title: string
+          type: Database["public"]["Enums"]["feedback_type"]
+          updated_at: string
+        }
+        Insert: {
+          anonymity?: Database["public"]["Enums"]["feedback_anonymity"]
+          audience?: Database["public"]["Enums"]["feedback_audience"]
+          closes_at?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          eligible_classes?: string[] | null
+          eligible_grades?: number[] | null
+          id?: string
+          opens_at?: string | null
+          session_id?: string | null
+          status?: Database["public"]["Enums"]["feedback_form_status"]
+          title: string
+          type?: Database["public"]["Enums"]["feedback_type"]
+          updated_at?: string
+        }
+        Update: {
+          anonymity?: Database["public"]["Enums"]["feedback_anonymity"]
+          audience?: Database["public"]["Enums"]["feedback_audience"]
+          closes_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          eligible_classes?: string[] | null
+          eligible_grades?: number[] | null
+          id?: string
+          opens_at?: string | null
+          session_id?: string | null
+          status?: Database["public"]["Enums"]["feedback_form_status"]
+          title?: string
+          type?: Database["public"]["Enums"]["feedback_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      feedback_questions: {
+        Row: {
+          created_at: string
+          form_id: string
+          id: string
+          options: Json | null
+          position: number
+          question_type: Database["public"]["Enums"]["feedback_question_type"]
+          required: boolean
+          scale_max: number | null
+          scale_max_label: string | null
+          scale_min: number | null
+          scale_min_label: string | null
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          form_id: string
+          id?: string
+          options?: Json | null
+          position?: number
+          question_type: Database["public"]["Enums"]["feedback_question_type"]
+          required?: boolean
+          scale_max?: number | null
+          scale_max_label?: string | null
+          scale_min?: number | null
+          scale_min_label?: string | null
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          form_id?: string
+          id?: string
+          options?: Json | null
+          position?: number
+          question_type?: Database["public"]["Enums"]["feedback_question_type"]
+          required?: boolean
+          scale_max?: number | null
+          scale_max_label?: string | null
+          scale_min?: number | null
+          scale_min_label?: string | null
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_questions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_responses: {
+        Row: {
+          class_id: string | null
+          form_id: string
+          id: string
+          is_identified: boolean
+          respondent_id: string | null
+          subject_teacher_id: string | null
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          class_id?: string | null
+          form_id: string
+          id?: string
+          is_identified?: boolean
+          respondent_id?: string | null
+          subject_teacher_id?: string | null
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string | null
+          form_id?: string
+          id?: string
+          is_identified?: boolean
+          respondent_id?: string | null
+          subject_teacher_id?: string | null
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_submissions: {
         Row: {
           admin_notes: string | null
@@ -1629,6 +1819,10 @@ export type Database = {
         Args: { _club_id: string; _student_id: string }
         Returns: Json
       }
+      check_feedback_submission: {
+        Args: { _form_id: string; _teacher_id: string; _user_id: string }
+        Returns: Json
+      }
       check_volunteer_enrollment: {
         Args: { _project_id: string; _student_id: string }
         Returns: Json
@@ -1653,7 +1847,23 @@ export type Database = {
         Args: { _event_ids: string[] }
         Returns: Json
       }
+      get_form_id_for_question: {
+        Args: { _question_id: string }
+        Returns: string
+      }
+      get_form_id_for_response: {
+        Args: { _response_id: string }
+        Returns: string
+      }
       get_project_id_for_day: { Args: { _day_id: string }; Returns: string }
+      get_response_meta: {
+        Args: { _response_id: string }
+        Returns: {
+          form_id: string
+          respondent_id: string
+          subject_teacher_id: string
+        }[]
+      }
       get_student_progress: {
         Args: { _session_id: string; _student_id: string }
         Returns: Json
@@ -1705,6 +1915,18 @@ export type Database = {
         Args: { _event_id: string; _user_id: string }
         Returns: boolean
       }
+      is_feedback_creator: {
+        Args: { _form_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_feedback_subject_teacher: {
+        Args: { _response_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_student_eligible_for_form: {
+        Args: { _form_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_teacher_for_student: {
         Args: { _student_id: string; _teacher_id: string }
         Returns: boolean
@@ -1753,6 +1975,16 @@ export type Database = {
       club_enrollment_status: "enrolled" | "withdrawn"
       club_status: "draft" | "active" | "archived"
       event_status: "draft" | "published" | "closed" | "cancelled"
+      feedback_anonymity: "anonymous" | "identified" | "anonymous_optional"
+      feedback_audience: "students" | "teachers"
+      feedback_form_status: "draft" | "active" | "closed"
+      feedback_question_type:
+        | "single_choice"
+        | "multi_choice"
+        | "dropdown"
+        | "scale"
+        | "open_text"
+      feedback_type: "general" | "teacher_feedback" | "teacher_survey"
       file_category: "event_dossier" | "form_template"
       form_submission_status: "uploaded" | "reviewed" | "accepted" | "rejected"
       import_batch_status: "pending" | "processing" | "completed" | "failed"
@@ -1906,6 +2138,17 @@ export const Constants = {
       club_enrollment_status: ["enrolled", "withdrawn"],
       club_status: ["draft", "active", "archived"],
       event_status: ["draft", "published", "closed", "cancelled"],
+      feedback_anonymity: ["anonymous", "identified", "anonymous_optional"],
+      feedback_audience: ["students", "teachers"],
+      feedback_form_status: ["draft", "active", "closed"],
+      feedback_question_type: [
+        "single_choice",
+        "multi_choice",
+        "dropdown",
+        "scale",
+        "open_text",
+      ],
+      feedback_type: ["general", "teacher_feedback", "teacher_survey"],
       file_category: ["event_dossier", "form_template"],
       form_submission_status: ["uploaded", "reviewed", "accepted", "rejected"],
       import_batch_status: ["pending", "processing", "completed", "failed"],

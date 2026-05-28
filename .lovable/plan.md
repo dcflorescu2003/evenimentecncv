@@ -1,143 +1,137 @@
 
-# Plan: Modul „Cluburi & Voluntariat"
+# Plan: Modul „Feedback"
 
-Notă: Feedback rămâne pe etapa următoare. Acum livrăm doar Cluburi + Voluntariat, ca un singur modul nou în registry (`/app` → „Cluburi & Voluntariat"), cu dashboard care arată întâi proiectele de voluntariat active și dedesubt cluburile.
-
----
-
-## 1. Structură date (Supabase)
-
-### Tabele noi
-
-**`clubs`** — definiția clubului
-- `name`, `description`, `frequency_label` (text liber: „Săptămânal Joi 15:00")
-- `session_id` (academic year scope), `max_capacity`, `eligible_grades int[]`, `eligible_classes uuid[]`
-- `enrollment_open_at`, `enrollment_close_at` (modificabile oricând)
-- `status` enum: `draft | active | archived`
-- `created_by`, timestamps
-
-**`club_coordinators`** — mai mulți coordonatori per club (profesori și/sau elevi), toți cu aceleași drepturi de management (prezență, vezi membri, rapoarte). Unique `(club_id, user_id)`.
-
-**`club_enrollments`** — înscrieri elevi
-- `club_id`, `student_id`, `status` (`enrolled | withdrawn`), `enrolled_at`, `withdrawn_at`
-- Eligibilitate verificată prin RPC `check_club_enrollment` (capacitate + clasă/an + perioadă), similar `check_booking_eligibility`.
-
-**`club_meetings`** — întâlniri ale clubului (echivalent unui „event day")
-- `club_id`, `date`, `start_time`, `end_time`, `location`, `qr_code_data` (uuid), `status`
-- Generate manual de coordonator sau bulk din frecvență (opțional, etapa 2).
-
-**`club_attendance`** — prezența per întâlnire
-- `meeting_id`, `student_id`, `status` (`present | late | absent`), `checkin_at`, `marked_by`
-- Reuse fereastra `-30m / +15m` din regulile existente (validare în RPC).
-
-### Voluntariat (proiecte multi-zi)
-
-**`volunteer_projects`** — proiect cu perioadă fixă
-- `name`, `description`, `session_id`, `location`
-- `start_date`, `end_date` (perioada proiectului, dincolo de care nu se mai pot face prezențe)
-- `enrollment_open_at`, `enrollment_close_at`
-- `max_capacity`, `eligible_grades`, `eligible_classes`, `max_per_class`
-- `status`: `draft | active | closed` (auto-closed via pg_cron după `end_date`, ca la `close-past-events`)
-- `created_by`
-
-**`volunteer_coordinators`** — mai mulți coordonatori (profesori/elevi).
-
-**`volunteer_enrollments`** — înscrieri elevi (analog `club_enrollments`).
-
-**`volunteer_days`** — zilele active ale proiectului
-- `project_id`, `date`, `start_time`, `end_time`, `qr_code_data`
-- Coordonatorul adaugă zilele relevante (nu obligatoriu toate datele din interval).
-
-**`volunteer_attendance`** — `project_day_id`, `student_id`, `status`, `checkin_at`, `marked_by`.
-
-### Grants & RLS (rezumat)
-
-- `GRANT SELECT, INSERT, UPDATE, DELETE` pentru `authenticated`; `GRANT ALL` pentru `service_role`.
-- `SECURITY DEFINER` helpers:
-  - `is_club_coordinator(_user, _club)`, `is_club_enrolled(_user, _club)`
-  - `is_volunteer_coordinator(_user, _project)`, `is_volunteer_enrolled(_user, _project)`
-- RLS:
-  - Admin & CSE: full (CSE pentru cluburile/proiectele unde e `created_by` sau coordonator).
-  - Coordonatori (profesor sau elev): citesc & gestionează clubul/proiectul propriu (membri, meetings, attendance).
-  - Elev: vede toate cluburile/proiectele `active`; vede & se înscrie/retrage doar pentru sine; vede propria prezență.
-  - Manager: read-only global (similar tabelelor existente).
-
-### Funcții & cron
-
-- `check_club_enrollment(student, club)` — capacitate, perioadă, eligibilitate clasă/an, evită dubla înscriere, max_per_class (opțional).
-- `check_volunteer_enrollment(student, project)` — analog.
-- `get_club_attendance_stats(club_id, student_id?)` — pentru rapoarte.
-- `pg_cron` zilnic 06:00 — închide `volunteer_projects` cu `end_date < today`.
+Modul nou în registry (`/app` → „Feedback"), cu acces pentru Admin, CSE, Profesor, Diriginte, Elev. Reia pattern-urile din modulul „Cluburi & Voluntariat" (eligibilitate clasă/an, RLS prin security definer, navigare jos cu 2 butoane).
 
 ---
 
-## 2. UI
+## 1. Tipuri de chestionare
 
-### Module registry
-Adaug în `src/modules/registry.ts` modulul `clubs_volunteer`:
-- Label: „Cluburi & Voluntariat"
-- Icon: `Users` (lucide)
-- Paths per rol: admin → `/admin/clubs`, cse → `/cse/clubs`, student → `/student/clubs`, teacher → `/teacher/clubs`, manager → `/manager/clubs`.
+- `general` — chestionar standard pentru elevi (anonim sau non-anonim).
+- `teacher_feedback` — elevul alege un profesor din **orarul clasei sale** și completează chestionarul; un răspuns per (chestionar, profesor); rezultatele vizibile profesorului evaluat (+ Admin).
+- `teacher_survey` — chestionar pentru profesori (doar Admin îl poate crea), profesorii răspund, rapoarte centralizate la Admin.
 
-### Dashboard modul (toți utilizatorii)
-`/student/clubs`, `/cse/clubs`, etc. — același layout:
-1. „Voluntariat activ" — carduri cu proiecte `active`, perioada și nr. locuri.
-2. „Cluburi" — carduri cu clubul, coordonatori, locuri rămase, perioada de înscriere.
+Anonimat:
+- `anonymous` (default pentru `teacher_feedback`): nu se salvează `respondent_id`; banner explicit „Răspuns anonim".
+- `identified`: se salvează `respondent_id`; banner „Identitatea ta este vizibilă creatorului".
+- `anonymous_optional`: implicit anonim, dar respondentul poate bifa „Vreau să fiu identificat" la trimitere.
 
-### Pagini per tip
-
-**Cluburi**
-- `ClubsListPage` (admin/CSE): tabel cu acțiuni → creare/editare club, definește coordonatori, vezi membri, vezi rapoarte.
-- `ClubDetailPage`:
-  - Tab „General" (nume, descriere, frecvență, perioadă înscriere — editabile).
-  - Tab „Coordonatori" (add/remove profesori/elevi cu Combobox).
-  - Tab „Membri" (listă înscriși, sortată după `last_name`; admin/coordonator pot retrage forțat).
-  - Tab „Întâlniri" (listă + buton „Creează întâlnire" → generează QR; per întâlnire → ecran prezență cu listă + scan QR, fereastră -30/+15 min).
-  - Tab „Rapoarte" (matrice prezență elev × întâlnire).
-- `StudentClubsPage`: listă cluburi cu „Înscrie-mă" / „Retrage-mă"; ecran „Clubul meu" cu calendarul întâlnirilor și prezența proprie. Înscrierile sunt libere dacă elevul îndeplinește filtrele și e perioada deschisă (fără aprobare manuală — am ales „Capacitate + filtre").
-
-**Voluntariat**
-- `VolunteerProjectsPage` (admin/CSE): tabel proiecte + creare/editare.
-- `VolunteerProjectDetailPage`:
-  - Tab „General" (date, perioadă, înscrieri).
-  - Tab „Coordonatori".
-  - Tab „Înscriși".
-  - Tab „Zile & prezență" (admin/coordonator adaugă zilele; per zi → QR + listă prezență, aceeași logică -30/+15).
-  - Tab „Rapoarte".
-- `StudentVolunteerPage`: listă active + „Înscrie-mă / Retrage-mă"; istoric prezență per proiect.
-
-**Scan QR**
-- Refolosesc componentele existente din `*/scan/*` într-o variantă `ClubScanPage` și `VolunteerScanPage` care primesc `meeting_id` / `day_id`.
-
-### Rapoarte admin (`/admin/reports`)
-
-Adaug subsecțiuni noi:
-- **Pe club** — listă cluburi → detaliu cu rate prezență, total întâlniri, membri activi, export CSV/PDF.
-- **Pe proiect de voluntariat** — analog (ore/zile prezent, % participare).
-- **Pe clasă** — pivot: elevii clasei × (cluburi înscris/ore prezent + proiecte voluntariat ore prezent), pe sesiune.
-- **Pe elev** — fișa elev: lista cluburilor și proiectelor cu prezență detaliată.
-- Reutilizez `lib/report-pdf.ts` și pattern-urile din `ManagerReports`.
+Editare după trimitere:
+- Anonim → final, fără editare.
+- Non-anonim (sau anonim cu identificare bifată) → editabil până la `closes_at`.
 
 ---
 
-## 3. Etapizare livrare
+## 2. Schema DB (migration unic)
 
-1. **Schema DB + RLS + grants** (migration unic) pentru cluburi & voluntariat + funcții helper.
-2. **Modul în registry + dashboard** + rute admin/CSE/student.
-3. **CRUD cluburi** (definire, coordonatori, înscrieri, întâlniri, prezență cu QR).
-4. **CRUD voluntariat** (analog, cu zile + auto-close cron).
-5. **Rapoarte admin** (club, proiect, clasă, elev) + export CSV/PDF.
-6. **Memory update**: adaug `mem://features/clubs-volunteer` și actualizez `mem://index.md`.
+Enums:
+- `feedback_type`: `general | teacher_feedback | teacher_survey`
+- `feedback_anonymity`: `anonymous | identified | anonymous_optional`
+- `feedback_audience`: `students | teachers`
+- `feedback_status`: `draft | active | closed`
+- `feedback_question_type`: `single_choice | multi_choice | dropdown | scale | open_text`
+
+Tabele (toate cu GRANT pentru `authenticated` + `service_role`, RLS activat):
+
+- `feedback_forms` — `title`, `description`, `type`, `anonymity`, `audience`, `status`, `session_id`, `opens_at`, `closes_at`, `eligible_grades int[]`, `eligible_classes uuid[]`, `created_by`, `created_at`, `updated_at`.
+- `feedback_questions` — `form_id`, `position`, `question_type`, `text`, `required bool`, `options jsonb` (variante pentru choice/dropdown), `scale_min int`, `scale_max int`, `scale_min_label`, `scale_max_label`.
+- `feedback_responses` — `form_id`, `respondent_id` (nullable când anonim), `subject_teacher_id` (nullable, doar la `teacher_feedback`), `submitted_at`, `is_identified bool`, `class_id` (snapshot pentru rapoarte agregate). Unique: `(form_id, respondent_id, subject_teacher_id)` când `respondent_id IS NOT NULL`.
+- `feedback_answers` — `response_id`, `question_id`, `value jsonb` (text, număr, sau array de opțiuni).
+
+Security definer functions:
+- `is_feedback_creator(_form_id, _user)`, `is_feedback_eligible_student(_form_id, _user)`, `is_feedback_target_teacher(_response_id, _user)`, `check_feedback_submission(_form_id, _user, _teacher_id)` (verifică status, fereastră, eligibilitate clasă/an, anti-duplicat).
+
+Vizibilitate rezultate (confirmat: doar creator + Admin):
+- `general` / `teacher_survey`: read pentru `created_by` și `admin`.
+- `teacher_feedback`: read pentru `admin`, `created_by` și profesorul evaluat (`subject_teacher_id = auth.uid()` prin security definer).
+- Elev: vede propriul răspuns (dacă non-anonim sau identificat opțional).
 
 ---
 
-## Detalii tehnice cheie
+## 3. Editor de chestionare (stil Google Forms)
 
-- Coordonatori multipli: toți (profesor sau elev) au aceleași drepturi de management — verificat prin `is_club_coordinator` / `is_volunteer_coordinator` în RLS.
-- Prezență identică cu evenimentele: QR + listă, fereastră -30m/+15m → după aceea `late`, restul `absent`.
-- Înscrieri: capacitate + filtre clasă/an + perioadă; fără aprobare manuală.
-- Voluntariatul **nu** se amestecă cu `events`; e tabel separat, dar trăiește în același modul UI ca și cluburile.
-- Toate textele în română, datele `zz.ll.aaaa`, orele HH:MM, sortare după `last_name`.
-- Auto-close proiecte voluntariat prin extinderea cron-ului `close-past-events` sau job nou similar.
+Componentă `FeedbackFormEditor` cu listă de întrebări drag-to-reorder. Tipuri:
 
-Confirmă planul și trec la implementarea etapei 1 (schema DB).
+- **Single choice** — listă de opțiuni, radio la răspuns.
+- **Multiple choice** — listă de opțiuni, checkbox la răspuns.
+- **Dropdown** — listă de opțiuni, Select.
+- **Scale** — min/max (ex. 1–5, 1–10) + etichete capete; Slider sau buline numerotate.
+- **Open text** — Textarea cu limită de caractere.
+
+Fiecare întrebare are toggle „obligatoriu". Salvare normalizată în `feedback_questions` cu `options jsonb`.
+
+Setări form: titlu, descriere, tip, anonimat, perioadă (`opens_at`/`closes_at` cu `DateInput`), filtre clase/ani (reutilizez `ClassEligibilityPicker`), audiență.
+
+---
+
+## 4. UI — Rute & layout
+
+Înregistrare modul în `src/modules/registry.ts` (key `feedback`, label „Feedback", icon `MessageSquare`).
+
+Rute noi:
+- `/admin/feedback`, `/admin/feedback/new`, `/admin/feedback/:id`, `/admin/feedback/:id/report`
+- `/prof/feedback`, `/prof/feedback/new`, `/prof/feedback/:id`, `/prof/feedback/:id/report`
+- `/student/feedback`, `/student/feedback/:id/respond`, `/student/feedback/:id/respond/:teacherId`
+
+Navigare bottom (asemănător `StudentLayout` pentru Cluburi):
+- **Elev**: când `/student/feedback*` → 2 butoane: `Dashboard` (chestionare deschise + istoric), `Feedback-ul meu` (răspunsurile mele).
+- **Profesor/Diriginte/CSE**: când `/prof/feedback*` → 2 butoane: `Dashboard` (chestionarele pe care le văd / la care răspund), `Feedback-ul meu` (chestionarele create de mine + buton „Creează chestionar"). Pentru profesori, aici apar și rapoartele pe `teacher_feedback` unde sunt subiect.
+
+Componente principale:
+- `FeedbackDashboardStudent` — carduri „Deschise" și „Istoric".
+- `FeedbackFillPage` — randează întrebările pe baza `question_type`; pentru `teacher_feedback` precedat de selector profesor (Combobox cu profesorii din orarul clasei elevului → query pe `class_schedules` + `teacher_initials`/`profiles`).
+- `FeedbackMineStudent` — lista răspunsurilor proprii (cu badge anonim/identificat); editabil doar non-anonim, înainte de `closes_at`.
+- `FeedbackListAdminLike` — listă chestionare proprii cu acțiuni (publică/închide/duplică/șterge, vezi rapoarte).
+- `FeedbackReportPage` — agregare per întrebare (bare/donut pentru choice, histogramă/medie pentru scale, listă răspunsuri text) + tab „Răspunsuri individuale" (doar non-anonim) + filtre (clasă, perioadă, profesor pentru `teacher_feedback`). Buton „Export PDF" via `lib/report-pdf.ts` (jsPDF).
+
+---
+
+## 5. Reguli & validări
+
+- O dată per chestionar (anti-duplicat prin unique key). La `teacher_feedback`: o dată per (chestionar, profesor) — elevul poate completa pentru fiecare profesor al său.
+- Filtre clase/ani aplicate exact ca la evenimente (`eligible_classes` / `eligible_grades`).
+- `check_feedback_submission` RPC verifică: status `active`, fereastra `opens_at/closes_at`, eligibilitate clasă, anti-duplicat, iar la `teacher_feedback` că profesorul ales chiar predă clasei elevului.
+- Anonim: edge function `submit-feedback` inserează cu `respondent_id = NULL` chiar dacă este apelată cu JWT (folosește service role doar pentru insert; verifică eligibilitate prin RPC înainte). Asta protejează identitatea chiar și în log-urile DB.
+
+---
+
+## 6. Notificări
+
+- La publicarea unui chestionar `general` / `teacher_feedback` → notificare in-app + push elevilor din clasele eligibile (refolosesc pattern-ul din notifications).
+- La `teacher_survey` publicat → notificare profesorilor eligibili.
+- Reminder cu 24h înainte de `closes_at` pentru cei care n-au răspuns (cron zilnic, similar `send-event-reminders`).
+
+---
+
+## 7. Export PDF
+
+`lib/feedback-pdf.ts` (jsPDF) — header CNCV, titlu chestionar, perioada, filtrele aplicate, pentru fiecare întrebare: enunț + grafic/tabel + statistici (n, %, medie, mediană la scale). La final, anexă cu răspunsuri individuale (doar dacă non-anonim și user-ul a cerut-o).
+
+---
+
+## 8. Memorie
+
+După implementare, adaug `mem://features/feedback` cu rezumat (tipuri, anonimat, vizibilitate creator+admin, anti-duplicat, navigare bottom 2 butoane) și update la `mem://index.md`.
+
+---
+
+## 9. Etapizare livrare
+
+1. **Schema DB**: enums, tabele, GRANTs, RLS, security definer functions, `check_feedback_submission` RPC.
+2. **Module registry + rute + layout bottom-nav** (2 butoane elev / profesor).
+3. **Editor de chestionare** (toate cele 5 tipuri de întrebări) + listă chestionare proprii.
+4. **Răspunsuri**: `FeedbackFillPage` (cu selector profesor la `teacher_feedback`), edge function `submit-feedback` cu logica de anonimat.
+5. **Rapoarte** agregate + individuale, filtrare, export PDF.
+6. **Notificări** la publicare + reminder zilnic prin cron.
+7. **Memory update**.
+
+---
+
+## Întrebări deschise / sugestii
+
+- **Reminder de răspuns**: ok să trimit auto la 24h înainte de `closes_at` (push + in-app) doar celor care n-au răspuns?
+- **Duplicare chestionar**: util de avut buton „Duplică" pentru reutilizare anuală — îl includ implicit.
+- **Template-uri**: să prevăd o bibliotecă mică de chestionare standard (ex. „Evaluare semestrială profesor", „Feedback eveniment") pe care Adminul le poate clona? Recomand să le adăugăm în etapa 3.
+- **Răspunsuri text deschise la chestionare anonime**: rămân vizibile creatorului ca text, fără asociere — confirmi?
+
+Confirmă planul (și răspunsurile la cele 4 puncte de mai sus) și trec la etapa 1.
