@@ -1,5 +1,6 @@
 import { formatDate } from "@/lib/time";
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Printer } from "lucide-react";
+import { Download, Printer, BarChart3 } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
 import {
   ChartContainer,
@@ -17,6 +18,22 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis } from "recharts";
+
+// Batch fetch helper to bypass PostgREST 1000-row limit
+async function batchFetch<T = any>(queryFn: (from: number, to: number) => any): Promise<T[]> {
+  const batchSize = 1000;
+  const all: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await queryFn(from, from + batchSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < batchSize) break;
+    from += batchSize;
+  }
+  return all;
+}
 
 export default function ReportsPage() {
   const [sessionId, setSessionId] = useState<string>("");
