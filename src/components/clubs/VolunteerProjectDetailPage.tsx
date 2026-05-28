@@ -209,7 +209,8 @@ function ProjectGeneralTab({ project, canEdit, onSaved }: any) {
 }
 
 function DaysTab({ projectId, days, enrollments, canManage, userId, onChange }: any) {
-  const [d, setD] = useState(""); const [s, setS] = useState(""); const [e, setE] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [d, setD] = useState(today); const [s, setS] = useState(""); const [e, setE] = useState("");
   const [loc, setLoc] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   async function add() {
