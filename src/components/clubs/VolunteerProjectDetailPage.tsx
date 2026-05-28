@@ -511,6 +511,10 @@ function DayAttendancePanel({ dayId, enrollments, userId }: any) {
         checkin_at: status !== "absent" ? new Date().toISOString() : null, marked_by: userId,
       });
     }
+    // Best-effort: notify the student's homeroom teacher
+    supabase.functions.invoke("notify-volunteer-attendance", {
+      body: { day_id: dayId, student_id: studentId, status },
+    }).catch((e) => console.warn("notify-volunteer-attendance failed:", e));
     qc.invalidateQueries({ queryKey: ["v-att", dayId] });
   }
   return (
