@@ -1961,6 +1961,16 @@ export type Database = {
           read_ct: number
         }[]
       }
+      submit_feedback_response: {
+        Args: {
+          _answers: Json
+          _form_id: string
+          _identified: boolean
+          _response_id?: string
+          _teacher_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role:
