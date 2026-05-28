@@ -75,7 +75,7 @@ function aggregate(q: FbQuestion, responses: FbResponse[]) {
   return { kind: "choice" as const, counts, total };
 }
 
-export async function exportFeedbackReportPdf({ title, subtitle, questions, responses, sections }: ExportArgs) {
+export async function exportFeedbackReportPdf({ title, subtitle, questions, responses, sections, overall }: ExportArgs) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   await ensureUnicodeFont(doc);
   const pageW = doc.internal.pageSize.getWidth();
