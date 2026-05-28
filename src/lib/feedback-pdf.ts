@@ -48,19 +48,21 @@ function aggregate(q: FbQuestion, responses: FbResponse[]) {
     .map((r) => r.answers.find((a) => a.question_id === q.id)?.value)
     .filter((v) => v !== undefined && v !== null);
 
+  const skipped = responses.length - values.length;
+
   if (q.question_type === "scale") {
     const nums = values.map((v) => Number(v)).filter((n) => !Number.isNaN(n));
-    if (nums.length === 0) return { kind: "empty" as const };
+    if (nums.length === 0) return { kind: "empty" as const, skipped };
     const sum = nums.reduce((a, b) => a + b, 0);
     const sorted = [...nums].sort((a, b) => a - b);
     const median = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
     const dist: Record<number, number> = {};
     for (let i = q.scale_min ?? 1; i <= (q.scale_max ?? 5); i++) dist[i] = 0;
     nums.forEach((n) => { dist[n] = (dist[n] ?? 0) + 1; });
-    return { kind: "scale" as const, n: nums.length, avg: sum / nums.length, median, dist };
+    return { kind: "scale" as const, n: nums.length, avg: sum / nums.length, median, dist, skipped };
   }
   if (q.question_type === "open_text") {
-    return { kind: "text" as const, items: values.map((v) => String(v ?? "")) };
+    return { kind: "text" as const, items: values.map((v) => String(v ?? "")), skipped };
   }
   // choice / multi / dropdown
   const counts: Record<string, number> = {};
@@ -72,7 +74,7 @@ function aggregate(q: FbQuestion, responses: FbResponse[]) {
     });
   });
   const total = responses.length;
-  return { kind: "choice" as const, counts, total };
+  return { kind: "choice" as const, counts, total, skipped };
 }
 
 export async function exportFeedbackReportPdf({ title, subtitle, questions, responses, sections, overall }: ExportArgs) {
