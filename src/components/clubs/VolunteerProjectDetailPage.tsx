@@ -108,7 +108,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
 
       {mode === "student" && (
         <Card>
-          <CardContent className="flex items-center justify-between pt-4">
+          <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium">
                 {myEnrollment ? "Ești înscris" : "Nu ești înscris"}

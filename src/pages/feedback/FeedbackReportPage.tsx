@@ -160,14 +160,14 @@ export default function FeedbackReportPage({ mode }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button variant="ghost" onClick={() => navigate(base)}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <Button variant="ghost" onClick={() => navigate(base)} className="w-full sm:w-auto justify-start">
           <ArrowLeft className="h-4 w-4 mr-2" /> Înapoi
         </Button>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           {isTeacherFeedback && (
             <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
-              <SelectTrigger className="w-[260px]">
+              <SelectTrigger className="w-full sm:w-[260px]">
                 <SelectValue placeholder="Profesor" />
               </SelectTrigger>
               <SelectContent>
@@ -180,10 +180,10 @@ export default function FeedbackReportPage({ mode }: Props) {
               </SelectContent>
             </Select>
           )}
-          <Button variant="outline" onClick={handleExportXlsx}>
+          <Button variant="outline" onClick={handleExportXlsx} className="w-full sm:w-auto">
             <FileSpreadsheet className="h-4 w-4 mr-2" /> Export Excel
           </Button>
-          <Button onClick={handleExportPdf}>
+          <Button onClick={handleExportPdf} className="w-full sm:w-auto">
             <FileDown className="h-4 w-4 mr-2" /> Export PDF
           </Button>
         </div>

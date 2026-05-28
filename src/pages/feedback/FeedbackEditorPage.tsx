@@ -170,15 +170,15 @@ export default function FeedbackEditorPage({ mode }: Props) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => navigate(backBase(mode))}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Button variant="ghost" onClick={() => navigate(backBase(mode))} className="w-full sm:w-auto justify-start">
           <ArrowLeft className="h-4 w-4 mr-2" /> Înapoi
         </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => handleSave(false)} disabled={saving}>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button variant="outline" onClick={() => handleSave(false)} disabled={saving} className="w-full sm:w-auto">
             Salvează draft
           </Button>
-          <Button onClick={() => handleSave(true)} disabled={saving}>
+          <Button onClick={() => handleSave(true)} disabled={saving} className="w-full sm:w-auto">
             <Save className="h-4 w-4 mr-2" /> Publică
           </Button>
         </div>
