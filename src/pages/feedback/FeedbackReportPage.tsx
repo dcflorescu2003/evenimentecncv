@@ -103,8 +103,9 @@ export default function FeedbackReportPage({ mode }: Props) {
   const qMap = useMemo(() => new Map(questions.map((q) => [q.id, q])), [questions]);
 
   const isTeacherFeedback = form?.type === "teacher_feedback";
+  const [selectedTeacher, setSelectedTeacher] = useState<string>("all");
 
-  const groups = useMemo(() => {
+  const allGroups = useMemo(() => {
     if (!isTeacherFeedback) {
       return [{ key: "__all__", label: "Toate răspunsurile", responses }];
     }
@@ -118,13 +119,40 @@ export default function FeedbackReportPage({ mode }: Props) {
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "ro"));
   }, [responses, isTeacherFeedback]);
 
-  const handleExport = async () => {
+  const groups = useMemo(() => {
+    if (!isTeacherFeedback || selectedTeacher === "all") return allGroups;
+    return allGroups.filter((g) => g.key === selectedTeacher);
+  }, [allGroups, selectedTeacher, isTeacherFeedback]);
+
+  const exportSections = () => groups.map((g) => ({ label: g.label, responses: g.responses }));
+
+  const handleExportPdf = async () => {
     if (!form) return;
-    await exportFeedbackReportPdf({
+    if (isTeacherFeedback) {
+      await exportFeedbackReportPdf({
+        title: form.title,
+        subtitle: form.description ?? undefined,
+        questions,
+        sections: exportSections(),
+      });
+    } else {
+      await exportFeedbackReportPdf({
+        title: form.title,
+        subtitle: form.description ?? undefined,
+        questions,
+        responses,
+      });
+    }
+  };
+
+  const handleExportXlsx = () => {
+    if (!form) return;
+    exportFeedbackReportXlsx({
       title: form.title,
-      subtitle: form.description ?? undefined,
       questions,
-      responses,
+      sections: isTeacherFeedback
+        ? exportSections()
+        : [{ label: "Toate", responses }],
     });
   };
 
@@ -132,13 +160,33 @@ export default function FeedbackReportPage({ mode }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button variant="ghost" onClick={() => navigate(base)}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Înapoi
         </Button>
-        <Button onClick={handleExport}>
-          <FileDown className="h-4 w-4 mr-2" /> Export PDF
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {isTeacherFeedback && (
+            <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
+              <SelectTrigger className="w-[260px]">
+                <SelectValue placeholder="Profesor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toți profesorii (separat)</SelectItem>
+                {allGroups.map((g) => (
+                  <SelectItem key={g.key} value={g.key}>
+                    {g.label} ({g.responses.length})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Button variant="outline" onClick={handleExportXlsx}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" /> Export Excel
+          </Button>
+          <Button onClick={handleExportPdf}>
+            <FileDown className="h-4 w-4 mr-2" /> Export PDF
+          </Button>
+        </div>
       </div>
 
       <Card>
