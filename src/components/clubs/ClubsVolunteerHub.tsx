@@ -136,6 +136,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
             <CreateProjectDialog
               sessionId={activeSession?.id}
               userId={user!.id}
+              isCse={mode === "cse"}
               onCreated={() => qc.invalidateQueries({ queryKey: ["volunteer-hub", mode] })}
             />
           )}
