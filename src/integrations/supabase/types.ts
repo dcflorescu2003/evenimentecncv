@@ -1796,6 +1796,7 @@ export type Database = {
           enrollment_open_at: string | null
           id: string
           is_cse: boolean
+          is_private: boolean
           location: string | null
           max_capacity: number | null
           max_per_class: number | null
@@ -1816,6 +1817,7 @@ export type Database = {
           enrollment_open_at?: string | null
           id?: string
           is_cse?: boolean
+          is_private?: boolean
           location?: string | null
           max_capacity?: number | null
           max_per_class?: number | null
@@ -1836,6 +1838,7 @@ export type Database = {
           enrollment_open_at?: string | null
           id?: string
           is_cse?: boolean
+          is_private?: boolean
           location?: string | null
           max_capacity?: number | null
           max_per_class?: number | null
