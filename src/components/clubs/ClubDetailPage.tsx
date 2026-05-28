@@ -757,3 +757,39 @@ function StudentOwnAttendance({ meetingId, studentId }: { meetingId: string; stu
     </div>
   );
 }
+
+function ReadOnlyAttendancePanel({ meetingId, enrollments }: { meetingId: string; enrollments: any[] }) {
+  const { data: attendance = [] } = useQuery({
+    queryKey: ["club-att-ro", meetingId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("club_attendance")
+        .select("student_id, status")
+        .eq("meeting_id", meetingId);
+      return data ?? [];
+    },
+  });
+  const labelFor = (s?: string) =>
+    s === "present" ? "Prezent" : s === "late" ? "Întârziat" : s === "absent" ? "Absent" : "—";
+  const variantFor = (s?: string): "default" | "secondary" | "outline" | "destructive" =>
+    s === "present" || s === "late" ? "default" : s === "absent" ? "destructive" : "outline";
+  if (enrollments.length === 0) {
+    return <p className="mt-3 text-xs text-muted-foreground border-t pt-3">Niciun elev din clasa ta nu este înscris la acest club.</p>;
+  }
+  return (
+    <div className="mt-3 space-y-1 border-t pt-3">
+      <p className="text-xs text-muted-foreground mb-2">Doar elevii clasei tale (vizualizare).</p>
+      {enrollments.map((e: any) => {
+        const a = attendance.find((x: any) => x.student_id === e.student_id);
+        return (
+          <div key={e.id} className="flex items-center justify-between rounded border px-2 py-1.5">
+            <span className="text-sm">
+              {e.profile ? `${e.profile.last_name} ${e.profile.first_name}` : e.student_id}
+            </span>
+            <Badge variant={variantFor(a?.status)}>{labelFor(a?.status)}</Badge>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
