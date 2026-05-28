@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { CseBadge } from "@/components/CseBadge";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -191,12 +192,15 @@ export default function FeedbackReportPage({ mode }: Props) {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>{form.title}</CardTitle>
-          <CardDescription>
-            {responses.length} răspunsuri • {form.anonymity === "anonymous" ? "Anonim" : form.anonymity === "identified" ? "Identificat" : "Anonim opțional"}
-          </CardDescription>
-        </CardHeader>
+          <CardHeader>
+            <div className="flex items-center gap-2 flex-wrap">
+              <CardTitle>{form.title}</CardTitle>
+              {(form as any).is_cse && <CseBadge short />}
+            </div>
+            <CardDescription>
+              {responses.length} răspunsuri • {form.anonymity === "anonymous" ? "Anonim" : form.anonymity === "identified" ? "Identificat" : "Anonim opțional"}
+            </CardDescription>
+          </CardHeader>
       </Card>
 
       {isTeacherFeedback ? (

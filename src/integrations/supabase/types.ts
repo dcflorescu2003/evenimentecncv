@@ -411,6 +411,7 @@ export type Database = {
           enrollment_open_at: string | null
           frequency_label: string | null
           id: string
+          is_cse: boolean
           location: string | null
           max_capacity: number | null
           max_per_class: number | null
@@ -429,6 +430,7 @@ export type Database = {
           enrollment_open_at?: string | null
           frequency_label?: string | null
           id?: string
+          is_cse?: boolean
           location?: string | null
           max_capacity?: number | null
           max_per_class?: number | null
@@ -447,6 +449,7 @@ export type Database = {
           enrollment_open_at?: string | null
           frequency_label?: string | null
           id?: string
+          is_cse?: boolean
           location?: string | null
           max_capacity?: number | null
           max_per_class?: number | null
@@ -873,6 +876,7 @@ export type Database = {
           eligible_classes: string[] | null
           eligible_grades: number[] | null
           id: string
+          is_cse: boolean
           opens_at: string | null
           session_id: string | null
           status: Database["public"]["Enums"]["feedback_form_status"]
@@ -890,6 +894,7 @@ export type Database = {
           eligible_classes?: string[] | null
           eligible_grades?: number[] | null
           id?: string
+          is_cse?: boolean
           opens_at?: string | null
           session_id?: string | null
           status?: Database["public"]["Enums"]["feedback_form_status"]
@@ -907,6 +912,7 @@ export type Database = {
           eligible_classes?: string[] | null
           eligible_grades?: number[] | null
           id?: string
+          is_cse?: boolean
           opens_at?: string | null
           session_id?: string | null
           status?: Database["public"]["Enums"]["feedback_form_status"]
@@ -1789,6 +1795,7 @@ export type Database = {
           enrollment_close_at: string | null
           enrollment_open_at: string | null
           id: string
+          is_cse: boolean
           location: string | null
           max_capacity: number | null
           max_per_class: number | null
@@ -1808,6 +1815,7 @@ export type Database = {
           enrollment_close_at?: string | null
           enrollment_open_at?: string | null
           id?: string
+          is_cse?: boolean
           location?: string | null
           max_capacity?: number | null
           max_per_class?: number | null
@@ -1827,6 +1835,7 @@ export type Database = {
           enrollment_close_at?: string | null
           enrollment_open_at?: string | null
           id?: string
+          is_cse?: boolean
           location?: string | null
           max_capacity?: number | null
           max_per_class?: number | null

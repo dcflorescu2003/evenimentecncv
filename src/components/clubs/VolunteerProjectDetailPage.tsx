@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { CseBadge } from "@/components/CseBadge";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -98,11 +99,12 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button variant="ghost" size="sm" onClick={() => navigate(backPath)}>
           <ArrowLeft className="h-4 w-4 mr-1" />Înapoi
         </Button>
         <h1 className="font-display text-xl font-semibold flex-1 truncate">{project.name}</h1>
+        {(project as any).is_cse && <CseBadge short />}
         <Badge variant={project.status === "active" ? "default" : "outline"}>{project.status}</Badge>
       </div>
 

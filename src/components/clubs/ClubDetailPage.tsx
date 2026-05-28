@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { CseBadge } from "@/components/CseBadge";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -133,11 +134,12 @@ export default function ClubDetailPage({ mode }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button variant="ghost" size="sm" onClick={() => navigate(backPath)}>
           <ArrowLeft className="h-4 w-4 mr-1" /> Înapoi
         </Button>
         <h1 className="font-display text-xl font-semibold flex-1 truncate">{club.name}</h1>
+        {(club as any).is_cse && <CseBadge short />}
         <Badge variant={club.status === "active" ? "default" : "outline"}>
           {club.status === "active" ? "Activ" : club.status === "draft" ? "Ciornă" : "Arhivat"}
         </Badge>

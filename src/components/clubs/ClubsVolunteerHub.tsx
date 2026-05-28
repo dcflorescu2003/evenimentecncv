@@ -15,7 +15,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange, Trash2 } from "lucide-react";
+import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange, Trash2, Megaphone } from "lucide-react";
+import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
 import { DateInput } from "@/components/ui/date-input";
@@ -68,7 +69,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clubs")
-        .select("id, name, description, frequency_label, status, max_capacity, enrollment_open_at, enrollment_close_at, created_by")
+        .select("id, name, description, frequency_label, status, max_capacity, enrollment_open_at, enrollment_close_at, created_by, is_cse")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -80,7 +81,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("volunteer_projects")
-        .select("id, name, description, start_date, end_date, status, max_capacity, created_by")
+        .select("id, name, description, start_date, end_date, status, max_capacity, created_by, is_cse")
         .order("start_date", { ascending: true });
       if (error) throw error;
       return data ?? [];
@@ -135,6 +136,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
             <CreateProjectDialog
               sessionId={activeSession?.id}
               userId={user!.id}
+              isCse={mode === "cse"}
               onCreated={() => qc.invalidateQueries({ queryKey: ["volunteer-hub", mode] })}
             />
           )}
@@ -149,7 +151,10 @@ export default function ClubsVolunteerHub({ mode }: Props) {
               <Card key={p.id} className="flex flex-col">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base">{p.name}</CardTitle>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <CardTitle className="text-base truncate">{p.name}</CardTitle>
+                      {(p as any).is_cse && <CseBadge short />}
+                    </div>
                     <StatusBadge status={p.status} />
                   </div>
                   <CardDescription className="text-xs">
@@ -197,6 +202,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
             <CreateClubDialog
               sessionId={activeSession?.id}
               userId={user!.id}
+              isCse={mode === "cse"}
               onCreated={() => qc.invalidateQueries({ queryKey: ["clubs-hub", mode] })}
             />
           )}
@@ -211,7 +217,10 @@ export default function ClubsVolunteerHub({ mode }: Props) {
               <Card key={c.id} className="flex flex-col">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base">{c.name}</CardTitle>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <CardTitle className="text-base truncate">{c.name}</CardTitle>
+                      {(c as any).is_cse && <CseBadge short />}
+                    </div>
                     <StatusBadge status={c.status} />
                   </div>
                   {c.frequency_label && (
@@ -272,10 +281,12 @@ function combineDateTime(date: string, time: string): string | null {
 function CreateClubDialog({
   sessionId,
   userId,
+  isCse,
   onCreated,
 }: {
   sessionId?: string;
   userId: string;
+  isCse: boolean;
   onCreated: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -323,6 +334,7 @@ function CreateClubDialog({
       enrollment_close_at: combineDateTime(enrollCloseDate, enrollCloseTime),
       status,
       created_by: userId,
+      is_cse: isCse,
     });
     setSaving(false);
     if (error) {
@@ -417,10 +429,12 @@ function CreateClubDialog({
 function CreateProjectDialog({
   sessionId,
   userId,
+  isCse,
   onCreated,
 }: {
   sessionId?: string;
   userId: string;
+  isCse: boolean;
   onCreated: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -466,6 +480,7 @@ function CreateProjectDialog({
       enrollment_close_at: combineDateTime(enrollCloseDate, enrollCloseTime),
       status,
       created_by: userId,
+      is_cse: isCse,
     });
     setSaving(false);
     if (error) return toast.error("Eroare: " + error.message);

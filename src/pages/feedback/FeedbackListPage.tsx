@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { CseBadge } from "@/components/CseBadge";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,7 +48,7 @@ export default function FeedbackListPage({ mode }: Props) {
     queryFn: async () => {
       let q = supabase
         .from("feedback_forms")
-        .select("id, title, description, type, anonymity, status, opens_at, closes_at, created_at, created_by")
+        .select("id, title, description, type, anonymity, status, opens_at, closes_at, created_at, created_by, is_cse")
         .order("created_at", { ascending: false });
       if (mode !== "admin") q = q.eq("created_by", user!.id);
       const { data, error } = await q;
@@ -216,7 +217,10 @@ export default function FeedbackListPage({ mode }: Props) {
               <Card key={f.id} className="flex flex-col">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base break-words">{f.title}</CardTitle>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <CardTitle className="text-base break-words">{f.title}</CardTitle>
+                      {(f as any).is_cse && <CseBadge short />}
+                    </div>
                     <Badge variant={f.status === "active" ? "default" : "secondary"}>
                       {STATUS_LABEL[f.status]}
                     </Badge>
