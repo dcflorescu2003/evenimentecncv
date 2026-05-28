@@ -29,11 +29,17 @@ export interface FbResponse {
   answers: FbAnswer[];
 }
 
+export interface FbSection {
+  label: string;
+  responses: FbResponse[];
+}
+
 interface ExportArgs {
   title: string;
   subtitle?: string;
   questions: FbQuestion[];
-  responses: FbResponse[];
+  responses?: FbResponse[];
+  sections?: FbSection[];
 }
 
 function aggregate(q: FbQuestion, responses: FbResponse[]) {
@@ -68,11 +74,16 @@ function aggregate(q: FbQuestion, responses: FbResponse[]) {
   return { kind: "choice" as const, counts, total };
 }
 
-export async function exportFeedbackReportPdf({ title, subtitle, questions, responses }: ExportArgs) {
+export async function exportFeedbackReportPdf({ title, subtitle, questions, responses, sections }: ExportArgs) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   await ensureUnicodeFont(doc);
   const pageW = doc.internal.pageSize.getWidth();
   let y = 48;
+
+  const allSections: FbSection[] = sections && sections.length
+    ? sections
+    : [{ label: "", responses: responses ?? [] }];
+  const totalResponses = allSections.reduce((s, x) => s + x.responses.length, 0);
 
   doc.setFont(PDF_FONT, "bold");
   doc.setFontSize(16);
@@ -81,11 +92,23 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
   doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(10);
   if (subtitle) { doc.text(subtitle, 40, y); y += 14; }
-  doc.text(`Răspunsuri: ${responses.length}`, 40, y); y += 16;
+  doc.text(`Răspunsuri: ${totalResponses}`, 40, y); y += 16;
 
-  questions
-    .sort((a, b) => a.position - b.position)
-    .forEach((q, idx) => {
+  const sortedQ = [...questions].sort((a, b) => a.position - b.position);
+
+  allSections.forEach((section, secIdx) => {
+    if (section.label) {
+      if (secIdx > 0) { doc.addPage(); y = 48; }
+      if (y > 700) { doc.addPage(); y = 48; }
+      doc.setFont(PDF_FONT, "bold");
+      doc.setFontSize(13);
+      doc.text(section.label, 40, y); y += 16;
+      doc.setFont(PDF_FONT, "normal");
+      doc.setFontSize(10);
+      doc.text(`Răspunsuri: ${section.responses.length}`, 40, y); y += 14;
+    }
+
+    sortedQ.forEach((q, idx) => {
       if (y > 720) { doc.addPage(); y = 48; }
       doc.setFont(PDF_FONT, "bold");
       doc.setFontSize(11);
@@ -93,7 +116,7 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
       doc.text(lines, 40, y);
       y += lines.length * 14 + 4;
 
-      const agg = aggregate(q, responses);
+      const agg = aggregate(q, section.responses);
       doc.setFont(PDF_FONT, "normal");
       doc.setFontSize(10);
 
@@ -107,7 +130,6 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
           margin: { left: 40, right: 40 },
           styles: { fontSize: 9, font: PDF_FONT },
         });
-        // @ts-ignore
         y = (doc as any).lastAutoTable.finalY + 6;
         doc.text(`n=${agg.n} • medie=${agg.avg.toFixed(2)} • mediană=${agg.median}`, 40, y);
         y += 16;
@@ -122,12 +144,11 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
           margin: { left: 40, right: 40 },
           styles: { fontSize: 9, font: PDF_FONT },
         });
-        // @ts-ignore
         y = (doc as any).lastAutoTable.finalY + 10;
       } else if (agg.kind === "text") {
         if (agg.items.length === 0) { doc.text("Fără răspunsuri.", 50, y); y += 16; }
         else {
-          agg.items.forEach((t, i) => {
+          agg.items.forEach((t) => {
             if (!t.trim()) return;
             const wrapped = doc.splitTextToSize(`• ${t}`, pageW - 90);
             if (y + wrapped.length * 12 > 760) { doc.addPage(); y = 48; }
@@ -138,6 +159,7 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
         }
       }
     });
+  });
 
   doc.save(`${title.replace(/\s+/g, "_")}_raport.pdf`);
 }
