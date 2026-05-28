@@ -18,6 +18,8 @@ import {
 import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
+import { DateInput } from "@/components/ui/date-input";
+import { ClassEligibilityPicker } from "./ClassEligibilityPicker";
 
 type Mode = "admin" | "cse" | "student";
 
