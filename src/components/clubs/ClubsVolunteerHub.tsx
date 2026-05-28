@@ -574,6 +574,23 @@ function CreateProjectDialog({
             </div>
             <p className="text-xs text-muted-foreground">Lasă gol pentru înscrieri permanent deschise.</p>
           </div>
+
+          <div className="flex items-start gap-2 rounded-md border p-3">
+            <Checkbox
+              id="is_private"
+              checked={isPrivate}
+              onCheckedChange={(v) => setIsPrivate(v === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-0.5">
+              <Label htmlFor="is_private" className="cursor-pointer flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5" />Proiect privat
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Elevii NU se pot înscrie singuri. Tu alegi manual participanții din lista de elevi.
+              </p>
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Anulează</Button>
