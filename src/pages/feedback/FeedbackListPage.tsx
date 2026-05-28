@@ -48,7 +48,7 @@ export default function FeedbackListPage({ mode }: Props) {
     queryFn: async () => {
       let q = supabase
         .from("feedback_forms")
-        .select("id, title, description, type, anonymity, status, opens_at, closes_at, created_at, created_by")
+        .select("id, title, description, type, anonymity, status, opens_at, closes_at, created_at, created_by, is_cse")
         .order("created_at", { ascending: false });
       if (mode !== "admin") q = q.eq("created_by", user!.id);
       const { data, error } = await q;
