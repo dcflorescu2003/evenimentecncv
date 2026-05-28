@@ -209,7 +209,8 @@ function ProjectGeneralTab({ project, canEdit, onSaved }: any) {
 }
 
 function DaysTab({ projectId, days, enrollments, canManage, userId, onChange }: any) {
-  const [d, setD] = useState(""); const [s, setS] = useState(""); const [e, setE] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [d, setD] = useState(today); const [s, setS] = useState(""); const [e, setE] = useState("");
   const [loc, setLoc] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   async function add() {
@@ -219,7 +220,7 @@ function DaysTab({ projectId, days, enrollments, canManage, userId, onChange }: 
       location: loc.trim() || null, created_by: userId,
     });
     if (error) return toast.error(error.message);
-    toast.success("Zi adăugată"); setD(""); setS(""); setE(""); setLoc(""); onChange();
+    toast.success("Zi adăugată"); setD(new Date().toISOString().slice(0, 10)); setS(""); setE(""); setLoc(""); onChange();
   }
   async function remove(id: string) {
     if (!confirm("Ștergi această zi?")) return;
