@@ -59,23 +59,14 @@ export default function FeedbackFillPage() {
     },
   });
 
-  // All teachers (searchable) for teacher_feedback
+  // All teachers (searchable) for teacher_feedback — via RPC (security definer, bypasses user_roles RLS)
   const { data: allTeachers = [] } = useQuery({
     enabled: form?.type === "teacher_feedback",
     queryKey: ["feedback-all-teachers"],
     queryFn: async () => {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .in("role", ["teacher", "homeroom_teacher", "coordinator_teacher"]);
-      const ids = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
-      if (!ids.length) return [];
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, is_active")
-        .in("id", ids);
-      return (profs ?? [])
-        .filter((p: any) => p.is_active !== false)
+      const { data, error } = await supabase.rpc("get_feedback_teachers");
+      if (error) throw error;
+      return (data ?? [])
         .map((p: any) => ({
           id: p.id,
           name: `${p.last_name ?? ""} ${p.first_name ?? ""}`.trim(),
@@ -83,6 +74,7 @@ export default function FeedbackFillPage() {
         .sort((a, b) => a.name.localeCompare(b.name, "ro"));
     },
   });
+
 
 
   // Load existing answers when editing
