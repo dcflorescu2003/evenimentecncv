@@ -330,6 +330,7 @@ function CreateClubDialog({
       enrollment_close_at: combineDateTime(enrollCloseDate, enrollCloseTime),
       status,
       created_by: userId,
+      is_cse: mode === "cse",
     });
     setSaving(false);
     if (error) {
