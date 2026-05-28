@@ -393,8 +393,23 @@ function CreateProjectDialog({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [maxCap, setMaxCap] = useState<string>("");
+  const [maxPerClass, setMaxPerClass] = useState<string>("");
   const [status, setStatus] = useState<"draft" | "active">("draft");
+  const [eligibleGrades, setEligibleGrades] = useState<number[]>([]);
+  const [eligibleClasses, setEligibleClasses] = useState<string[]>([]);
+  const [enrollOpenDate, setEnrollOpenDate] = useState("");
+  const [enrollOpenTime, setEnrollOpenTime] = useState("08:00");
+  const [enrollCloseDate, setEnrollCloseDate] = useState("");
+  const [enrollCloseTime, setEnrollCloseTime] = useState("23:59");
   const [saving, setSaving] = useState(false);
+
+  function reset() {
+    setName(""); setDescription(""); setStartDate(""); setEndDate("");
+    setMaxCap(""); setMaxPerClass(""); setStatus("draft");
+    setEligibleGrades([]); setEligibleClasses([]);
+    setEnrollOpenDate(""); setEnrollOpenTime("08:00");
+    setEnrollCloseDate(""); setEnrollCloseTime("23:59");
+  }
 
   async function submit() {
     if (!name.trim()) return toast.error("Numele proiectului este obligatoriu");
@@ -408,6 +423,11 @@ function CreateProjectDialog({
       start_date: startDate,
       end_date: endDate,
       max_capacity: maxCap ? Number(maxCap) : null,
+      max_per_class: maxPerClass ? Number(maxPerClass) : null,
+      eligible_grades: eligibleGrades.length > 0 ? eligibleGrades : null,
+      eligible_classes: eligibleClasses.length > 0 ? eligibleClasses : null,
+      enrollment_open_at: combineDateTime(enrollOpenDate, enrollOpenTime),
+      enrollment_close_at: combineDateTime(enrollCloseDate, enrollCloseTime),
       status,
       created_by: userId,
     });
@@ -415,7 +435,7 @@ function CreateProjectDialog({
     if (error) return toast.error("Eroare: " + error.message);
     toast.success("Proiect creat");
     setOpen(false);
-    setName(""); setDescription(""); setStartDate(""); setEndDate(""); setMaxCap(""); setStatus("draft");
+    reset();
     onCreated();
   }
 
@@ -424,7 +444,7 @@ function CreateProjectDialog({
       <DialogTrigger asChild>
         <Button size="sm" variant="secondary"><Plus className="h-4 w-4 mr-1" />Proiect nou</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader><DialogTitle>Proiect voluntariat nou</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
@@ -438,17 +458,21 @@ function CreateProjectDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label>Început *</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              <DateInput value={startDate} onChange={setStartDate} />
             </div>
             <div className="space-y-1">
               <Label>Sfârșit *</Label>
-              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              <DateInput value={endDate} onChange={setEndDate} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label>Capacitate maximă</Label>
               <Input type="number" min={1} value={maxCap} onChange={(e) => setMaxCap(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Maxim per clasă</Label>
+              <Input type="number" min={1} placeholder="Fără limită" value={maxPerClass} onChange={(e) => setMaxPerClass(e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Status</Label>
@@ -460,6 +484,35 @@ function CreateProjectDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <ClassEligibilityPicker
+            eligibleGrades={eligibleGrades}
+            eligibleClasses={eligibleClasses}
+            onChange={({ eligibleGrades: g, eligibleClasses: c }) => {
+              setEligibleGrades(g); setEligibleClasses(c);
+            }}
+          />
+
+          <div className="space-y-2">
+            <Label>Perioada de înscriere</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">De la</Label>
+                <div className="flex gap-2">
+                  <DateInput value={enrollOpenDate} onChange={setEnrollOpenDate} />
+                  <Input type="time" value={enrollOpenTime} onChange={(e) => setEnrollOpenTime(e.target.value)} className="w-28" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Până la</Label>
+                <div className="flex gap-2">
+                  <DateInput value={enrollCloseDate} onChange={setEnrollCloseDate} />
+                  <Input type="time" value={enrollCloseTime} onChange={(e) => setEnrollCloseTime(e.target.value)} className="w-28" />
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Lasă gol pentru înscrieri permanent deschise.</p>
           </div>
         </div>
         <DialogFooter>
