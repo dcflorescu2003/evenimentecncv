@@ -280,14 +280,14 @@ function DayAttendancePanel({ dayId, enrollments, userId }: any) {
       return data ?? [];
     },
   });
-  async function setStatus(studentId: string, status: string) {
+  async function setStatus(studentId: string, status: "present" | "late" | "absent") {
     const existing = attendance.find((a: any) => a.student_id === studentId);
     if (existing) {
-      await supabase.from("volunteer_attendance").update({
+      await (supabase.from("volunteer_attendance") as any).update({
         status, checkin_at: status !== "absent" ? new Date().toISOString() : null, marked_by: userId,
       }).eq("id", existing.id);
     } else {
-      await supabase.from("volunteer_attendance").insert({
+      await (supabase.from("volunteer_attendance") as any).insert({
         day_id: dayId, student_id: studentId, status,
         checkin_at: status !== "absent" ? new Date().toISOString() : null, marked_by: userId,
       });
