@@ -294,6 +294,7 @@ export default function StudentEventDetailPage() {
       setUploadDialogOpen(false);
       setUploadTitle("");
       if (fileInputRef.current) fileInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
     } catch (e: any) {
       toast.error(e.message);
     } finally {
