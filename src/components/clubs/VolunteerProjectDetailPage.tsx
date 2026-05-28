@@ -391,7 +391,7 @@ function MembersTab({
   );
 }
 
-function DaysTab({ projectId, days, enrollments, canManage, userId, onChange }: any) {
+function DaysTab({ projectId, days, enrollments, canManage, readOnlyAttendance, userId, onChange }: any) {
   const today = new Date().toISOString().slice(0, 10);
   const [d, setD] = useState(today); const [s, setS] = useState(""); const [e, setE] = useState("");
   const [loc, setLoc] = useState("");
@@ -433,7 +433,7 @@ function DaysTab({ projectId, days, enrollments, canManage, userId, onChange }: 
               {day.location && <p className="text-xs text-muted-foreground">{day.location}</p>}
             </div>
             <div className="flex items-center gap-1">
-              {canManage && (
+              {(canManage || readOnlyAttendance) && (
                 <Button size="sm" variant="outline" onClick={() => setOpen(open === day.id ? null : day.id)}>
                   {open === day.id ? "Închide" : "Prezență"}
                 </Button>
@@ -448,8 +448,43 @@ function DaysTab({ projectId, days, enrollments, canManage, userId, onChange }: 
           {open === day.id && canManage && (
             <DayAttendancePanel dayId={day.id} enrollments={enrollments} userId={userId} />
           )}
+          {open === day.id && !canManage && readOnlyAttendance && (
+            <ReadOnlyDayAttendancePanel dayId={day.id} enrollments={enrollments} />
+          )}
         </CardContent></Card>
       ))}
+    </div>
+  );
+}
+
+function ReadOnlyDayAttendancePanel({ dayId, enrollments }: { dayId: string; enrollments: any[] }) {
+  const { data: attendance = [] } = useQuery({
+    queryKey: ["v-att-ro", dayId],
+    queryFn: async () => {
+      const { data } = await supabase.from("volunteer_attendance")
+        .select("student_id, status").eq("day_id", dayId);
+      return data ?? [];
+    },
+  });
+  const labelFor = (s?: string) =>
+    s === "present" ? "Prezent" : s === "late" ? "Întârziat" : s === "absent" ? "Absent" : "—";
+  const variantFor = (s?: string): "default" | "secondary" | "outline" | "destructive" =>
+    s === "present" || s === "late" ? "default" : s === "absent" ? "destructive" : "outline";
+  if (enrollments.length === 0) {
+    return <p className="mt-3 text-xs text-muted-foreground border-t pt-3">Niciun elev din clasa ta nu este înscris la acest proiect.</p>;
+  }
+  return (
+    <div className="mt-3 space-y-1 border-t pt-3">
+      <p className="text-xs text-muted-foreground mb-2">Doar elevii clasei tale (vizualizare).</p>
+      {enrollments.map((e: any) => {
+        const a = attendance.find((x: any) => x.student_id === e.student_id);
+        return (
+          <div key={e.id} className="flex items-center justify-between rounded border px-2 py-1.5">
+            <span className="text-sm">{e.profile ? `${e.profile.last_name} ${e.profile.first_name}` : e.student_id}</span>
+            <Badge variant={variantFor(a?.status)}>{labelFor(a?.status)}</Badge>
+          </div>
+        );
+      })}
     </div>
   );
 }
