@@ -1,4 +1,4 @@
-import { Calendar, BookOpen, type LucideIcon } from "lucide-react";
+import { Calendar, BookOpen, Users, type LucideIcon } from "lucide-react";
 
 export type AppRole =
   | "admin"
@@ -42,6 +42,18 @@ export const MODULES: AppModule[] = [
     pathByRole: {
       admin: "/admin/schedules",
       student: "/student/orar",
+    },
+  },
+  {
+    key: "clubs_volunteer",
+    label: "Cluburi & Voluntariat",
+    description: "Cluburi recurente și proiecte de voluntariat cu înscrieri și prezență.",
+    icon: Users,
+    pathByRole: {
+      admin: "/admin/clubs",
+      cse: "/prof/clubs",
+      student: "/student/clubs",
+      manager: "/manager",
     },
   },
 ];
