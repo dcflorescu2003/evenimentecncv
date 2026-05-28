@@ -88,13 +88,23 @@ export default function ClubsVolunteerHub({ mode }: Props) {
   });
 
   const visibleClubs = useMemo(() => {
-    if (mode === "student") return clubs.filter((c: any) => c.status === "active");
-    return clubs;
+    const list = mode === "student" ? clubs.filter((c: any) => c.status === "active") : [...clubs];
+    return list.sort((a: any, b: any) =>
+      (a.name || "").localeCompare(b.name || "", "ro", { sensitivity: "base" })
+    );
   }, [clubs, mode]);
 
   const visibleProjects = useMemo(() => {
-    if (mode === "student") return projects.filter((p: any) => p.status === "active");
-    return projects;
+    const list = mode === "student" ? projects.filter((p: any) => p.status === "active") : [...projects];
+    const now = Date.now();
+    return list.sort((a: any, b: any) => {
+      const da = a.start_date ? new Date(a.start_date).getTime() : Infinity;
+      const db = b.start_date ? new Date(b.start_date).getTime() : Infinity;
+      const fa = da >= now ? da - now : Infinity;
+      const fb = db >= now ? db - now : Infinity;
+      if (fa !== fb) return fa - fb;
+      return da - db;
+    });
   }, [projects, mode]);
 
   const canCreate = mode === "admin" || mode === "cse";
