@@ -55,11 +55,25 @@ export default function StudentFeedbackPage() {
     },
   });
 
+  const { data: myCompletions = [] } = useQuery({
+    enabled: !!user?.id,
+    queryKey: ["student-feedback-completions", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("feedback_completions")
+        .select("id, form_id, completed_at, subject_teacher_id, feedback_forms:form_id (id, title, type, anonymity, closes_at, status)")
+        .eq("user_id", user!.id)
+        .order("completed_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const respondedKeys = useMemo(() => {
     const s = new Set<string>();
-    myResponses.forEach((r: any) => s.add(`${r.form_id}::${r.subject_teacher_id ?? ""}`));
+    myCompletions.forEach((r: any) => s.add(`${r.form_id}::${r.subject_teacher_id ?? ""}`));
     return s;
-  }, [myResponses]);
+  }, [myCompletions]);
 
   const now = Date.now();
   const open = forms.filter((f: any) => {
