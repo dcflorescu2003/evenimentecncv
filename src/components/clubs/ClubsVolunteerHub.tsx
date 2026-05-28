@@ -184,8 +184,6 @@ export default function ClubsVolunteerHub({ mode }: Props) {
         )}
       </section>
 
-      </section>
-
       <Separator />
 
       {/* === CLUBURI === */}
