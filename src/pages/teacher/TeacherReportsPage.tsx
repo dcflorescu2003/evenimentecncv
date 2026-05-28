@@ -466,138 +466,202 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
 }
 
 /* ─── Tab 3: Verificare prezență ─── */
+type AttendanceItem = {
+  key: string; // "event:<id>" | "vday:<id>"
+  kind: "event" | "vday";
+  id: string;
+  title: string; // event title or "[V] project name"
+  date: string;
+};
+
 function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: string; classIds: string[]; myClasses: any[] }) {
   const [filterType, setFilterType] = useState<"event" | "date">("event");
-  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedKey, setSelectedKey] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
 
-  const { data: sessionEvents } = useQuery({
-    queryKey: ["teacher-session-events", sessionId],
-    queryFn: async () => {
-      const { data } = await supabase.from("events").select("id, title, date, start_time, end_time, counted_duration_hours")
-        .eq("session_id", sessionId).order("date");
-      return data ?? [];
-    },
-    enabled: !!sessionId,
-  });
+  // Load events + volunteer days for the session
+  const { data: items } = useQuery({
+    queryKey: ["teacher-attendance-items", sessionId, classIds.join(",")],
+    queryFn: async (): Promise<AttendanceItem[]> => {
+      if (!sessionId || classIds.length === 0) return [];
 
-  // Events where students from my class(es) are enrolled
-  const { data: relevantEventIds = [] } = useQuery({
-    queryKey: ["teacher-relevant-event-ids", sessionId, classIds, (sessionEvents ?? []).map(e => e.id).join(",")],
-    queryFn: async () => {
-      if (classIds.length === 0 || !sessionEvents?.length) return [] as string[];
       const { data: assignments } = await supabase
         .from("student_class_assignments").select("student_id").in("class_id", classIds);
       const studentIds = [...new Set((assignments ?? []).map(a => a.student_id))];
       if (studentIds.length === 0) return [];
-      const eventIds = sessionEvents.map(e => e.id);
-      const { data: reservations } = await supabase
-        .from("reservations").select("event_id")
-        .in("student_id", studentIds).in("event_id", eventIds).eq("status", "reserved");
-      const { data: assistants } = await supabase
-        .from("event_student_assistants").select("event_id")
-        .in("student_id", studentIds).in("event_id", eventIds);
-      const set = new Set<string>();
-      (reservations ?? []).forEach(r => set.add(r.event_id));
-      (assistants ?? []).forEach(a => set.add(a.event_id));
-      return [...set];
+
+      // ── Events ──
+      const { data: events } = await supabase.from("events")
+        .select("id, title, date").eq("session_id", sessionId).order("date");
+      const eventIds = (events ?? []).map(e => e.id);
+      const { data: reservations } = eventIds.length
+        ? await supabase.from("reservations").select("event_id")
+            .in("student_id", studentIds).in("event_id", eventIds).eq("status", "reserved")
+        : { data: [] as any[] };
+      const { data: assistants } = eventIds.length
+        ? await supabase.from("event_student_assistants").select("event_id")
+            .in("student_id", studentIds).in("event_id", eventIds)
+        : { data: [] as any[] };
+      const eventSet = new Set<string>();
+      (reservations ?? []).forEach((r: any) => eventSet.add(r.event_id));
+      (assistants ?? []).forEach((a: any) => eventSet.add(a.event_id));
+      const eventItems: AttendanceItem[] = (events ?? [])
+        .filter(e => eventSet.has(e.id))
+        .map(e => ({ key: `event:${e.id}`, kind: "event" as const, id: e.id, title: e.title, date: e.date }));
+
+      // ── Volunteer days ──
+      const { data: vEnrolls } = await supabase
+        .from("volunteer_enrollments").select("project_id")
+        .in("student_id", studentIds).eq("status", "enrolled");
+      const vpIds = [...new Set((vEnrolls ?? []).map((v: any) => v.project_id))];
+      const { data: vProjects } = vpIds.length
+        ? await supabase.from("volunteer_projects").select("id, name").in("id", vpIds).eq("session_id", sessionId)
+        : { data: [] as any[] };
+      const vpInSession = (vProjects ?? []).map((p: any) => p.id);
+      const vpNameMap = Object.fromEntries((vProjects ?? []).map((p: any) => [p.id, p.name]));
+      const { data: vDays } = vpInSession.length
+        ? await supabase.from("volunteer_days").select("id, project_id, date").in("project_id", vpInSession).order("date")
+        : { data: [] as any[] };
+      const vItems: AttendanceItem[] = (vDays ?? []).map((d: any) => ({
+        key: `vday:${d.id}`, kind: "vday" as const, id: d.id,
+        title: `[V] ${vpNameMap[d.project_id] ?? "Voluntariat"}`,
+        date: d.date,
+      }));
+
+      return [...eventItems, ...vItems].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
     },
-    enabled: !!sessionId && classIds.length > 0 && (sessionEvents?.length ?? 0) > 0,
+    enabled: !!sessionId && classIds.length > 0,
   });
 
-  const relevantEvents = useMemo(() => {
-    const set = new Set(relevantEventIds);
-    return (sessionEvents ?? []).filter(e => set.has(e.id))
-      .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  }, [sessionEvents, relevantEventIds]);
-
+  const relevantItems = items ?? [];
   const uniqueDates = useMemo(() => {
-    const dates = [...new Set(relevantEvents.map(e => e.date))];
+    const dates = [...new Set(relevantItems.map(i => i.date))];
     return dates.sort((a, b) => b.localeCompare(a));
-  }, [relevantEvents]);
+  }, [relevantItems]);
 
-  // Auto-preselect last finished event from relevant list
   useEffect(() => {
-    if (filterType !== "event" || selectedEventId) return;
-    if (relevantEvents.length === 0) return;
+    if (filterType !== "event" || selectedKey) return;
+    if (relevantItems.length === 0) return;
     const today = new Date().toISOString().slice(0, 10);
-    const lastFinished = relevantEvents.find(e => (e.date || "") <= today);
-    if (lastFinished) setSelectedEventId(lastFinished.id);
-  }, [relevantEvents, filterType, selectedEventId]);
+    const lastFinished = relevantItems.find(i => (i.date || "") <= today);
+    if (lastFinished) setSelectedKey(lastFinished.key);
+  }, [relevantItems, filterType, selectedKey]);
 
-  // Reset selection when session/class changes
   useEffect(() => {
-    setSelectedEventId("");
+    setSelectedKey("");
     setSelectedDate("");
   }, [sessionId, classIds.join(",")]);
 
-  const filteredEventIds = useMemo(() => {
-    if (filterType === "event" && selectedEventId) return [selectedEventId];
-    if (filterType === "date" && selectedDate) return relevantEvents.filter(e => e.date === selectedDate).map(e => e.id);
+  const filteredItems = useMemo<AttendanceItem[]>(() => {
+    if (filterType === "event" && selectedKey) {
+      const it = relevantItems.find(i => i.key === selectedKey);
+      return it ? [it] : [];
+    }
+    if (filterType === "date" && selectedDate) {
+      return relevantItems.filter(i => i.date === selectedDate);
+    }
     return [];
-  }, [filterType, selectedEventId, selectedDate, relevantEvents]);
+  }, [filterType, selectedKey, selectedDate, relevantItems]);
 
   const { data: checkData, isLoading } = useQuery({
-    queryKey: ["teacher-report-prezenta", classIds, filteredEventIds],
+    queryKey: ["teacher-report-prezenta", classIds, filteredItems.map(i => i.key).join(",")],
     queryFn: async () => {
-      if (classIds.length === 0 || filteredEventIds.length === 0) return [];
+      if (classIds.length === 0 || filteredItems.length === 0) return [];
 
-      const { data: assignments } = await supabase.from("student_class_assignments").select("student_id, class_id").in("class_id", classIds);
+      const { data: assignments } = await supabase
+        .from("student_class_assignments").select("student_id, class_id").in("class_id", classIds);
       const studentIds = [...new Set((assignments ?? []).map(a => a.student_id))];
       if (studentIds.length === 0) return [];
 
-      const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name").in("id", studentIds);
-      const { data: reservations } = await supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", studentIds).in("event_id", filteredEventIds);
-      const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
-      const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
+      const { data: profiles } = await supabase
+        .from("profiles").select("id, first_name, last_name").in("id", studentIds);
 
-      // Fetch assistant assignments
-      const { data: assistantAssignments } = await supabase
-        .from("event_student_assistants").select("student_id, event_id")
-        .in("student_id", studentIds).in("event_id", filteredEventIds);
-      const assistantSet = new Set((assistantAssignments || []).map(a => `${a.student_id}:${a.event_id}`));
-
-      const eventMap = Object.fromEntries((sessionEvents ?? []).filter(e => filteredEventIds.includes(e.id)).map(e => [e.id, e]));
       const today = new Date().toISOString().slice(0, 10);
-
       const rows: { id: string; name: string; lastName: string; eventTitle: string; eventDate: string; status: string }[] = [];
-      const seen = new Set<string>();
 
-      for (const p of (profiles ?? [])) {
-        for (const eid of filteredEventIds) {
-          const ev = eventMap[eid];
-          if (!ev) continue;
-          const isAssistant = assistantSet.has(`${p.id}:${eid}`);
-          const res = (reservations ?? []).find(r => r.student_id === p.id && r.event_id === eid && r.status === "reserved");
-          if (!res && !isAssistant) continue;
-          const rowKey = `${p.id}-${eid}`;
-          if (seen.has(rowKey)) continue;
-          seen.add(rowKey);
+      // Group filtered items by kind
+      const eventIds = filteredItems.filter(i => i.kind === "event").map(i => i.id);
+      const vdayIds = filteredItems.filter(i => i.kind === "vday").map(i => i.id);
 
-          let status = "Absent";
-          if (isAssistant) {
-            status = "Prezent";
-          } else if (res) {
-            const ticket = ticketByRes[res.id];
-            const ts = ticket?.status || "reserved";
-            if (ts === "present" || ts === "late") status = "Prezent";
-            else if (ts === "reserved" && ev.date < today) status = "Absent";
-            else if (ts === "reserved") status = "Rezervat";
-            else status = "Absent";
+      // ── Events ──
+      if (eventIds.length > 0) {
+        const { data: reservations } = await supabase.from("reservations")
+          .select("id, student_id, event_id, status")
+          .in("student_id", studentIds).in("event_id", eventIds);
+        const { data: tickets } = await supabase.from("tickets")
+          .select("id, reservation_id, status");
+        const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
+        const { data: assistantAssignments } = await supabase
+          .from("event_student_assistants").select("student_id, event_id")
+          .in("student_id", studentIds).in("event_id", eventIds);
+        const assistantSet = new Set((assistantAssignments || []).map(a => `${a.student_id}:${a.event_id}`));
+
+        for (const item of filteredItems.filter(i => i.kind === "event")) {
+          for (const p of (profiles ?? [])) {
+            const isAssistant = assistantSet.has(`${p.id}:${item.id}`);
+            const res = (reservations ?? []).find(r => r.student_id === p.id && r.event_id === item.id && r.status === "reserved");
+            if (!res && !isAssistant) continue;
+            let status = "Absent";
+            if (isAssistant) status = "Prezent";
+            else if (res) {
+              const ts = ticketByRes[res.id]?.status || "reserved";
+              if (ts === "present" || ts === "late") status = "Prezent";
+              else if (ts === "reserved" && item.date < today) status = "Absent";
+              else if (ts === "reserved") status = "Rezervat";
+              else status = "Absent";
+            }
+            rows.push({
+              id: `${p.id}-${item.key}`,
+              name: `${p.last_name} ${p.first_name}`,
+              lastName: p.last_name,
+              eventTitle: item.title, eventDate: item.date, status,
+            });
           }
-          rows.push({
-            id: rowKey,
-            name: `${p.last_name} ${p.first_name}`,
-            lastName: p.last_name,
-            eventTitle: ev.title,
-            eventDate: ev.date,
-            status,
-          });
         }
       }
+
+      // ── Volunteer days ──
+      if (vdayIds.length > 0) {
+        const { data: vDays } = await supabase.from("volunteer_days")
+          .select("id, project_id, date").in("id", vdayIds);
+        const projectIds = [...new Set((vDays ?? []).map((d: any) => d.project_id))];
+        const { data: vEnrolls } = await supabase.from("volunteer_enrollments")
+          .select("project_id, student_id").in("project_id", projectIds)
+          .in("student_id", studentIds).eq("status", "enrolled");
+        const enrolledByProject = new Map<string, Set<string>>();
+        (vEnrolls ?? []).forEach((e: any) => {
+          if (!enrolledByProject.has(e.project_id)) enrolledByProject.set(e.project_id, new Set());
+          enrolledByProject.get(e.project_id)!.add(e.student_id);
+        });
+        const { data: vAtt } = await supabase.from("volunteer_attendance")
+          .select("day_id, student_id, status").in("day_id", vdayIds).in("student_id", studentIds);
+        const vAttMap = Object.fromEntries((vAtt ?? []).map((a: any) => [`${a.student_id}:${a.day_id}`, a.status]));
+
+        for (const item of filteredItems.filter(i => i.kind === "vday")) {
+          const day = (vDays ?? []).find((d: any) => d.id === item.id);
+          if (!day) continue;
+          const enrolledStudents = enrolledByProject.get(day.project_id) || new Set();
+          for (const p of (profiles ?? [])) {
+            if (!enrolledStudents.has(p.id)) continue;
+            const att = vAttMap[`${p.id}:${item.id}`];
+            let status = "Absent";
+            if (att === "present" || att === "late") status = "Prezent";
+            else if (att === "excused") status = "Absent motivat";
+            else if (item.date < today) status = "Absent";
+            else status = "Rezervat";
+            rows.push({
+              id: `${p.id}-${item.key}`,
+              name: `${p.last_name} ${p.first_name}`,
+              lastName: p.last_name,
+              eventTitle: item.title, eventDate: item.date, status,
+            });
+          }
+        }
+      }
+
       return rows.sort((a, b) => a.lastName.localeCompare(b.lastName) || a.eventTitle.localeCompare(b.eventTitle));
     },
-    enabled: classIds.length > 0 && filteredEventIds.length > 0,
+    enabled: classIds.length > 0 && filteredItems.length > 0,
   });
 
   const statusBadge = (status: string) => {
@@ -619,10 +683,8 @@ function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3 print:hidden">
-        <Select value={filterType} onValueChange={(v: "event" | "date") => { setFilterType(v); setSelectedEventId(""); setSelectedDate(""); }}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
+        <Select value={filterType} onValueChange={(v: "event" | "date") => { setFilterType(v); setSelectedKey(""); setSelectedDate(""); }}>
+          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="event">După eveniment</SelectItem>
             <SelectItem value="date">După dată</SelectItem>
@@ -630,15 +692,15 @@ function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: 
         </Select>
 
         {filterType === "event" ? (
-          <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-            <SelectTrigger className="w-[260px]">
+          <Select value={selectedKey} onValueChange={setSelectedKey}>
+            <SelectTrigger className="w-[300px]">
               <SelectValue placeholder="Selectează evenimentul" />
             </SelectTrigger>
             <SelectContent>
-              {relevantEvents.length === 0 ? (
+              {relevantItems.length === 0 ? (
                 <div className="px-2 py-4 text-xs text-muted-foreground text-center">Niciun eveniment cu elevi din clasă.</div>
-              ) : relevantEvents.map(e => (
-                <SelectItem key={e.id} value={e.id}>{e.title} ({formatDate(e.date)})</SelectItem>
+              ) : relevantItems.map(i => (
+                <SelectItem key={i.key} value={i.key}>{i.title} ({formatDate(i.date)})</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -662,7 +724,7 @@ function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: 
         )}
       </div>
 
-      {filteredEventIds.length === 0 ? (
+      {filteredItems.length === 0 ? (
         <p className="text-muted-foreground text-sm">Selectează un eveniment sau o dată pentru a vedea prezența.</p>
       ) : (
         <Card className="print:shadow-none print:border-0">
