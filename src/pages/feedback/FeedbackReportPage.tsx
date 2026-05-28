@@ -136,6 +136,7 @@ export default function FeedbackReportPage({ mode }: Props) {
         subtitle: form.description ?? undefined,
         questions,
         sections: exportSections(),
+        overall: { label: "Statistici generale (toți profesorii)", responses },
       });
     } else {
       await exportFeedbackReportPdf({
@@ -202,6 +203,20 @@ export default function FeedbackReportPage({ mode }: Props) {
             </CardDescription>
           </CardHeader>
       </Card>
+
+      {isTeacherFeedback && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Statistici generale (toți profesorii)</CardTitle>
+            <CardDescription>{responses.length} răspunsuri totale • întrebări cu opțiuni</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {questions.filter((q) => q.question_type !== "open_text").map((q, idx) => (
+              <AggregateBlock key={q.id} q={q} idx={idx} responses={responses} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {isTeacherFeedback ? (
         <Accordion type="multiple" className="space-y-2">
