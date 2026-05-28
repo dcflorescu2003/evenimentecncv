@@ -106,8 +106,8 @@ export default function FeedbackEditorPage({ mode }: Props) {
     if (questions.length === 0 || questions.some((q) => !q.text.trim())) {
       toast.error("Toate întrebările trebuie să aibă text"); return;
     }
-    if (mode !== "admin" && type === "teacher_survey") {
-      toast.error("Doar adminul poate crea chestionare pentru profesori"); return;
+    if (mode !== "admin" && (type === "teacher_survey" || type === "teacher_feedback")) {
+      toast.error("Doar adminul poate crea acest tip de chestionar"); return;
     }
 
     setSaving(true);
@@ -205,7 +205,7 @@ export default function FeedbackEditorPage({ mode }: Props) {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="general">General (pentru elevi)</SelectItem>
-                  <SelectItem value="teacher_feedback">Feedback profesori (elevii aleg profesorul)</SelectItem>
+                  {mode === "admin" && <SelectItem value="teacher_feedback">Feedback profesori (elevii aleg profesorul)</SelectItem>}
                   {mode === "admin" && <SelectItem value="teacher_survey">Chestionar pentru profesori</SelectItem>}
                 </SelectContent>
               </Select>
