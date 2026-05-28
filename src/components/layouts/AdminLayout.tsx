@@ -32,6 +32,7 @@ import {
   QrCode,
   BookOpen,
   HeartHandshake,
+  MessageSquare,
 } from "lucide-react";
 
 const menuItems = [
@@ -43,6 +44,7 @@ const menuItems = [
   { title: "Import CSV", icon: FileUp, path: "/admin/import" },
   { title: "Evenimente", icon: CalendarDays, path: "/admin/events" },
   { title: "Cluburi & Voluntariat", icon: HeartHandshake, path: "/admin/clubs" },
+  { title: "Feedback", icon: MessageSquare, path: "/admin/feedback" },
   { title: "Scanare bilete", icon: QrCode, path: "/admin/scan" },
   { title: "Utilizatori", icon: Users, path: "/admin/users" },
   { title: "Rapoarte", icon: BarChart3, path: "/admin/reports" },
