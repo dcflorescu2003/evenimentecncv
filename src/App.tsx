@@ -120,6 +120,9 @@ const App = () => (
               <Route path="/admin/scan" element={<AdminScanPage />} />
               <Route path="/admin/schedules" element={<SchedulesPage />} />
               <Route path="/admin/subjects" element={<SubjectsPage />} />
+              <Route path="/admin/clubs" element={<ClubsVolunteerHub mode="admin" />} />
+              <Route path="/admin/clubs/:id" element={<ClubDetailPage mode="admin" />} />
+              <Route path="/admin/volunteer/:id" element={<VolunteerProjectDetailPage mode="admin" />} />
             </Route>
 
             {/* Student routes */}
