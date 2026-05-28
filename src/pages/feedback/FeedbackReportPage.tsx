@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, FileDown, FileSpreadsheet } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { formatDate } from "@/lib/time";
 import { exportFeedbackReportPdf, type FbQuestion, type FbResponse } from "@/lib/feedback-pdf";
 import { exportFeedbackReportXlsx } from "@/lib/feedback-xlsx";
@@ -198,59 +199,88 @@ export default function FeedbackReportPage({ mode }: Props) {
         </CardHeader>
       </Card>
 
-      {groups.map((g) => (
-        <div key={g.key} className="space-y-4">
-          {isTeacherFeedback && (
-            <div className="flex items-center gap-2 pt-2">
-              <h2 className="text-lg font-semibold">{g.label}</h2>
-              <Badge variant="secondary">{g.responses.length} răspunsuri</Badge>
-            </div>
-          )}
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Rezultate agregate</CardTitle></CardHeader>
-            <CardContent className="space-y-6">
-              {questions.map((q, idx) => (
-                <AggregateBlock key={q.id} q={q} idx={idx} responses={g.responses} />
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Răspunsuri individuale</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              {g.responses.length === 0 && <p className="text-sm text-muted-foreground">Niciun răspuns încă.</p>}
-              {g.responses.map((r) => (
-                <div key={r.id} className="border rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm">
-                      {r.is_identified
-                        ? <strong>{r.respondent_name ?? "Identificat"}</strong>
-                        : <span className="text-muted-foreground">Anonim</span>}
-                      {isTeacherFeedback && r.subject_teacher_name && (
-                        <span className="text-muted-foreground"> • despre {r.subject_teacher_name}</span>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">{formatDate(r.submitted_at)}</div>
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    {r.answers.map((a) => {
-                      const q = qMap.get(a.question_id);
-                      if (!q) return null;
-                      return (
-                        <div key={a.question_id}>
-                          <span className="text-muted-foreground">{q.text}: </span>
-                          <span>{formatValue(a.value)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+      {isTeacherFeedback ? (
+        <Accordion type="multiple" className="space-y-2">
+          {groups.map((g) => (
+            <AccordionItem key={g.key} value={g.key} className="border rounded-lg bg-card px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2 text-left">
+                  <span className="text-base font-semibold">{g.label}</span>
+                  <Badge variant="secondary">{g.responses.length} răspunsuri</Badge>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-      ))}
+              </AccordionTrigger>
+              <AccordionContent>
+                <GroupContent g={g} questions={questions} qMap={qMap} isTeacherFeedback />
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      ) : (
+        groups.map((g) => (
+          <div key={g.key} className="space-y-4">
+            <GroupContent g={g} questions={questions} qMap={qMap} isTeacherFeedback={false} />
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function GroupContent({
+  g,
+  questions,
+  qMap,
+  isTeacherFeedback,
+}: {
+  g: { key: string; label: string; responses: FbResponse[] };
+  questions: FbQuestion[];
+  qMap: Map<string, FbQuestion>;
+  isTeacherFeedback: boolean;
+}) {
+  return (
+    <div className="space-y-4 pt-2">
+      <Card>
+        <CardHeader><CardTitle className="text-base">Rezultate agregate</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
+          {questions.map((q, idx) => (
+            <AggregateBlock key={q.id} q={q} idx={idx} responses={g.responses} />
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Răspunsuri individuale</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          {g.responses.length === 0 && <p className="text-sm text-muted-foreground">Niciun răspuns încă.</p>}
+          {g.responses.map((r) => (
+            <div key={r.id} className="border rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm">
+                  {r.is_identified
+                    ? <strong>{r.respondent_name ?? "Identificat"}</strong>
+                    : <span className="text-muted-foreground">Anonim</span>}
+                  {isTeacherFeedback && r.subject_teacher_name && (
+                    <span className="text-muted-foreground"> • despre {r.subject_teacher_name}</span>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground">{formatDate(r.submitted_at)}</div>
+              </div>
+              <div className="space-y-1 text-sm">
+                {r.answers.map((a) => {
+                  const q = qMap.get(a.question_id);
+                  if (!q) return null;
+                  return (
+                    <div key={a.question_id}>
+                      <span className="text-muted-foreground">{q.text}: </span>
+                      <span>{formatValue(a.value)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }
