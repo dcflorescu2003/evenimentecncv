@@ -551,12 +551,13 @@ function MembersTab({
 
 // ============================================================
 function MeetingsTab({
-  clubId, meetings, enrollments, canManage, userId, isStudent, onChange,
+  clubId, meetings, enrollments, canManage, readOnlyAttendance, userId, isStudent, onChange,
 }: {
   clubId: string;
   meetings: any[];
   enrollments: any[];
   canManage: boolean;
+  readOnlyAttendance?: boolean;
   userId: string;
   isStudent: boolean;
   onChange: () => void;
