@@ -135,7 +135,7 @@ export default function FeedbackEditorPage({ mode }: Props) {
       } else {
         const { data, error } = await supabase
           .from("feedback_forms")
-          .insert({ ...payload, created_by: user.id })
+          .insert({ ...payload, created_by: user.id, is_cse: mode === "cse" })
           .select("id")
           .single();
         if (error) throw error;
