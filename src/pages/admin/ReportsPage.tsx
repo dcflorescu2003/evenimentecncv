@@ -452,3 +452,499 @@ function StudentReport({ sessionId }: { sessionId: string }) {
     </div>
   );
 }
+
+// ============================================================
+// FEEDBACK REPORT
+// ============================================================
+function FeedbackReport({ sessionId }: { sessionId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["report-feedback", sessionId],
+    queryFn: async () => {
+      const { data: forms } = await supabase
+        .from("feedback_forms")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: false });
+
+      const formIds = (forms ?? []).map((f) => f.id);
+      if (formIds.length === 0) return [];
+
+      const questions = await batchFetch<any>((f, t) =>
+        supabase.from("feedback_questions").select("id, form_id").in("form_id", formIds).range(f, t)
+      );
+      const responses = await batchFetch<any>((f, t) =>
+        supabase.from("feedback_responses").select("id, form_id, is_identified").in("form_id", formIds).range(f, t)
+      );
+
+      const qCount = new Map<string, number>();
+      questions.forEach((q) => qCount.set(q.form_id, (qCount.get(q.form_id) ?? 0) + 1));
+      const rCount = new Map<string, number>();
+      const rIdent = new Map<string, number>();
+      responses.forEach((r) => {
+        rCount.set(r.form_id, (rCount.get(r.form_id) ?? 0) + 1);
+        if (r.is_identified) rIdent.set(r.form_id, (rIdent.get(r.form_id) ?? 0) + 1);
+      });
+
+      return (forms ?? []).map((f: any) => ({
+        id: f.id,
+        title: f.title,
+        type: f.type,
+        audience: f.audience,
+        status: f.status,
+        anonymity: f.anonymity,
+        opens_at: f.opens_at,
+        closes_at: f.closes_at,
+        questions: qCount.get(f.id) ?? 0,
+        responses: rCount.get(f.id) ?? 0,
+        identified: rIdent.get(f.id) ?? 0,
+      }));
+    },
+  });
+
+  const typeLabels: Record<string, string> = {
+    general: "General",
+    teacher_feedback: "Feedback profesori",
+    event_feedback: "Feedback eveniment",
+  };
+  const audienceLabels: Record<string, string> = { students: "Elevi", teachers: "Profesori" };
+  const statusLabels: Record<string, string> = { draft: "Ciornă", active: "Activ", closed: "Închis" };
+  const anonLabels: Record<string, string> = {
+    anonymous: "Anonim",
+    identified: "Identificat",
+    optional: "Opțional",
+  };
+
+  const totalResponses = (data ?? []).reduce((s, f) => s + f.responses, 0);
+  const top = [...(data ?? [])].sort((a, b) => b.responses - a.responses).slice(0, 5);
+  const chartConfig: ChartConfig = { responses: { label: "Răspunsuri", color: "hsl(220, 70%, 55%)" } };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Chestionare</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{data?.length ?? "—"}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Răspunsuri totale</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{totalResponses}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Chestionare active</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{(data ?? []).filter((f) => f.status === "active").length}</p></CardContent></Card>
+      </div>
+
+      {top.length > 0 && top[0].responses > 0 && (
+        <Card className="print:shadow-none print:border-0">
+          <CardHeader><CardTitle className="text-base">Top chestionare după răspunsuri</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="max-h-[260px]">
+              <BarChart data={top}>
+                <XAxis dataKey="title" tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="responses" fill="hsl(220, 70%, 55%)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex justify-end print:hidden">
+        <Button variant="outline" size="sm" onClick={() => {
+          if (!data) return;
+          exportReportPdf({
+            title: "Raport chestionare feedback",
+            headers: ["Titlu", "Tip", "Audiență", "Status", "Anonimitate", "Întrebări", "Răspunsuri", "Identificați"],
+            rows: data.map((f) => [
+              f.title,
+              typeLabels[f.type] ?? f.type,
+              audienceLabels[f.audience] ?? f.audience,
+              statusLabels[f.status] ?? f.status,
+              anonLabels[f.anonymity] ?? f.anonymity,
+              String(f.questions),
+              String(f.responses),
+              String(f.identified),
+            ]),
+            filename: "raport-feedback",
+            orientation: "landscape",
+          });
+        }}>
+          <Download className="mr-2 h-4 w-4" /> Export PDF
+        </Button>
+      </div>
+
+      <Card className="print:shadow-none print:border-0">
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Titlu</TableHead>
+                <TableHead>Tip</TableHead>
+                <TableHead>Audiență</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Anonimitate</TableHead>
+                <TableHead className="text-right">Întrebări</TableHead>
+                <TableHead className="text-right">Răspunsuri</TableHead>
+                <TableHead className="text-right">Identificați</TableHead>
+                <TableHead className="print:hidden"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={9} className="text-center">Se încarcă...</TableCell></TableRow>
+              ) : (data ?? []).length === 0 ? (
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">Nu există chestionare în această sesiune.</TableCell></TableRow>
+              ) : data!.map((f) => (
+                <TableRow key={f.id}>
+                  <TableCell className="font-medium">{f.title}</TableCell>
+                  <TableCell>{typeLabels[f.type] ?? f.type}</TableCell>
+                  <TableCell>{audienceLabels[f.audience] ?? f.audience}</TableCell>
+                  <TableCell>
+                    <Badge variant={f.status === "active" ? "default" : f.status === "closed" ? "secondary" : "outline"}>
+                      {statusLabels[f.status] ?? f.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{anonLabels[f.anonymity] ?? f.anonymity}</TableCell>
+                  <TableCell className="text-right">{f.questions}</TableCell>
+                  <TableCell className="text-right font-medium">{f.responses}</TableCell>
+                  <TableCell className="text-right">{f.identified}</TableCell>
+                  <TableCell className="print:hidden">
+                    <Button asChild variant="ghost" size="sm">
+                      <Link to={`/admin/feedback/${f.id}/report`}><BarChart3 className="h-4 w-4 mr-1" /> Raport</Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ============================================================
+// CLUBS REPORT
+// ============================================================
+function ClubsReport({ sessionId }: { sessionId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["report-clubs", sessionId],
+    queryFn: async () => {
+      const { data: clubs } = await supabase
+        .from("clubs")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("name");
+
+      const clubIds = (clubs ?? []).map((c) => c.id);
+      if (clubIds.length === 0) return [];
+
+      const enrollments = await batchFetch<any>((f, t) =>
+        supabase.from("club_enrollments").select("club_id, student_id, status").in("club_id", clubIds).range(f, t)
+      );
+      const meetings = await batchFetch<any>((f, t) =>
+        supabase.from("club_meetings").select("id, club_id").in("club_id", clubIds).range(f, t)
+      );
+      const meetingIds = meetings.map((m) => m.id);
+      const attendance = meetingIds.length
+        ? await batchFetch<any>((f, t) =>
+            supabase.from("club_attendance").select("meeting_id, status").in("meeting_id", meetingIds).range(f, t)
+          )
+        : [];
+
+      const meetingToClub = new Map(meetings.map((m) => [m.id, m.club_id]));
+
+      return (clubs ?? []).map((c: any) => {
+        const enr = enrollments.filter((e) => e.club_id === c.id && e.status === "enrolled");
+        const mtgs = meetings.filter((m) => m.club_id === c.id);
+        const att = attendance.filter((a) => meetingToClub.get(a.meeting_id) === c.id);
+        const present = att.filter((a) => a.status === "present" || a.status === "late").length;
+        const heldMeetings = new Set(att.filter((a) => a.status === "present" || a.status === "late").map((a) => a.meeting_id)).size;
+        return {
+          id: c.id,
+          name: c.name,
+          status: c.status,
+          enrolled: enr.length,
+          capacity: c.max_capacity ?? 0,
+          fillRate: c.max_capacity ? Math.round((enr.length / c.max_capacity) * 100) : 0,
+          meetingsTotal: mtgs.length,
+          meetingsHeld: heldMeetings,
+          attendanceRate: att.length ? Math.round((present / att.length) * 100) : 0,
+        };
+      });
+    },
+  });
+
+  const statusLabels: Record<string, string> = { draft: "Ciornă", active: "Activ", closed: "Închis" };
+  const totals = {
+    active: (data ?? []).filter((c) => c.status === "active").length,
+    enrolled: (data ?? []).reduce((s, c) => s + c.enrolled, 0),
+    held: (data ?? []).reduce((s, c) => s + c.meetingsHeld, 0),
+  };
+  const top = [...(data ?? [])].sort((a, b) => b.enrolled - a.enrolled).slice(0, 10);
+  const chartConfig: ChartConfig = { enrolled: { label: "Înscriși", color: "hsl(220, 70%, 55%)" } };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Cluburi active</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{totals.active}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total înscrieri</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{totals.enrolled}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Întâlniri ținute</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{totals.held}</p></CardContent></Card>
+      </div>
+
+      {top.length > 0 && top[0].enrolled > 0 && (
+        <Card className="print:shadow-none print:border-0">
+          <CardHeader><CardTitle className="text-base">Înscriși per club (top 10)</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="max-h-[260px]">
+              <BarChart data={top}>
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="enrolled" fill="hsl(220, 70%, 55%)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex justify-end print:hidden">
+        <Button variant="outline" size="sm" onClick={() => {
+          if (!data) return;
+          exportReportPdf({
+            title: "Raport cluburi",
+            headers: ["Club", "Status", "Înscriși", "Capacitate", "% Ocupare", "Întâlniri", "Ținute", "% Prezență"],
+            rows: data.map((c) => [
+              c.name,
+              statusLabels[c.status] ?? c.status,
+              String(c.enrolled),
+              c.capacity ? String(c.capacity) : "—",
+              c.capacity ? `${c.fillRate}%` : "—",
+              String(c.meetingsTotal),
+              String(c.meetingsHeld),
+              `${c.attendanceRate}%`,
+            ]),
+            filename: "raport-cluburi",
+            orientation: "landscape",
+          });
+        }}>
+          <Download className="mr-2 h-4 w-4" /> Export PDF
+        </Button>
+      </div>
+
+      <Card className="print:shadow-none print:border-0">
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Club</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Înscriși</TableHead>
+                <TableHead className="text-right">Capacitate</TableHead>
+                <TableHead className="text-right">% Ocupare</TableHead>
+                <TableHead className="text-right">Întâlniri</TableHead>
+                <TableHead className="text-right">Ținute</TableHead>
+                <TableHead className="text-right">% Prezență</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={8} className="text-center">Se încarcă...</TableCell></TableRow>
+              ) : (data ?? []).length === 0 ? (
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Nu există cluburi în această sesiune.</TableCell></TableRow>
+              ) : data!.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell>
+                    <Badge variant={c.status === "active" ? "default" : c.status === "closed" ? "secondary" : "outline"}>
+                      {statusLabels[c.status] ?? c.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">{c.enrolled}</TableCell>
+                  <TableCell className="text-right">{c.capacity || "—"}</TableCell>
+                  <TableCell className="text-right">
+                    {c.capacity ? (
+                      <Badge variant={c.fillRate >= 90 ? "destructive" : c.fillRate >= 70 ? "secondary" : "outline"}>
+                        {c.fillRate}%
+                      </Badge>
+                    ) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right">{c.meetingsTotal}</TableCell>
+                  <TableCell className="text-right">{c.meetingsHeld}</TableCell>
+                  <TableCell className="text-right">{c.attendanceRate}%</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ============================================================
+// VOLUNTEERS REPORT
+// ============================================================
+function hoursBetween(start: string, end: string): number {
+  // "HH:MM:SS" or "HH:MM"
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const mins = (eh * 60 + (em || 0)) - (sh * 60 + (sm || 0));
+  return Math.max(0, Math.round(mins / 60));
+}
+
+function VolunteersReport({ sessionId }: { sessionId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["report-volunteers", sessionId],
+    queryFn: async () => {
+      const { data: projects } = await supabase
+        .from("volunteer_projects")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("name");
+
+      const projIds = (projects ?? []).map((p) => p.id);
+      if (projIds.length === 0) return [];
+
+      const enrollments = await batchFetch<any>((f, t) =>
+        supabase.from("volunteer_enrollments").select("project_id, student_id, status").in("project_id", projIds).range(f, t)
+      );
+      const days = await batchFetch<any>((f, t) =>
+        supabase.from("volunteer_days").select("id, project_id, start_time, end_time").in("project_id", projIds).range(f, t)
+      );
+      const dayIds = days.map((d) => d.id);
+      const attendance = dayIds.length
+        ? await batchFetch<any>((f, t) =>
+            supabase.from("volunteer_attendance").select("day_id, student_id, status").in("day_id", dayIds).range(f, t)
+          )
+        : [];
+
+      const dayMap = new Map(days.map((d) => [d.id, d]));
+
+      return (projects ?? []).map((p: any) => {
+        const enr = enrollments.filter((e) => e.project_id === p.id && e.status === "enrolled");
+        const projDays = days.filter((d) => d.project_id === p.id);
+        const projAtt = attendance.filter((a) => {
+          const d = dayMap.get(a.day_id) as any;
+          return d && d.project_id === p.id && (a.status === "present" || a.status === "late");
+        });
+        const totalHours = projAtt.reduce((sum, a) => {
+          const d = dayMap.get(a.day_id) as any;
+          return d ? sum + hoursBetween(d.start_time, d.end_time) : sum;
+        }, 0);
+        const activeVolunteers = new Set(projAtt.map((a) => a.student_id)).size;
+        return {
+          id: p.id,
+          name: p.name,
+          status: p.status,
+          enrolled: enr.length,
+          capacity: p.max_capacity ?? 0,
+          fillRate: p.max_capacity ? Math.round((enr.length / p.max_capacity) * 100) : 0,
+          daysTotal: projDays.length,
+          totalHours,
+          activeVolunteers,
+        };
+      });
+    },
+  });
+
+  const statusLabels: Record<string, string> = { draft: "Ciornă", active: "Activ", closed: "Închis" };
+  const totals = {
+    active: (data ?? []).filter((p) => p.status === "active").length,
+    volunteers: new Set((data ?? []).flatMap((_) => [])).size, // placeholder
+    hours: (data ?? []).reduce((s, p) => s + p.totalHours, 0),
+  };
+  const totalUniqueVolunteers = (data ?? []).reduce((s, p) => s + p.activeVolunteers, 0);
+  const top = [...(data ?? [])].sort((a, b) => b.totalHours - a.totalHours).slice(0, 10);
+  const chartConfig: ChartConfig = { totalHours: { label: "Ore validate", color: "hsl(160, 60%, 40%)" } };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Proiecte active</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{totals.active}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Voluntari (cu prezență)</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{totalUniqueVolunteers}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Ore validate</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{totals.hours}h</p></CardContent></Card>
+      </div>
+
+      {top.length > 0 && top[0].totalHours > 0 && (
+        <Card className="print:shadow-none print:border-0">
+          <CardHeader><CardTitle className="text-base">Ore validate per proiect (top 10)</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="max-h-[260px]">
+              <BarChart data={top}>
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis allowDecimals={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="totalHours" fill="hsl(160, 60%, 40%)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex justify-end print:hidden">
+        <Button variant="outline" size="sm" onClick={() => {
+          if (!data) return;
+          exportReportPdf({
+            title: "Raport voluntariat",
+            headers: ["Proiect", "Status", "Înscriși", "Capacitate", "% Ocupare", "Zile", "Voluntari activi", "Ore validate"],
+            rows: data.map((p) => [
+              p.name,
+              statusLabels[p.status] ?? p.status,
+              String(p.enrolled),
+              p.capacity ? String(p.capacity) : "—",
+              p.capacity ? `${p.fillRate}%` : "—",
+              String(p.daysTotal),
+              String(p.activeVolunteers),
+              `${p.totalHours}h`,
+            ]),
+            filename: "raport-voluntariat",
+            orientation: "landscape",
+          });
+        }}>
+          <Download className="mr-2 h-4 w-4" /> Export PDF
+        </Button>
+      </div>
+
+      <Card className="print:shadow-none print:border-0">
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Proiect</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Înscriși</TableHead>
+                <TableHead className="text-right">Capacitate</TableHead>
+                <TableHead className="text-right">% Ocupare</TableHead>
+                <TableHead className="text-right">Zile</TableHead>
+                <TableHead className="text-right">Voluntari activi</TableHead>
+                <TableHead className="text-right">Ore validate</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={8} className="text-center">Se încarcă...</TableCell></TableRow>
+              ) : (data ?? []).length === 0 ? (
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Nu există proiecte de voluntariat în această sesiune.</TableCell></TableRow>
+              ) : data!.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableCell>
+                    <Badge variant={p.status === "active" ? "default" : p.status === "closed" ? "secondary" : "outline"}>
+                      {statusLabels[p.status] ?? p.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">{p.enrolled}</TableCell>
+                  <TableCell className="text-right">{p.capacity || "—"}</TableCell>
+                  <TableCell className="text-right">
+                    {p.capacity ? (
+                      <Badge variant={p.fillRate >= 90 ? "destructive" : p.fillRate >= 70 ? "secondary" : "outline"}>
+                        {p.fillRate}%
+                      </Badge>
+                    ) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right">{p.daysTotal}</TableCell>
+                  <TableCell className="text-right">{p.activeVolunteers}</TableCell>
+                  <TableCell className="text-right font-medium">{p.totalHours}h</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
