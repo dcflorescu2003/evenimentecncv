@@ -48,19 +48,21 @@ function aggregate(q: FbQuestion, responses: FbResponse[]) {
     .map((r) => r.answers.find((a) => a.question_id === q.id)?.value)
     .filter((v) => v !== undefined && v !== null);
 
+  const skipped = responses.length - values.length;
+
   if (q.question_type === "scale") {
     const nums = values.map((v) => Number(v)).filter((n) => !Number.isNaN(n));
-    if (nums.length === 0) return { kind: "empty" as const };
+    if (nums.length === 0) return { kind: "empty" as const, skipped };
     const sum = nums.reduce((a, b) => a + b, 0);
     const sorted = [...nums].sort((a, b) => a - b);
     const median = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
     const dist: Record<number, number> = {};
     for (let i = q.scale_min ?? 1; i <= (q.scale_max ?? 5); i++) dist[i] = 0;
     nums.forEach((n) => { dist[n] = (dist[n] ?? 0) + 1; });
-    return { kind: "scale" as const, n: nums.length, avg: sum / nums.length, median, dist };
+    return { kind: "scale" as const, n: nums.length, avg: sum / nums.length, median, dist, skipped };
   }
   if (q.question_type === "open_text") {
-    return { kind: "text" as const, items: values.map((v) => String(v ?? "")) };
+    return { kind: "text" as const, items: values.map((v) => String(v ?? "")), skipped };
   }
   // choice / multi / dropdown
   const counts: Record<string, number> = {};
@@ -72,7 +74,7 @@ function aggregate(q: FbQuestion, responses: FbResponse[]) {
     });
   });
   const total = responses.length;
-  return { kind: "choice" as const, counts, total };
+  return { kind: "choice" as const, counts, total, skipped };
 }
 
 export async function exportFeedbackReportPdf({ title, subtitle, questions, responses, sections, overall }: ExportArgs) {
@@ -112,6 +114,7 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
 
       if (agg.kind === "empty") {
         doc.text("Fără răspunsuri.", 50, y); y += 16;
+        if (agg.skipped > 0) { doc.text(`Nu au răspuns: ${agg.skipped}`, 50, y); y += 14; }
       } else if (agg.kind === "scale") {
         autoTable(doc, {
           startY: y,
@@ -121,12 +124,15 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
           styles: { fontSize: 9, font: PDF_FONT },
         });
         y = (doc as any).lastAutoTable.finalY + 6;
-        doc.text(`n=${agg.n} • medie=${agg.avg.toFixed(2)} • mediană=${agg.median}`, 40, y);
+        doc.text(`n=${agg.n} • medie=${agg.avg.toFixed(2)} • mediană=${agg.median}${agg.skipped > 0 ? ` • Nu au răspuns: ${agg.skipped}` : ""}`, 40, y);
         y += 16;
       } else if (agg.kind === "choice") {
         const rows = Object.entries(agg.counts).map(([k, v]) => [
           k, String(v), agg.total ? `${((v / agg.total) * 100).toFixed(1)}%` : "—",
         ]);
+        if (agg.skipped > 0) {
+          rows.push(["Nu au răspuns", String(agg.skipped), agg.total ? `${((agg.skipped / agg.total) * 100).toFixed(1)}%` : "—"]);
+        }
         autoTable(doc, {
           startY: y,
           head: [["Opțiune", "Răspunsuri", "%"]],
@@ -147,6 +153,7 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
           });
           y += 6;
         }
+        if (agg.skipped > 0) { doc.text(`Nu au răspuns: ${agg.skipped}`, 50, y); y += 14; }
       }
     });
   };
@@ -190,6 +197,7 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
 
       if (agg.kind === "empty") {
         doc.text("Fără răspunsuri.", 50, y); y += 16;
+        if (agg.skipped > 0) { doc.text(`Nu au răspuns: ${agg.skipped}`, 50, y); y += 14; }
       } else if (agg.kind === "scale") {
         autoTable(doc, {
           startY: y,
@@ -199,12 +207,15 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
           styles: { fontSize: 9, font: PDF_FONT },
         });
         y = (doc as any).lastAutoTable.finalY + 6;
-        doc.text(`n=${agg.n} • medie=${agg.avg.toFixed(2)} • mediană=${agg.median}`, 40, y);
+        doc.text(`n=${agg.n} • medie=${agg.avg.toFixed(2)} • mediană=${agg.median}${agg.skipped > 0 ? ` • Nu au răspuns: ${agg.skipped}` : ""}`, 40, y);
         y += 16;
       } else if (agg.kind === "choice") {
         const rows = Object.entries(agg.counts).map(([k, v]) => [
           k, String(v), agg.total ? `${((v / agg.total) * 100).toFixed(1)}%` : "—",
         ]);
+        if (agg.skipped > 0) {
+          rows.push(["Nu au răspuns", String(agg.skipped), agg.total ? `${((agg.skipped / agg.total) * 100).toFixed(1)}%` : "—"]);
+        }
         autoTable(doc, {
           startY: y,
           head: [["Opțiune", "Răspunsuri", "%"]],
@@ -225,6 +236,7 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
           });
           y += 6;
         }
+        if (agg.skipped > 0) { doc.text(`Nu au răspuns: ${agg.skipped}`, 50, y); y += 14; }
       }
     });
   });
