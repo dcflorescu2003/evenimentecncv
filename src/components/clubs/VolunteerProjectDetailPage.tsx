@@ -171,6 +171,7 @@ function ProjectGeneralTab({ project, canEdit, onSaved }: any) {
   const [endDate, setEndDate] = useState(project.end_date ?? "");
   const [maxCap, setMaxCap] = useState(project.max_capacity?.toString() ?? "");
   const [status, setStatus] = useState(project.status);
+  const [isPrivate, setIsPrivate] = useState(!!project.is_private);
   const [saving, setSaving] = useState(false);
   async function save() {
     setSaving(true);
@@ -178,6 +179,7 @@ function ProjectGeneralTab({ project, canEdit, onSaved }: any) {
       name: name.trim(), description: description.trim() || null,
       start_date: startDate, end_date: endDate,
       max_capacity: maxCap ? Number(maxCap) : null, status,
+      is_private: isPrivate,
     }).eq("id", project.id);
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -210,9 +212,144 @@ function ProjectGeneralTab({ project, canEdit, onSaved }: any) {
           </Select>
         </div>
       </div>
+      <label className={`flex items-start gap-2 rounded-md border p-3 ${ro ? "opacity-70" : "cursor-pointer"}`}>
+        <input
+          type="checkbox"
+          checked={isPrivate}
+          disabled={ro}
+          onChange={(e) => setIsPrivate(e.target.checked)}
+          className="mt-1 h-4 w-4"
+        />
+        <div className="space-y-0.5">
+          <div className="text-sm font-medium flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" />Proiect privat</div>
+          <p className="text-xs text-muted-foreground">Elevii NU se pot înscrie singuri. Tu alegi manual participanții din lista de elevi.</p>
+        </div>
+      </label>
       {canEdit && <div className="flex justify-end">
         <Button onClick={save} disabled={saving}><Save className="h-4 w-4 mr-1" />Salvează</Button></div>}
     </CardContent></Card>
+  );
+}
+
+function MembersTab({
+  projectId, enrollments, enrolledIds, onChange,
+}: {
+  projectId: string;
+  enrollments: any[];
+  enrolledIds: string[];
+  onChange: () => void;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
+
+  const { data: students = [] } = useQuery({
+    queryKey: ["students-for-volunteer-picker"],
+    queryFn: async () => {
+      // Fetch all student user ids (paginated)
+      const ids: string[] = [];
+      const pageSize = 1000;
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "student")
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data?.length) break;
+        ids.push(...data.map((r: any) => r.user_id));
+        if (data.length < pageSize) break;
+      }
+      if (ids.length === 0) return [];
+      const profiles: any[] = [];
+      for (let i = 0; i < ids.length; i += 500) {
+        const chunk = ids.slice(i, i + 500);
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", chunk);
+        profiles.push(...(data ?? []));
+      }
+      return profiles.sort((a, b) =>
+        (a.last_name || "").localeCompare(b.last_name || "", "ro", { sensitivity: "base" })
+      );
+    },
+  });
+
+  const available = useMemo(
+    () => students.filter((s: any) => !enrolledIds.includes(s.id)),
+    [students, enrolledIds]
+  );
+
+  async function addStudent(studentId: string) {
+    setAdding(studentId);
+    const { error } = await supabase.from("volunteer_enrollments").insert({
+      project_id: projectId,
+      student_id: studentId,
+      status: "enrolled",
+    });
+    setAdding(null);
+    if (error) return toast.error("Eroare: " + error.message);
+    toast.success("Elev adăugat");
+    setPickerOpen(false);
+    onChange();
+  }
+
+  async function removeStudent(enrollmentId: string) {
+    if (!confirm("Retragi acest elev din proiect?")) return;
+    const { error } = await supabase
+      .from("volunteer_enrollments")
+      .update({ status: "withdrawn", withdrawn_at: new Date().toISOString() })
+      .eq("id", enrollmentId);
+    if (error) return toast.error(error.message);
+    toast.success("Elev retras");
+    onChange();
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 pt-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">
+            {enrollments.length} participant{enrollments.length === 1 ? "" : "i"}
+          </p>
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button size="sm"><UserPlus className="h-4 w-4 mr-1" />Adaugă elev</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[320px] p-0" align="end">
+              <Command>
+                <CommandInput placeholder="Caută elev după nume..." />
+                <CommandList>
+                  <CommandEmpty>Niciun elev disponibil.</CommandEmpty>
+                  <CommandGroup>
+                    {available.map((s: any) => (
+                      <CommandItem
+                        key={s.id}
+                        value={`${s.last_name} ${s.first_name}`}
+                        onSelect={() => addStudent(s.id)}
+                        disabled={adding === s.id}
+                      >
+                        {adding === s.id ? <Check className="h-4 w-4 mr-2 animate-pulse" /> : <Plus className="h-4 w-4 mr-2" />}
+                        {s.last_name} {s.first_name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+        {enrollments.length === 0 && <p className="text-sm text-muted-foreground">Niciun înscris.</p>}
+        {enrollments.map((e: any) => (
+          <div key={e.id} className="flex items-center justify-between rounded border p-2 text-sm">
+            <span>{e.profile ? `${e.profile.last_name} ${e.profile.first_name}` : e.student_id}</span>
+            <Button variant="ghost" size="sm" onClick={() => removeStudent(e.id)}>
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
