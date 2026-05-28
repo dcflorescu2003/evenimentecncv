@@ -128,51 +128,86 @@ export default function StudentFeedbackPage() {
         {/* === FEEDBACKUL MEU === */}
         <TabsContent value="mine" className="space-y-3 pt-2">
           <h2 className="text-lg font-semibold">Răspunsurile mele</h2>
-          {myResponses.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nu ai răspuns la niciun chestionar.</p>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {myResponses.map((r: any) => {
-                const form = r.feedback_forms;
-                if (!form) return null;
-                const editable =
-                  r.is_identified &&
-                  form.status === "active" &&
-                  (!form.closes_at || new Date(form.closes_at).getTime() > now);
-                return (
-                  <Card key={r.id} className="flex flex-col">
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-base">{form.title}</CardTitle>
-                        {r.is_identified ? (
-                          <Badge variant="secondary"><Eye className="h-3 w-3 mr-1" />Identificat</Badge>
+          {(() => {
+            const identifiedKeys = new Set(
+              myResponses.map((r: any) => `${r.form_id}::${r.subject_teacher_id ?? ""}`),
+            );
+            const anonCompletions = myCompletions.filter(
+              (c: any) => !identifiedKeys.has(`${c.form_id}::${c.subject_teacher_id ?? ""}`),
+            );
+            const total = myResponses.length + anonCompletions.length;
+            if (total === 0) {
+              return <p className="text-sm text-muted-foreground">Nu ai răspuns la niciun chestionar.</p>;
+            }
+            return (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {myResponses.map((r: any) => {
+                  const form = r.feedback_forms;
+                  if (!form) return null;
+                  const editable =
+                    r.is_identified &&
+                    form.status === "active" &&
+                    (!form.closes_at || new Date(form.closes_at).getTime() > now);
+                  return (
+                    <Card key={r.id} className="flex flex-col">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <CardTitle className="text-base">{form.title}</CardTitle>
+                          {r.is_identified ? (
+                            <Badge variant="secondary"><Eye className="h-3 w-3 mr-1" />Identificat</Badge>
+                          ) : (
+                            <Badge variant="outline"><EyeOff className="h-3 w-3 mr-1" />Anonim</Badge>
+                          )}
+                        </div>
+                        <CardDescription className="text-xs">
+                          {TYPE_LABEL[form.type]} • trimis {formatDate(r.submitted_at)}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-1 items-end justify-between gap-2">
+                        <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 text-primary" /> Trimis
+                        </span>
+                        {editable ? (
+                          <Button size="sm" variant="outline" onClick={() => navigate(`/student/feedback/${form.id}/fill?response=${r.id}`)}>
+                            Editează <ArrowRight className="ml-1 h-3 w-3" />
+                          </Button>
                         ) : (
-                          <Badge variant="outline"><EyeOff className="h-3 w-3 mr-1" />Anonim</Badge>
+                          <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                            <Lock className="h-3 w-3" /> Final
+                          </span>
                         )}
-                      </div>
-                      <CardDescription className="text-xs">
-                        {TYPE_LABEL[form.type]} • trimis {formatDate(r.submitted_at)}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-1 items-end justify-between gap-2">
-                      <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-primary" /> Trimis
-                      </span>
-                      {editable ? (
-                        <Button size="sm" variant="outline" onClick={() => navigate(`/student/feedback/${form.id}/fill?response=${r.id}`)}>
-                          Editează <ArrowRight className="ml-1 h-3 w-3" />
-                        </Button>
-                      ) : (
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+                {anonCompletions.map((c: any) => {
+                  const form = c.feedback_forms;
+                  if (!form) return null;
+                  return (
+                    <Card key={c.id} className="flex flex-col">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <CardTitle className="text-base">{form.title}</CardTitle>
+                          <Badge variant="outline"><EyeOff className="h-3 w-3 mr-1" />Anonim</Badge>
+                        </div>
+                        <CardDescription className="text-xs">
+                          {TYPE_LABEL[form.type]} • trimis {formatDate(c.completed_at)}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-1 items-end justify-between gap-2">
+                        <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 text-primary" /> Trimis
+                        </span>
                         <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
                           <Lock className="h-3 w-3" /> Final
                         </span>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </TabsContent>
       </Tabs>
     </div>
