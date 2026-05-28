@@ -88,11 +88,7 @@ export default function StudentClubsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setSp({ tab: v })}>
-        <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-flex">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="my-clubs">Cluburile mele</TabsTrigger>
-          <TabsTrigger value="volunteer">Voluntariat</TabsTrigger>
-        </TabsList>
+        {/* Navigarea între secțiuni se face din bara de jos */}
 
         {/* === DASHBOARD === */}
         <TabsContent value="dashboard" className="space-y-8 pt-4">
