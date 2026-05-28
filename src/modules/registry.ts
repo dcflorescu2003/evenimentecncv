@@ -56,6 +56,19 @@ export const MODULES: AppModule[] = [
       manager: "/manager",
     },
   },
+  {
+    key: "feedback",
+    label: "Feedback",
+    description: "Chestionare de feedback pentru elevi, profesori și evenimente.",
+    icon: MessageSquare,
+    pathByRole: {
+      admin: "/admin/feedback",
+      cse: "/prof/feedback",
+      teacher: "/prof/feedback",
+      homeroom_teacher: "/prof/feedback",
+      student: "/student/feedback",
+    },
+  },
 ];
 
 /** Returnează modulele vizibile pentru utilizator în funcție de rolurile sale. */
