@@ -630,7 +630,7 @@ function MeetingsTab({
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  {canManage && (
+                  {(canManage || readOnlyAttendance) && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -652,6 +652,9 @@ function MeetingsTab({
                   enrollments={enrollments}
                   userId={userId}
                 />
+              )}
+              {openMeeting === m.id && !canManage && readOnlyAttendance && (
+                <ReadOnlyAttendancePanel meetingId={m.id} enrollments={enrollments} />
               )}
               {isStudent && <StudentOwnAttendance meetingId={m.id} studentId={userId} />}
             </CardContent>
