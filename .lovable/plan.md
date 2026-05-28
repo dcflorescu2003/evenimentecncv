@@ -1,66 +1,46 @@
-## Diagnostic
+## Problema
 
-Contul **CSE** folosește `ProfEventDetailPage`. Permisiunile sunt setate parțial:
+În `StudentEventDetailPage.tsx`, dialogul „Încarcă formular completat" folosește `<input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">`.
 
-| Funcționalitate | Stare actuală |
-|---|---|
-| 1. Upload fișiere dosar / cerere (`event_files` + bucket `event-files`) | ✅ funcționează — există politică `CSE manage event files` + `Event creators manage event files storage` |
-| 1. Upload șablon formular | ✅ funcționează (aceeași politică) |
-| 1. Elevi descarcă șablonul (`Students read form templates` pe tabel + storage) | ✅ funcționează |
-| 1. Elevi încarcă formular completat (`form-submissions/<student_id>/...`) | ✅ funcționează |
-| 2. Lista de participanți: numele elevilor și clasa lor | ❌ **nu se afișează** — nu există politică CSE pe `profiles` și `student_class_assignments` |
-| 2. Tickets (status prezență) la participanți | ✅ există `CSE read event tickets` |
-| 3. Dialog „Adaugă elev asistent" — căutare elevi | ❌ **listă goală** — nu există politică CSE pe `user_roles` și pe `profiles` |
-| 3. Insert în `event_student_assistants` | ✅ există `CSE manage assistants for own events` |
+Pe mobil apar două probleme:
+1. **PDF-urile nu apar în picker pe web mobil** — pe iOS/Android browser, extensiile (`.pdf`) sunt deseori ignorate, doar MIME types sunt onorate corect. De aceea apar doar imagini (image/*).
+2. **Pozele cu paginile completate nu se încarcă în aplicația mobilă (Capacitor)** — cel mai probabil pentru că iPhone-ul livrează fotografii HEIC (`image/heic`), iar validarea client-side respinge tot ce nu e PDF/DOCX/imagine recunoscută. În plus, pe Capacitor `<input type="file">` poate avea comportament inconsistent, iar dimensiunea > 10MB de la cameră trece ușor de limită.
 
-**Cauza** problemelor 2 și 3: politicile RLS pentru `profiles`, `student_class_assignments` și `user_roles` au cazuri pentru `teacher`, `homeroom_teacher`, `coordinator_teacher`, `manager`, `admin`, dar **lipsește `cse`**.
+## Schimbări (doar frontend, fără logică nouă)
 
-## Soluție — o singură migrare
+### 1. `src/pages/student/StudentEventDetailPage.tsx`
 
-Adaug 3 politici noi, simetrice cu cele existente pentru profesori, scopate la evenimentele al căror creator este utilizatorul CSE (funcția existentă `is_event_creator`).
-
-### 1) `public.profiles` — CSE citește profilurile participanților la propriile evenimente
-```sql
-CREATE POLICY "CSE read event participant profiles"
-ON public.profiles FOR SELECT TO authenticated
-USING (
-  has_role(auth.uid(),'cse'::app_role)
-  AND id IN (
-    SELECT r.student_id FROM reservations r
-    WHERE is_event_creator(r.event_id, auth.uid())
-  )
-);
+**a) `accept` cu MIME types + extensii + HEIC:**
 ```
-
-### 2) `public.profiles` — CSE citește profilurile elevilor pentru căutarea de asistenți
-```sql
-CREATE POLICY "CSE read student profiles for assistant assignment"
-ON public.profiles FOR SELECT TO authenticated
-USING (
-  has_role(auth.uid(),'cse'::app_role)
-  AND id IN (SELECT user_id FROM user_roles WHERE role = 'student'::app_role)
-);
+accept="application/pdf,.pdf,application/msword,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,image/*,.heic,.heif"
 ```
+Asta forțează picker-ul mobil să afișeze și fișiere (Files / Documents / Drive), nu doar galeria.
 
-### 3) `public.user_roles` — CSE citește rolurile (necesar pentru filtrul `role = student` din dialog)
-```sql
-CREATE POLICY "CSE read roles for assignment"
-ON public.user_roles FOR SELECT TO authenticated
-USING (has_role(auth.uid(),'cse'::app_role));
-```
+**b) Validare mai permisivă în `handleSubmissionUpload`:**
+- acceptă orice `image/*` (inclusiv `image/heic`, `image/heif`)
+- acceptă pdf / doc / docx prin MIME **sau** extensie
+- mesaj de eroare clar dacă MIME e gol pe mobil (fallback strict pe extensie)
 
-### 4) `public.student_class_assignments` — CSE citește clasa elevilor (pentru afișarea „Clasa" în lista de participanți și în dialogul de asistenți)
-```sql
-CREATE POLICY "CSE read student class assignments"
-ON public.student_class_assignments FOR SELECT TO authenticated
-USING (has_role(auth.uid(),'cse'::app_role));
-```
+**c) Mesaj de ajutor în dialog pentru mobil:**
+"Poți încărca poze cu paginile completate sau un PDF/Word. Pe iPhone, dacă fotografia este HEIC, va fi acceptată automat."
 
-## Cod aplicație
-Nu sunt necesare modificări — `ProfEventDetailPage.tsx` deja gestionează rolul `cse` (`isCse = roles.includes("cse")`), butoanele de upload, dialogul de asistenți și fetch-urile sunt deja scrise; pur și simplu RLS le bloca.
+**d) Buton secundar „Fă o poză" pe mobil** (opțional, util):
+Un al doilea `<input type="file" accept="image/*" capture="environment">` ascuns + buton care îl declanșează, ca să deschidă direct camera. Util când elevul vrea să fotografieze pagina pe loc.
 
-## Verificare după aplicare
-1. Login cu cont CSE → eveniment propriu → tab **Fișiere** → upload dosar / cerere ✓
-2. Tab **Formulare** → upload șablon → login elev cu rezervare → descărcare + upload formular completat ✓
-3. Tab **Participanți** → se văd numele și clasa elevilor ✓
-4. Buton **Adaugă elev asistent** → căutare returnează elevi cu nume + clasă ✓
+**e) Limita de 10MB rămâne**, dar afișăm dimensiunea efectivă în mesaj dacă e depășită ("Fișierul are X MB, maxim 10MB").
+
+### 2. Fără modificări la storage / RLS / edge functions
+Bucket-ul `event-files` și politicile pentru `form_submissions` sunt deja corecte și permit elevului să încarce. Problema e strict la nivel de input HTML + validare.
+
+## Ce NU schimb
+- Logica de upload Supabase Storage
+- Politicile RLS
+- Structura DB
+- Fluxul pentru profesor / CSE
+
+## Verificare
+După implementare, pe mobil:
+- Tap pe „Încarcă formular completat" → în file picker apar și **Files/Documents** (nu doar Galerie)
+- Selectare PDF → upload OK
+- Selectare poză HEIC din iPhone → upload OK
+- Buton „Fă o poză" → deschide camera direct
