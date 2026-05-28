@@ -136,6 +136,7 @@ export default function FeedbackReportPage({ mode }: Props) {
         subtitle: form.description ?? undefined,
         questions,
         sections: exportSections(),
+        overall: { label: "Statistici generale (toți profesorii)", responses },
       });
     } else {
       await exportFeedbackReportPdf({
