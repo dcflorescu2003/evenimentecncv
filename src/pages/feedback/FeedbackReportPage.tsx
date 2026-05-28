@@ -49,7 +49,7 @@ export default function FeedbackReportPage({ mode }: Props) {
     queryFn: async () => {
       const { data: resp, error } = await supabase
         .from("feedback_responses")
-        .select("id, submitted_at, is_identified, respondent_id, subject_teacher_id, profiles:respondent_id (first_name, last_name)")
+        .select("id, submitted_at, is_identified, respondent_id, subject_teacher_id")
         .eq("form_id", id!)
         .order("submitted_at", { ascending: false });
       if (error) throw error;
@@ -62,13 +62,31 @@ export default function FeedbackReportPage({ mode }: Props) {
         if (!byResp.has(a.response_id)) byResp.set(a.response_id, []);
         byResp.get(a.response_id)!.push({ question_id: a.question_id, value: a.value });
       });
+
+      // Fetch respondent names separately (no FK -> can't embed via PostgREST)
+      const respondentIds = Array.from(
+        new Set(
+          (resp ?? [])
+            .filter((r: any) => r.is_identified && r.respondent_id)
+            .map((r: any) => r.respondent_id as string)
+        )
+      );
+      const nameMap = new Map<string, string>();
+      if (respondentIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", respondentIds);
+        (profs ?? []).forEach((p: any) => {
+          nameMap.set(p.id, `${p.last_name ?? ""} ${p.first_name ?? ""}`.trim());
+        });
+      }
+
       return (resp ?? []).map((r: any) => ({
         id: r.id,
         submitted_at: r.submitted_at,
         is_identified: r.is_identified,
-        respondent_name: r.is_identified && r.profiles
-          ? `${r.profiles.last_name ?? ""} ${r.profiles.first_name ?? ""}`.trim()
-          : null,
+        respondent_name: r.is_identified && r.respondent_id ? nameMap.get(r.respondent_id) ?? null : null,
         answers: byResp.get(r.id) ?? [],
       }));
     },
