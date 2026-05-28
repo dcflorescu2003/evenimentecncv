@@ -15,11 +15,17 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange } from "lucide-react";
+import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
 import { DateInput } from "@/components/ui/date-input";
 import { ClassEligibilityPicker } from "./ClassEligibilityPicker";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
 
 type Mode = "admin" | "cse" | "student";
 
