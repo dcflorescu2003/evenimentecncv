@@ -23,6 +23,8 @@ export interface FbResponse {
   submitted_at: string;
   respondent_name?: string | null;
   is_identified?: boolean;
+  subject_teacher_id?: string | null;
+  subject_teacher_name?: string | null;
   answers: FbAnswer[];
 }
 
