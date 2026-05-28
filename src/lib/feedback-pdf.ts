@@ -73,11 +73,11 @@ export function exportFeedbackReportPdf({ title, subtitle, questions, responses 
   const pageW = doc.internal.pageSize.getWidth();
   let y = 48;
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont(PDF_FONT, "bold");
   doc.setFontSize(16);
   doc.text(title, 40, y);
   y += 18;
-  doc.setFont("helvetica", "normal");
+  doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(10);
   if (subtitle) { doc.text(subtitle, 40, y); y += 14; }
   doc.text(`Răspunsuri: ${responses.length}`, 40, y); y += 16;
@@ -86,14 +86,14 @@ export function exportFeedbackReportPdf({ title, subtitle, questions, responses 
     .sort((a, b) => a.position - b.position)
     .forEach((q, idx) => {
       if (y > 720) { doc.addPage(); y = 48; }
-      doc.setFont("helvetica", "bold");
+      doc.setFont(PDF_FONT, "bold");
       doc.setFontSize(11);
       const lines = doc.splitTextToSize(`${idx + 1}. ${q.text}`, pageW - 80);
       doc.text(lines, 40, y);
       y += lines.length * 14 + 4;
 
       const agg = aggregate(q, responses);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT, "normal");
       doc.setFontSize(10);
 
       if (agg.kind === "empty") {
