@@ -32,7 +32,7 @@ export default function ProfLayout() {
     : [
         { title: "Dashboard", icon: LayoutDashboard, path: "/prof" },
         { title: "Evenimentele mele", icon: CalendarDays, path: "/prof/events" },
-        ...(isCse ? [{ title: "Cluburi & Voluntariat", icon: HeartHandshake, path: "/prof/clubs" }] : []),
+        { title: "Cluburi & Voluntariat", icon: HeartHandshake, path: "/prof/clubs" },
         { title: "Feedback", icon: MessageSquare, path: "/prof/feedback" },
         ...(isHomeroom ? [{ title: "Clasa mea", icon: Users2, path: "/teacher" }] : []),
         ...(isHomeroom ? [{ title: "Rapoarte", icon: BarChart3, path: "/teacher/reports" }] : []),
