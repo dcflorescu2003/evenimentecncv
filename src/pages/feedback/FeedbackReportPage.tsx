@@ -1,13 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, FileDown, FileSpreadsheet } from "lucide-react";
 import { formatDate } from "@/lib/time";
 import { exportFeedbackReportPdf, type FbQuestion, type FbResponse } from "@/lib/feedback-pdf";
+import { exportFeedbackReportXlsx } from "@/lib/feedback-xlsx";
 
 interface Props {
   mode: "admin" | "cse" | "teacher";
