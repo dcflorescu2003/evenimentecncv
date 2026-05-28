@@ -233,6 +233,230 @@ export type Database = {
           },
         ]
       }
+      club_attendance: {
+        Row: {
+          checkin_at: string | null
+          created_at: string
+          id: string
+          marked_by: string | null
+          meeting_id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["club_attendance_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          checkin_at?: string | null
+          created_at?: string
+          id?: string
+          marked_by?: string | null
+          meeting_id: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["club_attendance_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          checkin_at?: string | null
+          created_at?: string
+          id?: string
+          marked_by?: string | null
+          meeting_id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["club_attendance_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_attendance_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "club_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_coordinators: {
+        Row: {
+          assigned_by: string
+          club_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by: string
+          club_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string
+          club_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_coordinators_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_enrollments: {
+        Row: {
+          club_id: string
+          created_at: string
+          enrolled_at: string
+          id: string
+          status: Database["public"]["Enums"]["club_enrollment_status"]
+          student_id: string
+          updated_at: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          enrolled_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["club_enrollment_status"]
+          student_id: string
+          updated_at?: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          enrolled_at?: string
+          id?: string
+          status?: Database["public"]["Enums"]["club_enrollment_status"]
+          student_id?: string
+          updated_at?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_enrollments_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_meetings: {
+        Row: {
+          club_id: string
+          created_at: string
+          created_by: string
+          date: string
+          end_time: string
+          id: string
+          location: string | null
+          notes: string | null
+          qr_code_data: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          created_by: string
+          date: string
+          end_time: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          qr_code_data?: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          created_by?: string
+          date?: string
+          end_time?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          qr_code_data?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_meetings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clubs: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          eligible_classes: string[] | null
+          eligible_grades: number[] | null
+          enrollment_close_at: string | null
+          enrollment_open_at: string | null
+          frequency_label: string | null
+          id: string
+          location: string | null
+          max_capacity: number | null
+          max_per_class: number | null
+          name: string
+          session_id: string
+          status: Database["public"]["Enums"]["club_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          eligible_classes?: string[] | null
+          eligible_grades?: number[] | null
+          enrollment_close_at?: string | null
+          enrollment_open_at?: string | null
+          frequency_label?: string | null
+          id?: string
+          location?: string | null
+          max_capacity?: number | null
+          max_per_class?: number | null
+          name: string
+          session_id: string
+          status?: Database["public"]["Enums"]["club_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          eligible_classes?: string[] | null
+          eligible_grades?: number[] | null
+          enrollment_close_at?: string | null
+          enrollment_open_at?: string | null
+          frequency_label?: string | null
+          id?: string
+          location?: string | null
+          max_capacity?: number | null
+          max_per_class?: number | null
+          name?: string
+          session_id?: string
+          status?: Database["public"]["Enums"]["club_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coordinator_assignments: {
         Row: {
           created_at: string
@@ -1165,6 +1389,233 @@ export type Database = {
         }
         Relationships: []
       }
+      volunteer_attendance: {
+        Row: {
+          checkin_at: string | null
+          created_at: string
+          day_id: string
+          id: string
+          marked_by: string | null
+          notes: string | null
+          status: Database["public"]["Enums"]["club_attendance_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          checkin_at?: string | null
+          created_at?: string
+          day_id: string
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          status?: Database["public"]["Enums"]["club_attendance_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          checkin_at?: string | null
+          created_at?: string
+          day_id?: string
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          status?: Database["public"]["Enums"]["club_attendance_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_attendance_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_coordinators: {
+        Row: {
+          assigned_by: string
+          created_at: string
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by: string
+          created_at?: string
+          id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string
+          created_at?: string
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_coordinators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_days: {
+        Row: {
+          created_at: string
+          created_by: string
+          date: string
+          end_time: string
+          id: string
+          location: string | null
+          notes: string | null
+          project_id: string
+          qr_code_data: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          date: string
+          end_time: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          project_id: string
+          qr_code_data?: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          date?: string
+          end_time?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          project_id?: string
+          qr_code_data?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_days_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_enrollments: {
+        Row: {
+          created_at: string
+          enrolled_at: string
+          id: string
+          project_id: string
+          status: Database["public"]["Enums"]["club_enrollment_status"]
+          student_id: string
+          updated_at: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          enrolled_at?: string
+          id?: string
+          project_id: string
+          status?: Database["public"]["Enums"]["club_enrollment_status"]
+          student_id: string
+          updated_at?: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          enrolled_at?: string
+          id?: string
+          project_id?: string
+          status?: Database["public"]["Enums"]["club_enrollment_status"]
+          student_id?: string
+          updated_at?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_enrollments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_projects: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          eligible_classes: string[] | null
+          eligible_grades: number[] | null
+          end_date: string
+          enrollment_close_at: string | null
+          enrollment_open_at: string | null
+          id: string
+          location: string | null
+          max_capacity: number | null
+          max_per_class: number | null
+          name: string
+          session_id: string
+          start_date: string
+          status: Database["public"]["Enums"]["volunteer_project_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          eligible_classes?: string[] | null
+          eligible_grades?: number[] | null
+          end_date: string
+          enrollment_close_at?: string | null
+          enrollment_open_at?: string | null
+          id?: string
+          location?: string | null
+          max_capacity?: number | null
+          max_per_class?: number | null
+          name: string
+          session_id: string
+          start_date: string
+          status?: Database["public"]["Enums"]["volunteer_project_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          eligible_classes?: string[] | null
+          eligible_grades?: number[] | null
+          end_date?: string
+          enrollment_close_at?: string | null
+          enrollment_open_at?: string | null
+          id?: string
+          location?: string | null
+          max_capacity?: number | null
+          max_per_class?: number | null
+          name?: string
+          session_id?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["volunteer_project_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1172,6 +1623,14 @@ export type Database = {
     Functions: {
       check_booking_eligibility: {
         Args: { _event_id: string; _student_id: string }
+        Returns: Json
+      }
+      check_club_enrollment: {
+        Args: { _club_id: string; _student_id: string }
+        Returns: Json
+      }
+      check_volunteer_enrollment: {
+        Args: { _project_id: string; _student_id: string }
         Returns: Json
       }
       delete_email: {
@@ -1186,10 +1645,15 @@ export type Database = {
         Args: { _assistant_id: string }
         Returns: string[]
       }
+      get_club_id_for_meeting: {
+        Args: { _meeting_id: string }
+        Returns: string
+      }
       get_events_reserved_counts: {
         Args: { _event_ids: string[] }
         Returns: Json
       }
+      get_project_id_for_day: { Args: { _day_id: string }; Returns: string }
       get_student_progress: {
         Args: { _session_id: string; _student_id: string }
         Returns: Json
@@ -1221,6 +1685,18 @@ export type Database = {
         Args: { _reservation_id: string; _student_id: string }
         Returns: boolean
       }
+      is_club_coordinator: {
+        Args: { _club_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_club_creator: {
+        Args: { _club_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_club_enrolled: {
+        Args: { _club_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_coordinator_for_event: {
         Args: { _event_id: string; _user_id: string }
         Returns: boolean
@@ -1231,6 +1707,18 @@ export type Database = {
       }
       is_teacher_for_student: {
         Args: { _student_id: string; _teacher_id: string }
+        Returns: boolean
+      }
+      is_volunteer_coordinator: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_volunteer_creator: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_volunteer_enrolled: {
+        Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
       lookup_public_reservation: { Args: { p_code: string }; Returns: Json }
@@ -1261,6 +1749,9 @@ export type Database = {
         | "teacher"
         | "manager"
         | "cse"
+      club_attendance_status: "present" | "late" | "absent"
+      club_enrollment_status: "enrolled" | "withdrawn"
+      club_status: "draft" | "active" | "archived"
       event_status: "draft" | "published" | "closed" | "cancelled"
       file_category: "event_dossier" | "form_template"
       form_submission_status: "uploaded" | "reviewed" | "accepted" | "rejected"
@@ -1274,6 +1765,7 @@ export type Database = {
         | "late"
         | "absent"
         | "excused"
+      volunteer_project_status: "draft" | "active" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1410,6 +1902,9 @@ export const Constants = {
         "manager",
         "cse",
       ],
+      club_attendance_status: ["present", "late", "absent"],
+      club_enrollment_status: ["enrolled", "withdrawn"],
+      club_status: ["draft", "active", "archived"],
       event_status: ["draft", "published", "closed", "cancelled"],
       file_category: ["event_dossier", "form_template"],
       form_submission_status: ["uploaded", "reviewed", "accepted", "rejected"],
@@ -1424,6 +1919,7 @@ export const Constants = {
         "absent",
         "excused",
       ],
+      volunteer_project_status: ["draft", "active", "closed"],
     },
   },
 } as const
