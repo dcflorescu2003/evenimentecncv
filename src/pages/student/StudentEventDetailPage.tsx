@@ -52,6 +52,7 @@ export default function StudentEventDetailPage() {
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const { data: event, isLoading } = useQuery({
     queryKey: ["event_detail", id],
@@ -247,22 +248,27 @@ export default function StudentEventDetailPage() {
     }
   }
 
-  async function handleSubmissionUpload() {
-    const file = fileInputRef.current?.files?.[0];
+  async function handleSubmissionUpload(sourceRef?: React.RefObject<HTMLInputElement>) {
+    const ref = sourceRef ?? fileInputRef;
+    const file = ref.current?.files?.[0];
     if (!file || !uploadTitle || !user) {
       toast.error("Completați titlul și selectați un fișier");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("Fișierul depășește 10MB");
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      toast.error(`Fișierul are ${mb}MB, maxim 10MB`);
       return;
     }
     const lowerName = file.name.toLowerCase();
-    const isPdf = file.type === "application/pdf" || lowerName.endsWith(".pdf");
-    const isDocx = file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || lowerName.endsWith(".docx");
-    const isImage = file.type.startsWith("image/");
-    if (!isPdf && !isDocx && !isImage) {
-      toast.error("Sunt acceptate doar fișiere PDF, DOCX sau imagini");
+    const mime = (file.type || "").toLowerCase();
+    const isPdf = mime === "application/pdf" || lowerName.endsWith(".pdf");
+    const isDoc = mime.includes("word") || lowerName.endsWith(".doc") || lowerName.endsWith(".docx");
+    const isImage =
+      mime.startsWith("image/") ||
+      [".png", ".jpg", ".jpeg", ".webp", ".gif", ".heic", ".heif"].some((ext) => lowerName.endsWith(ext));
+    if (!isPdf && !isDoc && !isImage) {
+      toast.error("Sunt acceptate doar PDF, Word (DOC/DOCX) sau imagini (inclusiv HEIC).");
       return;
     }
 
@@ -288,6 +294,7 @@ export default function StudentEventDetailPage() {
       setUploadDialogOpen(false);
       setUploadTitle("");
       if (fileInputRef.current) fileInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -522,12 +529,37 @@ export default function StudentEventDetailPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="sub-file">Fișier *</Label>
-              <Input id="sub-file" type="file" ref={fileInputRef} accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" />
+              <Input
+                id="sub-file"
+                type="file"
+                ref={fileInputRef}
+                accept="application/pdf,.pdf,application/msword,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,image/*,.heic,.heif"
+              />
+              <p className="text-xs text-muted-foreground">
+                Acceptăm PDF, Word sau poze (inclusiv HEIC de pe iPhone). Maxim 10MB.
+              </p>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={() => handleSubmissionUpload(cameraInputRef)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" /> Fă o poză acum
+              </Button>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>Anulează</Button>
-            <Button onClick={handleSubmissionUpload} disabled={uploading}>
+            <Button onClick={() => handleSubmissionUpload()} disabled={uploading}>
               {uploading ? "Se încarcă…" : "Încarcă"}
             </Button>
           </DialogFooter>
