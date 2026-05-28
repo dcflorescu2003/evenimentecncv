@@ -40,6 +40,7 @@ interface ExportArgs {
   questions: FbQuestion[];
   responses?: FbResponse[];
   sections?: FbSection[];
+  overall?: { label: string; responses: FbResponse[] };
 }
 
 function aggregate(q: FbQuestion, responses: FbResponse[]) {
