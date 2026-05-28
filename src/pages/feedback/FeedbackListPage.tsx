@@ -217,7 +217,10 @@ export default function FeedbackListPage({ mode }: Props) {
               <Card key={f.id} className="flex flex-col">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-base break-words">{f.title}</CardTitle>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <CardTitle className="text-base break-words">{f.title}</CardTitle>
+                      {(f as any).is_cse && <CseBadge short />}
+                    </div>
                     <Badge variant={f.status === "active" ? "default" : "secondary"}>
                       {STATUS_LABEL[f.status]}
                     </Badge>
