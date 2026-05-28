@@ -15,11 +15,17 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange } from "lucide-react";
+import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
 import { DateInput } from "@/components/ui/date-input";
 import { ClassEligibilityPicker } from "./ClassEligibilityPicker";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
 
 type Mode = "admin" | "cse" | "student";
 
@@ -82,13 +88,23 @@ export default function ClubsVolunteerHub({ mode }: Props) {
   });
 
   const visibleClubs = useMemo(() => {
-    if (mode === "student") return clubs.filter((c: any) => c.status === "active");
-    return clubs;
+    const list = mode === "student" ? clubs.filter((c: any) => c.status === "active") : [...clubs];
+    return list.sort((a: any, b: any) =>
+      (a.name || "").localeCompare(b.name || "", "ro", { sensitivity: "base" })
+    );
   }, [clubs, mode]);
 
   const visibleProjects = useMemo(() => {
-    if (mode === "student") return projects.filter((p: any) => p.status === "active");
-    return projects;
+    const list = mode === "student" ? projects.filter((p: any) => p.status === "active") : [...projects];
+    const now = Date.now();
+    return list.sort((a: any, b: any) => {
+      const da = a.start_date ? new Date(a.start_date).getTime() : Infinity;
+      const db = b.start_date ? new Date(b.start_date).getTime() : Infinity;
+      const fa = da >= now ? da - now : Infinity;
+      const fb = db >= now ? db - now : Infinity;
+      if (fa !== fb) return fa - fb;
+      return da - db;
+    });
   }, [projects, mode]);
 
   const canCreate = mode === "admin" || mode === "cse";
@@ -144,20 +160,31 @@ export default function ClubsVolunteerHub({ mode }: Props) {
                   <p className="line-clamp-3 text-sm text-muted-foreground">
                     {p.description || "Fără descriere"}
                   </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="self-end"
-                    onClick={() => navigate(`${detailBase}/volunteer/${p.id}`)}
-                  >
-                    Deschide <ArrowRight className="ml-1 h-3 w-3" />
-                  </Button>
+                  <div className="flex flex-wrap gap-2 self-end">
+                    {canCreate && p.status === "draft" && (
+                      <DeleteDraftButton
+                        table="volunteer_projects"
+                        id={p.id}
+                        name={p.name}
+                        onDeleted={() => qc.invalidateQueries({ queryKey: ["volunteer-hub", mode] })}
+                      />
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`${detailBase}/volunteer/${p.id}`)}
+                    >
+                      Deschide <ArrowRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
       </section>
+
+      <Separator />
 
       {/* === CLUBURI === */}
       <section className="space-y-3">
@@ -198,14 +225,23 @@ export default function ClubsVolunteerHub({ mode }: Props) {
                   <p className="line-clamp-3 text-sm text-muted-foreground">
                     {c.description || "Fără descriere"}
                   </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="self-end"
-                    onClick={() => navigate(`${detailBase}/clubs/${c.id}`)}
-                  >
-                    Deschide <ArrowRight className="ml-1 h-3 w-3" />
-                  </Button>
+                  <div className="flex flex-wrap gap-2 self-end">
+                    {canCreate && c.status === "draft" && (
+                      <DeleteDraftButton
+                        table="clubs"
+                        id={c.id}
+                        name={c.name}
+                        onDeleted={() => qc.invalidateQueries({ queryKey: ["clubs-hub", mode] })}
+                      />
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`${detailBase}/clubs/${c.id}`)}
+                    >
+                      Deschide <ArrowRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -521,5 +557,58 @@ function CreateProjectDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DeleteDraftButton({
+  table,
+  id,
+  name,
+  onDeleted,
+}: {
+  table: "clubs" | "volunteer_projects";
+  id: string;
+  name: string;
+  onDeleted: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    const { error } = await supabase.from(table).delete().eq("id", id);
+    setDeleting(false);
+    if (error) {
+      toast.error("Eroare la ștergere: " + error.message);
+      return;
+    }
+    toast.success("Ciornă ștearsă");
+    setOpen(false);
+    onDeleted();
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button size="sm" variant="destructive">
+          <Trash2 className="h-3 w-3 mr-1" />
+          Șterge
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Ștergi ciorna „{name}"?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Această acțiune este definitivă și nu poate fi anulată.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleting}>Anulează</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={deleting}>
+            {deleting ? "Se șterge…" : "Șterge"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
