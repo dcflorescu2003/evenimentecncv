@@ -15,7 +15,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange, Trash2, Megaphone } from "lucide-react";
+import { Plus, Users, ArrowRight, HeartHandshake, CalendarRange, Trash2, Lock } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
@@ -42,9 +43,10 @@ interface Props {
  */
 export default function ClubsVolunteerHub({ mode }: Props) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
   const qc = useQueryClient();
 
+  const isCseRole = roles.includes("cse");
   const detailBase =
     mode === "admin" ? "/admin" : mode === "cse" ? "/prof" : "/student";
 
@@ -81,7 +83,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("volunteer_projects")
-        .select("id, name, description, start_date, end_date, status, max_capacity, created_by, is_cse")
+        .select("id, name, description, start_date, end_date, status, max_capacity, created_by, is_cse, is_private")
         .order("start_date", { ascending: true });
       if (error) throw error;
       return data ?? [];
@@ -136,7 +138,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
             <CreateProjectDialog
               sessionId={activeSession?.id}
               userId={user!.id}
-              isCse={mode === "cse"}
+              isCse={isCseRole}
               onCreated={() => qc.invalidateQueries({ queryKey: ["volunteer-hub", mode] })}
             />
           )}
@@ -151,9 +153,14 @@ export default function ClubsVolunteerHub({ mode }: Props) {
               <Card key={p.id} className="flex flex-col">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
                       <CardTitle className="text-base truncate">{p.name}</CardTitle>
                       {(p as any).is_cse && <CseBadge short />}
+                      {(p as any).is_private && (
+                        <Badge variant="secondary" className="gap-1">
+                          <Lock className="h-3 w-3" />Privat
+                        </Badge>
+                      )}
                     </div>
                     <StatusBadge status={p.status} />
                   </div>
@@ -202,7 +209,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
             <CreateClubDialog
               sessionId={activeSession?.id}
               userId={user!.id}
-              isCse={mode === "cse"}
+              isCse={isCseRole}
               onCreated={() => qc.invalidateQueries({ queryKey: ["clubs-hub", mode] })}
             />
           )}
@@ -445,6 +452,7 @@ function CreateProjectDialog({
   const [maxCap, setMaxCap] = useState<string>("");
   const [maxPerClass, setMaxPerClass] = useState<string>("");
   const [status, setStatus] = useState<"draft" | "active">("draft");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [eligibleGrades, setEligibleGrades] = useState<number[]>([]);
   const [eligibleClasses, setEligibleClasses] = useState<string[]>([]);
   const [enrollOpenDate, setEnrollOpenDate] = useState("");
@@ -455,7 +463,7 @@ function CreateProjectDialog({
 
   function reset() {
     setName(""); setDescription(""); setStartDate(""); setEndDate("");
-    setMaxCap(""); setMaxPerClass(""); setStatus("draft");
+    setMaxCap(""); setMaxPerClass(""); setStatus("draft"); setIsPrivate(false);
     setEligibleGrades([]); setEligibleClasses([]);
     setEnrollOpenDate(""); setEnrollOpenTime("08:00");
     setEnrollCloseDate(""); setEnrollCloseTime("23:59");
@@ -479,6 +487,7 @@ function CreateProjectDialog({
       enrollment_open_at: combineDateTime(enrollOpenDate, enrollOpenTime),
       enrollment_close_at: combineDateTime(enrollCloseDate, enrollCloseTime),
       status,
+      is_private: isPrivate,
       created_by: userId,
       is_cse: isCse,
     });
@@ -564,6 +573,23 @@ function CreateProjectDialog({
               </div>
             </div>
             <p className="text-xs text-muted-foreground">Lasă gol pentru înscrieri permanent deschise.</p>
+          </div>
+
+          <div className="flex items-start gap-2 rounded-md border p-3">
+            <Checkbox
+              id="is_private"
+              checked={isPrivate}
+              onCheckedChange={(v) => setIsPrivate(v === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-0.5">
+              <Label htmlFor="is_private" className="cursor-pointer flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5" />Proiect privat
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Elevii NU se pot înscrie singuri. Tu alegi manual participanții din lista de elevi.
+              </p>
+            </div>
           </div>
         </div>
         <DialogFooter>

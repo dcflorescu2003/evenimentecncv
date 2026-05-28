@@ -52,6 +52,8 @@ export const MODULES: AppModule[] = [
     pathByRole: {
       admin: "/admin/clubs",
       cse: "/prof/clubs",
+      teacher: "/prof/clubs",
+      homeroom_teacher: "/prof/clubs",
       student: "/student/clubs",
       manager: "/manager",
     },
