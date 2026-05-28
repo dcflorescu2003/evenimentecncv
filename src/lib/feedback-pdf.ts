@@ -197,6 +197,7 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
 
       if (agg.kind === "empty") {
         doc.text("Fără răspunsuri.", 50, y); y += 16;
+        if (agg.skipped > 0) { doc.text(`Nu au răspuns: ${agg.skipped}`, 50, y); y += 14; }
       } else if (agg.kind === "scale") {
         autoTable(doc, {
           startY: y,
@@ -206,12 +207,15 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
           styles: { fontSize: 9, font: PDF_FONT },
         });
         y = (doc as any).lastAutoTable.finalY + 6;
-        doc.text(`n=${agg.n} • medie=${agg.avg.toFixed(2)} • mediană=${agg.median}`, 40, y);
+        doc.text(`n=${agg.n} • medie=${agg.avg.toFixed(2)} • mediană=${agg.median}${agg.skipped > 0 ? ` • Nu au răspuns: ${agg.skipped}` : ""}`, 40, y);
         y += 16;
       } else if (agg.kind === "choice") {
         const rows = Object.entries(agg.counts).map(([k, v]) => [
           k, String(v), agg.total ? `${((v / agg.total) * 100).toFixed(1)}%` : "—",
         ]);
+        if (agg.skipped > 0) {
+          rows.push(["Nu au răspuns", String(agg.skipped), agg.total ? `${((agg.skipped / agg.total) * 100).toFixed(1)}%` : "—"]);
+        }
         autoTable(doc, {
           startY: y,
           head: [["Opțiune", "Răspunsuri", "%"]],
@@ -232,6 +236,7 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
           });
           y += 6;
         }
+        if (agg.skipped > 0) { doc.text(`Nu au răspuns: ${agg.skipped}`, 50, y); y += 14; }
       }
     });
   });
