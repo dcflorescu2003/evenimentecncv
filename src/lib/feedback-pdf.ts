@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { ensureUnicodeFont, PDF_FONT } from "./pdf-font";
 
 export type FbQuestionType = "single_choice" | "multi_choice" | "dropdown" | "scale" | "open_text";
 
