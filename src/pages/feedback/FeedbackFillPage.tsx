@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { ArrowLeft, Eye, EyeOff, Send } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Check, ChevronsUpDown, Eye, EyeOff, Send } from "lucide-react";
 import { toast } from "sonner";
 import { QuestionRenderer, type RenderQuestion } from "@/components/feedback/QuestionRenderer";
 
@@ -59,51 +59,31 @@ export default function FeedbackFillPage() {
     },
   });
 
-  // Class teachers (for teacher_feedback): map schedule_entries.teacher_name (initials) -> profile by initials
-  const { data: classTeachers = [] } = useQuery({
-    enabled: !!user?.id && form?.type === "teacher_feedback",
-    queryKey: ["class-teachers", user?.id],
+  // All teachers (searchable) for teacher_feedback
+  const { data: allTeachers = [] } = useQuery({
+    enabled: form?.type === "teacher_feedback",
+    queryKey: ["feedback-all-teachers"],
     queryFn: async () => {
-      const { data: cls } = await supabase
-        .from("student_class_assignments")
-        .select("class_id")
-        .eq("student_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!cls?.class_id) return [];
-      const { data: schedules } = await supabase
-        .from("class_schedules")
-        .select("id")
-        .eq("class_id", cls.class_id);
-      const scheduleIds = (schedules ?? []).map((s: any) => s.id);
-      if (!scheduleIds.length) return [];
-      const { data: entries } = await supabase
-        .from("schedule_entries")
-        .select("teacher_name, subject")
-        .in("schedule_id", scheduleIds);
-      const initials = Array.from(
-        new Set((entries ?? []).map((e: any) => (e.teacher_name ?? "").trim()).filter(Boolean)),
-      );
-      if (!initials.length) return [];
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("role", ["teacher", "homeroom_teacher", "coordinator_teacher"]);
+      const ids = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
+      if (!ids.length) return [];
       const { data: profs } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name, initials")
-        .in("initials", initials);
-      const subjectByInit = new Map<string, Set<string>>();
-      (entries ?? []).forEach((e: any) => {
-        const k = (e.teacher_name ?? "").trim();
-        if (!k) return;
-        if (!subjectByInit.has(k)) subjectByInit.set(k, new Set());
-        if (e.subject) subjectByInit.get(k)!.add(e.subject);
-      });
-      return (profs ?? []).map((p: any) => ({
-        id: p.id,
-        name: `${p.last_name ?? ""} ${p.first_name ?? ""}`.trim(),
-        subjects: Array.from(subjectByInit.get(p.initials) ?? []).join(", "),
-      })).sort((a, b) => a.name.localeCompare(b.name, "ro"));
+        .select("id, first_name, last_name, is_active")
+        .in("id", ids);
+      return (profs ?? [])
+        .filter((p: any) => p.is_active !== false)
+        .map((p: any) => ({
+          id: p.id,
+          name: `${p.last_name ?? ""} ${p.first_name ?? ""}`.trim(),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, "ro"));
     },
   });
+
 
   // Load existing answers when editing
   useEffect(() => {
@@ -208,23 +188,43 @@ export default function FeedbackFillPage() {
           {form.type === "teacher_feedback" && (
             <div>
               <Label>Profesor</Label>
-              <Select value={teacherId} onValueChange={setTeacherId} disabled={!!existingResponseId}>
-                <SelectTrigger><SelectValue placeholder="Alege profesorul…" /></SelectTrigger>
-                <SelectContent>
-                  {classTeachers.length === 0 && (
-                    <div className="px-2 py-3 text-sm text-muted-foreground">
-                      Niciun profesor disponibil din orar.
-                    </div>
-                  )}
-                  {classTeachers.map((t: any) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}{t.subjects ? ` — ${t.subjects}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between"
+                    disabled={!!existingResponseId}
+                  >
+                    {teacherId
+                      ? allTeachers.find((t: any) => t.id === teacherId)?.name ?? "Alege profesorul…"
+                      : "Alege profesorul…"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Caută profesor..." />
+                    <CommandList>
+                      <CommandEmpty>Niciun profesor găsit.</CommandEmpty>
+                      <CommandGroup>
+                        {allTeachers.map((t: any) => (
+                          <CommandItem
+                            key={t.id}
+                            value={t.name}
+                            onSelect={() => setTeacherId(t.id)}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", teacherId === t.id ? "opacity-100" : "opacity-0")} />
+                            {t.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <p className="text-xs text-muted-foreground mt-1">
-                Vezi doar profesorii din orarul clasei tale. Poți răspunde o singură dată per profesor.
+                Poți răspunde o singură dată per profesor.
               </p>
             </div>
           )}
