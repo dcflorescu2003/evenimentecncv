@@ -27,6 +27,9 @@ import CredentialsPage from "./pages/admin/CredentialsPage";
 import AdminScanPage from "./pages/admin/AdminScanPage";
 import SchedulesPage from "./pages/admin/SchedulesPage";
 import SubjectsPage from "./pages/admin/SubjectsPage";
+import ClubsVolunteerHub from "./components/clubs/ClubsVolunteerHub";
+import ClubDetailPage from "./components/clubs/ClubDetailPage";
+import VolunteerProjectDetailPage from "./components/clubs/VolunteerProjectDetailPage";
 
 import StudentLayout from "./components/layouts/StudentLayout";
 import StudentDashboard from "./pages/student/StudentDashboard";
