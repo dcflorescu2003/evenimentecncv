@@ -59,51 +59,31 @@ export default function FeedbackFillPage() {
     },
   });
 
-  // Class teachers (for teacher_feedback): map schedule_entries.teacher_name (initials) -> profile by initials
-  const { data: classTeachers = [] } = useQuery({
-    enabled: !!user?.id && form?.type === "teacher_feedback",
-    queryKey: ["class-teachers", user?.id],
+  // All teachers (searchable) for teacher_feedback
+  const { data: allTeachers = [] } = useQuery({
+    enabled: form?.type === "teacher_feedback",
+    queryKey: ["feedback-all-teachers"],
     queryFn: async () => {
-      const { data: cls } = await supabase
-        .from("student_class_assignments")
-        .select("class_id")
-        .eq("student_id", user!.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!cls?.class_id) return [];
-      const { data: schedules } = await supabase
-        .from("class_schedules")
-        .select("id")
-        .eq("class_id", cls.class_id);
-      const scheduleIds = (schedules ?? []).map((s: any) => s.id);
-      if (!scheduleIds.length) return [];
-      const { data: entries } = await supabase
-        .from("schedule_entries")
-        .select("teacher_name, subject")
-        .in("schedule_id", scheduleIds);
-      const initials = Array.from(
-        new Set((entries ?? []).map((e: any) => (e.teacher_name ?? "").trim()).filter(Boolean)),
-      );
-      if (!initials.length) return [];
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("role", ["teacher", "homeroom_teacher", "coordinator_teacher"]);
+      const ids = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
+      if (!ids.length) return [];
       const { data: profs } = await supabase
         .from("profiles")
-        .select("id, first_name, last_name, initials")
-        .in("initials", initials);
-      const subjectByInit = new Map<string, Set<string>>();
-      (entries ?? []).forEach((e: any) => {
-        const k = (e.teacher_name ?? "").trim();
-        if (!k) return;
-        if (!subjectByInit.has(k)) subjectByInit.set(k, new Set());
-        if (e.subject) subjectByInit.get(k)!.add(e.subject);
-      });
-      return (profs ?? []).map((p: any) => ({
-        id: p.id,
-        name: `${p.last_name ?? ""} ${p.first_name ?? ""}`.trim(),
-        subjects: Array.from(subjectByInit.get(p.initials) ?? []).join(", "),
-      })).sort((a, b) => a.name.localeCompare(b.name, "ro"));
+        .select("id, first_name, last_name, is_active")
+        .in("id", ids);
+      return (profs ?? [])
+        .filter((p: any) => p.is_active !== false)
+        .map((p: any) => ({
+          id: p.id,
+          name: `${p.last_name ?? ""} ${p.first_name ?? ""}`.trim(),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, "ro"));
     },
   });
+
 
   // Load existing answers when editing
   useEffect(() => {
