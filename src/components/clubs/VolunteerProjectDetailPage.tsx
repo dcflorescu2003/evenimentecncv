@@ -27,6 +27,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
   const qc = useQueryClient();
   const isAdmin = roles.includes("admin");
   const isCse = roles.includes("cse");
+  const isTeacher = roles.includes("teacher") || roles.includes("homeroom_teacher");
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["volunteer", projectId],
