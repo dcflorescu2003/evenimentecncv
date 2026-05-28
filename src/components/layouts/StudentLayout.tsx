@@ -43,10 +43,15 @@ export default function StudentLayout() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="header-safe fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between border-b bg-card px-4 shadow-sm">
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => navigate("/app")}
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          aria-label="Toate modulele"
+        >
           <GraduationCap className="h-6 w-6 text-primary" />
           <span className="font-display text-lg font-semibold">CNCV</span>
-        </div>
+        </button>
         <div className="flex items-center gap-1">
           <ModuleSwitcher variant="labeled" />
           <PushNotificationToggle />

@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { ensureUnicodeFont, PDF_FONT } from "./pdf-font";
 
 export type FbQuestionType = "single_choice" | "multi_choice" | "dropdown" | "scale" | "open_text";
 
@@ -67,16 +68,17 @@ function aggregate(q: FbQuestion, responses: FbResponse[]) {
   return { kind: "choice" as const, counts, total };
 }
 
-export function exportFeedbackReportPdf({ title, subtitle, questions, responses }: ExportArgs) {
+export async function exportFeedbackReportPdf({ title, subtitle, questions, responses }: ExportArgs) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
+  await ensureUnicodeFont(doc);
   const pageW = doc.internal.pageSize.getWidth();
   let y = 48;
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont(PDF_FONT, "bold");
   doc.setFontSize(16);
   doc.text(title, 40, y);
   y += 18;
-  doc.setFont("helvetica", "normal");
+  doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(10);
   if (subtitle) { doc.text(subtitle, 40, y); y += 14; }
   doc.text(`Răspunsuri: ${responses.length}`, 40, y); y += 16;
@@ -85,14 +87,14 @@ export function exportFeedbackReportPdf({ title, subtitle, questions, responses 
     .sort((a, b) => a.position - b.position)
     .forEach((q, idx) => {
       if (y > 720) { doc.addPage(); y = 48; }
-      doc.setFont("helvetica", "bold");
+      doc.setFont(PDF_FONT, "bold");
       doc.setFontSize(11);
       const lines = doc.splitTextToSize(`${idx + 1}. ${q.text}`, pageW - 80);
       doc.text(lines, 40, y);
       y += lines.length * 14 + 4;
 
       const agg = aggregate(q, responses);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT, "normal");
       doc.setFontSize(10);
 
       if (agg.kind === "empty") {
@@ -103,7 +105,7 @@ export function exportFeedbackReportPdf({ title, subtitle, questions, responses 
           head: [["Valoare", "Răspunsuri"]],
           body: Object.entries(agg.dist).map(([k, v]) => [k, String(v)]),
           margin: { left: 40, right: 40 },
-          styles: { fontSize: 9 },
+          styles: { fontSize: 9, font: PDF_FONT },
         });
         // @ts-ignore
         y = (doc as any).lastAutoTable.finalY + 6;
@@ -118,7 +120,7 @@ export function exportFeedbackReportPdf({ title, subtitle, questions, responses 
           head: [["Opțiune", "Răspunsuri", "%"]],
           body: rows.length ? rows : [["—", "0", "—"]],
           margin: { left: 40, right: 40 },
-          styles: { fontSize: 9 },
+          styles: { fontSize: 9, font: PDF_FONT },
         });
         // @ts-ignore
         y = (doc as any).lastAutoTable.finalY + 10;

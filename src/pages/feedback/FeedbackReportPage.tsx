@@ -116,9 +116,9 @@ export default function FeedbackReportPage({ mode }: Props) {
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "ro"));
   }, [responses, isTeacherFeedback]);
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!form) return;
-    exportFeedbackReportPdf({
+    await exportFeedbackReportPdf({
       title: form.title,
       subtitle: form.description ?? undefined,
       questions,

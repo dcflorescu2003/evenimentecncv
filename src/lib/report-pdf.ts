@@ -1,15 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { downloadFileMobileSafe } from "./download";
-
-function stripDiacritics(str: string): string {
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\u0163/g, "t").replace(/\u0162/g, "T")
-    .replace(/\u015f/g, "s").replace(/\u015e/g, "S")
-    .replace(/\u0111/g, "d").replace(/\u0110/g, "D");
-}
+import { ensureUnicodeFont, PDF_FONT } from "./pdf-font";
 
 interface ExportReportOptions {
   title: string;
@@ -59,17 +51,19 @@ export async function exportReportPdfSections({
   orientation = "portrait",
 }: ExportReportSectionsOptions) {
   const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
+  await ensureUnicodeFont(doc);
   const pageWidth = orientation === "landscape" ? 297 : 210;
   const center = pageWidth / 2;
 
+  doc.setFont(PDF_FONT, "normal");
   doc.setFontSize(16);
-  doc.text(stripDiacritics(title), center, 15, { align: "center" });
+  doc.text(title, center, 15, { align: "center" });
 
   let startY = 22;
 
   if (subtitle) {
     doc.setFontSize(10);
-    doc.text(stripDiacritics(subtitle), center, startY, { align: "center" });
+    doc.text(subtitle, center, startY, { align: "center" });
     startY += 6;
   }
 
@@ -81,19 +75,17 @@ export async function exportReportPdfSections({
     if (!section.rows.length) continue;
     if (section.title) {
       doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.text(stripDiacritics(section.title), 14, startY + 4);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT, "bold");
+      doc.text(section.title, 14, startY + 4);
+      doc.setFont(PDF_FONT, "normal");
       startY += 7;
     }
-    const safeHeaders = section.headers.map((h) => stripDiacritics(h));
-    const safeRows = section.rows.map((row) => row.map((cell) => stripDiacritics(String(cell ?? ""))));
     autoTable(doc, {
       startY,
-      head: [safeHeaders],
-      body: safeRows,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [41, 65, 122], textColor: 255, fontStyle: "bold" },
+      head: [section.headers],
+      body: section.rows.map((row) => row.map((cell) => String(cell ?? ""))),
+      styles: { fontSize: 8, cellPadding: 2, font: PDF_FONT },
+      headStyles: { fillColor: [41, 65, 122], textColor: 255, fontStyle: "bold", font: PDF_FONT },
       alternateRowStyles: { fillColor: [245, 247, 250] },
     });
     startY = (doc as any).lastAutoTable.finalY + 8;

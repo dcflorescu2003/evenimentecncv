@@ -59,7 +59,12 @@ export default function AdminLayout() {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader className="border-b border-sidebar-border p-4">
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/app")}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
+            aria-label="Toate modulele"
+          >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
               <GraduationCap className="h-5 w-5 text-sidebar-primary-foreground" />
             </div>
@@ -67,7 +72,7 @@ export default function AdminLayout() {
               <span className="text-sm font-semibold text-sidebar-foreground">CNCV Admin</span>
               <span className="text-xs text-sidebar-foreground/60">2025-2026</span>
             </div>
-          </div>
+          </button>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>

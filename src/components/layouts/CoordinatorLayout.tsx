@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, LogOut } from "lucide-react";
@@ -6,14 +6,20 @@ import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 
 export default function CoordinatorLayout() {
   const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="header-safe fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between border-b bg-card px-3 sm:px-4 shadow-sm">
-        <div className="flex items-center gap-2 min-w-0">
+        <button
+          type="button"
+          onClick={() => navigate("/app")}
+          className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity"
+          aria-label="Toate modulele"
+        >
           <GraduationCap className="h-6 w-6 text-primary shrink-0" />
           <span className="font-display text-base sm:text-lg font-semibold truncate">CNCV Asistent</span>
-        </div>
+        </button>
         <div className="flex items-center gap-2">
           <ModuleSwitcher />
           <span className="hidden sm:inline text-sm text-muted-foreground truncate max-w-[160px]">{profile?.display_name}</span>

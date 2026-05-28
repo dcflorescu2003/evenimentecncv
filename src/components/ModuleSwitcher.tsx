@@ -17,21 +17,36 @@ interface Props {
   className?: string;
 }
 
+function detectCurrentKey(pathname: string): string {
+  if (
+    pathname.startsWith("/admin/feedback") ||
+    pathname.startsWith("/prof/feedback") ||
+    pathname.startsWith("/student/feedback")
+  ) return "feedback";
+  if (
+    pathname.startsWith("/admin/clubs") ||
+    pathname.startsWith("/prof/clubs") ||
+    pathname.startsWith("/student/clubs") ||
+    pathname.startsWith("/student/volunteer")
+  ) return "clubs_volunteer";
+  if (
+    pathname.startsWith("/admin/schedules") ||
+    pathname.startsWith("/student/orar")
+  ) return "schedule";
+  return "events";
+}
+
 export function ModuleSwitcher({ variant = "icon", className }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const { roles } = useAuth();
 
   const modules = getEnabledModules(roles ?? []);
-
-  // Determină modulul curent după prefixul căii
-  const current = modules.find((m) => {
-    if (m.module.key === "schedule") {
-      return location.pathname.startsWith("/student/orar") ||
-        location.pathname.startsWith("/admin/schedules");
-    }
-    return false;
-  }) ?? modules.find((m) => m.module.key === "events") ?? modules[0];
+  const detectedKey = detectCurrentKey(location.pathname);
+  const current =
+    modules.find((m) => m.module.key === detectedKey) ??
+    modules.find((m) => m.module.key === "events") ??
+    modules[0];
 
   if (!modules.length) return null;
 
