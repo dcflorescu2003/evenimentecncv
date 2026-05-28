@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake, Users } from "lucide-react";
+import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake, Users, MessageSquare, Inbox } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
@@ -23,6 +23,11 @@ const clubsNav = [
   { title: "Voluntariat", icon: HeartHandshake, path: "/student/clubs", tab: "volunteer" },
 ];
 
+const feedbackNav = [
+  { title: "Dashboard", icon: LayoutDashboard, path: "/student/feedback", tab: "dashboard" },
+  { title: "Feedbackul meu", icon: Inbox, path: "/student/feedback", tab: "mine" },
+];
+
 export default function StudentLayout() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -30,7 +35,9 @@ export default function StudentLayout() {
 
   const isSchedule = location.pathname.startsWith("/student/orar");
   const isClubs = location.pathname.startsWith("/student/clubs") || location.pathname.startsWith("/student/volunteer");
-  const navItems = isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
+  const isFeedback = location.pathname.startsWith("/student/feedback");
+  const navItems = isFeedback ? feedbackNav : isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
+  const useTabs = isClubs || isFeedback;
   const currentTab = new URLSearchParams(location.search).get("tab") ?? "dashboard";
 
   return (
@@ -60,7 +67,7 @@ export default function StudentLayout() {
         style={{ bottom: 0, paddingBottom: "max(env(safe-area-inset-bottom), 1.25rem)" }}
       >
         {navItems.map((item: any) => {
-          const isActive = isClubs && "tab" in item
+          const isActive = useTabs && "tab" in item
             ? location.pathname === item.path && currentTab === item.tab
             : location.pathname === item.path;
           const target = "tab" in item ? `${item.path}?tab=${item.tab}` : item.path;
