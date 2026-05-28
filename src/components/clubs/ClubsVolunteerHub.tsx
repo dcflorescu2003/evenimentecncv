@@ -227,6 +227,12 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
 }
 
+function combineDateTime(date: string, time: string): string | null {
+  if (!date) return null;
+  const t = time && /^\d{2}:\d{2}$/.test(time) ? time : "00:00";
+  return new Date(`${date}T${t}:00`).toISOString();
+}
+
 function CreateClubDialog({
   sessionId,
   userId,
@@ -241,8 +247,22 @@ function CreateClubDialog({
   const [description, setDescription] = useState("");
   const [frequency, setFrequency] = useState("");
   const [maxCap, setMaxCap] = useState<string>("");
+  const [maxPerClass, setMaxPerClass] = useState<string>("");
   const [status, setStatus] = useState<"draft" | "active">("draft");
+  const [eligibleGrades, setEligibleGrades] = useState<number[]>([]);
+  const [eligibleClasses, setEligibleClasses] = useState<string[]>([]);
+  const [enrollOpenDate, setEnrollOpenDate] = useState("");
+  const [enrollOpenTime, setEnrollOpenTime] = useState("08:00");
+  const [enrollCloseDate, setEnrollCloseDate] = useState("");
+  const [enrollCloseTime, setEnrollCloseTime] = useState("23:59");
   const [saving, setSaving] = useState(false);
+
+  function reset() {
+    setName(""); setDescription(""); setFrequency(""); setMaxCap(""); setMaxPerClass("");
+    setStatus("draft"); setEligibleGrades([]); setEligibleClasses([]);
+    setEnrollOpenDate(""); setEnrollOpenTime("08:00");
+    setEnrollCloseDate(""); setEnrollCloseTime("23:59");
+  }
 
   async function submit() {
     if (!name.trim()) {
@@ -260,6 +280,11 @@ function CreateClubDialog({
       description: description.trim() || null,
       frequency_label: frequency.trim() || null,
       max_capacity: maxCap ? Number(maxCap) : null,
+      max_per_class: maxPerClass ? Number(maxPerClass) : null,
+      eligible_grades: eligibleGrades.length > 0 ? eligibleGrades : null,
+      eligible_classes: eligibleClasses.length > 0 ? eligibleClasses : null,
+      enrollment_open_at: combineDateTime(enrollOpenDate, enrollOpenTime),
+      enrollment_close_at: combineDateTime(enrollCloseDate, enrollCloseTime),
       status,
       created_by: userId,
     });
@@ -270,7 +295,7 @@ function CreateClubDialog({
     }
     toast.success("Club creat");
     setOpen(false);
-    setName(""); setDescription(""); setFrequency(""); setMaxCap(""); setStatus("draft");
+    reset();
     onCreated();
   }
 
@@ -279,7 +304,7 @@ function CreateClubDialog({
       <DialogTrigger asChild>
         <Button size="sm"><Plus className="h-4 w-4 mr-1" />Club nou</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader><DialogTitle>Club nou</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
@@ -294,10 +319,14 @@ function CreateClubDialog({
             <Label>Frecvență (ex: Săptămânal Joi 15:00)</Label>
             <Input value={frequency} onChange={(e) => setFrequency(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label>Capacitate maximă</Label>
               <Input type="number" min={1} value={maxCap} onChange={(e) => setMaxCap(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Maxim per clasă</Label>
+              <Input type="number" min={1} placeholder="Fără limită" value={maxPerClass} onChange={(e) => setMaxPerClass(e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Status</Label>
@@ -309,6 +338,35 @@ function CreateClubDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <ClassEligibilityPicker
+            eligibleGrades={eligibleGrades}
+            eligibleClasses={eligibleClasses}
+            onChange={({ eligibleGrades: g, eligibleClasses: c }) => {
+              setEligibleGrades(g); setEligibleClasses(c);
+            }}
+          />
+
+          <div className="space-y-2">
+            <Label>Perioada de înscriere</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">De la</Label>
+                <div className="flex gap-2">
+                  <DateInput value={enrollOpenDate} onChange={setEnrollOpenDate} />
+                  <Input type="time" value={enrollOpenTime} onChange={(e) => setEnrollOpenTime(e.target.value)} className="w-28" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Până la</Label>
+                <div className="flex gap-2">
+                  <DateInput value={enrollCloseDate} onChange={setEnrollCloseDate} />
+                  <Input type="time" value={enrollCloseTime} onChange={(e) => setEnrollCloseTime(e.target.value)} className="w-28" />
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Lasă gol pentru înscrieri permanent deschise.</p>
           </div>
         </div>
         <DialogFooter>
