@@ -209,7 +209,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
             <CreateClubDialog
               sessionId={activeSession?.id}
               userId={user!.id}
-              isCse={mode === "cse"}
+              isCse={isCseRole}
               onCreated={() => qc.invalidateQueries({ queryKey: ["clubs-hub", mode] })}
             />
           )}
