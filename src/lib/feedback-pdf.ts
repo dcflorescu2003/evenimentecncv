@@ -105,7 +105,7 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
           head: [["Valoare", "Răspunsuri"]],
           body: Object.entries(agg.dist).map(([k, v]) => [k, String(v)]),
           margin: { left: 40, right: 40 },
-          styles: { fontSize: 9 },
+          styles: { fontSize: 9, font: PDF_FONT },
         });
         // @ts-ignore
         y = (doc as any).lastAutoTable.finalY + 6;
@@ -120,7 +120,7 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
           head: [["Opțiune", "Răspunsuri", "%"]],
           body: rows.length ? rows : [["—", "0", "—"]],
           margin: { left: 40, right: 40 },
-          styles: { fontSize: 9 },
+          styles: { fontSize: 9, font: PDF_FONT },
         });
         // @ts-ignore
         y = (doc as any).lastAutoTable.finalY + 10;
