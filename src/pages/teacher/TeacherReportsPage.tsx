@@ -136,9 +136,42 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
         }
       });
 
+      // ── Volunteer data (session-scoped) ──
+      const { data: vEnrolls } = await supabase
+        .from("volunteer_enrollments").select("student_id, project_id, status")
+        .in("student_id", studentIds).eq("status", "enrolled");
+      const vpIdsAll = [...new Set((vEnrolls ?? []).map((v: any) => v.project_id))];
+      const { data: vProjects } = vpIdsAll.length
+        ? await supabase.from("volunteer_projects").select("id").in("id", vpIdsAll).eq("session_id", sessionId)
+        : { data: [] as any[] };
+      const vpInSession = new Set((vProjects ?? []).map((p: any) => p.id));
+      const enrolledByStudent = new Map<string, Set<string>>();
+      (vEnrolls ?? []).forEach(e => {
+        if (!vpInSession.has(e.project_id)) return;
+        if (!enrolledByStudent.has(e.student_id)) enrolledByStudent.set(e.student_id, new Set());
+        enrolledByStudent.get(e.student_id)!.add(e.project_id);
+      });
+      const projectIdsInSession = [...vpInSession] as string[];
+      const { data: vDays } = projectIdsInSession.length
+        ? await supabase.from("volunteer_days").select("id, project_id, date, start_time, end_time").in("project_id", projectIdsInSession)
+        : { data: [] as any[] };
+      const dayHours = (d: any) => {
+        const [sh, sm] = String(d.start_time).split(":").map(Number);
+        const [eh, em] = String(d.end_time).split(":").map(Number);
+        const mins = (eh * 60 + em) - (sh * 60 + sm);
+        return Math.max(0, Math.round(mins / 60));
+      };
+      const vDayList = (vDays ?? []) as any[];
+      const vDayIds = vDayList.map(d => d.id);
+      const { data: vAtt } = vDayIds.length
+        ? await supabase.from("volunteer_attendance").select("day_id, student_id, status").in("day_id", vDayIds).in("student_id", studentIds)
+        : { data: [] as any[] };
+      const vAttKey = (sid: string, did: string) => `${sid}:${did}`;
+      const vAttMap = Object.fromEntries((vAtt ?? []).map((a: any) => [vAttKey(a.student_id, a.day_id), a.status]));
+
       return (profiles ?? []).map(p => {
         const sRes = (reservations ?? []).filter(r => r.student_id === p.id && r.status === "reserved" && eventIds.includes(r.event_id));
-        const reservedHours = sRes.reduce((s, r) => s + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
+        const reservedHoursEv = sRes.reduce((s, r) => s + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
         const studentAssistantEvents = assistantByStudent.get(p.id) || new Set();
         const validatedEventIds = new Set<string>();
         sRes.forEach(r => {
@@ -146,16 +179,26 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
           if (t && (t.status === "present" || t.status === "late")) validatedEventIds.add(r.event_id);
         });
         studentAssistantEvents.forEach(eid => validatedEventIds.add(eid));
-        const validatedHours = [...validatedEventIds].reduce((s, eid) => s + (eventMap[eid]?.counted_duration_hours ?? 0), 0);
+        const validatedHoursEv = [...validatedEventIds].reduce((s, eid) => s + (eventMap[eid]?.counted_duration_hours ?? 0), 0);
+
+        // Volunteer contributions
+        const enrolledProjects = enrolledByStudent.get(p.id) || new Set<string>();
+        const myDays = vDayList.filter(d => enrolledProjects.has(d.project_id));
+        const reservedHoursV = myDays.reduce((s, d) => s + dayHours(d), 0);
+        const validatedHoursV = myDays.reduce((s, d) => {
+          const st = vAttMap[vAttKey(p.id, d.id)];
+          return s + (st === "present" || st === "late" ? dayHours(d) : 0);
+        }, 0);
+
         const classId = classMap[p.id];
         return {
           id: p.id,
           name: `${p.last_name} ${p.first_name}`,
           lastName: p.last_name,
           className: classNameMap[classId] ?? "—",
-          reservations: sRes.length,
-          reservedHours,
-          validatedHours,
+          reservations: sRes.length + myDays.length,
+          reservedHours: reservedHoursEv + reservedHoursV,
+          validatedHours: validatedHoursEv + validatedHoursV,
           requiredHours: requiredByClass[classId] || 0,
         };
       }).sort((a, b) => a.lastName.localeCompare(b.lastName));
