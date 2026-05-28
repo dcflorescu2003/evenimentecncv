@@ -119,13 +119,15 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
           <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-medium">
-                {myEnrollment ? "Ești înscris" : "Nu ești înscris"}
+                {(project as any).is_private && !myEnrollment
+                  ? "Proiect privat — participanții sunt aleși de organizator"
+                  : myEnrollment ? "Ești înscris" : "Nu ești înscris"}
               </p>
               <p className="text-xs text-muted-foreground">
                 Perioadă: {formatDate(project.start_date)} – {formatDate(project.end_date)}
               </p>
             </div>
-            {myEnrollment
+            {(project as any).is_private && !myEnrollment ? null : myEnrollment
               ? <Button size="sm" variant="outline" onClick={withdraw}>Retrage-mă</Button>
               : <Button size="sm" onClick={enroll}>Înscrie-mă</Button>}
           </CardContent>
@@ -144,14 +146,12 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
         </TabsContent>
         {canManage && (
           <TabsContent value="members" className="pt-3">
-            <Card><CardContent className="space-y-2 pt-4">
-              {enrollments.length === 0 && <p className="text-sm text-muted-foreground">Niciun înscris.</p>}
-              {enrollments.map((e: any) => (
-                <div key={e.id} className="rounded border p-2 text-sm">
-                  {e.profile ? `${e.profile.last_name} ${e.profile.first_name}` : e.student_id}
-                </div>
-              ))}
-            </CardContent></Card>
+            <MembersTab
+              projectId={projectId!}
+              enrollments={enrollments}
+              enrolledIds={enrollments.map((e: any) => e.student_id)}
+              onChange={() => qc.invalidateQueries({ queryKey: ["volunteer-enroll", projectId] })}
+            />
           </TabsContent>
         )}
         <TabsContent value="days" className="pt-3">
