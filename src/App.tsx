@@ -30,6 +30,7 @@ import SubjectsPage from "./pages/admin/SubjectsPage";
 import ClubsVolunteerHub from "./components/clubs/ClubsVolunteerHub";
 import ClubDetailPage from "./components/clubs/ClubDetailPage";
 import VolunteerProjectDetailPage from "./components/clubs/VolunteerProjectDetailPage";
+import StudentClubsPage from "./components/clubs/StudentClubsPage";
 
 import StudentLayout from "./components/layouts/StudentLayout";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -139,7 +140,7 @@ const App = () => (
               <Route path="/student/tickets" element={<StudentTicketsPage />} />
               <Route path="/student/scan/:eventId" element={<StudentScanPage />} />
               <Route path="/student/orar" element={<StudentSchedulePage />} />
-              <Route path="/student/clubs" element={<ClubsVolunteerHub mode="student" />} />
+              <Route path="/student/clubs" element={<StudentClubsPage />} />
               <Route path="/student/clubs/:id" element={<ClubDetailPage mode="student" />} />
               <Route path="/student/volunteer/:id" element={<VolunteerProjectDetailPage mode="student" />} />
             </Route>
