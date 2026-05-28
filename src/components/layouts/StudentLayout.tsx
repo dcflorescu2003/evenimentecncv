@@ -18,7 +18,9 @@ const scheduleNav = [
 ];
 
 const clubsNav = [
-  { title: "Cluburi & Voluntariat", icon: HeartHandshake, path: "/student/clubs" },
+  { title: "Dashboard", icon: LayoutDashboard, path: "/student/clubs", tab: "dashboard" },
+  { title: "Cluburile mele", icon: Users, path: "/student/clubs", tab: "my-clubs" },
+  { title: "Voluntariat", icon: HeartHandshake, path: "/student/clubs", tab: "volunteer" },
 ];
 
 export default function StudentLayout() {
@@ -29,6 +31,7 @@ export default function StudentLayout() {
   const isSchedule = location.pathname.startsWith("/student/orar");
   const isClubs = location.pathname.startsWith("/student/clubs") || location.pathname.startsWith("/student/volunteer");
   const navItems = isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
+  const currentTab = new URLSearchParams(location.search).get("tab") ?? "dashboard";
 
   return (
     <div className="flex min-h-screen flex-col">
