@@ -160,14 +160,23 @@ export default function ClubsVolunteerHub({ mode }: Props) {
                   <p className="line-clamp-3 text-sm text-muted-foreground">
                     {p.description || "Fără descriere"}
                   </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="self-end"
-                    onClick={() => navigate(`${detailBase}/volunteer/${p.id}`)}
-                  >
-                    Deschide <ArrowRight className="ml-1 h-3 w-3" />
-                  </Button>
+                  <div className="flex flex-wrap gap-2 self-end">
+                    {canCreate && p.status === "draft" && (
+                      <DeleteDraftButton
+                        table="volunteer_projects"
+                        id={p.id}
+                        name={p.name}
+                        onDeleted={() => qc.invalidateQueries({ queryKey: ["volunteer-hub", mode] })}
+                      />
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`${detailBase}/volunteer/${p.id}`)}
+                    >
+                      Deschide <ArrowRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
