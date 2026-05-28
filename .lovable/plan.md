@@ -1,50 +1,59 @@
-## 1) Adăugare „Feedback" în sidebar-ul Admin
+## 1. Buton „Module" în bara de navigare (profesori + diriginți)
 
-În `src/components/layouts/AdminLayout.tsx`, în `menuItems` (după "Cluburi & Voluntariat"), adăugăm:
-```
-{ title: "Feedback", icon: MessageSquare, path: "/admin/feedback" }
-```
-Ruta `/admin/feedback` există deja și folosește `FeedbackListPage` cu `mode="admin"`, care încarcă deja **toate** chestionarele de pe platformă (fără filtru pe creator) — deci adminul vede tot ce există indiferent de modul/rol.
+În `ProfLayout.tsx` și `TeacherLayout.tsx`, adaug un buton dedicat „Module" în bara de tab-uri (sub header), care folosește `ModuleSwitcher` (varianta labeled). Iconul rămâne și în header, dar va apărea și ca tab vizibil în nav.
 
-## 2) Date relevante pe pagina Feedback (mod admin)
+## 2. Unificarea barei de navigare în `ProfLayout`
 
-Extindem `src/pages/feedback/FeedbackListPage.tsx` doar pentru `mode === "admin"`:
-- **Bară de statistici** sus (4 carduri mici): Total chestionare, Active, Draft, Închise.
-- **Pe fiecare card** afișăm: autorul (Nume Prenume din `profiles` pe `created_by`), numărul de răspunsuri (count pe `feedback_responses` per formular, fetchat în paralel) și data ultimului răspuns. Pentru `teacher_feedback` afișăm și numărul de profesori evaluați (distinct `subject_teacher_id`).
-- **Filtre rapide**: status (Toate / Active / Draft / Închise) + căutare după titlu + filtru după tip. Doar UI client-side pe lista existentă.
-- Sortare implicită: cele active primele, apoi după `created_at` desc.
+Bara de nav actuală variază în funcție de pagina curentă (`isClubs` / `isFeedback`). O simplific la o listă unică, mereu aceeași:
+- Dashboard → `/prof`
+- Evenimentele mele → `/prof/events`
+- Cluburi & Voluntariat → `/prof/clubs`
+- Feedback → `/prof/feedback`
+- Clasa mea → `/teacher` (doar diriginte)
+- Rapoarte → `/teacher/reports` (doar diriginte)
+- Module (selector) — întotdeauna
 
-Nu modificăm schema bazei de date.
+Același set și în `TeacherLayout.tsx` ca să nu mai existe diferențe între pagini.
 
-## 3) Optimizare mobil pentru cele 3 module noi
+## 3. Proiecte de voluntariat în Rapoarte (`TeacherReportsPage`)
 
-Audit și fix-uri punctuale (toate Tailwind, fără logică):
+Sub-tabul „Situație elevi" și „Verificare prezență" deja includ proiectele de voluntariat. Modific „Sumar" ca să fie aliniat:
+- Adaug interogare pe `volunteer_enrollments` + `volunteer_projects` (filtrate pe `session_id`) + `volunteer_days` + `volunteer_attendance` pentru elevii claselor dirigintelui.
+- Calculez ore rezervate / validate din voluntariat (zile cu status `present`/`late`, folosind durata zilei din `start_time`/`end_time` rotunjit la oră întreagă, conform regulilor existente) și le însumez cu cele din evenimente în coloanele „Ore rezervate" / „Ore validate".
+- Coloana „Rezervări" cumulează numărul de evenimente + zile de voluntariat.
+- Exportul PDF rămâne cu aceleași coloane (totalurile sunt deja unificate).
 
-**Feedback**
-- `FeedbackListPage`: headerul `flex items-center justify-between` rupe pe mobil (titlu + buton „Chestionar nou"). Schimbăm în `flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between` și butonul `w-full sm:w-auto`. Bara de stats devine `grid-cols-2 sm:grid-cols-4`. Filtrele: `flex flex-col gap-2 sm:flex-row`.
-- `FeedbackReportPage`: bara de sus cu Select + 2 butoane Export depășește lățimea pe mobil. O facem `flex-wrap` real cu `w-full sm:w-auto` pe Select și butoane; Select-ul devine `w-full sm:w-[260px]`. Titlurile grupurilor `flex-wrap`.
-- `FeedbackEditorPage`: verificăm headerul și butoanele de acțiune să fie `flex-wrap` cu `w-full sm:w-auto`.
-- `FeedbackFillPage` / `StudentFeedbackPage`: deja folosesc grid-uri responsive; verificăm doar header.
+## 4. Vizibilitate restrânsă cluburi/voluntariat pentru non-creatori
 
-**Cluburi & Voluntariat**
-- `ClubsVolunteerHub`: headerul cu tab-uri + butoane „Club nou / Proiect nou" — flex-wrap + butoane full-width pe mobil. `TabsList` deja are `overflow-x-auto`, ok.
-- `ClubDetailPage` și `VolunteerProjectDetailPage`: headerele cu acțiuni multiple (Editează/Șterge/Înscriere) → `flex flex-wrap gap-2`, butoane `w-full sm:w-auto` pe mobil; tabelele de participanți primesc wrapper `overflow-x-auto`.
+Modific `ClubDetailPage.tsx` și `VolunteerProjectDetailPage.tsx`:
 
-**Orar & Meniu**
-- `StudentSchedulePage`: `TabsList grid-cols-5` (L-V) e prea înghesuit pe ecrane mici → folosim abrevieri (L/Ma/Mi/J/V) pe mobil cu `sm:` text complet, sau `overflow-x-auto` pe tabs. Grila orarului are deja `overflow-x-auto`, ok.
-- `ScheduleGridEditor` (admin): are `overflow-x-auto`, dar headerul paginii `SchedulesPage` are nevoie de butoane flex-wrap.
-- `CantinaMenuSection`: grid deja responsive.
+**Pentru profesor (`teacher` fără `homeroom_teacher`) care NU este creator/coordonator:**
+- Vede DOAR tabul „General" (read-only). Tab-urile Coordonatori, Membri, Întâlniri/Zile sunt ascunse.
 
-Toate modificările sunt strict UI/Tailwind; nu schimbăm logica, query-urile sau structura de date.
+**Pentru diriginte (`homeroom_teacher`) care NU este creator/coordonator:**
+- Vede tab „General" (read-only)
+- Vede tab „Întâlniri" / „Zile & prezență", DAR lista de membri și grila de prezență sunt filtrate la elevii claselor pe care le conduce (`homeroom_teacher_id = auth.uid()`).
+- Nu vede Coordonatori sau lista globală de Membri.
 
-## Fișiere afectate
+**Admin / CSE / creator / coordonator:** comportamentul actual (acces complet).
 
-- `src/components/layouts/AdminLayout.tsx` — adăugare item Feedback
-- `src/pages/feedback/FeedbackListPage.tsx` — stats, filtre, mobile
-- `src/pages/feedback/FeedbackReportPage.tsx` — toolbar mobile
-- `src/pages/feedback/FeedbackEditorPage.tsx` — header mobile
-- `src/components/clubs/ClubsVolunteerHub.tsx` — header mobile
-- `src/components/clubs/ClubDetailPage.tsx` — header + tabel mobile
-- `src/components/clubs/VolunteerProjectDetailPage.tsx` — header + tabel mobile
-- `src/pages/student/StudentSchedulePage.tsx` — tabs mobile
-- `src/pages/admin/SchedulesPage.tsx` — header mobile (dacă e cazul)
+### Detalii tehnice
+
+Adaug un flag `viewMode` calculat în detail page:
+- `full` — admin/creator/coordonator (canManage actual)
+- `homeroom_filtered` — diriginte non-creator → vede General + Întâlniri/Zile filtrate
+- `general_only` — profesor non-creator → vede doar General
+
+În `MeetingsTab` / `DaysTab`, dacă `viewMode === "homeroom_filtered"`:
+- Încarc `student_class_assignments` pentru `homeroom_teacher_id = auth.uid()` ca să obțin lista `myStudentIds`
+- Filtrez `enrollments` (membrii afișați în grila de prezență) și `club_attendance` / `volunteer_attendance` doar la acei studenți
+- Ascund butoanele de adăugare/modificare; totul este read-only
+
+RLS-urile existente permit dirigintelui să citească `club_enrollments`, `club_attendance`, `volunteer_enrollments`, `volunteer_attendance` pentru elevii săi (politici `Homeroom read class …` deja existente). RLS-ul pentru `clubs`/`volunteer_projects` permite oricărui authenticated să citească cele cu `status = 'active'`. Nu e nevoie de migrare SQL.
+
+### Fișiere modificate
+- `src/components/layouts/ProfLayout.tsx` — bară unificată + tab Module
+- `src/components/layouts/TeacherLayout.tsx` — bară unificată + tab Module
+- `src/pages/teacher/TeacherReportsPage.tsx` — voluntariat în tab „Sumar"
+- `src/components/clubs/ClubDetailPage.tsx` — viewMode + filtrare prezență
+- `src/components/clubs/VolunteerProjectDetailPage.tsx` — viewMode + filtrare prezență
