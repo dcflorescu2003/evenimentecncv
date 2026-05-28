@@ -1,74 +1,93 @@
-## Obiectiv
+## 1) Logo "CNCV" devine buton către hub-ul de module
 
-Extind pagina **Admin → Rapoarte** (`src/pages/admin/ReportsPage.tsx`) cu trei taburi noi, fiecare cu rapoarte dedicate, separate de cele existente (Pe clasă / Pe eveniment / Pe elev).
+În toate layout-urile cu antet (`StudentLayout`, `ProfLayout`, `TeacherLayout`, `CoordinatorLayout`, `ManagerLayout`, `AdminLayout`) blocul `<GraduationCap /> CNCV …` devine un `<button>` care navighează la `/app`. Stilizare neschimbată, doar wrapper cu `cursor-pointer hover:opacity-80`, `aria-label="Toate modulele"`.
 
-Toate rapoartele se filtrează după **sesiunea selectată** (selectorul existent din header) și au buton **Export PDF** + tabel + grafic acolo unde aduce valoare. Folosesc aceleași patternuri (batch fetch >1000 rânduri, `exportReportPdf`, `ChartContainer`).
+## 2) `ModuleSwitcher` afișează modulul curent corect
 
-## Tab "Feedback"
+Acum funcția `current` recunoaște doar `events`/`schedule`. O extind ca să detecteze pe baza prefixului de cale toate cele 4 module:
 
-Listează toate chestionarele din sesiune cu metrici de participare. Surse: `feedback_forms`, `feedback_responses`, `feedback_questions`.
+```text
+/admin/feedback, /prof/feedback, /student/feedback        → feedback
+/admin/clubs, /prof/clubs, /student/clubs, /student/volunteer → clubs_volunteer
+/admin/schedules, /student/orar                           → schedule
+restul (/admin, /student, /prof, /coordinator, /manager)  → events
+```
 
-Coloane tabel:
-- Titlu chestionar
-- Tip (General / Feedback profesori / etc.)
-- Audiență (Elevi / Profesori)
-- Status (Draft / Activ / Închis)
-- Anonimitate
-- Nr. întrebări
-- Nr. răspunsuri totale
-- Nr. respondenți identificați
-- Data deschidere / închidere
-- Acțiune: link "Vezi raport" → `/admin/feedback/:id/report` (există deja)
+Logica devine o mică funcție `detectCurrentKey(pathname)` cu lista de prefixe per `module.key`, după care `current = modules.find(m => m.module.key === detected)`.
 
-Card sumar deasupra: total chestionare, total răspunsuri în sesiune, top 3 chestionare după nr. răspunsuri (bar chart).
+## 3) Chestionarele anonime apar ca "completate"
 
-## Tab "Cluburi"
+**Cauză:** la trimitere anonimă, `feedback_responses.respondent_id` rămâne NULL prin design, deci pagina elevului nu mai poate filtra după `respondent_id = user.id`.
 
-Listează cluburile din sesiune. Surse: `clubs`, `club_enrollments`, `club_meetings`, `club_attendance`.
+**Soluție:** tabel nou de evidență `feedback_completions`, separat de răspunsuri (fără date, doar marker).
 
-Coloane tabel:
-- Nume club
-- Status (Draft / Activ / Închis)
-- Înscriși activi (status=`enrolled`)
-- Capacitate / % ocupare
-- Nr. întâlniri programate
-- Nr. întâlniri ținute (cele cu cel puțin un `club_attendance.status='present'`)
-- Rată prezență medie (% present din total marcate pe toate întâlnirile)
+Migrație:
+```sql
+CREATE TABLE public.feedback_completions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  form_id uuid NOT NULL REFERENCES public.feedback_forms(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
+  subject_teacher_id uuid,
+  completed_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (form_id, user_id, subject_teacher_id)
+);
+GRANT SELECT ON public.feedback_completions TO authenticated;
+GRANT ALL ON public.feedback_completions TO service_role;
+ALTER TABLE public.feedback_completions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own completions" ON public.feedback_completions
+  FOR SELECT TO authenticated USING (user_id = auth.uid());
+```
 
-Card sumar: total cluburi active, total elevi înscriși (distinct), total întâlniri ținute, bar chart "Înscriși per club" (top 10).
+Actualizez `submit_feedback_response` să facă `INSERT … ON CONFLICT DO NOTHING` în `feedback_completions` pentru `_uid` la fiecare submit (anonim sau identificat), folosind `subject_teacher_id` când e cazul.
 
-Export PDF: tabel complet (landscape).
+În `StudentFeedbackPage`:
+- `myResponses` rămâne pentru cele identificate (cu butonul "Editează").
+- adaug un al doilea query `myCompletions` din `feedback_completions` join cu `feedback_forms`.
+- în "Feedbackul meu" afișez reuniunea: cele identificate cu opțiunea Editează; cele anonime cu badge "Anonim" + "Final" și data din `completed_at` (fără link de editare).
+- în "Chestionare deschise" markez ca închise pe baza `(form_id, subject_teacher_id)` din completări (înlocuiește `respondedKeys` actual).
 
-## Tab "Voluntariat"
+## 4) Calendarul din `DateInput` nu se deschide (preview iframe)
 
-Listează proiectele de voluntariat din sesiune. Surse: `volunteer_projects`, `volunteer_enrollments`, `volunteer_days`, `volunteer_attendance`.
+**Cauză:** `input.showPicker()` aruncă `SecurityError` din iframe cross-origin (preview-ul Lovable). În producție merge, dar preview-ul rămâne nefuncțional.
 
-Coloane tabel:
-- Nume proiect
-- Status (Draft / Activ / Închis)
-- Înscriși activi
-- Capacitate / % ocupare
-- Nr. zile programate
-- Total ore validate (sumă ore din `volunteer_attendance` cu status `present`)
-- Nr. voluntari care au cel puțin o prezență
+**Soluție:** elimin dependența de `showPicker` și folosesc `<Popover>` + `<Calendar>` (shadcn, deja prezent), care merge oriunde. Păstrez și input-ul text cu format `zz.ll.aaaa`.
 
-Card sumar: total proiecte active, total voluntari unici, total ore validate în sesiune, bar chart "Ore validate per proiect" (top 10).
+Schiță:
+```tsx
+<Popover>
+  <PopoverTrigger asChild>
+    <button><CalendarDays /></button>
+  </PopoverTrigger>
+  <PopoverContent align="end" className="p-0">
+    <Calendar mode="single" selected={value ? new Date(value) : undefined}
+      onSelect={(d) => d && onChange(format(d, "yyyy-MM-dd"))} />
+  </PopoverContent>
+</Popover>
+```
+Înlătur `hiddenRef` și `showPicker`. Locale `ro` pentru calendar.
 
-Export PDF: tabel complet (landscape).
+## 5) Diacritice în PDF
 
-## Detalii tehnice
+`exportReportPdf` (`src/lib/report-pdf.ts`) elimină explicit diacriticele (`stripDiacritics`), iar `feedback-pdf.ts` folosește fontul `helvetica` (Latin-1), care nu suportă glifele românești.
 
-- Adaug 3 `<TabsTrigger>` noi în `TabsList` din `ReportsPage.tsx`, după "students": `feedback`, `clubs`, `volunteers`.
-- Adaug 3 componente noi în același fișier: `FeedbackReport`, `ClubsReport`, `VolunteersReport`, fiecare primește `sessionId`.
-- Pentru fiecare folosesc `useQuery` cu key `["report-feedback"|"report-clubs"|"report-volunteers", sessionId]`.
-- Pentru queries >1000 rânduri (`club_attendance`, `volunteer_attendance`) folosesc helper-ul `batchFetch` deja prezent în fișier (îl extrag într-o funcție utility la nivel de modul ca să nu-l duplic).
-- Numele cluburilor/proiectelor/chestionarelor sunt deja în tabele — fără join cu profiles necesar.
-- Pentru "rată prezență club" și "ore voluntariat" calculele se fac client-side după fetch.
-- Texte UI 100% în română, format dată `zz.ll.aaaa` via `formatDate`.
-- Fără modificări de schemă, RLS sau edge functions (adminul are deja `ALL` pe toate aceste tabele).
+**Soluție:** embed font Unicode (Noto Sans / DejaVu Sans) în jsPDF.
 
-## Out of scope
+- Adaug `src/lib/pdf-font.ts` cu funcția `ensureUnicodeFont(doc)` care, la prima utilizare, încarcă un TTF (de ex. `noto-sans-regular.ttf` și `noto-sans-bold.ttf`) plasat în `public/fonts/`, apoi `doc.addFileToVFS(...)` + `doc.addFont(..., "NotoSans", "normal"/"bold")` și setează `doc.setFont("NotoSans")`.
+- Înlocuiesc `stripDiacritics(...)` din `report-pdf.ts` cu textul brut și apelez `ensureUnicodeFont(doc)` la început; același lucru în `feedback-pdf.ts` (inclusiv pentru `autoTable` prin `styles: { font: "NotoSans" }`).
+- Verific că `attendance-pdf.ts` (folosit deja la alte rapoarte) primește același tratament dacă folosește același pattern.
 
-- Drill-down per club/proiect (există deja paginile de detaliu).
-- Modificări la `/admin/feedback` list page (rămâne cum e).
-- Schimbări de navigație în sidebar.
+Fonts: pun fișierele TTF în `public/fonts/` și le fetch la cerere (lazy) pentru a nu mări bundle-ul.
+
+## Fișiere atinse
+
+- `src/components/layouts/{Student,Prof,Teacher,Coordinator,Manager,Admin}Layout.tsx` (1)
+- `src/components/ModuleSwitcher.tsx` (2)
+- migrație SQL nouă + edit `submit_feedback_response` (3)
+- `src/pages/feedback/StudentFeedbackPage.tsx` (3)
+- `src/components/ui/date-input.tsx` (4)
+- `src/lib/pdf-font.ts` (nou), `src/lib/report-pdf.ts`, `src/lib/feedback-pdf.ts`, `public/fonts/noto-sans-*.ttf` (5)
+
+## În afara scopului
+
+- Restructurarea navigării bottom-bar pentru module.
+- Tracking pentru completări retroactive (existente înainte de migrație).

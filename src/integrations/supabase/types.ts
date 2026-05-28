@@ -830,6 +830,38 @@ export type Database = {
           },
         ]
       }
+      feedback_completions: {
+        Row: {
+          completed_at: string
+          form_id: string
+          id: string
+          subject_teacher_id: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          form_id: string
+          id?: string
+          subject_teacher_id?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          form_id?: string
+          id?: string
+          subject_teacher_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_completions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback_forms: {
         Row: {
           anonymity: Database["public"]["Enums"]["feedback_anonymity"]
