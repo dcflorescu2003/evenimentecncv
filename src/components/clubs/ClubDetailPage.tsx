@@ -246,7 +246,7 @@ function StudentEnrollmentBar({
 
   return (
     <Card>
-      <CardContent className="flex items-center justify-between gap-3 pt-4">
+      <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-medium">
             {enrolled ? "Ești înscris la acest club" : "Nu ești înscris la acest club"}
