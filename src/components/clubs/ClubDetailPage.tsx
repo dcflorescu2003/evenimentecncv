@@ -41,6 +41,7 @@ export default function ClubDetailPage({ mode }: Props) {
 
   const isAdmin = roles.includes("admin");
   const isCse = roles.includes("cse");
+  const isTeacher = roles.includes("teacher") || roles.includes("homeroom_teacher");
 
   const { data: club, isLoading } = useQuery({
     queryKey: ["club", clubId],
