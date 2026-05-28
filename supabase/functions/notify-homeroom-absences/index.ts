@@ -204,10 +204,8 @@ Deno.serve(async (req) => {
       return endTime <= localTimeStr;
     });
 
-    if (endedEvents.length === 0) {
-      return new Response(JSON.stringify({ message: `No ended events today (${bucharestStr} ${localTimeStr})` }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+    // (Removed early return — fall through so volunteer notifications still run if no events ended.)
+
 
     const eventIds = endedEvents.map((e: any) => e.id);
     const eventMap: Record<string, any> = {};
