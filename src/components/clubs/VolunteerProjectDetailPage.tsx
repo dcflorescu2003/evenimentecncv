@@ -70,7 +70,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
   });
 
   const isCreator = !!user && project?.created_by === user.id;
-  const canManage = isAdmin || (isCse && isCreator);
+  const canManage = isAdmin || ((isCse || isTeacher) && isCreator);
   const myEnrollment = enrollments.find((e: any) => e.student_id === user?.id);
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Se încarcă…</p>;
