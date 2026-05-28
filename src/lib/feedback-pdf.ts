@@ -97,6 +97,73 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
 
   const sortedQ = [...questions].sort((a, b) => a.position - b.position);
 
+  const renderQuestionsFor = (sectionResponses: FbResponse[], qs: FbQuestion[]) => {
+    qs.forEach((q, idx) => {
+      if (y > 720) { doc.addPage(); y = 48; }
+      doc.setFont(PDF_FONT, "bold");
+      doc.setFontSize(11);
+      const lines = doc.splitTextToSize(`${idx + 1}. ${q.text}`, pageW - 80);
+      doc.text(lines, 40, y);
+      y += lines.length * 14 + 4;
+
+      const agg = aggregate(q, sectionResponses);
+      doc.setFont(PDF_FONT, "normal");
+      doc.setFontSize(10);
+
+      if (agg.kind === "empty") {
+        doc.text("Fără răspunsuri.", 50, y); y += 16;
+      } else if (agg.kind === "scale") {
+        autoTable(doc, {
+          startY: y,
+          head: [["Valoare", "Răspunsuri"]],
+          body: Object.entries(agg.dist).map(([k, v]) => [k, String(v)]),
+          margin: { left: 40, right: 40 },
+          styles: { fontSize: 9, font: PDF_FONT },
+        });
+        y = (doc as any).lastAutoTable.finalY + 6;
+        doc.text(`n=${agg.n} • medie=${agg.avg.toFixed(2)} • mediană=${agg.median}`, 40, y);
+        y += 16;
+      } else if (agg.kind === "choice") {
+        const rows = Object.entries(agg.counts).map(([k, v]) => [
+          k, String(v), agg.total ? `${((v / agg.total) * 100).toFixed(1)}%` : "—",
+        ]);
+        autoTable(doc, {
+          startY: y,
+          head: [["Opțiune", "Răspunsuri", "%"]],
+          body: rows.length ? rows : [["—", "0", "—"]],
+          margin: { left: 40, right: 40 },
+          styles: { fontSize: 9, font: PDF_FONT },
+        });
+        y = (doc as any).lastAutoTable.finalY + 10;
+      } else if (agg.kind === "text") {
+        if (agg.items.length === 0) { doc.text("Fără răspunsuri.", 50, y); y += 16; }
+        else {
+          agg.items.forEach((t) => {
+            if (!t.trim()) return;
+            const wrapped = doc.splitTextToSize(`• ${t}`, pageW - 90);
+            if (y + wrapped.length * 12 > 760) { doc.addPage(); y = 48; }
+            doc.text(wrapped, 50, y);
+            y += wrapped.length * 12 + 2;
+          });
+          y += 6;
+        }
+      }
+    });
+  };
+
+  if (overall) {
+    doc.setFont(PDF_FONT, "bold");
+    doc.setFontSize(13);
+    doc.text(overall.label, 40, y); y += 16;
+    doc.setFont(PDF_FONT, "normal");
+    doc.setFontSize(10);
+    doc.text(`Răspunsuri totale: ${overall.responses.length}`, 40, y); y += 14;
+    const nonOpen = sortedQ.filter((q) => q.question_type !== "open_text");
+    renderQuestionsFor(overall.responses, nonOpen);
+    if (allSections.length) { doc.addPage(); y = 48; }
+  }
+
+
   allSections.forEach((section, secIdx) => {
     if (section.label) {
       if (secIdx > 0) { doc.addPage(); y = 48; }
