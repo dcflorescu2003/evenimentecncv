@@ -1,4 +1,4 @@
-import { Calendar, BookOpen, Users, type LucideIcon } from "lucide-react";
+import { Calendar, BookOpen, Users, MessageSquare, type LucideIcon } from "lucide-react";
 
 export type AppRole =
   | "admin"
