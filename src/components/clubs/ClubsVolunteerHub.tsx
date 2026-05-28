@@ -43,9 +43,10 @@ interface Props {
  */
 export default function ClubsVolunteerHub({ mode }: Props) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, roles } = useAuth();
   const qc = useQueryClient();
 
+  const isCseRole = roles.includes("cse");
   const detailBase =
     mode === "admin" ? "/admin" : mode === "cse" ? "/prof" : "/student";
 
