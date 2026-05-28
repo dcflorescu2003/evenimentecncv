@@ -241,11 +241,11 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
   const { data, isLoading } = useQuery({
     queryKey: ["teacher-report-situatie", sessionId, classIds],
     queryFn: async () => {
-      if (!sessionId || classIds.length === 0) return { students: [], events: [] };
+      if (!sessionId || classIds.length === 0) return { students: [], events: [], volunteerDays: [] };
 
       const { data: assignments } = await supabase.from("student_class_assignments").select("student_id, class_id").in("class_id", classIds);
       const studentIds = [...new Set((assignments ?? []).map(a => a.student_id))];
-      if (studentIds.length === 0) return { students: [], events: [] };
+      if (studentIds.length === 0) return { students: [], events: [], volunteerDays: [] };
 
       const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name").in("id", studentIds);
       const { data: events } = await supabase.from("events").select("id, title, date, counted_duration_hours").eq("session_id", sessionId).order("date");
@@ -255,7 +255,6 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
       const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
       const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
 
-      // Required hours per class for this session
       const { data: rules } = await supabase
         .from("class_participation_rules")
         .select("class_id, required_value")
@@ -264,7 +263,6 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
       const requiredByClass = Object.fromEntries((rules ?? []).map(r => [r.class_id, r.required_value]));
       const studentClassMap = Object.fromEntries((assignments ?? []).map(a => [a.student_id, a.class_id]));
 
-      // Fetch assistant assignments
       const { data: assistantAssignments } = await supabase
         .from("event_student_assistants").select("student_id, event_id").in("student_id", studentIds);
       const assistantByStudent = new Map<string, Set<string>>();
@@ -275,9 +273,36 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
         }
       });
 
+      // ─── Volunteer data ───
+      const { data: vEnrolls } = await supabase
+        .from("volunteer_enrollments")
+        .select("student_id, project_id, status")
+        .in("student_id", studentIds)
+        .eq("status", "enrolled");
+      const vProjectIdsAll = [...new Set((vEnrolls ?? []).map(v => v.project_id))];
+      const { data: vProjects } = vProjectIdsAll.length
+        ? await supabase.from("volunteer_projects").select("id, name").in("id", vProjectIdsAll).eq("session_id", sessionId)
+        : { data: [] as any[] };
+      const vProjectMap = Object.fromEntries((vProjects ?? []).map((p: any) => [p.id, p]));
+      const vProjectIdsInSession = (vProjects ?? []).map((p: any) => p.id);
+      const enrolledByStudent = new Map<string, Set<string>>();
+      (vEnrolls ?? []).forEach(e => {
+        if (!vProjectIdsInSession.includes(e.project_id)) return;
+        if (!enrolledByStudent.has(e.student_id)) enrolledByStudent.set(e.student_id, new Set());
+        enrolledByStudent.get(e.student_id)!.add(e.project_id);
+      });
+      const { data: vDays } = vProjectIdsInSession.length
+        ? await supabase.from("volunteer_days").select("id, project_id, date").in("project_id", vProjectIdsInSession).order("date")
+        : { data: [] as any[] };
+      const vDayIds = (vDays ?? []).map((d: any) => d.id);
+      const { data: vAtt } = vDayIds.length
+        ? await supabase.from("volunteer_attendance").select("day_id, student_id, status").in("day_id", vDayIds).in("student_id", studentIds)
+        : { data: [] as any[] };
+      const vAttKey = (sid: string, did: string) => `${sid}:${did}`;
+      const vAttMap = Object.fromEntries((vAtt ?? []).map((a: any) => [vAttKey(a.student_id, a.day_id), a.status]));
+
       const today = new Date().toISOString().slice(0, 10);
 
-      // Build matrix: student → event → status
       const students = (profiles ?? []).map(p => {
         const eventStatuses: Record<string, string> = {};
         let validatedHours = 0;
@@ -288,36 +313,45 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
           if (res) {
             const ticket = ticketByRes[res.id];
             let status = ticket?.status || "reserved";
-            // Assistant → present
             if (studentAssistantEvents.has(eid)) status = "present";
-            // Past reserved → absent
             else if (status === "reserved" && ev?.date && ev.date < today) status = "absent";
             eventStatuses[eid] = status;
             if (status === "present" || status === "late") {
               validatedHours += ev?.counted_duration_hours ?? 0;
             }
           } else if (studentAssistantEvents.has(eid)) {
-            // Assistant-only (no reservation)
             eventStatuses[eid] = "present";
             validatedHours += ev?.counted_duration_hours ?? 0;
           }
+        }
+        const volunteerStatuses: Record<string, string> = {};
+        const enrolledProjects = enrolledByStudent.get(p.id) || new Set();
+        for (const day of (vDays ?? []) as any[]) {
+          if (!enrolledProjects.has(day.project_id)) continue;
+          const att = vAttMap[vAttKey(p.id, day.id)];
+          if (att) volunteerStatuses[day.id] = att;
+          else if (day.date < today) volunteerStatuses[day.id] = "absent";
+          else volunteerStatuses[day.id] = "reserved";
         }
         return {
           id: p.id,
           name: `${p.last_name} ${p.first_name}`,
           lastName: p.last_name,
           eventStatuses,
+          volunteerStatuses,
           validatedHours,
           requiredHours: requiredByClass[studentClassMap[p.id]] || 0,
         };
       }).sort((a, b) => a.lastName.localeCompare(b.lastName));
 
-      // Filter events to only those with at least 1 enrolled student
       const eventsWithEnrollments = (events ?? []).filter(e =>
         students.some(st => st.eventStatuses[e.id] !== undefined)
       );
+      const volunteerDaysWithEnrollments = ((vDays ?? []) as any[])
+        .filter((d: any) => students.some(st => st.volunteerStatuses[d.id] !== undefined))
+        .map((d: any) => ({ ...d, projectName: vProjectMap[d.project_id]?.name ?? "Voluntariat" }));
 
-      return { students, events: eventsWithEnrollments };
+      return { students, events: eventsWithEnrollments, volunteerDays: volunteerDaysWithEnrollments };
     },
     enabled: !!sessionId && classIds.length > 0,
   });
@@ -339,8 +373,10 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
   };
 
   const handleExport = () => {
-    if (!data?.students.length || !data?.events.length) return;
-    const headers = ["Elev", ...data.events.map(e => e.title), "Ore validate"];
+    if (!data?.students.length) return;
+    const evHeaders = data.events.map(e => e.title);
+    const volHeaders = data.volunteerDays.map((d: any) => `[V] ${d.projectName} ${formatDate(d.date)}`);
+    const headers = ["Elev", ...evHeaders, ...volHeaders, "Ore validate"];
     const statusText = (s: string) => {
       if (s === "present" || s === "late") return "P";
       if (s === "absent") return "A";
@@ -351,6 +387,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
     const rows = data.students.map(st => [
       st.name,
       ...data.events.map(e => statusText(st.eventStatuses[e.id])),
+      ...data.volunteerDays.map((d: any) => statusText(st.volunteerStatuses[d.id])),
       formatHoursVsRequired(st.validatedHours, st.requiredHours),
     ]);
     exportReportPdf({
@@ -370,7 +407,8 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
           Legendă: <span className="text-green-600 font-bold">✓</span> Prezent &nbsp;
           <span className="text-destructive font-bold">✗</span> Absent &nbsp;
           <span className="text-amber-600 font-bold">M</span> Motivat &nbsp;
-          <span className="text-muted-foreground">○</span> Rezervat
+          <span className="text-muted-foreground">○</span> Rezervat &nbsp;
+          <span className="text-primary font-semibold">[V]</span> Voluntariat
         </p>
         <Button variant="outline" size="sm" onClick={handleExport}>
           <Download className="mr-2 h-4 w-4" /> Export PDF
@@ -390,6 +428,14 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
                       <div className="text-[10px] text-muted-foreground">{formatDate(e.date)}</div>
                     </TableHead>
                   ))}
+                  {data?.volunteerDays.map((d: any) => (
+                    <TableHead key={d.id} className="text-center min-w-[80px] text-xs whitespace-normal bg-primary/5">
+                      <div className="truncate max-w-[100px]" title={`Voluntariat: ${d.projectName}`}>
+                        <span className="text-primary">[V]</span> {d.projectName}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">{formatDate(d.date)}</div>
+                    </TableHead>
+                  ))}
                   <TableHead className="text-right">Ore validate</TableHead>
                 </TableRow>
               </TableHeader>
@@ -403,6 +449,9 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
                     <TableCell className="sticky left-0 bg-background z-10 font-medium text-sm">{st.name}</TableCell>
                     {data.events.map(e => (
                       <TableCell key={e.id} className="text-center">{statusIcon(st.eventStatuses[e.id])}</TableCell>
+                    ))}
+                    {data.volunteerDays.map((d: any) => (
+                      <TableCell key={d.id} className="text-center bg-primary/5">{statusIcon(st.volunteerStatuses[d.id])}</TableCell>
                     ))}
                     <TableCell className="text-right font-semibold">{formatHoursVsRequired(st.validatedHours, st.requiredHours)}h</TableCell>
                   </TableRow>
