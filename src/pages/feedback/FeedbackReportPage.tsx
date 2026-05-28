@@ -100,6 +100,22 @@ export default function FeedbackReportPage({ mode }: Props) {
 
   const qMap = useMemo(() => new Map(questions.map((q) => [q.id, q])), [questions]);
 
+  const isTeacherFeedback = form?.type === "teacher_feedback";
+
+  const groups = useMemo(() => {
+    if (!isTeacherFeedback) {
+      return [{ key: "__all__", label: "Toate răspunsurile", responses }];
+    }
+    const map = new Map<string, { key: string; label: string; responses: FbResponse[] }>();
+    responses.forEach((r) => {
+      const key = r.subject_teacher_id ?? "__none__";
+      const label = r.subject_teacher_name ?? "Profesor neselectat";
+      if (!map.has(key)) map.set(key, { key, label, responses: [] });
+      map.get(key)!.responses.push(r);
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "ro"));
+  }, [responses, isTeacherFeedback]);
+
   const handleExport = () => {
     if (!form) return;
     exportFeedbackReportPdf({
@@ -132,45 +148,59 @@ export default function FeedbackReportPage({ mode }: Props) {
         </CardHeader>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle className="text-base">Rezultate agregate</CardTitle></CardHeader>
-        <CardContent className="space-y-6">
-          {questions.map((q, idx) => (
-            <AggregateBlock key={q.id} q={q} idx={idx} responses={responses} />
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle className="text-base">Răspunsuri individuale</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          {responses.length === 0 && <p className="text-sm text-muted-foreground">Niciun răspuns încă.</p>}
-          {responses.map((r) => (
-            <div key={r.id} className="border rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-sm">
-                  {r.is_identified
-                    ? <strong>{r.respondent_name ?? "Identificat"}</strong>
-                    : <span className="text-muted-foreground">Anonim</span>}
-                </div>
-                <div className="text-xs text-muted-foreground">{formatDate(r.submitted_at)}</div>
-              </div>
-              <div className="space-y-1 text-sm">
-                {r.answers.map((a) => {
-                  const q = qMap.get(a.question_id);
-                  if (!q) return null;
-                  return (
-                    <div key={a.question_id}>
-                      <span className="text-muted-foreground">{q.text}: </span>
-                      <span>{formatValue(a.value)}</span>
-                    </div>
-                  );
-                })}
-              </div>
+      {groups.map((g) => (
+        <div key={g.key} className="space-y-4">
+          {isTeacherFeedback && (
+            <div className="flex items-center gap-2 pt-2">
+              <h2 className="text-lg font-semibold">{g.label}</h2>
+              <Badge variant="secondary">{g.responses.length} răspunsuri</Badge>
             </div>
-          ))}
-        </CardContent>
-      </Card>
+          )}
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Rezultate agregate</CardTitle></CardHeader>
+            <CardContent className="space-y-6">
+              {questions.map((q, idx) => (
+                <AggregateBlock key={q.id} q={q} idx={idx} responses={g.responses} />
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Răspunsuri individuale</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {g.responses.length === 0 && <p className="text-sm text-muted-foreground">Niciun răspuns încă.</p>}
+              {g.responses.map((r) => (
+                <div key={r.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm">
+                      {r.is_identified
+                        ? <strong>{r.respondent_name ?? "Identificat"}</strong>
+                        : <span className="text-muted-foreground">Anonim</span>}
+                      {isTeacherFeedback && r.subject_teacher_name && (
+                        <span className="text-muted-foreground"> • despre {r.subject_teacher_name}</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{formatDate(r.submitted_at)}</div>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    {r.answers.map((a) => {
+                      const q = qMap.get(a.question_id);
+                      if (!q) return null;
+                      return (
+                        <div key={a.question_id}>
+                          <span className="text-muted-foreground">{q.text}: </span>
+                          <span>{formatValue(a.value)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      ))}
     </div>
   );
 }
