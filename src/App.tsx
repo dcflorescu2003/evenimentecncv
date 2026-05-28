@@ -31,6 +31,11 @@ import ClubsVolunteerHub from "./components/clubs/ClubsVolunteerHub";
 import ClubDetailPage from "./components/clubs/ClubDetailPage";
 import VolunteerProjectDetailPage from "./components/clubs/VolunteerProjectDetailPage";
 import StudentClubsPage from "./components/clubs/StudentClubsPage";
+import FeedbackListPage from "./pages/feedback/FeedbackListPage";
+import FeedbackEditorPage from "./pages/feedback/FeedbackEditorPage";
+import FeedbackFillPage from "./pages/feedback/FeedbackFillPage";
+import FeedbackReportPage from "./pages/feedback/FeedbackReportPage";
+import StudentFeedbackPage from "./pages/feedback/StudentFeedbackPage";
 
 import StudentLayout from "./components/layouts/StudentLayout";
 import StudentDashboard from "./pages/student/StudentDashboard";
@@ -124,6 +129,10 @@ const App = () => (
               <Route path="/admin/clubs" element={<ClubsVolunteerHub mode="admin" />} />
               <Route path="/admin/clubs/:id" element={<ClubDetailPage mode="admin" />} />
               <Route path="/admin/volunteer/:id" element={<VolunteerProjectDetailPage mode="admin" />} />
+              <Route path="/admin/feedback" element={<FeedbackListPage mode="admin" />} />
+              <Route path="/admin/feedback/new" element={<FeedbackEditorPage mode="admin" />} />
+              <Route path="/admin/feedback/:id/edit" element={<FeedbackEditorPage mode="admin" />} />
+              <Route path="/admin/feedback/:id/report" element={<FeedbackReportPage mode="admin" />} />
             </Route>
 
             {/* Student routes */}
@@ -143,6 +152,8 @@ const App = () => (
               <Route path="/student/clubs" element={<StudentClubsPage />} />
               <Route path="/student/clubs/:id" element={<ClubDetailPage mode="student" />} />
               <Route path="/student/volunteer/:id" element={<VolunteerProjectDetailPage mode="student" />} />
+              <Route path="/student/feedback" element={<StudentFeedbackPage />} />
+              <Route path="/student/feedback/:id/fill" element={<FeedbackFillPage />} />
             </Route>
 
             {/* Teacher (profesor) routes */}
@@ -161,6 +172,11 @@ const App = () => (
               <Route path="/prof/clubs" element={<ClubsVolunteerHub mode="cse" />} />
               <Route path="/prof/clubs/:id" element={<ClubDetailPage mode="cse" />} />
               <Route path="/prof/volunteer/:id" element={<VolunteerProjectDetailPage mode="cse" />} />
+              <Route path="/prof/feedback" element={<FeedbackListPage mode="teacher" />} />
+              <Route path="/prof/feedback/new" element={<FeedbackEditorPage mode="teacher" />} />
+              <Route path="/prof/feedback/:id/edit" element={<FeedbackEditorPage mode="teacher" />} />
+              <Route path="/prof/feedback/:id/report" element={<FeedbackReportPage mode="teacher" />} />
+              <Route path="/prof/feedback/:id/fill" element={<FeedbackFillPage />} />
             </Route>
 
             {/* Homeroom teacher routes */}
