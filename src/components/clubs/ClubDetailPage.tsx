@@ -81,8 +81,8 @@ export default function ClubDetailPage({ mode }: Props) {
 
   const isCoordinator = !!user && coordinators.some((c: any) => c.user_id === user.id);
   const isCreator = !!user && club?.created_by === user.id;
-  const canManage = isAdmin || (isCse && isCreator) || isCoordinator;
-  const canManageCoords = isAdmin || (isCse && isCreator);
+  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator;
+  const canManageCoords = isAdmin || ((isCse || isTeacher) && isCreator);
 
   const { data: enrollments = [] } = useQuery({
     queryKey: ["club-enrollments", clubId],
