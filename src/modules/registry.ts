@@ -1,4 +1,4 @@
-import { Calendar, BookOpen, Users, type LucideIcon } from "lucide-react";
+import { Calendar, BookOpen, Users, MessageSquare, type LucideIcon } from "lucide-react";
 
 export type AppRole =
   | "admin"
@@ -54,6 +54,19 @@ export const MODULES: AppModule[] = [
       cse: "/prof/clubs",
       student: "/student/clubs",
       manager: "/manager",
+    },
+  },
+  {
+    key: "feedback",
+    label: "Feedback",
+    description: "Chestionare de feedback pentru elevi, profesori și evenimente.",
+    icon: MessageSquare,
+    pathByRole: {
+      admin: "/admin/feedback",
+      cse: "/prof/feedback",
+      teacher: "/prof/feedback",
+      homeroom_teacher: "/prof/feedback",
+      student: "/student/feedback",
     },
   },
 ];
