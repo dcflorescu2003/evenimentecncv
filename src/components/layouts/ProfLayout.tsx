@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, Users2, BarChart3, LogOut } from "lucide-react";
+import { GraduationCap, LayoutDashboard, CalendarDays, Users2, BarChart3, LogOut, HeartHandshake } from "lucide-react";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 
 export default function ProfLayout() {
@@ -17,12 +17,19 @@ export default function ProfLayout() {
     ? "CNCV Diriginte"
     : "CNCV Profesor";
 
-  const navItems = [
-    { title: "Dashboard", icon: LayoutDashboard, path: "/prof" },
-    { title: "Evenimentele mele", icon: CalendarDays, path: "/prof/events" },
-    ...(isHomeroom ? [{ title: "Clasa mea", icon: Users2, path: "/teacher" }] : []),
-    ...(isHomeroom ? [{ title: "Rapoarte", icon: BarChart3, path: "/teacher/reports" }] : []),
-  ];
+  const isClubs = location.pathname.startsWith("/prof/clubs") || location.pathname.startsWith("/prof/volunteer");
+
+  const navItems = isClubs
+    ? [
+        { title: "Cluburi & Voluntariat", icon: HeartHandshake, path: "/prof/clubs" },
+      ]
+    : [
+        { title: "Dashboard", icon: LayoutDashboard, path: "/prof" },
+        { title: "Evenimentele mele", icon: CalendarDays, path: "/prof/events" },
+        ...(isCse ? [{ title: "Cluburi & Voluntariat", icon: HeartHandshake, path: "/prof/clubs" }] : []),
+        ...(isHomeroom ? [{ title: "Clasa mea", icon: Users2, path: "/teacher" }] : []),
+        ...(isHomeroom ? [{ title: "Rapoarte", icon: BarChart3, path: "/teacher/reports" }] : []),
+      ];
 
   return (
     <div className="flex min-h-screen flex-col">
