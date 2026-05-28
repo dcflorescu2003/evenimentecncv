@@ -161,7 +161,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
 
       {/* === CLUBURI === */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Cluburi</h2>
