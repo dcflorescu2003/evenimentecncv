@@ -279,10 +279,12 @@ function combineDateTime(date: string, time: string): string | null {
 function CreateClubDialog({
   sessionId,
   userId,
+  isCse,
   onCreated,
 }: {
   sessionId?: string;
   userId: string;
+  isCse: boolean;
   onCreated: () => void;
 }) {
   const [open, setOpen] = useState(false);
