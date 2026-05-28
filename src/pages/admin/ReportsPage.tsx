@@ -79,14 +79,20 @@ export default function ReportsPage() {
         <p className="text-muted-foreground">Selectează o sesiune pentru a vedea rapoartele.</p>
       ) : (
         <Tabs defaultValue="classes">
-          <TabsList className="print:hidden w-full sm:w-auto">
+          <TabsList className="print:hidden w-full sm:w-auto flex-wrap h-auto">
             <TabsTrigger value="classes" className="flex-1 sm:flex-none">Pe clasă</TabsTrigger>
             <TabsTrigger value="events" className="flex-1 sm:flex-none">Pe eveniment</TabsTrigger>
             <TabsTrigger value="students" className="flex-1 sm:flex-none">Pe elev</TabsTrigger>
+            <TabsTrigger value="feedback" className="flex-1 sm:flex-none">Feedback</TabsTrigger>
+            <TabsTrigger value="clubs" className="flex-1 sm:flex-none">Cluburi</TabsTrigger>
+            <TabsTrigger value="volunteers" className="flex-1 sm:flex-none">Voluntariat</TabsTrigger>
           </TabsList>
           <TabsContent value="classes"><ClassReport sessionId={sessionId} /></TabsContent>
           <TabsContent value="events"><EventReport sessionId={sessionId} /></TabsContent>
           <TabsContent value="students"><StudentReport sessionId={sessionId} /></TabsContent>
+          <TabsContent value="feedback"><FeedbackReport sessionId={sessionId} /></TabsContent>
+          <TabsContent value="clubs"><ClubsReport sessionId={sessionId} /></TabsContent>
+          <TabsContent value="volunteers"><VolunteersReport sessionId={sessionId} /></TabsContent>
         </Tabs>
       )}
     </div>
