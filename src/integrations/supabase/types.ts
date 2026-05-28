@@ -1847,6 +1847,14 @@ export type Database = {
         Args: { _event_ids: string[] }
         Returns: Json
       }
+      get_feedback_teachers: {
+        Args: never
+        Returns: {
+          first_name: string
+          id: string
+          last_name: string
+        }[]
+      }
       get_form_id_for_question: {
         Args: { _question_id: string }
         Returns: string
