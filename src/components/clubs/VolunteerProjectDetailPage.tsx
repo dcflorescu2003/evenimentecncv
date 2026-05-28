@@ -220,7 +220,7 @@ function DaysTab({ projectId, days, enrollments, canManage, userId, onChange }: 
       location: loc.trim() || null, created_by: userId,
     });
     if (error) return toast.error(error.message);
-    toast.success("Zi adăugată"); setD(""); setS(""); setE(""); setLoc(""); onChange();
+    toast.success("Zi adăugată"); setD(new Date().toISOString().slice(0, 10)); setS(""); setE(""); setLoc(""); onChange();
   }
   async function remove(id: string) {
     if (!confirm("Ștergi această zi?")) return;
