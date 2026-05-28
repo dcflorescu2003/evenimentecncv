@@ -452,6 +452,7 @@ function CreateProjectDialog({
   const [maxCap, setMaxCap] = useState<string>("");
   const [maxPerClass, setMaxPerClass] = useState<string>("");
   const [status, setStatus] = useState<"draft" | "active">("draft");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [eligibleGrades, setEligibleGrades] = useState<number[]>([]);
   const [eligibleClasses, setEligibleClasses] = useState<string[]>([]);
   const [enrollOpenDate, setEnrollOpenDate] = useState("");
@@ -462,7 +463,7 @@ function CreateProjectDialog({
 
   function reset() {
     setName(""); setDescription(""); setStartDate(""); setEndDate("");
-    setMaxCap(""); setMaxPerClass(""); setStatus("draft");
+    setMaxCap(""); setMaxPerClass(""); setStatus("draft"); setIsPrivate(false);
     setEligibleGrades([]); setEligibleClasses([]);
     setEnrollOpenDate(""); setEnrollOpenTime("08:00");
     setEnrollCloseDate(""); setEnrollCloseTime("23:59");
@@ -486,6 +487,7 @@ function CreateProjectDialog({
       enrollment_open_at: combineDateTime(enrollOpenDate, enrollOpenTime),
       enrollment_close_at: combineDateTime(enrollCloseDate, enrollCloseTime),
       status,
+      is_private: isPrivate,
       created_by: userId,
       is_cse: isCse,
     });
