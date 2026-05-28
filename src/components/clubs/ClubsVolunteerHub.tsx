@@ -95,7 +95,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold">Cluburi & Voluntariat</h1>
           <p className="text-sm text-muted-foreground">
@@ -108,7 +108,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
 
       {/* === VOLUNTARIAT === */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <HeartHandshake className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">
