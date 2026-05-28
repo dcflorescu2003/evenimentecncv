@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange } from "lucide-react";
+import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
@@ -17,13 +17,18 @@ const scheduleNav = [
   { title: "Orar", icon: CalendarRange, path: "/student/orar" },
 ];
 
+const clubsNav = [
+  { title: "Cluburi & Voluntariat", icon: HeartHandshake, path: "/student/clubs" },
+];
+
 export default function StudentLayout() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const isSchedule = location.pathname.startsWith("/student/orar");
-  const navItems = isSchedule ? scheduleNav : eventsNav;
+  const isClubs = location.pathname.startsWith("/student/clubs") || location.pathname.startsWith("/student/volunteer");
+  const navItems = isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
 
   return (
     <div className="flex min-h-screen flex-col">
