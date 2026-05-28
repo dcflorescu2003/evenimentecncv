@@ -125,14 +125,13 @@ Deno.serve(async (req) => {
 
     // Best-effort push
     try {
-      await admin.functions.invoke("send-push-to-user", {
+      await userClient.functions.invoke("send-push-to-user", {
         body: {
           user_id: klass.homeroom_teacher_id,
           title,
           body: msgBody,
           url: `/prof/clubs`,
         },
-        headers: { Authorization: `Bearer ${serviceRoleKey}` },
       });
     } catch (e) {
       console.warn("Push send failed (non-fatal):", e);
