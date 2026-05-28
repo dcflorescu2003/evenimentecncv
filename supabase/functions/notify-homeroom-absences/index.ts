@@ -398,11 +398,149 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ════════════════════════════════════════════════════════════
+    // VOLUNTEER PROJECTS — notify when a project ends (end_date = today)
+    // ════════════════════════════════════════════════════════════
+    let vTeacherCount = 0, vInserted = 0, vWebPush = 0, vFcm = 0;
+    try {
+      const { data: vProjects } = await supabase
+        .from("volunteer_projects")
+        .select("id, name, end_date")
+        .eq("end_date", bucharestStr)
+        .in("status", ["active", "closed", "draft"]);
+
+      if (vProjects && vProjects.length > 0) {
+        const vpIds = vProjects.map((p: any) => p.id);
+        const vpMap: Record<string, any> = {};
+        vProjects.forEach((p: any) => { vpMap[p.id] = p; });
+
+        // Enrolled students per project
+        const { data: vEnrolls } = await supabase
+          .from("volunteer_enrollments")
+          .select("project_id, student_id, status")
+          .in("project_id", vpIds)
+          .eq("status", "enrolled");
+
+        const enrolledStudentIds = [...new Set((vEnrolls || []).map((e: any) => e.student_id))];
+        if (enrolledStudentIds.length > 0) {
+          // Map student -> homeroom_teacher
+          const { data: vAssignments } = await supabase
+            .from("student_class_assignments")
+            .select("student_id, class_id, created_at")
+            .in("student_id", enrolledStudentIds)
+            .order("created_at", { ascending: false });
+          const studentClassV: Record<string, string> = {};
+          for (const a of (vAssignments || [])) {
+            if (!studentClassV[a.student_id]) studentClassV[a.student_id] = a.class_id;
+          }
+          const vClassIds = [...new Set(Object.values(studentClassV))];
+          const { data: vClasses } = await supabase
+            .from("classes").select("id, homeroom_teacher_id").in("id", vClassIds);
+          const vClassMap: Record<string, any> = {};
+          (vClasses || []).forEach((c: any) => { vClassMap[c.id] = c; });
+
+          // teacher_id -> project_id -> count of class students enrolled
+          const teacherProjectCount: Record<string, Record<string, number>> = {};
+          for (const e of (vEnrolls || [])) {
+            const cid = studentClassV[e.student_id];
+            if (!cid) continue;
+            const tid = vClassMap[cid]?.homeroom_teacher_id;
+            if (!tid) continue;
+            if (!teacherProjectCount[tid]) teacherProjectCount[tid] = {};
+            teacherProjectCount[tid][e.project_id] = (teacherProjectCount[tid][e.project_id] || 0) + 1;
+          }
+
+          const vTeacherIds = Object.keys(teacherProjectCount);
+          vTeacherCount = vTeacherIds.length;
+
+          // Dedup
+          const { data: vExisting } = await supabase
+            .from("notifications")
+            .select("user_id, related_event_id")
+            .in("user_id", vTeacherIds)
+            .in("related_event_id", vpIds)
+            .eq("type", "homeroom_volunteer_alert");
+          const vExistingSet = new Set((vExisting || []).map((n: any) => `${n.user_id}_${n.related_event_id}`));
+
+          const vToInsert: any[] = [];
+          const teacherProjects: Record<string, string[]> = {};
+          for (const tid of vTeacherIds) {
+            for (const [pid, cnt] of Object.entries(teacherProjectCount[tid])) {
+              if (vExistingSet.has(`${tid}_${pid}`)) continue;
+              const proj = vpMap[pid];
+              vToInsert.push({
+                user_id: tid,
+                title: "Voluntariat încheiat — verifică prezența",
+                body: `Proiectul de voluntariat „${proj.name}” s-a încheiat. Ai ${cnt} elev${cnt === 1 ? "" : "i"} înscri${cnt === 1 ? "s" : "și"} din clasă. Verifică prezența în raport.`,
+                type: "homeroom_volunteer_alert",
+                related_event_id: pid,
+              });
+              if (!teacherProjects[tid]) teacherProjects[tid] = [];
+              teacherProjects[tid].push(pid);
+            }
+          }
+          if (vToInsert.length > 0) {
+            const { error: vInsErr } = await supabase.from("notifications").insert(vToInsert);
+            if (!vInsErr) vInserted = vToInsert.length;
+            else console.error("Volunteer insert error:", vInsErr);
+          }
+
+          // Push notifications
+          const vPushTitle = "Voluntariat încheiat — verifică prezența";
+          if (vapidPrivateB64 && Object.keys(teacherProjects).length > 0) {
+            try {
+              const vapidKey = await importVapidKey(vapidPrivateB64);
+              const { data: subs } = await supabase
+                .from("push_subscriptions").select("*").in("user_id", Object.keys(teacherProjects));
+              const invalidIds: string[] = [];
+              for (const sub of (subs || [])) {
+                const pids = teacherProjects[sub.user_id] || [];
+                if (pids.length === 0) continue;
+                const body = pids.length === 1
+                  ? `Proiectul „${vpMap[pids[0]]?.name}” s-a încheiat. Verifică prezența elevilor.`
+                  : `${pids.length} proiecte de voluntariat s-au încheiat. Verifică prezența.`;
+                const url = "/teacher/reports";
+                const payload = JSON.stringify({ title: vPushTitle, body, icon: "/favicon.ico", data: { url } });
+                const r = await sendWebPush(sub, payload, vapidPublic, vapidKey);
+                if (r.ok) vWebPush++;
+                if (r.invalid) invalidIds.push(sub.id);
+              }
+              if (invalidIds.length > 0) await supabase.from("push_subscriptions").delete().in("id", invalidIds);
+            } catch (e) { console.error("Volunteer web push error:", e); }
+          }
+          if (firebaseSaJson && Object.keys(teacherProjects).length > 0) {
+            try {
+              const sa: ServiceAccount = JSON.parse(firebaseSaJson);
+              const accessToken = await getAccessToken(sa);
+              const { data: tokens } = await supabase
+                .from("fcm_tokens").select("*").in("user_id", Object.keys(teacherProjects));
+              const invalidIds: string[] = [];
+              for (const ft of (tokens || [])) {
+                const pids = teacherProjects[ft.user_id] || [];
+                if (pids.length === 0) continue;
+                const body = pids.length === 1
+                  ? `Proiectul „${vpMap[pids[0]]?.name}” s-a încheiat. Verifică prezența elevilor.`
+                  : `${pids.length} proiecte de voluntariat s-au încheiat. Verifică prezența.`;
+                const url = "/teacher/reports";
+                const r = await sendFcm(accessToken, sa.project_id, ft.token, vPushTitle, body, { url });
+                if (r.ok) vFcm++;
+                if (r.invalid) invalidIds.push(ft.id);
+              }
+              if (invalidIds.length > 0) await supabase.from("fcm_tokens").delete().in("id", invalidIds);
+            } catch (e) { console.error("Volunteer FCM error:", e); }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Volunteer notification error:", e);
+    }
+
     return new Response(
       JSON.stringify({
         message: `Notified ${teacherIds.length} homeroom teachers about absences`,
         endedEvents: endedEvents.length,
         inserted, webPushCount, fcmCount,
+        volunteer: { teachers: vTeacherCount, inserted: vInserted, webPush: vWebPush, fcm: vFcm },
         bucharestDate: bucharestStr, bucharestTime: localTimeStr,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
