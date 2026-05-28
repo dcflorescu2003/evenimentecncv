@@ -315,24 +315,29 @@ function AggregateBlock({ q, idx, responses }: { q: FbQuestion; idx: number; res
     .map((r) => r.answers.find((a) => a.question_id === q.id)?.value)
     .filter((v) => v !== undefined && v !== null);
 
+  const skipped = responses.length - values.length;
+
   return (
     <div className="space-y-2">
       <div className="font-medium">{idx + 1}. {q.text}</div>
+      {skipped > 0 && (
+        <div className="text-xs text-muted-foreground">Nu au răspuns: {skipped} din {responses.length}</div>
+      )}
       {q.question_type === "scale" ? (
-        <ScaleStats values={values} min={q.scale_min ?? 1} max={q.scale_max ?? 5} />
+        <ScaleStats values={values} min={q.scale_min ?? 1} max={q.scale_max ?? 5} skipped={skipped} />
       ) : q.question_type === "open_text" ? (
         <div className="space-y-1">
           {values.length === 0 && <span className="text-sm text-muted-foreground">Fără răspunsuri.</span>}
           {values.map((v, i) => <div key={i} className="text-sm border-l-2 pl-2 border-primary/40">{String(v)}</div>)}
         </div>
       ) : (
-        <ChoiceStats values={values} options={q.options ?? []} total={responses.length} />
+        <ChoiceStats values={values} options={q.options ?? []} total={responses.length} skipped={skipped} />
       )}
     </div>
   );
 }
 
-function ChoiceStats({ values, options, total }: { values: unknown[]; options: string[]; total: number }) {
+function ChoiceStats({ values, options, total, skipped }: { values: unknown[]; options: string[]; total: number; skipped: number }) {
   const counts: Record<string, number> = {};
   values.forEach((v) => {
     const arr = Array.isArray(v) ? v : [v];
@@ -359,13 +364,19 @@ function ChoiceStats({ values, options, total }: { values: unknown[]; options: s
           </div>
         );
       })}
+      {skipped > 0 && (
+        <div className="flex justify-between text-sm pt-1 border-t border-dashed border-muted">
+          <span className="text-muted-foreground">Nu au răspuns</span>
+          <span className="text-muted-foreground">{skipped} ({((skipped / total) * 100).toFixed(0)}%)</span>
+        </div>
+      )}
     </div>
   );
 }
 
-function ScaleStats({ values, min, max }: { values: unknown[]; min: number; max: number }) {
+function ScaleStats({ values, min, max, skipped }: { values: unknown[]; min: number; max: number; skipped: number }) {
   const nums = values.map((v) => Number(v)).filter((n) => !Number.isNaN(n));
-  if (!nums.length) return <span className="text-sm text-muted-foreground">Fără răspunsuri.</span>;
+  if (!nums.length && skipped === 0) return <span className="text-sm text-muted-foreground">Fără răspunsuri.</span>;
   const sum = nums.reduce((a, b) => a + b, 0);
   const sorted = [...nums].sort((a, b) => a - b);
   const median = sorted.length % 2 ? sorted[(sorted.length - 1) / 2]
@@ -373,14 +384,15 @@ function ScaleStats({ values, min, max }: { values: unknown[]; min: number; max:
   const dist: Record<number, number> = {};
   for (let i = min; i <= max; i++) dist[i] = 0;
   nums.forEach((n) => { dist[n] = (dist[n] ?? 0) + 1; });
+  const total = nums.length + skipped;
   return (
     <div className="space-y-2">
       <div className="text-sm text-muted-foreground">
-        n={nums.length} • medie={(sum / nums.length).toFixed(2)} • mediană={median}
+        n={nums.length} • medie={(sum / nums.length).toFixed(2)} • mediană={median}{skipped > 0 ? ` • Nu au răspuns: ${skipped} din ${total}` : ""}
       </div>
       <div className="space-y-1">
         {Object.entries(dist).map(([k, c]) => {
-          const pct = nums.length ? (c / nums.length) * 100 : 0;
+          const pct = total ? (c / total) * 100 : 0;
           return (
             <div key={k} className="space-y-1">
               <div className="flex justify-between text-sm">
@@ -393,6 +405,17 @@ function ScaleStats({ values, min, max }: { values: unknown[]; min: number; max:
             </div>
           );
         })}
+        {skipped > 0 && (
+          <div className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Nu au răspuns</span>
+              <span className="text-muted-foreground">{skipped} ({((skipped / total) * 100).toFixed(0)}%)</span>
+            </div>
+            <div className="h-2 rounded bg-muted overflow-hidden">
+              <div className="h-full bg-muted-foreground/30" style={{ width: `${(skipped / total) * 100}%` }} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
