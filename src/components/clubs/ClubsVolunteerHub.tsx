@@ -559,3 +559,56 @@ function CreateProjectDialog({
     </Dialog>
   );
 }
+
+function DeleteDraftButton({
+  table,
+  id,
+  name,
+  onDeleted,
+}: {
+  table: "clubs" | "volunteer_projects";
+  id: string;
+  name: string;
+  onDeleted: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    setDeleting(true);
+    const { error } = await supabase.from(table).delete().eq("id", id);
+    setDeleting(false);
+    if (error) {
+      toast.error("Eroare la ștergere: " + error.message);
+      return;
+    }
+    toast.success("Ciornă ștearsă");
+    setOpen(false);
+    onDeleted();
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button size="sm" variant="destructive">
+          <Trash2 className="h-3 w-3 mr-1" />
+          Șterge
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Ștergi ciorna „{name}"?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Această acțiune este definitivă și nu poate fi anulată.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleting}>Anulează</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={deleting}>
+            {deleting ? "Se șterge…" : "Șterge"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
