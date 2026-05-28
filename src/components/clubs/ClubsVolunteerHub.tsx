@@ -69,7 +69,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clubs")
-        .select("id, name, description, frequency_label, status, max_capacity, enrollment_open_at, enrollment_close_at, created_by")
+        .select("id, name, description, frequency_label, status, max_capacity, enrollment_open_at, enrollment_close_at, created_by, is_cse")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
