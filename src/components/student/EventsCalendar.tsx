@@ -237,28 +237,50 @@ export default function EventsCalendar({
                 type="button"
                 onClick={() => total > 0 && setDayDialogDate(d)}
                 className={cn(
-                  "aspect-square rounded-md border p-1 flex flex-col items-center justify-start text-xs transition-colors",
+                  "aspect-square rounded-md border p-1 flex flex-col items-start text-xs transition-colors overflow-hidden",
                   inMonth ? "bg-card" : "bg-muted/30 text-muted-foreground/60",
                   isToday && "border-primary border-2",
                   total > 0 ? "cursor-pointer hover:bg-muted" : "cursor-default",
                   isPastDay && inMonth && "opacity-60",
                 )}
               >
-                <span className={cn("font-medium", isToday && "text-primary")}>{d.getDate()}</span>
+                <span className={cn("font-medium self-center", isToday && "text-primary")}>{d.getDate()}</span>
                 {total > 0 && (
-                  <div className="mt-auto flex items-center gap-0.5 pb-0.5">
-                    {hasReserved && <span className="h-1.5 w-1.5 rounded-full bg-green-500" />}
-                    {hasAvailable && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-                    {hasPast && !hasAvailable && !hasReserved && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
-                    )}
-                    {hasVolunteer && (
-                      <VBadge className={cn(hasVolEnrolled && "ring-1 ring-green-500")} />
-                    )}
-                    {total > 1 && (
-                      <span className="ml-0.5 text-[9px] font-semibold text-muted-foreground">{total}</span>
-                    )}
-                  </div>
+                  <>
+                    <div className="flex-1 w-full flex flex-col gap-[2px] min-h-0 overflow-hidden mt-0.5">
+                      {dayEvents.slice(0, 2).map((ev) => {
+                        const s = getEventStatus(ev, myReservationIds, reservationCounts, today);
+                        return (
+                          <div key={ev.id} className="flex items-center gap-[3px] min-w-0">
+                            <span className={cn("h-1 w-1 rounded-full shrink-0", statusDotClass(s))} />
+                            <span className="text-[9px] leading-tight truncate text-foreground/90">{ev.title}</span>
+                          </div>
+                        );
+                      })}
+                      {dayVols.slice(0, Math.max(0, 2 - dayEvents.length)).map((v) => (
+                        <div key={v.id} className="flex items-center gap-[3px] min-w-0">
+                          <span className="inline-flex h-3 w-3 items-center justify-center rounded-[2px] bg-secondary text-secondary-foreground text-[7px] font-bold leading-none shrink-0">V</span>
+                          <span className="text-[9px] leading-tight truncate text-foreground/90">{v.project_name}</span>
+                        </div>
+                      ))}
+                      {total > 2 && (
+                        <span className="text-[8px] text-muted-foreground pl-1">+{total - 2}</span>
+                      )}
+                    </div>
+                    <div className="mt-auto flex items-center gap-0.5 self-center pb-0.5">
+                      {hasReserved && <span className="h-1.5 w-1.5 rounded-full bg-green-500" />}
+                      {hasAvailable && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                      {hasPast && !hasAvailable && !hasReserved && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />
+                      )}
+                      {hasVolunteer && (
+                        <VBadge className={cn(hasVolEnrolled && "ring-1 ring-green-500")} />
+                      )}
+                      {total > 1 && (
+                        <span className="ml-0.5 text-[9px] font-semibold text-muted-foreground">{total}</span>
+                      )}
+                    </div>
+                  </>
                 )}
               </button>
             );
