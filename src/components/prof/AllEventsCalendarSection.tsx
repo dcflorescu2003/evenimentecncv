@@ -20,7 +20,7 @@ export default function AllEventsCalendarSection() {
       const { data, error } = await supabase
         .from("events")
         .select("*")
-        .eq("status", "published")
+        .in("status", ["published", "closed"])
         .eq("published", true)
         .eq("is_public", false)
         .order("date", { ascending: true });
