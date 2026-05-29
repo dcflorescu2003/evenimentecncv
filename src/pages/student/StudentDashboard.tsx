@@ -130,12 +130,14 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
-  // Filter events to those the student is eligible for OR has reserved
+  // Filter events to those the student is eligible for OR has reserved.
+  // Closed (past) events are always visible to everyone, as read-only entries.
   const calendarEvents = useMemo(() => {
     const reservedSet = new Set(myReservationsAll.map((r) => r.event_id));
     const classId = studentClass?.class_id;
     const grade = studentClass?.classes?.grade_number;
     return allEvents.filter((e) => {
+      if (e.status === "closed") return true;
       if (reservedSet.has(e.id)) return true;
       const eligibleClasses = (e.eligible_classes as string[] | null) || [];
       const eligibleGrades = (e.eligible_grades as number[] | null) || [];
