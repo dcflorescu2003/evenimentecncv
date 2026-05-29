@@ -156,6 +156,7 @@ const App = () => (
               <Route path="/student/volunteer/:id" element={<VolunteerProjectDetailPage mode="student" />} />
               <Route path="/student/feedback" element={<StudentFeedbackPage />} />
               <Route path="/student/feedback/:id/fill" element={<FeedbackFillPage />} />
+              <Route path="/student/volunteer/preview/:id" element={<VolunteerProjectPreviewPage />} />
             </Route>
 
             {/* Teacher (profesor) routes */}
