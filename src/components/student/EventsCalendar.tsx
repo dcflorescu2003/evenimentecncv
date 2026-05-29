@@ -525,14 +525,17 @@ export default function EventsCalendar({
                 const reserved = reservationCounts[ev.id] || 0;
                 const remaining = Math.max(0, ev.max_capacity - reserved);
                 const past = s === "past_or_full" && parseDateStr(ev.date) < today;
+                const closed = isClosed(ev);
                 return (
                   <button
                     key={ev.id}
                     type="button"
                     onClick={() => { setDayDialogDate(null); handleEventClick(ev); }}
+                    disabled={closed}
                     className={cn(
-                      "w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors",
-                      past && "opacity-60",
+                      "w-full text-left rounded-lg border p-3 transition-colors",
+                      closed ? "cursor-default opacity-60" : "hover:bg-muted/50",
+                      past && !closed && "opacity-60",
                     )}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -555,9 +558,11 @@ export default function EventsCalendar({
                       )}
                       <span>{remaining} locuri libere</span>
                     </div>
-                    <div className="flex items-center justify-end mt-1.5 text-[11px] text-primary">
-                      Vezi detalii <ArrowRight className="ml-1 h-3 w-3" />
-                    </div>
+                    {!closed && (
+                      <div className="flex items-center justify-end mt-1.5 text-[11px] text-primary">
+                        Vezi detalii <ArrowRight className="ml-1 h-3 w-3" />
+                      </div>
+                    )}
                   </button>
                 );
               })}
