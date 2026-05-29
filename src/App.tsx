@@ -193,6 +193,8 @@ const App = () => (
             >
               <Route path="/teacher" element={<TeacherDashboard />} />
               <Route path="/teacher/reports" element={<TeacherReportsPage />} />
+              <Route path="/teacher/events/preview/:id" element={<EventPreviewPage />} />
+              <Route path="/teacher/volunteer/preview/:id" element={<VolunteerProjectPreviewPage />} />
             </Route>
 
             {/* Coordinator routes */}
