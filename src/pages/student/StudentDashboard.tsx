@@ -357,7 +357,12 @@ export default function StudentDashboard() {
         events={calendarEvents}
         myReservationIds={myReservedIdSet}
         reservationCounts={calendarReservationCounts}
+        volunteerDays={calendarVolunteerDays}
+        onVolunteerClick={(v) =>
+          navigate(v.enrolled ? `/student/volunteer/${v.project_id}` : `/student/volunteer/preview/${v.project_id}`)
+        }
       />
+
 
       {/* Upcoming reservations */}
       <div className="space-y-3">
