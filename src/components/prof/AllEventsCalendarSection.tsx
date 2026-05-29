@@ -20,7 +20,7 @@ export default function AllEventsCalendarSection() {
       const { data, error } = await supabase
         .from("events")
         .select("*")
-        .eq("status", "published")
+        .in("status", ["published", "closed"])
         .eq("published", true)
         .eq("is_public", false)
         .order("date", { ascending: true });
@@ -76,7 +76,10 @@ export default function AllEventsCalendarSection() {
       myReservationIds={EMPTY_RESERVED}
       reservationCounts={counts}
       volunteerDays={volunteerDays}
-      onEventClick={(ev) => navigate(`${prefix}/events/preview/${ev.id}`)}
+      onEventClick={(ev) => {
+        if (ev.status === "closed") return;
+        navigate(`${prefix}/events/preview/${ev.id}`);
+      }}
       onVolunteerClick={(v) => navigate(`${prefix}/volunteer/preview/${v.project_id}`)}
     />
   );

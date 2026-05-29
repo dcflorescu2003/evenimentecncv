@@ -113,7 +113,9 @@ export default function EventsCalendar({
   const [currentDate, setCurrentDate] = useState<Date>(today);
   const [dayDialogDate, setDayDialogDate] = useState<Date | null>(null);
 
+  const isClosed = (ev: Event) => (ev as any).status === "closed";
   const handleEventClick = (ev: Event) => {
+    if (isClosed(ev)) return;
     if (onEventClick) onEventClick(ev);
     else navigate(`/student/events/${ev.id}`);
   };
@@ -302,14 +304,17 @@ export default function EventsCalendar({
                     {dayEvents.map((ev) => {
                       const s = getEventStatus(ev, myReservationIds, reservationCounts, today);
                       const past = s === "past_or_full" && parseDateStr(ev.date) < today;
+                      const closed = isClosed(ev);
                       return (
                         <button
                           key={ev.id}
                           type="button"
                           onClick={() => handleEventClick(ev)}
+                          disabled={closed}
                           className={cn(
-                            "text-left rounded border bg-card hover:bg-muted/60 p-1.5 transition-colors",
-                            past && "opacity-60",
+                            "text-left rounded border bg-card p-1.5 transition-colors",
+                            closed ? "cursor-default opacity-60" : "hover:bg-muted/60",
+                            past && !closed && "opacity-60",
                           )}
                         >
                           <div className="flex items-start gap-1">
@@ -373,10 +378,15 @@ export default function EventsCalendar({
           const reserved = reservationCounts[ev.id] || 0;
           const remaining = Math.max(0, ev.max_capacity - reserved);
           const past = s === "past_or_full" && parseDateStr(ev.date) < today;
+          const closed = isClosed(ev);
           return (
             <Card
               key={ev.id}
-              className={cn("cursor-pointer hover:bg-muted/40 transition-colors", past && "opacity-60")}
+              className={cn(
+                "transition-colors",
+                closed ? "opacity-60 cursor-default" : "cursor-pointer hover:bg-muted/40",
+                past && !closed && "opacity-60",
+              )}
               onClick={() => handleEventClick(ev)}
             >
               <CardContent className="p-3 space-y-1.5">
@@ -515,14 +525,17 @@ export default function EventsCalendar({
                 const reserved = reservationCounts[ev.id] || 0;
                 const remaining = Math.max(0, ev.max_capacity - reserved);
                 const past = s === "past_or_full" && parseDateStr(ev.date) < today;
+                const closed = isClosed(ev);
                 return (
                   <button
                     key={ev.id}
                     type="button"
                     onClick={() => { setDayDialogDate(null); handleEventClick(ev); }}
+                    disabled={closed}
                     className={cn(
-                      "w-full text-left rounded-lg border p-3 hover:bg-muted/50 transition-colors",
-                      past && "opacity-60",
+                      "w-full text-left rounded-lg border p-3 transition-colors",
+                      closed ? "cursor-default opacity-60" : "hover:bg-muted/50",
+                      past && !closed && "opacity-60",
                     )}
                   >
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -545,9 +558,11 @@ export default function EventsCalendar({
                       )}
                       <span>{remaining} locuri libere</span>
                     </div>
-                    <div className="flex items-center justify-end mt-1.5 text-[11px] text-primary">
-                      Vezi detalii <ArrowRight className="ml-1 h-3 w-3" />
-                    </div>
+                    {!closed && (
+                      <div className="flex items-center justify-end mt-1.5 text-[11px] text-primary">
+                        Vezi detalii <ArrowRight className="ml-1 h-3 w-3" />
+                      </div>
+                    )}
                   </button>
                 );
               })}

@@ -99,14 +99,14 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
-  // All published, non-public events (same source as Events page)
+  // All published + closed (past) non-public events
   const { data: allEvents = [] } = useQuery({
     queryKey: ["dashboard_calendar_events"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
         .select("*")
-        .eq("status", "published")
+        .in("status", ["published", "closed"])
         .eq("published", true)
         .eq("is_public", false)
         .order("date", { ascending: true });
@@ -130,12 +130,14 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
-  // Filter events to those the student is eligible for OR has reserved
+  // Filter events to those the student is eligible for OR has reserved.
+  // Closed (past) events are always visible to everyone, as read-only entries.
   const calendarEvents = useMemo(() => {
     const reservedSet = new Set(myReservationsAll.map((r) => r.event_id));
     const classId = studentClass?.class_id;
     const grade = studentClass?.classes?.grade_number;
     return allEvents.filter((e) => {
+      if (e.status === "closed") return true;
       if (reservedSet.has(e.id)) return true;
       const eligibleClasses = (e.eligible_classes as string[] | null) || [];
       const eligibleGrades = (e.eligible_grades as number[] | null) || [];
@@ -358,6 +360,10 @@ export default function StudentDashboard() {
         myReservationIds={myReservedIdSet}
         reservationCounts={calendarReservationCounts}
         volunteerDays={calendarVolunteerDays}
+        onEventClick={(ev) => {
+          if (ev.status === "closed") return;
+          navigate(`/student/events/${ev.id}`);
+        }}
         onVolunteerClick={(v) =>
           navigate(v.enrolled ? `/student/volunteer/${v.project_id}` : `/student/volunteer/preview/${v.project_id}`)
         }
