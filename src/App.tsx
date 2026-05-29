@@ -55,6 +55,8 @@ import ProfEventsPage from "./pages/prof/ProfEventsPage";
 import ProfEventDetailPage from "./pages/prof/ProfEventDetailPage";
 import ProfScanPage from "./pages/prof/ProfScanPage";
 import ProfEventParticipantsPage from "./pages/prof/ProfEventParticipantsPage";
+import EventPreviewPage from "./pages/shared/EventPreviewPage";
+import VolunteerProjectPreviewPage from "./pages/shared/VolunteerProjectPreviewPage";
 
 import CoordinatorLayout from "./components/layouts/CoordinatorLayout";
 import CoordinatorDashboard from "./pages/coordinator/CoordinatorDashboard";
@@ -154,6 +156,7 @@ const App = () => (
               <Route path="/student/volunteer/:id" element={<VolunteerProjectDetailPage mode="student" />} />
               <Route path="/student/feedback" element={<StudentFeedbackPage />} />
               <Route path="/student/feedback/:id/fill" element={<FeedbackFillPage />} />
+              <Route path="/student/volunteer/preview/:id" element={<VolunteerProjectPreviewPage />} />
             </Route>
 
             {/* Teacher (profesor) routes */}
@@ -177,6 +180,8 @@ const App = () => (
               <Route path="/prof/feedback/:id/edit" element={<FeedbackEditorPage mode="teacher" />} />
               <Route path="/prof/feedback/:id/report" element={<FeedbackReportPage mode="teacher" />} />
               <Route path="/prof/feedback/:id/fill" element={<FeedbackFillPage />} />
+              <Route path="/prof/events/preview/:id" element={<EventPreviewPage />} />
+              <Route path="/prof/volunteer/preview/:id" element={<VolunteerProjectPreviewPage />} />
             </Route>
 
             {/* Homeroom teacher routes */}
@@ -189,6 +194,8 @@ const App = () => (
             >
               <Route path="/teacher" element={<TeacherDashboard />} />
               <Route path="/teacher/reports" element={<TeacherReportsPage />} />
+              <Route path="/teacher/events/preview/:id" element={<EventPreviewPage />} />
+              <Route path="/teacher/volunteer/preview/:id" element={<VolunteerProjectPreviewPage />} />
             </Route>
 
             {/* Coordinator routes */}

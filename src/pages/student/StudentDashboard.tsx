@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CalendarDays, Clock, Ticket, CheckCircle2, ArrowRight, HelpCircle, AlertTriangle, ScanLine } from "lucide-react";
 import PushNotificationPrompt from "@/components/PushNotificationPrompt";
-import EventsCalendar from "@/components/student/EventsCalendar";
+import EventsCalendar, { type VolunteerDayItem } from "@/components/student/EventsCalendar";
 import type { Tables } from "@/integrations/supabase/types";
 import { formatHoursVsRequired } from "@/lib/hours-format";
 
@@ -165,6 +165,60 @@ export default function StudentDashboard() {
     enabled: calendarEvents.length > 0,
   });
 
+  // Volunteer days for the calendar — all days from active projects, marked enrolled where relevant
+  const { data: calendarVolunteerDays = [] } = useQuery<VolunteerDayItem[]>({
+    queryKey: ["dashboard_volunteer_days", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data: projects, error: pErr } = await supabase
+        .from("volunteer_projects")
+        .select("id, name, eligible_grades, eligible_classes")
+        .eq("status", "active");
+      if (pErr) throw pErr;
+      if (!projects || projects.length === 0) return [];
+      const projectIds = projects.map((p: any) => p.id);
+
+      const { data: enrollments } = await supabase
+        .from("volunteer_enrollments")
+        .select("project_id, status")
+        .eq("student_id", user!.id)
+        .eq("status", "enrolled");
+      const enrolledSet = new Set((enrollments ?? []).map((e: any) => e.project_id));
+
+      const classId = studentClass?.class_id;
+      const grade = studentClass?.classes?.grade_number;
+      const eligibleProjects = projects.filter((p: any) => {
+        if (enrolledSet.has(p.id)) return true;
+        const ec = (p.eligible_classes as string[] | null) || [];
+        const eg = (p.eligible_grades as number[] | null) || [];
+        if (ec.length === 0 && eg.length === 0) return true;
+        if (classId && ec.includes(classId)) return true;
+        if (grade != null && eg.includes(grade)) return true;
+        return false;
+      });
+      const eligibleIds = eligibleProjects.map((p: any) => p.id);
+      if (eligibleIds.length === 0) return [];
+
+      const { data: days, error: dErr } = await supabase
+        .from("volunteer_days")
+        .select("id, project_id, date, start_time, end_time, location")
+        .in("project_id", eligibleIds)
+        .order("date", { ascending: true });
+      if (dErr) throw dErr;
+      const nameById = new Map(eligibleProjects.map((p: any) => [p.id, p.name]));
+      return (days ?? []).map((d: any) => ({
+        id: d.id,
+        project_id: d.project_id,
+        project_name: nameById.get(d.project_id) ?? "Proiect",
+        date: d.date,
+        start_time: d.start_time,
+        end_time: d.end_time,
+        location: d.location,
+        enrolled: enrolledSet.has(d.project_id),
+      }));
+    },
+  });
+
   return (
     <div className="space-y-6">
       <PushNotificationPrompt />
@@ -303,7 +357,12 @@ export default function StudentDashboard() {
         events={calendarEvents}
         myReservationIds={myReservedIdSet}
         reservationCounts={calendarReservationCounts}
+        volunteerDays={calendarVolunteerDays}
+        onVolunteerClick={(v) =>
+          navigate(v.enrolled ? `/student/volunteer/${v.project_id}` : `/student/volunteer/preview/${v.project_id}`)
+        }
       />
+
 
       {/* Upcoming reservations */}
       <div className="space-y-3">
