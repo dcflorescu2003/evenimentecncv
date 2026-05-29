@@ -360,6 +360,10 @@ export default function StudentDashboard() {
         myReservationIds={myReservedIdSet}
         reservationCounts={calendarReservationCounts}
         volunteerDays={calendarVolunteerDays}
+        onEventClick={(ev) => {
+          if (ev.status === "closed") return;
+          navigate(`/student/events/${ev.id}`);
+        }}
         onVolunteerClick={(v) =>
           navigate(v.enrolled ? `/student/volunteer/${v.project_id}` : `/student/volunteer/preview/${v.project_id}`)
         }
