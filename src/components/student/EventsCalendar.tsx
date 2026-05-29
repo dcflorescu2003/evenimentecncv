@@ -113,7 +113,9 @@ export default function EventsCalendar({
   const [currentDate, setCurrentDate] = useState<Date>(today);
   const [dayDialogDate, setDayDialogDate] = useState<Date | null>(null);
 
+  const isClosed = (ev: Event) => (ev as any).status === "closed";
   const handleEventClick = (ev: Event) => {
+    if (isClosed(ev)) return;
     if (onEventClick) onEventClick(ev);
     else navigate(`/student/events/${ev.id}`);
   };
