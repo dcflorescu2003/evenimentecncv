@@ -55,6 +55,8 @@ import ProfEventsPage from "./pages/prof/ProfEventsPage";
 import ProfEventDetailPage from "./pages/prof/ProfEventDetailPage";
 import ProfScanPage from "./pages/prof/ProfScanPage";
 import ProfEventParticipantsPage from "./pages/prof/ProfEventParticipantsPage";
+import EventPreviewPage from "./pages/shared/EventPreviewPage";
+import VolunteerProjectPreviewPage from "./pages/shared/VolunteerProjectPreviewPage";
 
 import CoordinatorLayout from "./components/layouts/CoordinatorLayout";
 import CoordinatorDashboard from "./pages/coordinator/CoordinatorDashboard";
