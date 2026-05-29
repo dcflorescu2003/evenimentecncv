@@ -304,14 +304,17 @@ export default function EventsCalendar({
                     {dayEvents.map((ev) => {
                       const s = getEventStatus(ev, myReservationIds, reservationCounts, today);
                       const past = s === "past_or_full" && parseDateStr(ev.date) < today;
+                      const closed = isClosed(ev);
                       return (
                         <button
                           key={ev.id}
                           type="button"
                           onClick={() => handleEventClick(ev)}
+                          disabled={closed}
                           className={cn(
-                            "text-left rounded border bg-card hover:bg-muted/60 p-1.5 transition-colors",
-                            past && "opacity-60",
+                            "text-left rounded border bg-card p-1.5 transition-colors",
+                            closed ? "cursor-default opacity-60" : "hover:bg-muted/60",
+                            past && !closed && "opacity-60",
                           )}
                         >
                           <div className="flex items-start gap-1">
