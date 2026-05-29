@@ -378,10 +378,15 @@ export default function EventsCalendar({
           const reserved = reservationCounts[ev.id] || 0;
           const remaining = Math.max(0, ev.max_capacity - reserved);
           const past = s === "past_or_full" && parseDateStr(ev.date) < today;
+          const closed = isClosed(ev);
           return (
             <Card
               key={ev.id}
-              className={cn("cursor-pointer hover:bg-muted/40 transition-colors", past && "opacity-60")}
+              className={cn(
+                "transition-colors",
+                closed ? "opacity-60 cursor-default" : "cursor-pointer hover:bg-muted/40",
+                past && !closed && "opacity-60",
+              )}
               onClick={() => handleEventClick(ev)}
             >
               <CardContent className="p-3 space-y-1.5">
