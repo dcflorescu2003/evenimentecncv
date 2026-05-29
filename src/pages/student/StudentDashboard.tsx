@@ -99,14 +99,14 @@ export default function StudentDashboard() {
     enabled: !!user,
   });
 
-  // All published, non-public events (same source as Events page)
+  // All published + closed (past) non-public events
   const { data: allEvents = [] } = useQuery({
     queryKey: ["dashboard_calendar_events"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
         .select("*")
-        .eq("status", "published")
+        .in("status", ["published", "closed"])
         .eq("published", true)
         .eq("is_public", false)
         .order("date", { ascending: true });
