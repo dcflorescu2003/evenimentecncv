@@ -230,6 +230,7 @@ export default function StudentPortfolioPage() {
           <TabsTrigger value="assignments">Teme</TabsTrigger>
           <TabsTrigger value="portfolio">Portofoliul meu</TabsTrigger>
           <TabsTrigger value="involvement">Implicare</TabsTrigger>
+          <TabsTrigger value="competitions">Concursuri</TabsTrigger>
         </TabsList>
 
         <TabsContent value="assignments" className="mt-4 space-y-2">
