@@ -11,6 +11,7 @@ import { ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import StudentPortfolioItemsTab from "@/components/portfolio/StudentPortfolioItemsTab";
 import StudentAssignmentsTab from "@/components/portfolio/StudentAssignmentsTab";
+import StudentInvolvementListForTeacher from "@/components/portfolio/StudentInvolvementListForTeacher";
 
 interface Note {
   id: string;
