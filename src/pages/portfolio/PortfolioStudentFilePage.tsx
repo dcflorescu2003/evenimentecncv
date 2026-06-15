@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import StudentPortfolioItemsTab from "@/components/portfolio/StudentPortfolioItemsTab";
 import StudentAssignmentsTab from "@/components/portfolio/StudentAssignmentsTab";
 import StudentInvolvementListForTeacher from "@/components/portfolio/StudentInvolvementListForTeacher";
+import StudentCompetitionsListForTeacher from "@/components/portfolio/StudentCompetitionsListForTeacher";
 
 interface Note {
   id: string;
