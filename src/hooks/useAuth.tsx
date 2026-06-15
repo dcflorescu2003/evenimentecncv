@@ -139,15 +139,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setProfile(null);
     setRoles([]);
+    setModuleAccess([]);
   }
 
   function hasRole(role: AppRole) {
     return roles.includes(role);
   }
 
+  function hasModuleAccess(key: string) {
+    return roles.includes("admin") || moduleAccess.includes(key);
+  }
+
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, roles, loading, signIn, signOut, hasRole }}
+      value={{ session, user, profile, roles, moduleAccess, loading, signIn, signOut, hasRole, hasModuleAccess }}
     >
       {children}
     </AuthContext.Provider>
