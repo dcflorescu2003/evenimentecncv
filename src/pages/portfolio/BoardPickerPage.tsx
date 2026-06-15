@@ -169,7 +169,7 @@ export default function BoardPickerPage() {
         student_id: picked.id,
         picked_on: TODAY(),
         lesson: lesson.trim() || null,
-        mode,
+        mode: mode as any,
         score: score ? Number(score) : null,
         note: note.trim() || null,
         attach_to_portfolio: attach,
