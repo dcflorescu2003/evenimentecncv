@@ -91,6 +91,8 @@ import PortfolioAssignmentsPage from "./pages/portfolio/PortfolioAssignmentsPage
 import PortfolioAssignmentDetailPage from "./pages/portfolio/PortfolioAssignmentDetailPage";
 import PortfolioInvolvementPage from "./pages/portfolio/PortfolioInvolvementPage";
 import BoardPickerPage from "./pages/portfolio/BoardPickerPage";
+import PortfolioCompetitionsPage from "./pages/portfolio/PortfolioCompetitionsPage";
+import PortfolioCompetitionDetailPage from "./pages/portfolio/PortfolioCompetitionDetailPage";
 import StudentPortfolioPage from "./pages/student/StudentPortfolioPage";
 
 const queryClient = new QueryClient();
@@ -259,6 +261,8 @@ const App = () => (
               <Route path="/portfolio/assignments/:id" element={<PortfolioAssignmentDetailPage />} />
               <Route path="/portfolio/involvement" element={<PortfolioInvolvementPage />} />
               <Route path="/portfolio/board-picker" element={<BoardPickerPage />} />
+              <Route path="/portfolio/competitions" element={<PortfolioCompetitionsPage />} />
+              <Route path="/portfolio/competitions/:id" element={<PortfolioCompetitionDetailPage />} />
             </Route>
 
             {/* Public routes (no auth) */}

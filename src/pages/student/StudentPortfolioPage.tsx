@@ -18,6 +18,7 @@ import {
   validatePortfolioFile, statusColor, statusLabel,
 } from "@/lib/portfolio";
 import StudentInvolvementTab from "@/components/portfolio/StudentInvolvementTab";
+import StudentCompetitionsTab from "@/components/portfolio/StudentCompetitionsTab";
 
 interface AssignmentRow {
   id: string;
@@ -229,6 +230,7 @@ export default function StudentPortfolioPage() {
           <TabsTrigger value="assignments">Teme</TabsTrigger>
           <TabsTrigger value="portfolio">Portofoliul meu</TabsTrigger>
           <TabsTrigger value="involvement">Implicare</TabsTrigger>
+          <TabsTrigger value="competitions">Concursuri</TabsTrigger>
         </TabsList>
 
         <TabsContent value="assignments" className="mt-4 space-y-2">
@@ -328,6 +330,10 @@ export default function StudentPortfolioPage() {
 
         <TabsContent value="involvement" className="mt-4">
           <StudentInvolvementTab />
+        </TabsContent>
+
+        <TabsContent value="competitions" className="mt-4">
+          <StudentCompetitionsTab />
         </TabsContent>
       </Tabs>
 

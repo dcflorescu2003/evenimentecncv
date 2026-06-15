@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import StudentPortfolioItemsTab from "@/components/portfolio/StudentPortfolioItemsTab";
 import StudentAssignmentsTab from "@/components/portfolio/StudentAssignmentsTab";
 import StudentInvolvementListForTeacher from "@/components/portfolio/StudentInvolvementListForTeacher";
+import StudentCompetitionsListForTeacher from "@/components/portfolio/StudentCompetitionsListForTeacher";
 
 interface Note {
   id: string;
@@ -19,15 +20,8 @@ interface Note {
   created_at: string;
 }
 
-function ComingSoon({ stage }: { stage: string }) {
-  return (
-    <Card>
-      <CardContent className="p-6 text-center text-sm text-muted-foreground">
-        Această secțiune va fi disponibilă în {stage}.
-      </CardContent>
-    </Card>
-  );
-}
+
+
 
 export default function PortfolioStudentFilePage() {
   const { classId, studentId } = useParams<{ classId: string; studentId: string }>();
@@ -129,7 +123,7 @@ export default function PortfolioStudentFilePage() {
           {studentId && <StudentInvolvementListForTeacher studentId={studentId} />}
         </TabsContent>
         <TabsContent value="competitions" className="mt-4">
-          <ComingSoon stage="etapa 4" />
+          {studentId && <StudentCompetitionsListForTeacher studentId={studentId} />}
         </TabsContent>
 
         <TabsContent value="notes" className="mt-4 space-y-4">
