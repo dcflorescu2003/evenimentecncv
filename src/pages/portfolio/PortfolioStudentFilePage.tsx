@@ -20,15 +20,8 @@ interface Note {
   created_at: string;
 }
 
-function ComingSoon({ stage }: { stage: string }) {
-  return (
-    <Card>
-      <CardContent className="p-6 text-center text-sm text-muted-foreground">
-        Această secțiune va fi disponibilă în {stage}.
-      </CardContent>
-    </Card>
-  );
-}
+
+
 
 export default function PortfolioStudentFilePage() {
   const { classId, studentId } = useParams<{ classId: string; studentId: string }>();
