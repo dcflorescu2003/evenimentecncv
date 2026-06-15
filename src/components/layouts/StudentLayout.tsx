@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake, Users, MessageSquare, Inbox } from "lucide-react";
+import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake, Users, MessageSquare, Inbox, FolderKanban, ClipboardList } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
@@ -28,6 +28,10 @@ const feedbackNav = [
   { title: "Feedbackul meu", icon: Inbox, path: "/student/feedback", tab: "mine" },
 ];
 
+const portfolioNav = [
+  { title: "Portofoliu", icon: FolderKanban, path: "/student/portfolio" },
+];
+
 export default function StudentLayout() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
@@ -36,7 +40,8 @@ export default function StudentLayout() {
   const isSchedule = location.pathname.startsWith("/student/orar");
   const isClubs = location.pathname.startsWith("/student/clubs") || location.pathname.startsWith("/student/volunteer");
   const isFeedback = location.pathname.startsWith("/student/feedback");
-  const navItems = isFeedback ? feedbackNav : isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
+  const isPortfolio = location.pathname.startsWith("/student/portfolio");
+  const navItems = isPortfolio ? portfolioNav : isFeedback ? feedbackNav : isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
   const useTabs = isClubs || isFeedback;
   const currentTab = new URLSearchParams(location.search).get("tab") ?? "dashboard";
 

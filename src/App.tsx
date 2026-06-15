@@ -167,6 +167,7 @@ const App = () => (
               <Route path="/student/feedback" element={<StudentFeedbackPage />} />
               <Route path="/student/feedback/:id/fill" element={<FeedbackFillPage />} />
               <Route path="/student/volunteer/preview/:id" element={<VolunteerProjectPreviewPage />} />
+              <Route path="/student/portfolio" element={<StudentPortfolioPage />} />
             </Route>
 
             {/* Teacher (profesor) routes */}
@@ -252,6 +253,8 @@ const App = () => (
               <Route path="/portfolio/classes" element={<PortfolioClassesPage />} />
               <Route path="/portfolio/classes/:classId" element={<PortfolioStudentListPage />} />
               <Route path="/portfolio/classes/:classId/students/:studentId" element={<PortfolioStudentFilePage />} />
+              <Route path="/portfolio/assignments" element={<PortfolioAssignmentsPage />} />
+              <Route path="/portfolio/assignments/:id" element={<PortfolioAssignmentDetailPage />} />
             </Route>
 
             {/* Public routes (no auth) */}
