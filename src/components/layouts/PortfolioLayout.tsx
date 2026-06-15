@@ -9,13 +9,15 @@ export default function PortfolioLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const navItems = [
+  const navItemsRow1 = [
     { title: "Dashboard", icon: LayoutDashboard, path: "/portfolio" },
     { title: "Clase și elevi", icon: Users2, path: "/portfolio/classes" },
     { title: "Teme", icon: ClipboardList, path: "/portfolio/assignments" },
     { title: "Implicare", icon: HeartHandshake, path: "/portfolio/involvement" },
     { title: "Concursuri", icon: Trophy, path: "/portfolio/competitions" },
     { title: "Cine iese la tablă", icon: Dice5, path: "/portfolio/board-picker" },
+  ];
+  const navItemsRow2 = [
     { title: "Documente", icon: FileText, path: "/portfolio/documents" },
     { title: "Jurnal", icon: BookOpen, path: "/portfolio/journal" },
     { title: "Portofoliul meu", icon: User, path: "/portfolio/teacher" },
