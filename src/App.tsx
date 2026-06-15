@@ -93,6 +93,9 @@ import PortfolioInvolvementPage from "./pages/portfolio/PortfolioInvolvementPage
 import BoardPickerPage from "./pages/portfolio/BoardPickerPage";
 import PortfolioCompetitionsPage from "./pages/portfolio/PortfolioCompetitionsPage";
 import PortfolioCompetitionDetailPage from "./pages/portfolio/PortfolioCompetitionDetailPage";
+import PortfolioDocumentsPage from "./pages/portfolio/PortfolioDocumentsPage";
+import PortfolioJournalPage from "./pages/portfolio/PortfolioJournalPage";
+import PortfolioTeacherPage from "./pages/portfolio/PortfolioTeacherPage";
 import StudentPortfolioPage from "./pages/student/StudentPortfolioPage";
 
 const queryClient = new QueryClient();
