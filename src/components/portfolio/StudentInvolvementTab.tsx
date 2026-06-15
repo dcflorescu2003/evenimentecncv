@@ -91,7 +91,7 @@ export default function StudentInvolvementTab() {
       const { error } = await supabase.from("portfolio_involvement").insert({
         student_id: user!.id,
         teacher_id: teacherId,
-        type,
+        type: type as any,
         description: desc.trim(),
         hours: hours ? Number(hours) : null,
         occurred_on: date || null,
