@@ -1310,6 +1310,128 @@ export type Database = {
           },
         ]
       }
+      portfolio_competition_signups: {
+        Row: {
+          attach_to_portfolio: boolean
+          award: string | null
+          competition_id: string
+          created_at: string
+          diploma_name: string | null
+          diploma_path: string | null
+          id: string
+          notes: string | null
+          project_name: string | null
+          project_path: string | null
+          result: string | null
+          score: number | null
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          attach_to_portfolio?: boolean
+          award?: string | null
+          competition_id: string
+          created_at?: string
+          diploma_name?: string | null
+          diploma_path?: string | null
+          id?: string
+          notes?: string | null
+          project_name?: string | null
+          project_path?: string | null
+          result?: string | null
+          score?: number | null
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          attach_to_portfolio?: boolean
+          award?: string | null
+          competition_id?: string
+          created_at?: string
+          diploma_name?: string | null
+          diploma_path?: string | null
+          id?: string
+          notes?: string | null
+          project_name?: string | null
+          project_path?: string | null
+          result?: string | null
+          score?: number | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_competition_signups_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_competitions: {
+        Row: {
+          academic_year: string | null
+          class_ids: string[]
+          created_at: string
+          description: string | null
+          difficulty: string
+          event_date: string | null
+          id: string
+          location: string | null
+          regulation_url: string | null
+          seats: number | null
+          signup_deadline: string | null
+          status: string
+          teacher_id: string
+          team_mode: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string | null
+          class_ids?: string[]
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          event_date?: string | null
+          id?: string
+          location?: string | null
+          regulation_url?: string | null
+          seats?: number | null
+          signup_deadline?: string | null
+          status?: string
+          teacher_id: string
+          team_mode?: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string | null
+          class_ids?: string[]
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          event_date?: string | null
+          id?: string
+          location?: string | null
+          regulation_url?: string | null
+          seats?: number | null
+          signup_deadline?: string | null
+          status?: string
+          teacher_id?: string
+          team_mode?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       portfolio_involvement: {
         Row: {
           academic_year: string | null
