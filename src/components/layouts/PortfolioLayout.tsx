@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FolderKanban, LayoutDashboard, Users2, ClipboardList, LogOut } from "lucide-react";
+import { FolderKanban, LayoutDashboard, Users2, ClipboardList, HeartHandshake, Dice5, LogOut } from "lucide-react";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 
 export default function PortfolioLayout() {
@@ -13,6 +13,8 @@ export default function PortfolioLayout() {
     { title: "Dashboard", icon: LayoutDashboard, path: "/portfolio" },
     { title: "Clase și elevi", icon: Users2, path: "/portfolio/classes" },
     { title: "Teme", icon: ClipboardList, path: "/portfolio/assignments" },
+    { title: "Implicare", icon: HeartHandshake, path: "/portfolio/involvement" },
+    { title: "Cine iese la tablă", icon: Dice5, path: "/portfolio/board-picker" },
   ];
 
   const isActive = (path: string) =>

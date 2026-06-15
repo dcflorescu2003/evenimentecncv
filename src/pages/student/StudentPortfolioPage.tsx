@@ -17,6 +17,7 @@ import {
   formatBytes, getPortfolioFileUrl, uploadSubmissionFile, deletePortfolioFile,
   validatePortfolioFile, statusColor, statusLabel,
 } from "@/lib/portfolio";
+import StudentInvolvementTab from "@/components/portfolio/StudentInvolvementTab";
 
 interface AssignmentRow {
   id: string;
@@ -227,6 +228,7 @@ export default function StudentPortfolioPage() {
         <TabsList>
           <TabsTrigger value="assignments">Teme</TabsTrigger>
           <TabsTrigger value="portfolio">Portofoliul meu</TabsTrigger>
+          <TabsTrigger value="involvement">Implicare</TabsTrigger>
         </TabsList>
 
         <TabsContent value="assignments" className="mt-4 space-y-2">
@@ -322,6 +324,10 @@ export default function StudentPortfolioPage() {
               </Card>
             ))
           )}
+        </TabsContent>
+
+        <TabsContent value="involvement" className="mt-4">
+          <StudentInvolvementTab />
         </TabsContent>
       </Tabs>
 

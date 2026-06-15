@@ -89,6 +89,8 @@ import PortfolioStudentListPage from "./pages/portfolio/PortfolioStudentListPage
 import PortfolioStudentFilePage from "./pages/portfolio/PortfolioStudentFilePage";
 import PortfolioAssignmentsPage from "./pages/portfolio/PortfolioAssignmentsPage";
 import PortfolioAssignmentDetailPage from "./pages/portfolio/PortfolioAssignmentDetailPage";
+import PortfolioInvolvementPage from "./pages/portfolio/PortfolioInvolvementPage";
+import BoardPickerPage from "./pages/portfolio/BoardPickerPage";
 import StudentPortfolioPage from "./pages/student/StudentPortfolioPage";
 
 const queryClient = new QueryClient();
@@ -255,6 +257,8 @@ const App = () => (
               <Route path="/portfolio/classes/:classId/students/:studentId" element={<PortfolioStudentFilePage />} />
               <Route path="/portfolio/assignments" element={<PortfolioAssignmentsPage />} />
               <Route path="/portfolio/assignments/:id" element={<PortfolioAssignmentDetailPage />} />
+              <Route path="/portfolio/involvement" element={<PortfolioInvolvementPage />} />
+              <Route path="/portfolio/board-picker" element={<BoardPickerPage />} />
             </Route>
 
             {/* Public routes (no auth) */}

@@ -1240,6 +1240,148 @@ export type Database = {
           },
         ]
       }
+      portfolio_board_picks: {
+        Row: {
+          academic_year: string | null
+          attach_to_portfolio: boolean
+          class_id: string
+          created_at: string
+          id: string
+          lesson: string | null
+          mode: Database["public"]["Enums"]["portfolio_board_pick_mode"]
+          note: string | null
+          picked_on: string
+          score: number | null
+          student_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string | null
+          attach_to_portfolio?: boolean
+          class_id: string
+          created_at?: string
+          id?: string
+          lesson?: string | null
+          mode?: Database["public"]["Enums"]["portfolio_board_pick_mode"]
+          note?: string | null
+          picked_on?: string
+          score?: number | null
+          student_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string | null
+          attach_to_portfolio?: boolean
+          class_id?: string
+          created_at?: string
+          id?: string
+          lesson?: string | null
+          mode?: Database["public"]["Enums"]["portfolio_board_pick_mode"]
+          note?: string | null
+          picked_on?: string
+          score?: number | null
+          student_id?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_board_picks_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_board_picks_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_board_picks_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_involvement: {
+        Row: {
+          academic_year: string | null
+          attach_to_portfolio: boolean
+          created_at: string
+          created_by: string
+          description: string
+          hours: number | null
+          id: string
+          occurred_on: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["portfolio_involvement_status"]
+          student_id: string
+          teacher_id: string
+          teacher_note: string | null
+          type: Database["public"]["Enums"]["portfolio_involvement_type"]
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string | null
+          attach_to_portfolio?: boolean
+          created_at?: string
+          created_by: string
+          description: string
+          hours?: number | null
+          id?: string
+          occurred_on?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["portfolio_involvement_status"]
+          student_id: string
+          teacher_id: string
+          teacher_note?: string | null
+          type: Database["public"]["Enums"]["portfolio_involvement_type"]
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string | null
+          attach_to_portfolio?: boolean
+          created_at?: string
+          created_by?: string
+          description?: string
+          hours?: number | null
+          id?: string
+          occurred_on?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["portfolio_involvement_status"]
+          student_id?: string
+          teacher_id?: string
+          teacher_note?: string | null
+          type?: Database["public"]["Enums"]["portfolio_involvement_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_involvement_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_involvement_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portfolio_items: {
         Row: {
           academic_year: string | null
@@ -2355,6 +2497,22 @@ export type Database = {
       file_category: "event_dossier" | "form_template"
       form_submission_status: "uploaded" | "reviewed" | "accepted" | "rejected"
       import_batch_status: "pending" | "processing" | "completed" | "failed"
+      portfolio_board_pick_mode:
+        | "random"
+        | "balanced"
+        | "no_repeat"
+        | "no_absent"
+        | "no_today"
+        | "manual"
+      portfolio_involvement_status: "pending" | "approved" | "rejected"
+      portfolio_involvement_type:
+        | "voluntariat"
+        | "ajutor"
+        | "proiect"
+        | "eveniment"
+        | "sprijin"
+        | "club"
+        | "materiale"
       reservation_status: "reserved" | "cancelled"
       session_status: "draft" | "active" | "closed" | "archived"
       ticket_status:
@@ -2519,6 +2677,24 @@ export const Constants = {
       file_category: ["event_dossier", "form_template"],
       form_submission_status: ["uploaded", "reviewed", "accepted", "rejected"],
       import_batch_status: ["pending", "processing", "completed", "failed"],
+      portfolio_board_pick_mode: [
+        "random",
+        "balanced",
+        "no_repeat",
+        "no_absent",
+        "no_today",
+        "manual",
+      ],
+      portfolio_involvement_status: ["pending", "approved", "rejected"],
+      portfolio_involvement_type: [
+        "voluntariat",
+        "ajutor",
+        "proiect",
+        "eveniment",
+        "sprijin",
+        "club",
+        "materiale",
+      ],
       reservation_status: ["reserved", "cancelled"],
       session_status: ["draft", "active", "closed", "archived"],
       ticket_status: [
