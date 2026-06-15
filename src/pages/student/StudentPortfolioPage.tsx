@@ -17,6 +17,7 @@ import {
   formatBytes, getPortfolioFileUrl, uploadSubmissionFile, deletePortfolioFile,
   validatePortfolioFile, statusColor, statusLabel,
 } from "@/lib/portfolio";
+import StudentInvolvementTab from "@/components/portfolio/StudentInvolvementTab";
 
 interface AssignmentRow {
   id: string;
