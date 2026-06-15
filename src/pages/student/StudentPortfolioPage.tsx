@@ -18,6 +18,7 @@ import {
   validatePortfolioFile, statusColor, statusLabel,
 } from "@/lib/portfolio";
 import StudentInvolvementTab from "@/components/portfolio/StudentInvolvementTab";
+import StudentCompetitionsTab from "@/components/portfolio/StudentCompetitionsTab";
 
 interface AssignmentRow {
   id: string;
