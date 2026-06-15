@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [moduleAccess, setModuleAccess] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const authRequestRef = useRef(0);
 
