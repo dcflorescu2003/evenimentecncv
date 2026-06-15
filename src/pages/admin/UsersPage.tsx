@@ -745,6 +745,18 @@ export default function UsersPage() {
                 </div>
               </>
             )}
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <Label className="cursor-pointer">Acces modul Portofoliu</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Permite acestui utilizator să vadă și să folosească modulul Portofoliu.
+                </p>
+              </div>
+              <Checkbox
+                checked={portfolioAccess}
+                onCheckedChange={(c) => setPortfolioAccess(!!c)}
+              />
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Anulează</Button>
               <Button type="submit" disabled={editUserMutation.isPending}>
