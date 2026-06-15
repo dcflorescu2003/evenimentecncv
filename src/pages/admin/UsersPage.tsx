@@ -267,12 +267,28 @@ export default function UsersPage() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+
+      // Sync portfolio module access
+      if (portfolioAccess && !portfolioInitial) {
+        const { error: insErr } = await supabase
+          .from("module_access")
+          .insert({ user_id: id, module_key: "portfolio" });
+        if (insErr) throw insErr;
+      } else if (!portfolioAccess && portfolioInitial) {
+        const { error: delErr } = await supabase
+          .from("module_access")
+          .delete()
+          .eq("user_id", id)
+          .eq("module_key", "portfolio");
+        if (delErr) throw delErr;
+      }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user_roles"] });
       queryClient.invalidateQueries({ queryKey: ["teacher_subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["module_access_all"] });
       setEditUser(null);
       toast.success("Utilizator actualizat");
     },
