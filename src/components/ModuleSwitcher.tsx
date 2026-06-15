@@ -18,6 +18,7 @@ interface Props {
 }
 
 function detectCurrentKey(pathname: string): string {
+  if (pathname.startsWith("/portfolio")) return "portfolio";
   if (
     pathname.startsWith("/admin/feedback") ||
     pathname.startsWith("/prof/feedback") ||
@@ -39,9 +40,9 @@ function detectCurrentKey(pathname: string): string {
 export function ModuleSwitcher({ variant = "icon", className }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { roles } = useAuth();
+  const { roles, moduleAccess } = useAuth();
 
-  const modules = getEnabledModules(roles ?? []);
+  const modules = getEnabledModules(roles ?? [], moduleAccess ?? []);
   const detectedKey = detectCurrentKey(location.pathname);
   const current =
     modules.find((m) => m.module.key === detectedKey) ??
