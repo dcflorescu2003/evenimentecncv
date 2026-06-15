@@ -76,12 +76,32 @@ export default function PortfolioDashboard() {
     },
   });
 
+  const { data: competitionStats = { active: 0, signups: 0 } } = useQuery({
+    queryKey: ["portfolio_dashboard_competitions", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data: comps, error } = await supabase
+        .from("portfolio_competitions")
+        .select("id, status")
+        .eq("teacher_id", user!.id);
+      if (error) throw error;
+      const active = (comps ?? []).filter((c) => c.status === "active").length;
+      const ids = (comps ?? []).map((c) => c.id);
+      if (ids.length === 0) return { active, signups: 0 };
+      const { count } = await supabase
+        .from("portfolio_competition_signups")
+        .select("id", { count: "exact", head: true })
+        .in("competition_id", ids);
+      return { active, signups: count ?? 0 };
+    },
+  });
+
   const stats: StatCard[] = [
     { label: "Clase curente", value: classCount, icon: Users2, hint: "Gestionate de tine" },
     { label: "Teme active", value: activeAssignmentCount, icon: ClipboardList, hint: "Neînarhivate" },
     { label: "Lucrări nevalidate", value: pendingCount, icon: Inbox, hint: "Trimiteri în așteptare" },
     { label: "Implicare în așteptare", value: involvementPending, icon: HeartHandshake, hint: "Declarații elevi" },
-    { label: "Elevi la concursuri", value: 0, icon: Trophy, hint: "Disponibil în etapa 4" },
+    { label: "Concursuri active", value: competitionStats.active, icon: Trophy, hint: `${competitionStats.signups} elevi înscriși` },
     { label: "Documente cu termen", value: 0, icon: FileText, hint: "Disponibil în etapa 5" },
     { label: "Activități recente", value: 0, icon: Activity, hint: "Disponibil în etapa 5" },
     { label: "Notificări", value: 0, icon: Bell, hint: "Disponibil ulterior" },
