@@ -19,10 +19,12 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   roles: AppRole[];
+  moduleAccess: string[];
   loading: boolean;
   signIn: (username: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
+  hasModuleAccess: (key: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
