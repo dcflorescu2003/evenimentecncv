@@ -57,6 +57,20 @@ export default function UsersPage() {
   const [editNormValue, setEditNormValue] = useState("");
   const [editUser, setEditUser] = useState<Profile | null>(null);
   const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "", initials: "", roles: [] as string[], subject_ids: [] as string[] });
+  const [portfolioAccess, setPortfolioAccess] = useState(false);
+  const [portfolioInitial, setPortfolioInitial] = useState(false);
+
+  const { data: allModuleAccess = [] } = useQuery({
+    queryKey: ["module_access_all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("module_access").select("user_id, module_key");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const portfolioUserIds = new Set(
+    allModuleAccess.filter((m) => m.module_key === "portfolio").map((m) => m.user_id),
+  );
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["profiles"],
