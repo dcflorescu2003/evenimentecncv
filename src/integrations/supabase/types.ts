@@ -2630,6 +2630,10 @@ export type Database = {
         Args: { _path: string; _user_id: string }
         Returns: boolean
       }
+      can_modify_ticket_attendance: {
+        Args: { _ticket_id: string; _user_id: string }
+        Returns: boolean
+      }
       check_booking_eligibility: {
         Args: { _event_id: string; _student_id: string }
         Returns: Json
@@ -2681,6 +2685,13 @@ export type Database = {
       get_form_id_for_response: {
         Args: { _response_id: string }
         Returns: string
+      }
+      get_profile_emails: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          email: string
+          id: string
+        }[]
       }
       get_project_id_for_day: { Args: { _day_id: string }; Returns: string }
       get_response_meta: {
