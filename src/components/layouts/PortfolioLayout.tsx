@@ -9,13 +9,15 @@ export default function PortfolioLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const navItems = [
+  const navItemsRow1 = [
     { title: "Dashboard", icon: LayoutDashboard, path: "/portfolio" },
     { title: "Clase și elevi", icon: Users2, path: "/portfolio/classes" },
     { title: "Teme", icon: ClipboardList, path: "/portfolio/assignments" },
     { title: "Implicare", icon: HeartHandshake, path: "/portfolio/involvement" },
     { title: "Concursuri", icon: Trophy, path: "/portfolio/competitions" },
     { title: "Cine iese la tablă", icon: Dice5, path: "/portfolio/board-picker" },
+  ];
+  const navItemsRow2 = [
     { title: "Documente", icon: FileText, path: "/portfolio/documents" },
     { title: "Jurnal", icon: BookOpen, path: "/portfolio/journal" },
     { title: "Portofoliul meu", icon: User, path: "/portfolio/teacher" },
@@ -51,18 +53,33 @@ export default function PortfolioLayout() {
         </div>
       </header>
       <div className="h-header-safe shrink-0" aria-hidden="true" />
-      <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-30 flex items-center gap-1 sm:gap-2 border-b bg-card px-2 sm:px-4 py-2 overflow-x-auto whitespace-nowrap">
-        {navItems.map((item) => (
-          <Button
-            key={item.path}
-            variant={isActive(item.path) ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => navigate(item.path)}
-          >
-            <item.icon className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{item.title}</span>
-          </Button>
-        ))}
+      <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-30 flex flex-col border-b bg-card">
+        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 overflow-x-auto whitespace-nowrap">
+          {navItemsRow1.map((item) => (
+            <Button
+              key={item.path}
+              variant={isActive(item.path) ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => navigate(item.path)}
+            >
+              <item.icon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{item.title}</span>
+            </Button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 border-t overflow-x-auto whitespace-nowrap">
+          {navItemsRow2.map((item) => (
+            <Button
+              key={item.path}
+              variant={isActive(item.path) ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => navigate(item.path)}
+            >
+              <item.icon className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{item.title}</span>
+            </Button>
+          ))}
+        </div>
       </div>
       <main className="flex-1 overflow-auto p-3 sm:p-4 pb-safe">
         <Outlet />
