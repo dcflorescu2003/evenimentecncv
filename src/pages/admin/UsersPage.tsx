@@ -290,6 +290,9 @@ export default function UsersPage() {
       roles: getRoles(p.id),
       subject_ids: getTeacherSubjectIds(p.id),
     });
+    const hasPortfolio = portfolioUserIds.has(p.id);
+    setPortfolioAccess(hasPortfolio);
+    setPortfolioInitial(hasPortfolio);
   }
 
   const deleteUserMutation = useMutation({
