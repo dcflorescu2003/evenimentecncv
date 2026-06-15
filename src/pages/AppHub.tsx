@@ -6,9 +6,9 @@ import { LogOut, GraduationCap } from "lucide-react";
 import { getEnabledModules } from "@/modules/registry";
 
 export default function AppHub() {
-  const { profile, roles, signOut } = useAuth();
+  const { profile, roles, moduleAccess, signOut } = useAuth();
   const navigate = useNavigate();
-  const items = getEnabledModules(roles);
+  const items = getEnabledModules(roles, moduleAccess);
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/30">
