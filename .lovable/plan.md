@@ -145,3 +145,12 @@ După confirmare, încep imediat etapa 1.
 1. Ok  
 2. Clasele momentan sunt introduse manual  
 3. Doar cele aprobate
+
+---
+
+## Stare implementare
+- Etapa 1 — ✅ implementată
+- Etapa 2 — ✅ implementată
+- Etapa 3 — ✅ implementată
+- Etapa 4 — ✅ implementată (concursuri + înscrieri elevi + diplome auto în portofoliu)
+- Etapele 5–6 — în așteptare
