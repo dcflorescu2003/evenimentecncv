@@ -325,6 +325,10 @@ export default function StudentPortfolioPage() {
             ))
           )}
         </TabsContent>
+
+        <TabsContent value="involvement" className="mt-4">
+          <StudentInvolvementTab />
+        </TabsContent>
       </Tabs>
 
       <Dialog open={!!active} onOpenChange={(o) => !o && setActive(null)}>
