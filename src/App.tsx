@@ -237,6 +237,20 @@ const App = () => (
               <Route path="/manager/ismb-report" element={<ISMBReportPage />} />
             </Route>
 
+            {/* Portfolio module (gated by module_access) */}
+            <Route
+              element={
+                <PortfolioRoute>
+                  <PortfolioLayout />
+                </PortfolioRoute>
+              }
+            >
+              <Route path="/portfolio" element={<PortfolioDashboard />} />
+              <Route path="/portfolio/classes" element={<PortfolioClassesPage />} />
+              <Route path="/portfolio/classes/:classId" element={<PortfolioStudentListPage />} />
+              <Route path="/portfolio/classes/:classId/students/:studentId" element={<PortfolioStudentFilePage />} />
+            </Route>
+
             {/* Public routes (no auth) */}
             <Route path="/public/events" element={<PublicEventsPage />} />
             <Route path="/public/events/:id" element={<PublicEventBookingPage />} />
