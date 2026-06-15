@@ -81,6 +81,14 @@ import PrivacyPolicyPage from "./pages/public/PrivacyPolicyPage";
 import SupportPage from "./pages/public/SupportPage";
 import UnsubscribePage from "./pages/public/UnsubscribePage";
 
+import PortfolioLayout from "./components/layouts/PortfolioLayout";
+import { PortfolioRoute } from "./components/PortfolioRoute";
+import PortfolioDashboard from "./pages/portfolio/PortfolioDashboard";
+import PortfolioClassesPage from "./pages/portfolio/PortfolioClassesPage";
+import PortfolioStudentListPage from "./pages/portfolio/PortfolioStudentListPage";
+import PortfolioStudentFilePage from "./pages/portfolio/PortfolioStudentFilePage";
+import UnsubscribePage from "./pages/public/UnsubscribePage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
