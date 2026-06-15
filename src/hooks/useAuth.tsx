@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
 
       try {
-        const [profileRes, rolesRes] = await Promise.all([
+        const [profileRes, rolesRes, modulesRes] = await Promise.all([
           supabase
             .from("profiles")
             .select("id, first_name, last_name, username, display_name, is_active, must_change_password")
@@ -70,6 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           supabase
             .from("user_roles")
             .select("role")
+            .eq("user_id", nextSession.user.id),
+          supabase
+            .from("module_access")
+            .select("module_key")
             .eq("user_id", nextSession.user.id),
         ]);
 
@@ -81,9 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (rolesRes.error) {
           console.error("Failed to load roles", rolesRes.error);
         }
+        if (modulesRes.error) {
+          console.error("Failed to load module access", modulesRes.error);
+        }
 
         setProfile((profileRes.data as Profile | null) ?? null);
         setRoles((rolesRes.data ?? []).map((r: { role: string }) => r.role as AppRole));
+        setModuleAccess((modulesRes.data ?? []).map((m: { module_key: string }) => m.module_key));
       } finally {
         if (isMounted && authRequestRef.current === requestId) {
           setLoading(false);
