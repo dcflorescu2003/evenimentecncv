@@ -266,6 +266,9 @@ const App = () => (
               <Route path="/portfolio/board-picker" element={<BoardPickerPage />} />
               <Route path="/portfolio/competitions" element={<PortfolioCompetitionsPage />} />
               <Route path="/portfolio/competitions/:id" element={<PortfolioCompetitionDetailPage />} />
+              <Route path="/portfolio/documents" element={<PortfolioDocumentsPage />} />
+              <Route path="/portfolio/journal" element={<PortfolioJournalPage />} />
+              <Route path="/portfolio/teacher" element={<PortfolioTeacherPage />} />
             </Route>
 
             {/* Public routes (no auth) */}
