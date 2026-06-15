@@ -19,10 +19,12 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   roles: AppRole[];
+  moduleAccess: string[];
   loading: boolean;
   signIn: (username: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
+  hasModuleAccess: (key: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -32,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [moduleAccess, setModuleAccess] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const authRequestRef = useRef(0);
 
@@ -45,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setProfile(null);
       setRoles([]);
+      setModuleAccess([]);
       setLoading(false);
     };
 
@@ -57,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
 
       try {
-        const [profileRes, rolesRes] = await Promise.all([
+        const [profileRes, rolesRes, modulesRes] = await Promise.all([
           supabase
             .from("profiles")
             .select("id, first_name, last_name, username, display_name, is_active, must_change_password")
@@ -66,6 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           supabase
             .from("user_roles")
             .select("role")
+            .eq("user_id", nextSession.user.id),
+          supabase
+            .from("module_access")
+            .select("module_key")
             .eq("user_id", nextSession.user.id),
         ]);
 
@@ -77,9 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (rolesRes.error) {
           console.error("Failed to load roles", rolesRes.error);
         }
+        if (modulesRes.error) {
+          console.error("Failed to load module access", modulesRes.error);
+        }
 
         setProfile((profileRes.data as Profile | null) ?? null);
         setRoles((rolesRes.data ?? []).map((r: { role: string }) => r.role as AppRole));
+        setModuleAccess((modulesRes.data ?? []).map((m: { module_key: string }) => m.module_key));
       } finally {
         if (isMounted && authRequestRef.current === requestId) {
           setLoading(false);
@@ -127,15 +139,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setProfile(null);
     setRoles([]);
+    setModuleAccess([]);
   }
 
   function hasRole(role: AppRole) {
     return roles.includes(role);
   }
 
+  function hasModuleAccess(key: string) {
+    return roles.includes("admin") || moduleAccess.includes(key);
+  }
+
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, roles, loading, signIn, signOut, hasRole }}
+      value={{ session, user, profile, roles, moduleAccess, loading, signIn, signOut, hasRole, hasModuleAccess }}
     >
       {children}
     </AuthContext.Provider>

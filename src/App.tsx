@@ -81,6 +81,13 @@ import PrivacyPolicyPage from "./pages/public/PrivacyPolicyPage";
 import SupportPage from "./pages/public/SupportPage";
 import UnsubscribePage from "./pages/public/UnsubscribePage";
 
+import PortfolioLayout from "./components/layouts/PortfolioLayout";
+import { PortfolioRoute } from "./components/PortfolioRoute";
+import PortfolioDashboard from "./pages/portfolio/PortfolioDashboard";
+import PortfolioClassesPage from "./pages/portfolio/PortfolioClassesPage";
+import PortfolioStudentListPage from "./pages/portfolio/PortfolioStudentListPage";
+import PortfolioStudentFilePage from "./pages/portfolio/PortfolioStudentFilePage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -228,6 +235,20 @@ const App = () => (
               <Route path="/manager/teachers" element={<TeacherReportPage />} />
               <Route path="/manager/incomplete" element={<IncompleteNormPage />} />
               <Route path="/manager/ismb-report" element={<ISMBReportPage />} />
+            </Route>
+
+            {/* Portfolio module (gated by module_access) */}
+            <Route
+              element={
+                <PortfolioRoute>
+                  <PortfolioLayout />
+                </PortfolioRoute>
+              }
+            >
+              <Route path="/portfolio" element={<PortfolioDashboard />} />
+              <Route path="/portfolio/classes" element={<PortfolioClassesPage />} />
+              <Route path="/portfolio/classes/:classId" element={<PortfolioStudentListPage />} />
+              <Route path="/portfolio/classes/:classId/students/:studentId" element={<PortfolioStudentFilePage />} />
             </Route>
 
             {/* Public routes (no auth) */}

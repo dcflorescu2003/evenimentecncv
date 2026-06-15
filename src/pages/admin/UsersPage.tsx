@@ -57,6 +57,20 @@ export default function UsersPage() {
   const [editNormValue, setEditNormValue] = useState("");
   const [editUser, setEditUser] = useState<Profile | null>(null);
   const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "", initials: "", roles: [] as string[], subject_ids: [] as string[] });
+  const [portfolioAccess, setPortfolioAccess] = useState(false);
+  const [portfolioInitial, setPortfolioInitial] = useState(false);
+
+  const { data: allModuleAccess = [] } = useQuery({
+    queryKey: ["module_access_all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("module_access").select("user_id, module_key");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const portfolioUserIds = new Set(
+    allModuleAccess.filter((m) => m.module_key === "portfolio").map((m) => m.user_id),
+  );
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["profiles"],
@@ -253,12 +267,28 @@ export default function UsersPage() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
+
+      // Sync portfolio module access
+      if (portfolioAccess && !portfolioInitial) {
+        const { error: insErr } = await supabase
+          .from("module_access")
+          .insert({ user_id: id, module_key: "portfolio" });
+        if (insErr) throw insErr;
+      } else if (!portfolioAccess && portfolioInitial) {
+        const { error: delErr } = await supabase
+          .from("module_access")
+          .delete()
+          .eq("user_id", id)
+          .eq("module_key", "portfolio");
+        if (delErr) throw delErr;
+      }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
       queryClient.invalidateQueries({ queryKey: ["user_roles"] });
       queryClient.invalidateQueries({ queryKey: ["teacher_subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["module_access_all"] });
       setEditUser(null);
       toast.success("Utilizator actualizat");
     },
@@ -276,6 +306,9 @@ export default function UsersPage() {
       roles: getRoles(p.id),
       subject_ids: getTeacherSubjectIds(p.id),
     });
+    const hasPortfolio = portfolioUserIds.has(p.id);
+    setPortfolioAccess(hasPortfolio);
+    setPortfolioInitial(hasPortfolio);
   }
 
   const deleteUserMutation = useMutation({
@@ -712,6 +745,18 @@ export default function UsersPage() {
                 </div>
               </>
             )}
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <Label className="cursor-pointer">Acces modul Portofoliu</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Permite acestui utilizator să vadă și să folosească modulul Portofoliu.
+                </p>
+              </div>
+              <Checkbox
+                checked={portfolioAccess}
+                onCheckedChange={(c) => setPortfolioAccess(!!c)}
+              />
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Anulează</Button>
               <Button type="submit" disabled={editUserMutation.isPending}>

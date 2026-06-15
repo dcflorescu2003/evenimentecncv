@@ -1,53 +1,147 @@
-## 1. Extindere `EventsCalendar` cu Proiecte de voluntariat
+# Modul „Portofoliu" — plan de implementare
 
-Generalizez `src/components/student/EventsCalendar.tsx` să accepte și „itemi" de tip volunteer day pe lângă evenimente:
+Modul nou pentru profesorii desemnați de admin, care ține evidența activității lor (clase, portofolii elevi, teme, concursuri, documente, jurnal, propriul portofoliu profesional). Elevii participă activ: trimit teme și declară implicare.
 
-- Nouă prop `volunteerDays?: VolunteerDayItem[]` cu `{ id, project_id, project_name, date, start_time, end_time, location, status }` și opțional `myEnrollment: boolean`.
-- Combin internă: un singur `itemsByDate` cu discriminator `kind: "event" | "volunteer"`.
-- În **lună**: pe lângă bulina existentă, dacă ziua are voluntariat → adaug litera **V** mică (badge text `V` în loc/peste bulină) folosind o nuanță secundară (ex. `bg-secondary text-secondary-foreground`).
-- În **săptămână** și **zi**: cardul pentru voluntariat afișează un prefix `V` (badge mic) + numele proiectului + interval orar; click → navighează la pagina read-only a proiectului (vezi §3).
-- Status afișat:
-  - `enrolled` → verde (similar „Rezervat").
-  - viitor & eligibil → primary.
-  - trecut → estompat (vezi §2).
+Implementăm pe **6 etape** independente, fiecare livrabilă și utilizabilă. După fiecare etapă confirmi că merge înainte să trec la următoarea.
 
-## 2. Evenimente/zile trecute afișate „mai șters"
+---
 
-În prezent, evenimentele trecute sunt incluse doar dacă utilizatorul are rezervare/înrolare. Schimbări:
+## Fundație tehnică (comună tuturor etapelor)
 
-- **Sursă date**: scot filtrul implicit „doar viitoare" (în `StudentDashboard` și `AllEventsCalendarSection` query-ul deja aduce toate published; ok). Dar `calendarEvents` filtrează după eligibilitate — păstrez ca atare, doar îi reduc opacitatea în UI.
-- Adaug clasă `opacity-50` (sau `text-muted-foreground` + `bg-muted/40`) pentru:
-  - cardurile din week/day view când `status === "past_or_full"` și data < azi
-  - bulinele month-view rămân `bg-muted-foreground/40`
-  - itemii volunteer cu `date < today` → același tratament
+- **Acces**: tabel nou `module_access(user_id, module_key)` + funcție `has_module_access(_uid, _key)`. Admin bifează din `UsersPage` cine primește `portfolio`. `src/modules/registry.ts` și `AppHub` afișează cardul „Portofoliu" doar dacă utilizatorul are acces (sau e admin).
+- **Layout**: `PortfolioLayout` cu navigație proprie + rute `/portfolio/*`. Header reutilizează `ModuleSwitcher`.
+- **Storage**: bucket privat `portfolio-files` (10MB/fișier, ca `event-files`), RLS pe `storage.objects` — profesorul vede tot ce a încărcat el; elevul vede doar fișierele aprobate din propriul portofoliu.
+- **Audit**: toate aprobările/respingerile/ștergerile loghează în `audit_logs`.
+- **Multi-an**: tabelele relevante (teme, jurnal, documente, diplome) au `academic_year` text (ex. „2025-2026").
 
-Astfel toate evenimentele/zilele trecute sunt mereu vizibile dar discrete.
+---
 
-## 3. Pagină nouă read-only pentru detalii eveniment
+## Etapa 1 — Fundație + Dashboard + Clase și elevi (pct. 1, 2)
 
-Rută nouă: `/events/preview/:id` (accesibilă rolurilor `teacher`, `homeroom_teacher`, `coordinator_teacher`, `admin`, `manager`, `student` ca fallback).
+**Backend**
 
-Componentă nouă: `src/pages/shared/EventPreviewPage.tsx` — vizual identică cu `StudentEventDetailPage` (titlu, descriere, dată, interval, locație, clase eligibile, fereastră rezervare, locuri rămase, CSE badge, fișiere `form_template` dacă există), dar:
-- Fără secțiunea „Rezervă loc" / `bookMutation` / `bookingConfirm`.
-- Fără secțiunea de rezervare/anulare proprie.
-- Buton „Înapoi" întors la `history.back()`.
+- Migration: `module_access`, `portfolio_teacher_classes(teacher_id, class_id, academic_year)`, `portfolio_student_notes(teacher_id, student_id, note, created_at)`.
+- Bucket `portfolio-files` + RLS de bază.
+- Edge function `portfolio-grant-access` (admin-only) pentru a acorda/revoca accesul.
 
-Pentru voluntariat: rută `/volunteer-projects/preview/:id` cu o pagină simetrică (`VolunteerProjectPreviewPage`) care arată descriere, perioadă, zile programate (read-only) și echipa.
+**Frontend**
 
-## 4. Routing & click handlers
+- `PortfolioLayout` + rute.
+- `PortfolioDashboard`: carduri cu numerele „teme active / netrimise / voluntariat în așteptare / concursuri apropiate / documente cu termen / activitate recentă". În etapa 1 cifrele sunt 0; vor crește pe măsură ce adăugăm etapele.
+- `PortfolioClassesPage`: listă clase asignate, filtre.
+- `PortfolioStudentListPage` (per clasă): tabel elevi, sortat după nume.
+- `PortfolioStudentFilePage`: fișă elev cu tab-uri goale (Portofoliu, Teme, Implicare, Concursuri, Observații) + observații interne salvate acum.
+- UI Admin în `UsersPage`: switch „Acces Portofoliu" per profesor.
 
-- `AllEventsCalendarSection` (prof/diriginte): înlocuiesc dialogul actual cu `navigate("/events/preview/:id")` sau `volunteer-projects/preview/:id` în `onEventClick`.
-- `StudentDashboard` calendar: click pe item volunteer → `/student/volunteer-projects/:id` existent (dacă există) sau `/volunteer-projects/preview/:id` ca fallback când nu e înrolat. Pentru evenimente păstrez `/student/events/:id`.
+---
 
-## 5. Sursă date voluntariat în dashboarduri
+## Etapa 2 — Portofolii elevi + Teme de portofoliu + Trimiteri elev (pct. 3, 4, 5)
 
-- Hook nou `useCalendarVolunteerDays(role, userId, classId, grade)` în `src/hooks/`:
-  - SELECT `volunteer_days` JOIN `volunteer_projects` unde `status='active'` și (eligibil pentru elev / fără restricție pentru profesori).
-  - Pentru elev: include și zile unde există `volunteer_enrollments` activ (similar logicii event).
-- Folosit în `StudentDashboard` și `AllEventsCalendarSection`.
+**Backend**
 
-## 6. Detalii tehnice
+- Tabele:
+  - `portfolio_assignments` (titlu, descriere, deadline, clase, tip predare: file/photo/link/text, criterii, status).
+  - `portfolio_submissions` (assignment_id, student_id, content_text, file_path, link, status: pending/approved/rejected/redo, teacher_feedback, score?).
+  - `portfolio_items` (student_id, owner_teacher_id, title, type: lucrare/poză/temă/proiect/diplomă/voluntariat/feedback/observație, file_path, tags[], pinned, source: manual/submission/competition/volunteer, source_id, academic_year).
+- RLS: profesorul gestionează doar elevii din clasele lui; elevul vede temele care îl vizează și trimite/edita propria trimitere până la deadline; vede propriul portofoliu (doar `approved`).
+- Edge function `portfolio-export-student` → PDF cu tot portofoliul aprobat (folosește `jspdf` + `pdf-font.ts`).
 
-- Niciun schema change. RLS existent pe `volunteer_projects` (active) și `volunteer_days` (creator/coordinator/admin) — pentru elevi va trebui o policy nouă „read days of active projects" dacă nu există deja; verific la implementare și adaug doar dacă lipsește.
-- Badge „V": componentă inline `<span className="inline-flex h-4 w-4 items-center justify-center rounded-sm bg-secondary text-secondary-foreground text-[9px] font-bold">V</span>`.
-- Tipuri: extind `Props` din `EventsCalendar` fără a sparge call site-urile existente (`volunteerDays` opțional, default `[]`).
+**Frontend profesor**
+
+- `PortfolioAssignmentsPage` (listă + creare/edit) cu vizualizare „cine a trimis / cine nu / în verificare / aprobate / refacere".
+- `PortfolioSubmissionReviewPage`: aprobă/respinge/cere refacere, atașează la portofoliul elevului cu un click.
+- `PortfolioStudentFilePage` → tab „Portofoliu" funcțional: galerie + upload manual + marcare pinned + export PDF.
+
+**Frontend elev**
+
+- Card nou „Portofoliu" în `StudentLayout` (vizibil doar dacă există cel puțin o temă/un item pentru el).
+- `StudentPortfolioPage`: teme active cu trimitere (upload/text/link), istoric trimiteri, portofoliu personal vizualizare.
+
+---
+
+## Etapa 3 — Implicare în clasă + Generator „Cine iese la tablă?" (pct. 6, 7)
+
+**Backend**
+
+- `portfolio_involvement` (student_id, teacher_id, type: voluntariat/ajutor/proiect/eveniment/sprijin/club/materiale, description, hours, status, teacher_note, attach_to_portfolio).
+- `portfolio_board_picks` (teacher_id, class_id, student_id, date, lesson, mode, score?, note, attach_to_portfolio).
+- Trigger: la `approved` pe involvement cu `attach_to_portfolio = true` → insert automat în `portfolio_items`.
+
+**Frontend profesor**
+
+- `PortfolioInvolvementPage`: coadă de validare (aprobă/respinge/modifică ore/observații).
+- `BoardPickerPage`: selectează clasa + mod (aleator / echilibrat / fără repetare / fără absenți / fără ascultați azi / manual), istoric, opțional salvează cu punctaj.
+
+**Frontend elev**
+
+- Tab „Declar implicare" în `StudentPortfolioPage` — formular cu cele 7 tipuri.
+
+---
+
+## Etapa 4 — Concursuri (pct. 8)
+
+**Backend**
+
+- `portfolio_competitions` (titlu, descriere, tip, dificultate, clase, deadline înscriere, dată concurs, link regulament, locuri, individual/echipă, status).
+- `portfolio_competition_signups` (competition_id, student_id, status: interesat/selectat/înscris, rezultat, diploma_file_path, proiect_file_path).
+
+**Frontend**
+
+- `PortfolioCompetitionsPage` (profesor): listă + creare + tabel pe etape (interesați/selectați/înscriși/rezultate).
+- Elev: tab nou „Concursuri" în `StudentPortfolioPage` — vede oportunitățile pentru clasa lui, butoane „Mă interesează" / vizualizare status.
+- Diploma elev → push automat în `portfolio_items` cu sursa `competition`.
+
+---
+
+## Etapa 5 — Documente birocratice + Jurnal profesional + Portofoliu profesor (pct. 9, 10, 11)
+
+**Backend**
+
+- `portfolio_documents` (teacher_id, titlu, categorie ENUM cu cele 13 tipuri, academic_year, class_id?, deadline?, status, file_path, observații).
+- `portfolio_journal` (teacher_id, data, titlu, descriere, tip ENUM cu cele 11 tipuri, class_id?, student_ids[], rezultate, observații, next_steps, relevant_for_annual_report).
+- `portfolio_teacher_items` (teacher_id, categorie: cv/adeverință/certificat/diplomă/curs/proiect/raport/material/aplicație/comisie, titlu, versiune, file_path, an).
+- `portfolio_student_diplomas` (teacher_id, student_id, concurs, premiu, data, file_path, observații) — apare în portofoliul elevului ȘI al profesorului.
+
+**Frontend**
+
+- `PortfolioDocumentsPage`: vizualizare pe categorii + termene + filtre an școlar.
+- `PortfolioJournalPage`: timeline + adăugare rapidă.
+- `PortfolioTeacherPage`: secțiuni vizuale pentru CV (cu versiuni), certificate, materiale + sub-tab „Diplome elevi" cu upload care creează automat și itemul în portofoliul elevului.
+
+---
+
+## Etapa 6 — Rapoarte și exporturi (pct. 12)
+
+**Backend**
+
+- `portfolio-report` edge function care primește `{ type, scope, period }` și întoarce date agregate.
+- Tipuri raport: anual, pe clasă, voluntariat, concursuri, portofolii elevi, listă elevi implicați, listă elevi cu teme netrimise, activități într-un interval.
+
+**Frontend**
+
+- `PortfolioReportsPage`: selectoare + preview tabel + butoane „Export PDF" și „Export CSV" (folosește `report-pdf.ts` și `csv-export.ts` existente).
+- Buton „Export portofoliu elev (PDF)" și pe `PortfolioStudentFilePage` (deja construit la etapa 2, reutilizat).
+- Buton „Export portofoliu profesor (PDF)" pe `PortfolioTeacherPage`.
+
+---
+
+## Detalii tehnice transversale
+
+- **Rute**: toate sub `/portfolio/*`, protejate prin `ProtectedRoute` + check `has_module_access(uid, 'portfolio')`.
+- **RLS pattern**: funcții `security definer` `portfolio_is_owner_teacher_of_student(_t, _s)` și `portfolio_can_view_item(_uid, _item_id)` pentru a evita recursia.
+- **Naming**: toate tabelele prefixate `portfolio_` ca să fie ușor de filtrat/șters dacă vrei să dezactivezi modulul.
+- **Mobil**: layout responsiv (Capacitor friendly), aceleași `header-safe` / `pb-safe` ca restul aplicației.
+- **Limbă**: tot UI-ul în română, date în format `zz.ll.aaaa` cu `DateInput`.
+
+---
+
+## Confirmări de la tine înainte să încep etapa 1
+
+1. OK cu structura pe 6 etape de mai sus?
+2. La etapa 1, vrei ca **clasele asignate** să fie introduse manual de admin/profesor în `portfolio_teacher_classes`, sau să se deducă automat din date existente (ex. `homeroom_teacher` + clase pentru care a făcut evenimente)?
+3. Pentru export PDF portofoliu elev — vrei să includă **și** materialele declarate de elev dar încă neaprobate, sau doar cele aprobate?
+
+După confirmare, încep imediat etapa 1.  
+1. Ok  
+2. Clasele momentan sunt introduse manual  
+3. Doar cele aprobate
