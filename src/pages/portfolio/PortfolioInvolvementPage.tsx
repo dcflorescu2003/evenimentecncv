@@ -127,7 +127,7 @@ export default function PortfolioInvolvementPage() {
       const { error } = await supabase.from("portfolio_involvement").insert({
         student_id: newStudentId,
         teacher_id: user!.id,
-        type: newType,
+        type: newType as any,
         description: newDesc.trim(),
         hours: newHours ? Number(newHours) : null,
         occurred_on: newDate || null,
