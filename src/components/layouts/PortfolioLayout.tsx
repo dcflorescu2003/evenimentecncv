@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FolderKanban, LayoutDashboard, Users2, ClipboardList, HeartHandshake, Dice5, Trophy, LogOut } from "lucide-react";
+import { FolderKanban, LayoutDashboard, Users2, ClipboardList, HeartHandshake, Dice5, Trophy, FileText, BookOpen, User, LogOut } from "lucide-react";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 
 export default function PortfolioLayout() {
@@ -16,6 +16,9 @@ export default function PortfolioLayout() {
     { title: "Implicare", icon: HeartHandshake, path: "/portfolio/involvement" },
     { title: "Concursuri", icon: Trophy, path: "/portfolio/competitions" },
     { title: "Cine iese la tablă", icon: Dice5, path: "/portfolio/board-picker" },
+    { title: "Documente", icon: FileText, path: "/portfolio/documents" },
+    { title: "Jurnal", icon: BookOpen, path: "/portfolio/journal" },
+    { title: "Portofoliul meu", icon: User, path: "/portfolio/teacher" },
   ];
 
   const isActive = (path: string) =>

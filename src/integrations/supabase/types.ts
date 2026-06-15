@@ -1432,6 +1432,68 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_documents: {
+        Row: {
+          academic_year: string | null
+          category: string
+          class_id: string | null
+          created_at: string
+          deadline: string | null
+          description: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          status: string
+          teacher_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string | null
+          category?: string
+          class_id?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          status?: string
+          teacher_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string | null
+          category?: string
+          class_id?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          status?: string
+          teacher_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_documents_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portfolio_involvement: {
         Row: {
           academic_year: string | null
@@ -1558,6 +1620,119 @@ export type Database = {
           title?: string
           updated_at?: string
           visible_to_student?: boolean
+        }
+        Relationships: []
+      }
+      portfolio_journal: {
+        Row: {
+          academic_year: string | null
+          class_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          next_steps: string | null
+          notes: string | null
+          relevant_for_annual_report: boolean
+          results: string | null
+          student_ids: string[]
+          teacher_id: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string | null
+          class_id?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          next_steps?: string | null
+          notes?: string | null
+          relevant_for_annual_report?: boolean
+          results?: string | null
+          student_ids?: string[]
+          teacher_id: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string | null
+          class_id?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          next_steps?: string | null
+          notes?: string | null
+          relevant_for_annual_report?: boolean
+          results?: string | null
+          student_ids?: string[]
+          teacher_id?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_journal_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_student_diplomas: {
+        Row: {
+          academic_year: string | null
+          award: string | null
+          contest: string
+          created_at: string
+          date: string | null
+          description: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          student_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string | null
+          award?: string | null
+          contest: string
+          created_at?: string
+          date?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          student_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string | null
+          award?: string | null
+          contest?: string
+          created_at?: string
+          date?: string | null
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          student_id?: string
+          teacher_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1707,6 +1882,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      portfolio_teacher_items: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          pinned: boolean
+          teacher_id: string
+          title: string
+          updated_at: string
+          version: string | null
+          year: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          pinned?: boolean
+          teacher_id: string
+          title: string
+          updated_at?: string
+          version?: string | null
+          year?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          pinned?: boolean
+          teacher_id?: string
+          title?: string
+          updated_at?: string
+          version?: string | null
+          year?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

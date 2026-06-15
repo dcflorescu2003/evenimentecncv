@@ -153,4 +153,5 @@ După confirmare, încep imediat etapa 1.
 - Etapa 2 — ✅ implementată
 - Etapa 3 — ✅ implementată
 - Etapa 4 — ✅ implementată (concursuri + înscrieri elevi + diplome auto în portofoliu)
-- Etapele 5–6 — în așteptare
+- Etapa 5 — ✅ implementată (documente, jurnal profesional, portofoliu profesor + diplome elevi)
+- Etapa 6 — în așteptare (rapoarte și exporturi)
