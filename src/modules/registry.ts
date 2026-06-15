@@ -83,6 +83,7 @@ export const MODULES: AppModule[] = [
       teacher: "/portfolio",
       homeroom_teacher: "/portfolio",
       cse: "/portfolio",
+      student: "/student/portfolio",
     },
     requiresModuleAccess: "portfolio",
   },

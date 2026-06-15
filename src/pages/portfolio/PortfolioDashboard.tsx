@@ -27,10 +27,45 @@ export default function PortfolioDashboard() {
     },
   });
 
+  const { data: activeAssignmentCount = 0 } = useQuery({
+    queryKey: ["portfolio_dashboard_assignments", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("portfolio_assignments")
+        .select("id", { count: "exact", head: true })
+        .eq("teacher_id", user!.id)
+        .eq("archived", false);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
+  const { data: pendingCount = 0 } = useQuery({
+    queryKey: ["portfolio_dashboard_pending", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data: assignments, error: aErr } = await supabase
+        .from("portfolio_assignments")
+        .select("id")
+        .eq("teacher_id", user!.id);
+      if (aErr) throw aErr;
+      const ids = (assignments ?? []).map((a) => a.id);
+      if (ids.length === 0) return 0;
+      const { count, error } = await supabase
+        .from("portfolio_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending")
+        .in("assignment_id", ids);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   const stats: StatCard[] = [
     { label: "Clase curente", value: classCount, icon: Users2, hint: "Gestionate de tine" },
-    { label: "Teme active", value: 0, icon: ClipboardList, hint: "Disponibil în etapa 2" },
-    { label: "Lucrări nevalidate", value: 0, icon: Inbox, hint: "Disponibil în etapa 2" },
+    { label: "Teme active", value: activeAssignmentCount, icon: ClipboardList, hint: "Neînarhivate" },
+    { label: "Lucrări nevalidate", value: pendingCount, icon: Inbox, hint: "Trimiteri în așteptare" },
     { label: "Voluntariat în așteptare", value: 0, icon: HeartHandshake, hint: "Disponibil în etapa 3" },
     { label: "Elevi la concursuri", value: 0, icon: Trophy, hint: "Disponibil în etapa 4" },
     { label: "Documente cu termen", value: 0, icon: FileText, hint: "Disponibil în etapa 5" },

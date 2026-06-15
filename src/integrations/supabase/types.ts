@@ -1187,6 +1187,116 @@ export type Database = {
           },
         ]
       }
+      portfolio_assignments: {
+        Row: {
+          academic_year: string | null
+          allow_files: boolean
+          allow_text: boolean
+          archived: boolean
+          class_id: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          teacher_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string | null
+          allow_files?: boolean
+          allow_text?: boolean
+          archived?: boolean
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          teacher_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string | null
+          allow_files?: boolean
+          allow_text?: boolean
+          archived?: boolean
+          class_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          teacher_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_assignments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_items: {
+        Row: {
+          academic_year: string | null
+          created_at: string
+          description: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          pinned: boolean
+          source: string
+          source_id: string | null
+          student_id: string
+          teacher_id: string
+          title: string
+          updated_at: string
+          visible_to_student: boolean
+        }
+        Insert: {
+          academic_year?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          pinned?: boolean
+          source?: string
+          source_id?: string | null
+          student_id: string
+          teacher_id: string
+          title: string
+          updated_at?: string
+          visible_to_student?: boolean
+        }
+        Update: {
+          academic_year?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          pinned?: boolean
+          source?: string
+          source_id?: string | null
+          student_id?: string
+          teacher_id?: string
+          title?: string
+          updated_at?: string
+          visible_to_student?: boolean
+        }
+        Relationships: []
+      }
       portfolio_student_notes: {
         Row: {
           created_at: string
@@ -1213,6 +1323,94 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      portfolio_submission_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_submission_files_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_submissions: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          student_id: string
+          submitted_at: string
+          teacher_feedback: string | null
+          text_content: string | null
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id: string
+          submitted_at?: string
+          teacher_feedback?: string | null
+          text_content?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id?: string
+          submitted_at?: string
+          teacher_feedback?: string | null
+          text_content?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       portfolio_teacher_classes: {
         Row: {
@@ -1938,6 +2136,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_portfolio_file: {
+        Args: { _path: string; _user_id: string }
+        Returns: boolean
+      }
       check_booking_eligibility: {
         Args: { _event_id: string; _student_id: string }
         Returns: Json
@@ -2060,6 +2262,22 @@ export type Database = {
       }
       is_feedback_subject_teacher: {
         Args: { _response_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_portfolio_assignment_teacher: {
+        Args: { _assignment_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_portfolio_assignment_visible_to_student: {
+        Args: { _assignment_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_portfolio_submission_student: {
+        Args: { _submission_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_portfolio_submission_teacher: {
+        Args: { _submission_id: string; _user_id: string }
         Returns: boolean
       }
       is_student_eligible_for_form: {

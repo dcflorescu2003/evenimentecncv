@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import StudentPortfolioItemsTab from "@/components/portfolio/StudentPortfolioItemsTab";
+import StudentAssignmentsTab from "@/components/portfolio/StudentAssignmentsTab";
 
 interface Note {
   id: string;
@@ -107,7 +109,7 @@ export default function PortfolioStudentFilePage() {
         )}
       </div>
 
-      <Tabs defaultValue="notes" className="w-full">
+      <Tabs defaultValue="portfolio" className="w-full">
         <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap">
           <TabsTrigger value="portfolio">Portofoliu</TabsTrigger>
           <TabsTrigger value="assignments">Teme</TabsTrigger>
@@ -117,10 +119,10 @@ export default function PortfolioStudentFilePage() {
         </TabsList>
 
         <TabsContent value="portfolio" className="mt-4">
-          <ComingSoon stage="etapa 2" />
+          {studentId && <StudentPortfolioItemsTab studentId={studentId} />}
         </TabsContent>
         <TabsContent value="assignments" className="mt-4">
-          <ComingSoon stage="etapa 2" />
+          {studentId && <StudentAssignmentsTab studentId={studentId} />}
         </TabsContent>
         <TabsContent value="involvement" className="mt-4">
           <ComingSoon stage="etapa 3" />
