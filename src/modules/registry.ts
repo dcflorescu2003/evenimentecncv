@@ -1,4 +1,4 @@
-import { Calendar, BookOpen, Users, MessageSquare, type LucideIcon } from "lucide-react";
+import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, type LucideIcon } from "lucide-react";
 
 export type AppRole =
   | "admin"
@@ -16,6 +16,8 @@ export interface AppModule {
   icon: LucideIcon;
   /** Cale per rol. Dacă un rol nu apare aici, modulul nu se afișează pentru el. */
   pathByRole: Partial<Record<AppRole, string>>;
+  /** Dacă e setat, modulul e gated de o intrare în module_access cu această cheie (sau rol admin). */
+  requiresModuleAccess?: string;
 }
 
 export const MODULES: AppModule[] = [
@@ -71,11 +73,31 @@ export const MODULES: AppModule[] = [
       student: "/student/feedback",
     },
   },
+  {
+    key: "portfolio",
+    label: "Portofoliu",
+    description: "Evidența activității de profesor: clase, elevi, teme, concursuri, documente.",
+    icon: FolderKanban,
+    pathByRole: {
+      admin: "/portfolio",
+      teacher: "/portfolio",
+      homeroom_teacher: "/portfolio",
+      cse: "/portfolio",
+    },
+    requiresModuleAccess: "portfolio",
+  },
 ];
 
-/** Returnează modulele vizibile pentru utilizator în funcție de rolurile sale. */
-export function getEnabledModules(roles: string[]): { module: AppModule; path: string }[] {
+/** Returnează modulele vizibile pentru utilizator în funcție de rolurile și accesele sale. */
+export function getEnabledModules(
+  roles: string[],
+  moduleAccess: string[] = [],
+): { module: AppModule; path: string }[] {
+  const isAdmin = roles.includes("admin");
   return MODULES.flatMap((m) => {
+    if (m.requiresModuleAccess && !isAdmin && !moduleAccess.includes(m.requiresModuleAccess)) {
+      return [];
+    }
     for (const r of roles) {
       const p = m.pathByRole[r as AppRole];
       if (p) return [{ module: m, path: p }];
