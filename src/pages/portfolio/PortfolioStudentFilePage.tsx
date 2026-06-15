@@ -130,7 +130,7 @@ export default function PortfolioStudentFilePage() {
           {studentId && <StudentInvolvementListForTeacher studentId={studentId} />}
         </TabsContent>
         <TabsContent value="competitions" className="mt-4">
-          <ComingSoon stage="etapa 4" />
+          {studentId && <StudentCompetitionsListForTeacher studentId={studentId} />}
         </TabsContent>
 
         <TabsContent value="notes" className="mt-4 space-y-4">
