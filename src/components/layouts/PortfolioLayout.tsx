@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FolderKanban, LayoutDashboard, Users2, ClipboardList, HeartHandshake, Dice5, LogOut } from "lucide-react";
+import { FolderKanban, LayoutDashboard, Users2, ClipboardList, HeartHandshake, Dice5, Trophy, LogOut } from "lucide-react";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 
 export default function PortfolioLayout() {
@@ -14,6 +14,7 @@ export default function PortfolioLayout() {
     { title: "Clase și elevi", icon: Users2, path: "/portfolio/classes" },
     { title: "Teme", icon: ClipboardList, path: "/portfolio/assignments" },
     { title: "Implicare", icon: HeartHandshake, path: "/portfolio/involvement" },
+    { title: "Concursuri", icon: Trophy, path: "/portfolio/competitions" },
     { title: "Cine iese la tablă", icon: Dice5, path: "/portfolio/board-picker" },
   ];
 
