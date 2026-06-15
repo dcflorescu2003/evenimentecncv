@@ -71,13 +71,19 @@ export default function PortfolioAssignmentDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("portfolio_submissions")
-        .select(
-          "*, portfolio_submission_files(id, file_path, file_name, file_size), profiles!portfolio_submissions_student_id_fkey(id, first_name, last_name, username)"
-        )
+        .select("*, portfolio_submission_files(id, file_path, file_name, file_size)")
         .eq("assignment_id", id!)
         .order("submitted_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as unknown as Submission[];
+      const list = (data ?? []) as any[];
+      if (list.length === 0) return [] as Submission[];
+      const studentIds = Array.from(new Set(list.map((s) => s.student_id)));
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, username")
+        .in("id", studentIds);
+      const pMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+      return list.map((s) => ({ ...s, profiles: pMap.get(s.student_id) ?? null })) as Submission[];
     },
   });
 
