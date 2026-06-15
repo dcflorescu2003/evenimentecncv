@@ -62,11 +62,25 @@ export default function PortfolioDashboard() {
     },
   });
 
+  const { data: involvementPending = 0 } = useQuery({
+    queryKey: ["portfolio_dashboard_involvement_pending", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("portfolio_involvement")
+        .select("id", { count: "exact", head: true })
+        .eq("teacher_id", user!.id)
+        .eq("status", "pending");
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   const stats: StatCard[] = [
     { label: "Clase curente", value: classCount, icon: Users2, hint: "Gestionate de tine" },
     { label: "Teme active", value: activeAssignmentCount, icon: ClipboardList, hint: "Neînarhivate" },
     { label: "Lucrări nevalidate", value: pendingCount, icon: Inbox, hint: "Trimiteri în așteptare" },
-    { label: "Voluntariat în așteptare", value: 0, icon: HeartHandshake, hint: "Disponibil în etapa 3" },
+    { label: "Implicare în așteptare", value: involvementPending, icon: HeartHandshake, hint: "Declarații elevi" },
     { label: "Elevi la concursuri", value: 0, icon: Trophy, hint: "Disponibil în etapa 4" },
     { label: "Documente cu termen", value: 0, icon: FileText, hint: "Disponibil în etapa 5" },
     { label: "Activități recente", value: 0, icon: Activity, hint: "Disponibil în etapa 5" },
