@@ -6,7 +6,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 // un fișier separat (ex: capacitor.config.dev.ts).
 const config: CapacitorConfig = {
   appId: 'com.evenimentecncv.app',
-  appName: 'Evenimente',
+  appName: 'CNCV',
   webDir: 'dist',
   plugins: {
     // Status bar nu se mai suprapune peste WebView pe Android
