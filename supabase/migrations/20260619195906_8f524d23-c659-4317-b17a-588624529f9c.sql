@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Authenticated read days of active projects" ON public.volunteer_days;
