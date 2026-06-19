@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users2, ClipboardList, Inbox, HeartHandshake, Trophy, FileText, Activity, Bell } from "lucide-react";
+import { Users2, ClipboardList, Inbox, HeartHandshake, Trophy, FileText, Activity, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 interface StatCard {
@@ -13,6 +14,7 @@ interface StatCard {
 
 export default function PortfolioDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const { data: classCount = 0 } = useQuery({
     queryKey: ["portfolio_dashboard_classes", user?.id],
@@ -102,9 +104,8 @@ export default function PortfolioDashboard() {
     { label: "Lucrări nevalidate", value: pendingCount, icon: Inbox, hint: "Trimiteri în așteptare" },
     { label: "Implicare în așteptare", value: involvementPending, icon: HeartHandshake, hint: "Declarații elevi" },
     { label: "Concursuri active", value: competitionStats.active, icon: Trophy, hint: `${competitionStats.signups} elevi înscriși` },
-    { label: "Documente cu termen", value: 0, icon: FileText, hint: "Disponibil în etapa 5" },
-    { label: "Activități recente", value: 0, icon: Activity, hint: "Disponibil în etapa 5" },
-    { label: "Notificări", value: 0, icon: Bell, hint: "Disponibil ulterior" },
+    { label: "Documente cu termen", value: 0, icon: FileText, hint: "În curând" },
+    { label: "Activități recente", value: 0, icon: Activity, hint: "În curând" },
   ];
 
   return (
@@ -134,6 +135,21 @@ export default function PortfolioDashboard() {
             </Card>
           );
         })}
+        <Card
+          className="cursor-pointer hover:bg-accent/40 transition-colors border-primary/40"
+          onClick={() => navigate("/portfolio/reports")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rapoarte</CardTitle>
+            <BarChart3 className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm font-medium">Generează PDF / CSV</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Clasă, elev, activitate, raport anual
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
