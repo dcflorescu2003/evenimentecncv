@@ -213,9 +213,8 @@ export default function UsersPage() {
         bodyData.initials = values.initials?.trim() || null;
         bodyData.subject_ids = values.subject_ids ?? [];
       }
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", { body: bodyData });
-      if (error) throw error;
-      return data;
+      return await invokeFunction("admin-manage-users", bodyData);
+
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
