@@ -25,7 +25,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { invokeFunction } from "@/lib/invokeFunction";
 
 
-type Profile = Omit<Tables<"profiles">, "email">;
+type Profile = Tables<"profiles">;
 type UserRole = Tables<"user_roles">;
 type Subject = Tables<"subjects">;
 type TeacherSubject = Tables<"teacher_subjects">;
@@ -84,9 +84,7 @@ export default function UsersPage() {
       while (true) {
         const { data, error } = await supabase
           .from("profiles")
-          .select(
-            "id, first_name, last_name, username, display_name, student_identifier, is_active, must_change_password, teaching_norm, initials, created_at, updated_at",
-          )
+          .select("*")
           .order("last_name")
           .order("first_name")
           .range(from, from + batchSize - 1);
