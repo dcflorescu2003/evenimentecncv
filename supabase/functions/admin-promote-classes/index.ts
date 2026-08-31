@@ -78,6 +78,21 @@ serve(async (req) => {
       });
     }
 
+    // Guard: refuse if a promotion to this academic year was already executed
+    const { data: existing } = await supabase
+      .from("audit_logs")
+      .select("id")
+      .eq("action", "promote_classes")
+      .eq("details->>new_academic_year", newYear)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      return new Response(JSON.stringify({
+        error: `Promovarea către anul ${newYear} a fost deja executată. Dacă vrei să o refaci, contactează administratorul de sistem.`,
+      }), {
+        status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Load all classes
     const { data: allClasses, error: classErr } = await supabase
       .from("classes").select("id, grade_number, section, display_name, homeroom_teacher_id");
