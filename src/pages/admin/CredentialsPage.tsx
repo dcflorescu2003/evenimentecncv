@@ -181,11 +181,8 @@ export default function CredentialsPage() {
         body = { role: selectedRole };
       }
 
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: { action, ...body },
-      });
+      const data = await invokeFunction("admin-manage-users", { action, ...body });
 
-      if (error) throw error;
 
       const results: CredentialResult[] = data.results || [];
       if (results.length === 0) {
