@@ -22,6 +22,8 @@ import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2, Pencil, Chevron
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import type { Tables } from "@/integrations/supabase/types";
+import { invokeFunction } from "@/lib/invokeFunction";
+
 
 type Profile = Omit<Tables<"profiles">, "email">;
 type UserRole = Tables<"user_roles">;
@@ -187,11 +189,8 @@ export default function UsersPage() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: { action: "reset_password", user_id: userId },
-      });
-      if (error) throw error;
-      return data;
+      return await invokeFunction("admin-manage-users", { action: "reset_password", user_id: userId });
+
     },
     onSuccess: (data) => {
       setNewPassword(data.password);
@@ -216,9 +215,8 @@ export default function UsersPage() {
         bodyData.initials = values.initials?.trim() || null;
         bodyData.subject_ids = values.subject_ids ?? [];
       }
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", { body: bodyData });
-      if (error) throw error;
-      return data;
+      return await invokeFunction("admin-manage-users", bodyData);
+
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });
@@ -264,11 +262,8 @@ export default function UsersPage() {
       bodyData.initials = hasTeacherRole ? (values.initials?.trim() || null) : null;
       bodyData.subject_ids = hasTeacherRole ? (values.subject_ids ?? []) : [];
 
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: bodyData,
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const data = await invokeFunction("admin-manage-users", bodyData);
+
 
       // Sync portfolio module access
       if (portfolioAccess && !portfolioInitial) {
@@ -315,11 +310,8 @@ export default function UsersPage() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: { action: "delete_user", user_id: userId },
-      });
-      if (error) throw error;
-      return data;
+      return await invokeFunction("admin-manage-users", { action: "delete_user", user_id: userId });
+
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profiles"] });

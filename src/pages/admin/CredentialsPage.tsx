@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { downloadFileMobileSafe } from "@/lib/download";
+import { invokeFunction } from "@/lib/invokeFunction";
 
 const roleLabels: Record<string, string> = {
   admin: "Administratori",
@@ -181,11 +182,8 @@ export default function CredentialsPage() {
         body = { role: selectedRole };
       }
 
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: { action, ...body },
-      });
+      const data = await invokeFunction("admin-manage-users", { action, ...body });
 
-      if (error) throw error;
 
       const results: CredentialResult[] = data.results || [];
       if (results.length === 0) {

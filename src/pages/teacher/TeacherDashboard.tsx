@@ -24,6 +24,7 @@ import { Search, Users, CalendarDays, Clock, ChevronRight, Download, Printer, Ke
 import { exportToCSV } from "@/lib/csv-export";
 import { toast } from "sonner";
 import AllEventsCalendarSection from "@/components/prof/AllEventsCalendarSection";
+import { invokeFunction } from "@/lib/invokeFunction";
 
 interface StudentReport {
   id: string;
@@ -186,11 +187,8 @@ export default function TeacherDashboard() {
 
   const resetPasswordsMutation = useMutation({
     mutationFn: async (classId: string) => {
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: { action: "batch_reset_class_passwords", class_id: classId },
-      });
-      if (error) throw error;
-      return data;
+      return await invokeFunction("admin-manage-users", { action: "batch_reset_class_passwords", class_id: classId });
+
     },
     onSuccess: (data) => {
       setCredentialResults(data.results || []);
