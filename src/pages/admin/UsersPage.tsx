@@ -187,11 +187,8 @@ export default function UsersPage() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: { action: "reset_password", user_id: userId },
-      });
-      if (error) throw error;
-      return data;
+      return await invokeFunction("admin-manage-users", { action: "reset_password", user_id: userId });
+
     },
     onSuccess: (data) => {
       setNewPassword(data.password);
