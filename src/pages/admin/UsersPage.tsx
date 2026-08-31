@@ -260,11 +260,8 @@ export default function UsersPage() {
       bodyData.initials = hasTeacherRole ? (values.initials?.trim() || null) : null;
       bodyData.subject_ids = hasTeacherRole ? (values.subject_ids ?? []) : [];
 
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: bodyData,
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const data = await invokeFunction("admin-manage-users", bodyData);
+
 
       // Sync portfolio module access
       if (portfolioAccess && !portfolioInitial) {
