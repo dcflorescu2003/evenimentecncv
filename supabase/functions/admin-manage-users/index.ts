@@ -62,6 +62,15 @@ serve(async (req) => {
     const apikeyHeader = req.headers.get("apikey") || "";
     const isServiceRole = apikeyHeader === serviceRoleKey || token === serviceRoleKey;
 
+    if (!caller && !isServiceRole) {
+      return new Response(
+        JSON.stringify({ error: "Sesiune expirată. Reautentificați-vă și încercați din nou." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+
+
     if (action === "create_user") {
       if (!isAdmin) throw new Error("Nu aveți permisiuni de administrator");
       const { first_name, last_name, username, role, teaching_norm, initials, subject_ids } = body;
