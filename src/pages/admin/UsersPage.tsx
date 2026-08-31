@@ -82,7 +82,9 @@ export default function UsersPage() {
       while (true) {
         const { data, error } = await supabase
           .from("profiles")
-          .select("*")
+          .select(
+            "id, first_name, last_name, username, display_name, student_identifier, is_active, must_change_password, teaching_norm, initials, created_at, updated_at",
+          )
           .order("last_name")
           .order("first_name")
           .range(from, from + batchSize - 1);
