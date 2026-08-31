@@ -1,60 +1,29 @@
-## Etapa 6 — Rapoarte și exporturi (Portofoliu)
+# Recuperare după dubla promovare a claselor
 
-Finalizează modulul cu o pagină dedicată de rapoarte pentru profesor, cu agregări multiple și export PDF/CSV.
+## Situația actuală (confirmată din baza de date)
+- Două execuții `promote_classes` în audit: 20:03 și 20:05, ambele către anul 2026-2027.
+- Elevi șterși: 241 + 226 = **467** (din 946 au rămas 479).
+- Clasele arată ca după o singură promovare (V, VI, VII, VIII fără secțiune + IX–XII A–G), dar elevii din clasele ajunse la VIII și XII după prima promovare au fost șterși la a doua rulare.
 
-### 1. Pagină nouă: `PortfolioReportsPage`
-Rută: `/portfolio/reports`, adăugată în `PortfolioLayout` pe rândul 2 (lângă „Portofoliul meu"), iconiță `BarChart3`.
+## Despre snapshot
+- Nu există un snapshot accesibil din partea mea. Lovable Cloud nu oferă restore point-in-time self-serve, iar eu pot doar citi starea curentă.
+- **Opțiune externă:** deschide un ticket la suportul Lovable și cere restaurarea din backup-ul zilnic (Supabase păstrează backup-uri automate; doar suportul poate decide dacă se poate face restore). Menționează timestamp-urile: cele două rulări au fost pe 31.08.2026, 20:03 și 20:05 UTC. Atenție: un restore ar aduce întreaga bază la starea de dinainte, deci s-ar pierde orice modificare făcută după backup.
 
-Filtre comune (sus):
-- An școlar (din clasele asignate, implicit anul curent)
-- Clasă (toate / una anume)
-- Interval date (opțional, pentru jurnal/board picks)
+## Plan de recuperare manuală (dacă nu alegi restore prin suport)
 
-### 2. Tipuri de rapoarte (tab-uri)
+### Pasul 1 — Repararea claselor (revers o promovare)
+Migrație SQL care inversează o promovare:
+- IX–XII (A–G) → VIII–XI... atenție: starea corectă după o singură promovare este cea dorită (2026-2027), deci **clasele sunt de fapt OK acum**. Nu e nevoie de revers pe clase — problema sunt elevii șterși.
+- Verific împreună cu tine dacă vrei ca anul curent să fie 2026-2027 (o promovare) sau 2025-2026 (zero promovări — atunci facem revers complet al claselor).
 
-**a) Per clasă** — pentru o clasă selectată, listă elevi cu:
-- nr. teme trimise / aprobate
-- nr. implicări aprobate + total ore
-- nr. concursuri (înscris / participat / premiat)
-- nr. diplome
-- nr. răspunsuri la tablă + medie punctaj
+### Pasul 2 — Recuperarea elevilor șterși
+Conturile șterse (inclusiv din auth) nu pot fi restaurate de mine. Opțiuni:
+- **Reimport din CSV** prin funcția existentă `admin-import-csv` (aceeași procedură ca la importul inițial). Ai nevoie de fișierul CSV cu elevii. Parolele se resetează la cea implicită; istoricul (prezențe, rezervări, bilete) al elevilor șterși este pierdut definitiv fără restore din backup.
+- Dacă ai CSV-ul doar pentru o parte din elevi, reimportăm selectiv.
 
-**b) Per elev** — fișă agregată cu toate elementele din `portfolio_items` grupate pe sursă (submission, involvement, competition, diploma, board_pick), plus observații.
+### Pasul 3 — Prevenire pe viitor
+- Adaug o protecție în `admin-promote-classes`: refuză rularea dacă în `audit_logs` există deja o promovare către același `new_academic_year`.
 
-**c) Activitate profesor** — pentru profesorul logat:
-- teme create, trimiteri evaluate
-- implicări aprobate/respinse
-- concursuri organizate, înscrieri
-- intrări jurnal (total + marcate pentru raport anual)
-- documente birocratice pe categorie
-- materiale proprii adăugate
-
-**d) Raport anual** — agregare bazată pe `portfolio_journal.relevant_for_annual_report = true` + statistici globale pe anul școlar selectat (text pregătit pentru copiere în raportul oficial).
-
-### 3. Export
-
-Toate tipurile suportă:
-- **PDF** — generat client-side cu `jspdf` + `pdf-font.ts` (reutilizăm pattern din `attendance-pdf.ts` / `report-pdf.ts`). Header cu logo CNCV, titlu raport, an școlar, data generării.
-- **CSV** — prin `csv-export.ts` existent.
-
-Funcții helper noi în `src/lib/portfolio-report.ts`:
-- `buildClassReport(classId, year)`
-- `buildStudentReport(studentId, year)`
-- `buildTeacherActivityReport(teacherId, year)`
-- `buildAnnualReport(teacherId, year)`
-- `exportReportPdf(report, type)` / `exportReportCsv(report, type)`
-
-### 4. Dashboard — link rapid
-În `PortfolioDashboard` adăugăm un card „Rapoarte" care duce direct la `/portfolio/reports`.
-
-### 5. Fără modificări de schemă
-Toate datele necesare există deja (Etapele 1–5). Folosim doar `SELECT`-uri cu join-uri prin client. **Nu e nevoie de migrație** și **nu e nevoie de edge function** — agregările sunt mici (per clasă/elev/profesor) și se pot face client-side sau prin RPC-uri simple `count`/`group by` existente.
-
-### Detalii tehnice
-- Fișiere noi: `src/pages/portfolio/PortfolioReportsPage.tsx`, `src/lib/portfolio-report.ts`
-- Modificate: `src/App.tsx` (rută), `src/components/layouts/PortfolioLayout.tsx` (nav rândul 2), `src/pages/portfolio/PortfolioDashboard.tsx` (card link)
-- Reutilizare: `jspdf`, `pdf-font.ts`, `csv-export.ts`, `DateInput`, Combobox pentru selectare elev
-- UI 100% în română, sortare alfabetică „Nume Prenume" după `last_name` (locale ro)
-- Format date `zz.ll.aaaa`, ore `HH:MM`
-
-După aprobare implementez tot într-un singur pas.
+## Detalii tehnice
+- Surse de adevăr consultate: `audit_logs` (2 înregistrări `promote_classes`), `classes`, `user_roles`, `student_class_assignments`.
+- Funcția de ștergere elevi șterge în cascadă: rezervări, bilete, prezențe, form_submissions, notificări, roluri, profil și contul de auth — niciuna recuperabilă fără backup.
