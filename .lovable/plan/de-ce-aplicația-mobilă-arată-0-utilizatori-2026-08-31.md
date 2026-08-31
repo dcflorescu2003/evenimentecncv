@@ -28,4 +28,5 @@ Până când versiunea nouă ajunge pe telefon, aplicația mobilă va continua s
 ## Detalii tehnice
 
 - `profiles.email` are grant retras pentru rolul `authenticated`; accesul se face doar prin funcția `get_profile_emails` (admin/manager). Orice `select("*")` pe `profiles` din client eșuează cu 403.
-- Nu recomand adăugarea `server.url` în `capacitor.config.ts` pentru producție (Apple respinge build-urile care încarcă conținut extern) — actualizarea prin build nou rămâne calea corectă.
+- Nu recomand adăugarea `server.url` în `capacitor.config.ts` pentru producție (Apple respinge build-urile care încarcă conținut extern) — actualizarea prin build nou rămâne calea corectă.  
+  
