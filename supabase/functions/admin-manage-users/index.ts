@@ -23,14 +23,27 @@ serve(async (req) => {
     // Verify caller
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace("Bearer ", "");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     let caller: any = null;
-    if (token && token !== serviceRoleKey) {
+    let tokenRole = "none";
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1] || ""));
+        tokenRole = payload?.role || "unknown";
+      } catch (_e) {
+        tokenRole = "unparsable";
+      }
+    }
+    if (token && token !== serviceRoleKey && token !== anonKey && tokenRole !== "anon") {
       const { data: { user }, error: userError } = await supabase.auth.getUser(token);
       if (userError) {
-        console.error("getUser error:", userError.message);
+        console.error("getUser error:", userError.message, "tokenRole:", tokenRole);
       }
       caller = user;
+    } else {
+      console.log("caller token role:", tokenRole, "hasToken:", !!token);
     }
+
 
     const body = await req.json();
     const { action } = body;
