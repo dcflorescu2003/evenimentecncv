@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import type { Tables } from "@/integrations/supabase/types";
 
-type Profile = Tables<"profiles">;
+type Profile = Omit<Tables<"profiles">, "email">;
 type UserRole = Tables<"user_roles">;
 type Subject = Tables<"subjects">;
 type TeacherSubject = Tables<"teacher_subjects">;
