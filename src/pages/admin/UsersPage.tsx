@@ -22,6 +22,8 @@ import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2, Pencil, Chevron
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import type { Tables } from "@/integrations/supabase/types";
+import { invokeFunction } from "@/lib/invokeFunction";
+
 
 type Profile = Omit<Tables<"profiles">, "email">;
 type UserRole = Tables<"user_roles">;
