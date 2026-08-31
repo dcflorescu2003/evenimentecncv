@@ -24,6 +24,7 @@ import { Search, Users, CalendarDays, Clock, ChevronRight, Download, Printer, Ke
 import { exportToCSV } from "@/lib/csv-export";
 import { toast } from "sonner";
 import AllEventsCalendarSection from "@/components/prof/AllEventsCalendarSection";
+import { invokeFunction } from "@/lib/invokeFunction";
 
 interface StudentReport {
   id: string;

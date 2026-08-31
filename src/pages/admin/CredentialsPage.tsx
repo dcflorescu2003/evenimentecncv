@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { downloadFileMobileSafe } from "@/lib/download";
+import { invokeFunction } from "@/lib/invokeFunction";
 
 const roleLabels: Record<string, string> = {
   admin: "Administratori",
