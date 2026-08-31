@@ -186,11 +186,8 @@ export default function TeacherDashboard() {
 
   const resetPasswordsMutation = useMutation({
     mutationFn: async (classId: string) => {
-      const { data, error } = await supabase.functions.invoke("admin-manage-users", {
-        body: { action: "batch_reset_class_passwords", class_id: classId },
-      });
-      if (error) throw error;
-      return data;
+      return await invokeFunction("admin-manage-users", { action: "batch_reset_class_passwords", class_id: classId });
+
     },
     onSuccess: (data) => {
       setCredentialResults(data.results || []);
