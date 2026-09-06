@@ -1,4 +1,12 @@
 {
+  "name": "CNCV",
+  "short_name": "CNCV",
+  "description": "Platforma CNCV pentru evenimente, orar si portofoliu.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7A1F2E",
   "icons": [
     {
       "src": "../icons/icon-48.webp",
