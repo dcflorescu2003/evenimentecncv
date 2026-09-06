@@ -39,7 +39,7 @@ export default function TeacherLayout() {
         </div>
       </header>
       <div className="h-header-safe shrink-0" aria-hidden="true" />
-      <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-30 flex items-center gap-1 sm:gap-2 border-b bg-card px-2 sm:px-4 py-2 overflow-x-auto whitespace-nowrap">
+      <div className="sticky top-[calc(3.5rem+var(--safe-area-inset-top,env(safe-area-inset-top,0px)))] z-30 flex items-center gap-1 sm:gap-2 border-b bg-card px-2 sm:px-4 py-2 overflow-x-auto whitespace-nowrap">
         {navItems.map((item) => (
           <Button
             key={item.path}

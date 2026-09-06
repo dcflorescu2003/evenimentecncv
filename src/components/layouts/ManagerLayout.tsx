@@ -126,7 +126,7 @@ export default function ManagerLayout() {
         </SidebarContent>
         <SidebarFooter
           className="border-t border-sidebar-border p-3"
-          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0.75rem)" }}
+          style={{ paddingBottom: "max(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)), 0.75rem)" }}
         >
           <div className="flex items-center justify-between">
             <span className="truncate text-xs text-sidebar-foreground/70">
