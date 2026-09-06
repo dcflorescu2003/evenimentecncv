@@ -9,13 +9,12 @@ const config: CapacitorConfig = {
   appName: 'CNCV',
   webDir: 'dist',
   plugins: {
-    // Status bar nu se mai suprapune peste WebView pe Android
-    // (sistemul rezervă spațiu, conținutul rămâne sub bara de status).
-    // Pe iOS, plugin-ul controlează doar stilul (fundalul vine din safe-area CSS).
-    StatusBar: {
-      overlaysWebView: false,
-      style: 'DEFAULT',
-      backgroundColor: '#ffffff',
+    // Android 16 impune edge-to-edge. SystemBars injectează în WebView
+    // variabilele --safe-area-inset-* folosite de interfață.
+    SystemBars: {
+      insetsHandling: 'css',
+      style: 'DARK',
+      hidden: false,
     },
   },
 };

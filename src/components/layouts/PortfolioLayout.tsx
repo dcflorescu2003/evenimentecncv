@@ -54,7 +54,7 @@ export default function PortfolioLayout() {
         </div>
       </header>
       <div className="h-header-safe shrink-0" aria-hidden="true" />
-      <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-30 flex flex-col border-b bg-card">
+      <div className="sticky top-[calc(3.5rem+var(--safe-area-inset-top,env(safe-area-inset-top,0px)))] z-30 flex flex-col border-b bg-card">
         <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 overflow-x-auto whitespace-nowrap">
           {navItemsRow1.map((item) => (
             <Button
