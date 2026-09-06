@@ -11,8 +11,8 @@ Deci numele de sub iconiță pe telefon este deja CNCV (în build-ul 1.22).
 ## Ce a rămas „Evenimente" (verificat)
 
 1. `index.html` — titlul paginii web și textele de partajare:
-   - `<title>Evenimente CNCV</title>`
-   - `og:title` și `twitter:title` = „Evenimente CNCV"
+  - `<title>Evenimente CNCV</title>`
+  - `og:title` și `twitter:title` = „Evenimente CNCV"
 2. `public/manifest.webmanifest` — nu are deloc `name` / `short_name`, deci la instalarea ca aplicație web numele vine din titlul paginii.
 3. `package.json` — `"name": "vite_react_shadcn_ts"` (intern, invizibil pentru utilizatori).
 
@@ -30,4 +30,6 @@ Deci numele de sub iconiță pe telefon este deja CNCV (în build-ul 1.22).
 
 ## Detaliu tehnic suplimentar
 
-În iOS, `CURRENT_PROJECT_VERSION` este 6 în timp ce `MARKETING_VERSION` este 1.22. Îl pot alinia la 22 la următorul bump dacă vrei.
+În iOS, `CURRENT_PROJECT_VERSION` este 6 în timp ce `MARKETING_VERSION` este 1.22. Îl pot alinia la 22 la următorul bump dacă vrei.  
+  
+Da, aliniaza si fa un bump de versiune peste tot
