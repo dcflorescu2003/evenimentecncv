@@ -416,7 +416,7 @@ export type Database = {
           max_capacity: number | null
           max_per_class: number | null
           name: string
-          session_id: string
+          session_id: string | null
           status: Database["public"]["Enums"]["club_status"]
           updated_at: string
         }
@@ -435,7 +435,7 @@ export type Database = {
           max_capacity?: number | null
           max_per_class?: number | null
           name: string
-          session_id: string
+          session_id?: string | null
           status?: Database["public"]["Enums"]["club_status"]
           updated_at?: string
         }
@@ -454,7 +454,7 @@ export type Database = {
           max_capacity?: number | null
           max_per_class?: number | null
           name?: string
-          session_id?: string
+          session_id?: string | null
           status?: Database["public"]["Enums"]["club_status"]
           updated_at?: string
         }
@@ -2572,7 +2572,7 @@ export type Database = {
           max_capacity: number | null
           max_per_class: number | null
           name: string
-          session_id: string
+          session_id: string | null
           start_date: string
           status: Database["public"]["Enums"]["volunteer_project_status"]
           updated_at: string
@@ -2593,7 +2593,7 @@ export type Database = {
           max_capacity?: number | null
           max_per_class?: number | null
           name: string
-          session_id: string
+          session_id?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["volunteer_project_status"]
           updated_at?: string
@@ -2614,7 +2614,7 @@ export type Database = {
           max_capacity?: number | null
           max_per_class?: number | null
           name?: string
-          session_id?: string
+          session_id?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["volunteer_project_status"]
           updated_at?: string
