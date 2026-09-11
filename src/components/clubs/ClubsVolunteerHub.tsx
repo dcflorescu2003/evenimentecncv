@@ -255,7 +255,7 @@ function StatusBadge({ status }: { status: string }) {
     draft: { label: "Ciornă", variant: "outline" },
     active: { label: "Activ", variant: "default" },
     archived: { label: "Arhivat", variant: "secondary" },
-    closed: { label: "Închis", variant: "secondary" },
+    closed: { label: "Finalizat", variant: "secondary" },
   };
   const cfg = map[status] ?? { label: status, variant: "outline" as const };
   return <Badge variant={cfg.variant}>{cfg.label}</Badge>;

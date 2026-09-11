@@ -281,7 +281,7 @@ function ProjectGeneralTab({ project, canEdit, onSaved }: any) {
             <SelectContent>
               <SelectItem value="draft">Ciornă</SelectItem>
               <SelectItem value="active">Activ</SelectItem>
-              <SelectItem value="closed">Închis</SelectItem>
+              <SelectItem value="closed">Finalizat</SelectItem>
             </SelectContent>
           </Select>
         </div>
