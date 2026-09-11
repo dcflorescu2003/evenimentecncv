@@ -142,7 +142,7 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
         .in("student_id", studentIds).eq("status", "enrolled");
       const vpIdsAll = [...new Set((vEnrolls ?? []).map((v: any) => v.project_id))];
       const { data: vProjects } = vpIdsAll.length
-        ? await supabase.from("volunteer_projects").select("id").in("id", vpIdsAll).eq("session_id", sessionId)
+        ? await supabase.from("volunteer_projects").select("id").in("id", vpIdsAll)
         : { data: [] as any[] };
       const vpInSession = new Set((vProjects ?? []).map((p: any) => p.id));
       const enrolledByStudent = new Map<string, Set<string>>();
@@ -324,7 +324,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
         .eq("status", "enrolled");
       const vProjectIdsAll = [...new Set((vEnrolls ?? []).map(v => v.project_id))];
       const { data: vProjects } = vProjectIdsAll.length
-        ? await supabase.from("volunteer_projects").select("id, name").in("id", vProjectIdsAll).eq("session_id", sessionId)
+        ? await supabase.from("volunteer_projects").select("id, name").in("id", vProjectIdsAll)
         : { data: [] as any[] };
       const vProjectMap = Object.fromEntries((vProjects ?? []).map((p: any) => [p.id, p]));
       const vProjectIdsInSession = (vProjects ?? []).map((p: any) => p.id);
@@ -558,7 +558,7 @@ function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: 
         .in("student_id", studentIds).eq("status", "enrolled");
       const vpIds = [...new Set((vEnrolls ?? []).map((v: any) => v.project_id))];
       const { data: vProjects } = vpIds.length
-        ? await supabase.from("volunteer_projects").select("id, name").in("id", vpIds).eq("session_id", sessionId)
+        ? await supabase.from("volunteer_projects").select("id, name").in("id", vpIds)
         : { data: [] as any[] };
       const vpInSession = (vProjects ?? []).map((p: any) => p.id);
       const vpNameMap = Object.fromEntries((vProjects ?? []).map((p: any) => [p.id, p.name]));

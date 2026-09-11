@@ -626,7 +626,6 @@ function ClubsReport({ sessionId }: { sessionId: string }) {
       const { data: clubs } = await supabase
         .from("clubs")
         .select("*")
-        .eq("session_id", sessionId)
         .order("name");
 
       const clubIds = (clubs ?? []).map((c) => c.id);
@@ -793,7 +792,6 @@ function VolunteersReport({ sessionId }: { sessionId: string }) {
       const { data: projects } = await supabase
         .from("volunteer_projects")
         .select("*")
-        .eq("session_id", sessionId)
         .order("name");
 
       const projIds = (projects ?? []).map((p) => p.id);

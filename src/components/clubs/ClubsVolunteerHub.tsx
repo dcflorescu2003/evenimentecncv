@@ -50,22 +50,6 @@ export default function ClubsVolunteerHub({ mode }: Props) {
   const detailBase =
     mode === "admin" ? "/admin" : mode === "cse" ? "/prof" : "/student";
 
-  // Sesiunea curentă (activă) — folosită la creare
-  const { data: activeSession } = useQuery({
-    queryKey: ["active-session"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("program_sessions")
-        .select("id, name, academic_year, status")
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const { data: clubs = [], isLoading: loadingClubs } = useQuery({
     queryKey: ["clubs-hub", mode],
     queryFn: async () => {
@@ -136,7 +120,6 @@ export default function ClubsVolunteerHub({ mode }: Props) {
           </div>
           {canCreate && (
             <CreateProjectDialog
-              sessionId={activeSession?.id}
               userId={user!.id}
               isCse={isCseRole}
               onCreated={() => qc.invalidateQueries({ queryKey: ["volunteer-hub", mode] })}
@@ -207,7 +190,6 @@ export default function ClubsVolunteerHub({ mode }: Props) {
           </div>
           {canCreate && (
             <CreateClubDialog
-              sessionId={activeSession?.id}
               userId={user!.id}
               isCse={isCseRole}
               onCreated={() => qc.invalidateQueries({ queryKey: ["clubs-hub", mode] })}
@@ -286,12 +268,10 @@ function combineDateTime(date: string, time: string): string | null {
 }
 
 function CreateClubDialog({
-  sessionId,
   userId,
   isCse,
   onCreated,
 }: {
-  sessionId?: string;
   userId: string;
   isCse: boolean;
   onCreated: () => void;
@@ -323,13 +303,8 @@ function CreateClubDialog({
       toast.error("Numele clubului este obligatoriu");
       return;
     }
-    if (!sessionId) {
-      toast.error("Nu există o sesiune activă");
-      return;
-    }
     setSaving(true);
     const { error } = await supabase.from("clubs").insert({
-      session_id: sessionId,
       name: name.trim(),
       description: description.trim() || null,
       frequency_label: frequency.trim() || null,
@@ -434,12 +409,10 @@ function CreateClubDialog({
 }
 
 function CreateProjectDialog({
-  sessionId,
   userId,
   isCse,
   onCreated,
 }: {
-  sessionId?: string;
   userId: string;
   isCse: boolean;
   onCreated: () => void;
@@ -472,10 +445,8 @@ function CreateProjectDialog({
   async function submit() {
     if (!name.trim()) return toast.error("Numele proiectului este obligatoriu");
     if (!startDate || !endDate) return toast.error("Setează perioada proiectului");
-    if (!sessionId) return toast.error("Nu există o sesiune activă");
     setSaving(true);
     const { error } = await supabase.from("volunteer_projects").insert({
-      session_id: sessionId,
       name: name.trim(),
       description: description.trim() || null,
       start_date: startDate,
