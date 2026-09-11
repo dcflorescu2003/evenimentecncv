@@ -17,10 +17,12 @@ Cluburile nu vor mai fi legate de o sesiune de program. Odată create, rămân v
 ## Detalii tehnice
 
 1. Migrare bază de date:
-   - `ALTER TABLE public.clubs ALTER COLUMN session_id DROP NOT NULL;`
-   - Coloana se păstrează (fără ștergere de date) pentru cluburile existente; nu se mai completează la creare.
+  - `ALTER TABLE public.clubs ALTER COLUMN session_id DROP NOT NULL;`
+  - Coloana se păstrează (fără ștergere de date) pentru cluburile existente; nu se mai completează la creare.
 2. `src/components/clubs/ClubsVolunteerHub.tsx`:
-   - Formularul de club nu mai primește/trimite `sessionId`; se elimină blocarea la lipsa sesiunii active.
-   - Interogarea `active-session` rămâne doar pentru proiectele de voluntariat.
+  - Formularul de club nu mai primește/trimite `sessionId`; se elimină blocarea la lipsa sesiunii active.
+  - Interogarea `active-session` rămâne doar pentru proiectele de voluntariat.
 3. `src/pages/admin/ReportsPage.tsx` — `ClubsReport`: se elimină filtrul `.eq("session_id", sessionId)`, listând toate cluburile.
-4. Fără modificări la politicile RLS sau la `check_club_enrollment` (nu depind de sesiune).
+4. Fără modificări la politicile RLS sau la `check_club_enrollment` (nu depind de sesiune).  
+  
+Vreau sa facem si pentru voluntariat sa fie independent de sesiune. Managerii sa poata marca ca finalizat evenimentul si sa nu mai fie vizibil elevilor
