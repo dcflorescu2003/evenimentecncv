@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, Plus, Trash2, Save, Lock, UserPlus, Check } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Lock, UserPlus, Check, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
 
@@ -145,7 +145,43 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
         {(project as any).is_private && (
           <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" />Privat</Badge>
         )}
-        <Badge variant={project.status === "active" ? "default" : "outline"}>{project.status}</Badge>
+        <Badge variant={project.status === "active" ? "default" : "outline"}>
+          {project.status === "active" ? "Activ" : project.status === "draft" ? "Ciornă" : "Finalizat"}
+        </Badge>
+        {canManage && project.status !== "closed" && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              const { error } = await supabase
+                .from("volunteer_projects")
+                .update({ status: "closed" })
+                .eq("id", projectId!);
+              if (error) return toast.error(error.message);
+              toast.success("Proiect marcat ca finalizat — nu mai este vizibil elevilor");
+              qc.invalidateQueries({ queryKey: ["volunteer", projectId] });
+            }}
+          >
+            <CheckCircle2 className="h-4 w-4 mr-1" />Marchează finalizat
+          </Button>
+        )}
+        {canManage && project.status === "closed" && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={async () => {
+              const { error } = await supabase
+                .from("volunteer_projects")
+                .update({ status: "active" })
+                .eq("id", projectId!);
+              if (error) return toast.error(error.message);
+              toast.success("Proiect reactivat");
+              qc.invalidateQueries({ queryKey: ["volunteer", projectId] });
+            }}
+          >
+            Redeschide
+          </Button>
+        )}
       </div>
 
       {mode === "student" && (
