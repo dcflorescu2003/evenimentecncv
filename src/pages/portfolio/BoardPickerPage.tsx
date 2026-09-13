@@ -338,7 +338,7 @@ export default function BoardPickerPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
+        </CollapsibleSection>
       )}
 
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
