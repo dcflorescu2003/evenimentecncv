@@ -316,8 +316,7 @@ export default function BoardPickerPage() {
       </Card>
 
       {classId && picks.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="font-semibold">Istoric</h2>
+        <CollapsibleSection title="Istoric" count={picks.length} contentClassName="space-y-2 pt-2">
           {picks.slice(0, 20).map((p) => (
             <Card key={p.id}>
               <CardContent className="flex items-center justify-between p-3 text-sm">
