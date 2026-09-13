@@ -102,7 +102,7 @@ export default function ClubDetailPage({ mode }: Props) {
   const isCreator = !!user && club?.created_by === user.id;
   const isAssistant = !!user && assistants.includes(user.id);
   const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator || isAssistant;
-  const canManageCoords = isAdmin || ((isCse || isTeacher) && isCreator);
+  const canManageCoords = isAdmin || isCse || (isTeacher && isCreator);
   const canManageAssistants = canManageCoords || isCoordinator;
 
   // View mode for non-creator, non-coordinator, non-admin teachers
