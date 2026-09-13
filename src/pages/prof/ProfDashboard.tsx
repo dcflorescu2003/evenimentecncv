@@ -254,10 +254,7 @@ export default function ProfDashboard() {
 
           {/* Past coordinator events (history) */}
           {pastCoord.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="font-display text-base sm:text-lg font-semibold">
-                Istoric coordonare ({pastCoord.length})
-              </h2>
+            <CollapsibleSection title="Istoric coordonare" count={pastCoord.length}>
               {pastCoord.slice(0, 10).map((a: any) => {
                 const ev = a.events;
                 return (

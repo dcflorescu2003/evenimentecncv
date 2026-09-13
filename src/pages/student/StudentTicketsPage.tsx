@@ -15,6 +15,7 @@ import { CalendarDays, Clock, MapPin, Ticket, X, ScanLine, Copy } from "lucide-r
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 type Reservation = Tables<"reservations">;
 type Event = Tables<"events">;

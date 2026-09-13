@@ -93,8 +93,7 @@ export default function CoordinatorDashboard() {
             </div>
           )}
           {past.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="font-display text-lg font-semibold text-muted-foreground">Încheiate ({past.length})</h2>
+            <CollapsibleSection title="Încheiate" count={past.length}>
               {past.map((a) => (
                 <EventCard
                   key={a.id}
