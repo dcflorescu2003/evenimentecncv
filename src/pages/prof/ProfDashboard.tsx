@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CalendarDays, Clock, MapPin, ScanLine, Users, Plus } from "lucide-react";
 import AllEventsCalendarSection from "@/components/prof/AllEventsCalendarSection";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 export default function ProfDashboard() {
   const { user, profile } = useAuth();
@@ -254,10 +255,7 @@ export default function ProfDashboard() {
 
           {/* Past coordinator events (history) */}
           {pastCoord.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="font-display text-base sm:text-lg font-semibold">
-                Istoric coordonare ({pastCoord.length})
-              </h2>
+            <CollapsibleSection title="Istoric coordonare" count={pastCoord.length}>
               {pastCoord.slice(0, 10).map((a: any) => {
                 const ev = a.events;
                 return (
@@ -286,7 +284,7 @@ export default function ProfDashboard() {
                   ... și încă {pastCoord.length - 10} evenimente coordonate
                 </p>
               )}
-            </div>
+            </CollapsibleSection>
           )}
 
           {activeCreated.length === 0 && activeCoord.length === 0 && pastCoord.length === 0 && (

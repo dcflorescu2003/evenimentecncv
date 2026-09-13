@@ -17,6 +17,7 @@ import {
 import { Dice5, Save, Trash2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { BOARD_PICK_MODES, boardPickModeLabel } from "@/lib/portfolioInvolvement";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 interface ClassRow {
   id: string;
@@ -315,8 +316,7 @@ export default function BoardPickerPage() {
       </Card>
 
       {classId && picks.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="font-semibold">Istoric</h2>
+        <CollapsibleSection title="Istoric" count={picks.length} contentClassName="space-y-2 pt-2">
           {picks.slice(0, 20).map((p) => (
             <Card key={p.id}>
               <CardContent className="flex items-center justify-between p-3 text-sm">
@@ -338,7 +338,7 @@ export default function BoardPickerPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
+        </CollapsibleSection>
       )}
 
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
