@@ -207,7 +207,7 @@ export default function StudentClubsPage() {
                 })}
               </div>
             )}
-          </section>
+          </CollapsibleSection>
         </TabsContent>
       </Tabs>
     </div>
