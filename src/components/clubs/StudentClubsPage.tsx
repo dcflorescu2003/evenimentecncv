@@ -73,8 +73,8 @@ export default function StudentClubsPage() {
     },
   });
 
-  const enrolledClubIds = useMemo(
-    () => new Set(myClubEnrollments.map((e: any) => e.club_id)),
+  const statusByClubId = useMemo(
+    () => new Map(myClubEnrollments.map((e: any) => [e.club_id, e.status])),
     [myClubEnrollments],
   );
 
