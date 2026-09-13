@@ -283,7 +283,7 @@ export default function ProfDashboard() {
                   ... și încă {pastCoord.length - 10} evenimente coordonate
                 </p>
               )}
-            </div>
+            </CollapsibleSection>
           )}
 
           {activeCreated.length === 0 && activeCoord.length === 0 && pastCoord.length === 0 && (

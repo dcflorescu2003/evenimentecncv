@@ -103,7 +103,7 @@ export default function CoordinatorDashboard() {
                   past
                 />
               ))}
-            </div>
+            </CollapsibleSection>
           )}
         </>
       )}
