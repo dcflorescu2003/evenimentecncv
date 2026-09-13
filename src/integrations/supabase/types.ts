@@ -2841,7 +2841,7 @@ export type Database = {
         | "manager"
         | "cse"
       club_attendance_status: "present" | "late" | "absent"
-      club_enrollment_status: "enrolled" | "withdrawn"
+      club_enrollment_status: "enrolled" | "withdrawn" | "pending" | "rejected"
       club_status: "draft" | "active" | "archived"
       event_status: "draft" | "published" | "closed" | "cancelled"
       feedback_anonymity: "anonymous" | "identified" | "anonymous_optional"
@@ -3020,7 +3020,7 @@ export const Constants = {
         "cse",
       ],
       club_attendance_status: ["present", "late", "absent"],
-      club_enrollment_status: ["enrolled", "withdrawn"],
+      club_enrollment_status: ["enrolled", "withdrawn", "pending", "rejected"],
       club_status: ["draft", "active", "archived"],
       event_status: ["draft", "published", "closed", "cancelled"],
       feedback_anonymity: ["anonymous", "identified", "anonymous_optional"],
