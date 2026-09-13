@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CalendarDays, Clock, MapPin, ScanLine, Users } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 type Assignment = Tables<"coordinator_assignments">;
 type Event = Tables<"events">;

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ArrowRight, HeartHandshake, Users, CalendarRange, History } from "lucide-react";
 import { formatDate } from "@/lib/time";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 export default function StudentClubsPage() {
   const navigate = useNavigate();

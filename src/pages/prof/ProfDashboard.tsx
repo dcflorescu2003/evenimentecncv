@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CalendarDays, Clock, MapPin, ScanLine, Users, Plus } from "lucide-react";
 import AllEventsCalendarSection from "@/components/prof/AllEventsCalendarSection";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 export default function ProfDashboard() {
   const { user, profile } = useAuth();

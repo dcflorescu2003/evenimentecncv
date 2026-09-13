@@ -17,6 +17,7 @@ import {
 import { Dice5, Save, Trash2, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { BOARD_PICK_MODES, boardPickModeLabel } from "@/lib/portfolioInvolvement";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 interface ClassRow {
   id: string;
