@@ -107,8 +107,8 @@ export default function ClubDetailPage({ mode }: Props) {
 
   // View mode for non-creator, non-coordinator, non-admin teachers
   const viewMode: "full" | "homeroom_filtered" | "general_only" | "student" =
-    mode === "student" ? "student"
-    : canManage ? "full"
+    canManage ? "full"
+    : mode === "student" ? "student"
     : isHomeroom ? "homeroom_filtered"
     : (isPlainTeacher || isCse) ? "general_only"
     : "full";
