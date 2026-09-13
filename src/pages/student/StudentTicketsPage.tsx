@@ -202,7 +202,7 @@ export default function StudentTicketsPage() {
                   past
                 />
               ))}
-            </div>
+            </CollapsibleSection>
           )}
         </>
       )}
