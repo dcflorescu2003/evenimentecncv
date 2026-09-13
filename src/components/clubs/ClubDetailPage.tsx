@@ -576,45 +576,6 @@ function CoordinatorsTab({
 }
 
 // ============================================================
-function MembersTab({
-  clubId, enrollments, canManage, onChange,
-}: {
-  clubId: string; enrollments: any[]; canManage: boolean; onChange: () => void;
-}) {
-  async function remove(id: string) {
-    const { error } = await supabase
-      .from("club_enrollments")
-      .update({ status: "withdrawn", withdrawn_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Membru retras");
-    onChange();
-  }
-
-  return (
-    <Card>
-      <CardContent className="space-y-2 pt-4">
-        {enrollments.length === 0 && (
-          <p className="text-sm text-muted-foreground">Niciun membru înscris.</p>
-        )}
-        {enrollments.map((e: any) => (
-          <div key={e.id} className="flex items-center justify-between rounded border p-2">
-            <span className="text-sm">
-              {e.profile ? `${e.profile.last_name} ${e.profile.first_name}` : e.student_id}
-            </span>
-            {canManage && (
-              <Button variant="ghost" size="sm" onClick={() => remove(e.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            )}
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ============================================================
 function MeetingsTab({
   clubId, meetings, enrollments, canManage, readOnlyAttendance, userId, isStudent, onChange,
 }: {
