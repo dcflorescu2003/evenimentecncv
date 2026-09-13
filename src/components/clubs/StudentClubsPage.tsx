@@ -50,7 +50,7 @@ export default function StudentClubsPage() {
         .from("club_enrollments")
         .select("id, club_id, status, enrolled_at, clubs:club_id (id, name, description, frequency_label, status)")
         .eq("student_id", user!.id)
-        .eq("status", "enrolled")
+        .in("status", ["enrolled", "pending"])
         .order("enrolled_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -73,8 +73,8 @@ export default function StudentClubsPage() {
     },
   });
 
-  const enrolledClubIds = useMemo(
-    () => new Set(myClubEnrollments.map((e: any) => e.club_id)),
+  const statusByClubId = useMemo(
+    () => new Map(myClubEnrollments.map((e: any) => [e.club_id, e.status])),
     [myClubEnrollments],
   );
 
@@ -102,7 +102,7 @@ export default function StudentClubsPage() {
               <ClubCard
                 key={c.id}
                 club={c}
-                enrolled={enrolledClubIds.has(c.id)}
+                status={statusByClubId.get(c.id)}
                 onOpen={() => navigate(`/student/clubs/${c.id}`)}
               />
             )}
@@ -140,7 +140,7 @@ export default function StudentClubsPage() {
                   <ClubCard
                     key={e.id}
                     club={e.clubs}
-                    enrolled
+                    status={e.status}
                     onOpen={() => navigate(`/student/clubs/${e.club_id}`)}
                   />
                 ) : null,
@@ -249,11 +249,11 @@ function Section({
 
 function ClubCard({
   club,
-  enrolled,
+  status,
   onOpen,
 }: {
   club: any;
-  enrolled?: boolean;
+  status?: string;
   onOpen: () => void;
 }) {
   return (
@@ -261,7 +261,8 @@ function ClubCard({
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">{club.name}</CardTitle>
-          {enrolled && <Badge variant="default">Înscris</Badge>}
+          {status === "enrolled" && <Badge variant="default">Înscris</Badge>}
+          {status === "pending" && <Badge variant="secondary">În așteptare</Badge>}
         </div>
         {club.frequency_label && (
           <CardDescription className="text-xs flex items-center gap-1">

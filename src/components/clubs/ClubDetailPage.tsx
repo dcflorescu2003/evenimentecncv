@@ -28,6 +28,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
+import ClubFormTab from "./ClubFormTab";
+import ClubEnrollDialog from "./ClubEnrollDialog";
+import {
+  ClubRequestsTab, ClubDepartmentsTab, ClubAssistantsTab, ClubMembersTab,
+} from "./ClubManagementTabs";
 
 type Mode = "admin" | "cse" | "student";
 
@@ -81,15 +86,29 @@ export default function ClubDetailPage({ mode }: Props) {
     },
   });
 
+  const { data: assistants = [] } = useQuery({
+    queryKey: ["club-assistants-ids", clubId],
+    enabled: !!clubId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("club_student_assistants")
+        .select("student_id")
+        .eq("club_id", clubId!);
+      return (data ?? []).map((a: any) => a.student_id) as string[];
+    },
+  });
+
   const isCoordinator = !!user && coordinators.some((c: any) => c.user_id === user.id);
   const isCreator = !!user && club?.created_by === user.id;
-  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator;
+  const isAssistant = !!user && assistants.includes(user.id);
+  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator || isAssistant;
   const canManageCoords = isAdmin || ((isCse || isTeacher) && isCreator);
+  const canManageAssistants = canManageCoords || isCoordinator;
 
   // View mode for non-creator, non-coordinator, non-admin teachers
   const viewMode: "full" | "homeroom_filtered" | "general_only" | "student" =
-    mode === "student" ? "student"
-    : canManage ? "full"
+    canManage ? "full"
+    : mode === "student" ? "student"
     : isHomeroom ? "homeroom_filtered"
     : (isPlainTeacher || isCse) ? "general_only"
     : "full";
@@ -115,7 +134,7 @@ export default function ClubDetailPage({ mode }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("club_enrollments")
-        .select("id, student_id, status, enrolled_at, withdrawn_at")
+        .select("id, student_id, status, enrolled_at, withdrawn_at, department_id")
         .eq("club_id", clubId!)
         .eq("status", "enrolled");
       if (error) throw error;
@@ -160,6 +179,35 @@ export default function ClubDetailPage({ mode }: Props) {
     [enrollments, user?.id],
   );
 
+  const { data: myRequest } = useQuery({
+    queryKey: ["club-my-enrollment", clubId, user?.id],
+    enabled: !!clubId && !!user && mode === "student",
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("club_enrollments")
+        .select("id, status")
+        .eq("club_id", clubId!)
+        .eq("student_id", user!.id)
+        .order("enrolled_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const { data: pendingCount = 0 } = useQuery({
+    queryKey: ["club-pending-count", clubId],
+    enabled: !!clubId && canManage,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("club_enrollments")
+        .select("id", { count: "exact", head: true })
+        .eq("club_id", clubId!)
+        .eq("status", "pending");
+      return count ?? 0;
+    },
+  });
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Se încarcă…</p>;
   if (!club) return <p className="text-sm text-muted-foreground">Clubul nu a fost găsit.</p>;
 
@@ -186,23 +234,42 @@ export default function ClubDetailPage({ mode }: Props) {
       {mode === "student" && (
         <StudentEnrollmentBar
           clubId={clubId!}
-          studentId={user!.id}
-          enrolled={!!myEnrollment}
-          enrollmentId={myEnrollment?.id}
+          status={(myRequest?.status as string) ?? null}
+          enrollmentId={myRequest?.id}
         />
       )}
 
       <Tabs defaultValue="general">
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="general">General</TabsTrigger>
+          {canManage && <TabsTrigger value="form">Formular</TabsTrigger>}
+          {canManage && (
+            <TabsTrigger value="requests">
+              Cereri{pendingCount > 0 ? ` (${pendingCount})` : ""}
+            </TabsTrigger>
+          )}
           {showCoordsTab && <TabsTrigger value="coords">Coordonatori</TabsTrigger>}
+          {canManage && <TabsTrigger value="assistants">Asistenți</TabsTrigger>}
           {showMembersTab && <TabsTrigger value="members">Membri ({enrollments.length})</TabsTrigger>}
+          {canManage && <TabsTrigger value="departments">Departamente</TabsTrigger>}
           {showMeetingsTab && <TabsTrigger value="meetings">Întâlniri</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="general" className="space-y-3 pt-3">
           <GeneralTab club={club} canEdit={canManage} onSaved={() => qc.invalidateQueries({ queryKey: ["club", clubId] })} />
         </TabsContent>
+
+        {canManage && (
+          <TabsContent value="form" className="space-y-3 pt-3">
+            <ClubFormTab clubId={clubId!} canEdit={canManage} />
+          </TabsContent>
+        )}
+
+        {canManage && (
+          <TabsContent value="requests" className="space-y-3 pt-3">
+            <ClubRequestsTab clubId={clubId!} canManage={canManage} />
+          </TabsContent>
+        )}
 
         {showCoordsTab && (
           <TabsContent value="coords" className="space-y-3 pt-3">
@@ -216,14 +283,25 @@ export default function ClubDetailPage({ mode }: Props) {
           </TabsContent>
         )}
 
+        {canManage && (
+          <TabsContent value="assistants" className="space-y-3 pt-3">
+            <ClubAssistantsTab clubId={clubId!} canManage={canManageAssistants} userId={user!.id} />
+          </TabsContent>
+        )}
+
         {showMembersTab && (
           <TabsContent value="members" className="space-y-3 pt-3">
-            <MembersTab
+            <ClubMembersTab
               clubId={clubId!}
               enrollments={enrollments}
               canManage={canManage}
-              onChange={() => qc.invalidateQueries({ queryKey: ["club-enrollments", clubId] })}
             />
+          </TabsContent>
+        )}
+
+        {canManage && (
+          <TabsContent value="departments" className="space-y-3 pt-3">
+            <ClubDepartmentsTab clubId={clubId!} canManage={canManage} />
           </TabsContent>
         )}
 
@@ -248,31 +326,12 @@ export default function ClubDetailPage({ mode }: Props) {
 
 // ============================================================
 function StudentEnrollmentBar({
-  clubId, studentId, enrolled, enrollmentId,
+  clubId, status, enrollmentId,
 }: {
-  clubId: string; studentId: string; enrolled: boolean; enrollmentId?: string;
+  clubId: string; status: string | null; enrollmentId?: string;
 }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
-
-  async function enroll() {
-    setBusy(true);
-    const { data: check, error: checkErr } = await supabase.rpc("check_club_enrollment", {
-      _student_id: studentId, _club_id: clubId,
-    });
-    if (checkErr) { setBusy(false); return toast.error(checkErr.message); }
-    if (!(check as any)?.allowed) {
-      setBusy(false);
-      return toast.error((check as any)?.reason ?? "Nu te poți înscrie");
-    }
-    const { error } = await supabase.from("club_enrollments").insert({
-      club_id: clubId, student_id: studentId, status: "enrolled",
-    });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Te-ai înscris cu succes");
-    qc.invalidateQueries({ queryKey: ["club-enrollments", clubId] });
-  }
 
   async function withdraw() {
     if (!enrollmentId) return;
@@ -285,27 +344,33 @@ function StudentEnrollmentBar({
     if (error) return toast.error(error.message);
     toast.success("Te-ai retras din club");
     qc.invalidateQueries({ queryKey: ["club-enrollments", clubId] });
+    qc.invalidateQueries({ queryKey: ["club-my-enrollment", clubId] });
   }
+
+  const label =
+    status === "enrolled" ? "Ești membru al acestui club"
+    : status === "pending" ? "Cererea ta așteaptă aprobarea coordonatorului"
+    : status === "rejected" ? "Cererea ta a fost respinsă"
+    : "Nu ești înscris la acest club";
+
+  const hint =
+    status === "pending"
+      ? "Vei deveni membru după ce cererea este aprobată."
+      : "Înscrierea trebuie aprobată de coordonator sau de elevul asistent.";
 
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium">
-            {enrolled ? "Ești înscris la acest club" : "Nu ești înscris la acest club"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Te poți retrage oricând cât perioada de înscriere e deschisă.
-          </p>
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{hint}</p>
         </div>
-        {enrolled ? (
+        {status === "enrolled" || status === "pending" ? (
           <Button variant="outline" size="sm" disabled={busy} onClick={withdraw}>
-            Retrage-mă
+            {status === "pending" ? "Anulează cererea" : "Retrage-mă"}
           </Button>
         ) : (
-          <Button size="sm" disabled={busy} onClick={enroll}>
-            Înscrie-mă
-          </Button>
+          <ClubEnrollDialog clubId={clubId} />
         )}
       </CardContent>
     </Card>
@@ -505,45 +570,6 @@ function CoordinatorsTab({
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ============================================================
-function MembersTab({
-  clubId, enrollments, canManage, onChange,
-}: {
-  clubId: string; enrollments: any[]; canManage: boolean; onChange: () => void;
-}) {
-  async function remove(id: string) {
-    const { error } = await supabase
-      .from("club_enrollments")
-      .update({ status: "withdrawn", withdrawn_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Membru retras");
-    onChange();
-  }
-
-  return (
-    <Card>
-      <CardContent className="space-y-2 pt-4">
-        {enrollments.length === 0 && (
-          <p className="text-sm text-muted-foreground">Niciun membru înscris.</p>
-        )}
-        {enrollments.map((e: any) => (
-          <div key={e.id} className="flex items-center justify-between rounded border p-2">
-            <span className="text-sm">
-              {e.profile ? `${e.profile.last_name} ${e.profile.first_name}` : e.student_id}
-            </span>
-            {canManage && (
-              <Button variant="ghost" size="sm" onClick={() => remove(e.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            )}
-          </div>
-        ))}
       </CardContent>
     </Card>
   );

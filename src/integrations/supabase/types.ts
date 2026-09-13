@@ -309,10 +309,85 @@ export type Database = {
           },
         ]
       }
+      club_departments: {
+        Row: {
+          club_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_departments_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_enrollment_answers: {
+        Row: {
+          created_at: string
+          enrollment_id: string
+          id: string
+          question_id: string
+          value: Json | null
+        }
+        Insert: {
+          created_at?: string
+          enrollment_id: string
+          id?: string
+          question_id: string
+          value?: Json | null
+        }
+        Update: {
+          created_at?: string
+          enrollment_id?: string
+          id?: string
+          question_id?: string
+          value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_enrollment_answers_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "club_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_enrollment_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "club_form_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_enrollments: {
         Row: {
           club_id: string
           created_at: string
+          department_id: string | null
           enrolled_at: string
           id: string
           status: Database["public"]["Enums"]["club_enrollment_status"]
@@ -323,6 +398,7 @@ export type Database = {
         Insert: {
           club_id: string
           created_at?: string
+          department_id?: string | null
           enrolled_at?: string
           id?: string
           status?: Database["public"]["Enums"]["club_enrollment_status"]
@@ -333,6 +409,7 @@ export type Database = {
         Update: {
           club_id?: string
           created_at?: string
+          department_id?: string | null
           enrolled_at?: string
           id?: string
           status?: Database["public"]["Enums"]["club_enrollment_status"]
@@ -343,6 +420,72 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "club_enrollments_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_enrollments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "club_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_form_questions: {
+        Row: {
+          club_id: string
+          created_at: string
+          id: string
+          is_phone: boolean
+          options: Json | null
+          position: number
+          question_type: Database["public"]["Enums"]["feedback_question_type"]
+          required: boolean
+          scale_max: number | null
+          scale_max_label: string | null
+          scale_min: number | null
+          scale_min_label: string | null
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          id?: string
+          is_phone?: boolean
+          options?: Json | null
+          position?: number
+          question_type: Database["public"]["Enums"]["feedback_question_type"]
+          required?: boolean
+          scale_max?: number | null
+          scale_max_label?: string | null
+          scale_min?: number | null
+          scale_min_label?: string | null
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          id?: string
+          is_phone?: boolean
+          options?: Json | null
+          position?: number
+          question_type?: Database["public"]["Enums"]["feedback_question_type"]
+          required?: boolean
+          scale_max?: number | null
+          scale_max_label?: string | null
+          scale_min?: number | null
+          scale_min_label?: string | null
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_form_questions_club_id_fkey"
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
@@ -393,6 +536,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "club_meetings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_student_assistants: {
+        Row: {
+          assigned_by: string
+          club_id: string
+          created_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          assigned_by: string
+          club_id: string
+          created_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          assigned_by?: string
+          club_id?: string
+          created_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_student_assistants_club_id_fkey"
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
@@ -2630,6 +2805,10 @@ export type Database = {
         Args: { _path: string; _user_id: string }
         Returns: boolean
       }
+      can_manage_club: {
+        Args: { _club_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_modify_ticket_attendance: {
         Args: { _ticket_id: string; _user_id: string }
         Returns: boolean
@@ -2662,6 +2841,10 @@ export type Database = {
       get_assistant_event_student_ids: {
         Args: { _assistant_id: string }
         Returns: string[]
+      }
+      get_club_id_for_enrollment: {
+        Args: { _enrollment_id: string }
+        Returns: string
       }
       get_club_id_for_meeting: {
         Args: { _meeting_id: string }
@@ -2750,6 +2933,10 @@ export type Database = {
         Args: { _club_id: string; _user_id: string }
         Returns: boolean
       }
+      is_club_student_assistant: {
+        Args: { _club_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_coordinator_for_event: {
         Args: { _event_id: string; _user_id: string }
         Returns: boolean
@@ -2820,6 +3007,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      submit_club_enrollment: {
+        Args: { _answers?: Json; _club_id: string }
+        Returns: string
+      }
       submit_feedback_response: {
         Args: {
           _answers: Json
@@ -2841,7 +3032,7 @@ export type Database = {
         | "manager"
         | "cse"
       club_attendance_status: "present" | "late" | "absent"
-      club_enrollment_status: "enrolled" | "withdrawn"
+      club_enrollment_status: "enrolled" | "withdrawn" | "pending" | "rejected"
       club_status: "draft" | "active" | "archived"
       event_status: "draft" | "published" | "closed" | "cancelled"
       feedback_anonymity: "anonymous" | "identified" | "anonymous_optional"
@@ -3020,7 +3211,7 @@ export const Constants = {
         "cse",
       ],
       club_attendance_status: ["present", "late", "absent"],
-      club_enrollment_status: ["enrolled", "withdrawn"],
+      club_enrollment_status: ["enrolled", "withdrawn", "pending", "rejected"],
       club_status: ["draft", "active", "archived"],
       event_status: ["draft", "published", "closed", "cancelled"],
       feedback_anonymity: ["anonymous", "identified", "anonymous_optional"],
