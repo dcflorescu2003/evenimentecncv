@@ -111,7 +111,7 @@ export default function ClubFormTab({ clubId, canEdit }: Props) {
           înscriere. Lasă lista goală pentru înscriere simplă.
         </p>
 
-        <QuestionsEditor questions={questions} onChange={setQuestions} />
+        <QuestionsEditor questions={questions} onChange={setQuestions} defaultRequired />
 
         {questions.some((q) => q.id) && (
           <div className="space-y-2 rounded-lg border p-3">

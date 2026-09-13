@@ -32,13 +32,13 @@ const TYPE_LABEL: Record<FbQType, string> = {
   open_text: "Răspuns deschis",
 };
 
-export function newQuestion(position: number): DraftQuestion {
+export function newQuestion(position: number, required = false): DraftQuestion {
   return {
     tempId: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     position,
     question_type: "single_choice",
     text: "",
-    required: false,
+    required,
     options: ["Opțiune 1", "Opțiune 2"],
     scale_min: 1,
     scale_max: 5,
@@ -50,9 +50,10 @@ export function newQuestion(position: number): DraftQuestion {
 interface Props {
   questions: DraftQuestion[];
   onChange: (qs: DraftQuestion[]) => void;
+  defaultRequired?: boolean;
 }
 
-export function QuestionsEditor({ questions, onChange }: Props) {
+export function QuestionsEditor({ questions, onChange, defaultRequired = false }: Props) {
   const update = (i: number, patch: Partial<DraftQuestion>) => {
     const next = [...questions];
     next[i] = { ...next[i], ...patch };
@@ -69,7 +70,7 @@ export function QuestionsEditor({ questions, onChange }: Props) {
     [next[i], next[j]] = [next[j], next[i]];
     onChange(next.map((q, idx) => ({ ...q, position: idx })));
   };
-  const add = () => onChange([...questions, newQuestion(questions.length)]);
+  const add = () => onChange([...questions, newQuestion(questions.length, defaultRequired)]);
 
   return (
     <div className="space-y-3">
