@@ -86,10 +86,24 @@ export default function ClubDetailPage({ mode }: Props) {
     },
   });
 
+  const { data: assistants = [] } = useQuery({
+    queryKey: ["club-assistants-ids", clubId],
+    enabled: !!clubId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("club_student_assistants")
+        .select("student_id")
+        .eq("club_id", clubId!);
+      return (data ?? []).map((a: any) => a.student_id) as string[];
+    },
+  });
+
   const isCoordinator = !!user && coordinators.some((c: any) => c.user_id === user.id);
   const isCreator = !!user && club?.created_by === user.id;
-  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator;
+  const isAssistant = !!user && assistants.includes(user.id);
+  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator || isAssistant;
   const canManageCoords = isAdmin || ((isCse || isTeacher) && isCreator);
+  const canManageAssistants = canManageCoords || isCoordinator;
 
   // View mode for non-creator, non-coordinator, non-admin teachers
   const viewMode: "full" | "homeroom_filtered" | "general_only" | "student" =
