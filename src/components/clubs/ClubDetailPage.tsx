@@ -326,31 +326,12 @@ export default function ClubDetailPage({ mode }: Props) {
 
 // ============================================================
 function StudentEnrollmentBar({
-  clubId, studentId, enrolled, enrollmentId,
+  clubId, status, enrollmentId,
 }: {
-  clubId: string; studentId: string; enrolled: boolean; enrollmentId?: string;
+  clubId: string; status: string | null; enrollmentId?: string;
 }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
-
-  async function enroll() {
-    setBusy(true);
-    const { data: check, error: checkErr } = await supabase.rpc("check_club_enrollment", {
-      _student_id: studentId, _club_id: clubId,
-    });
-    if (checkErr) { setBusy(false); return toast.error(checkErr.message); }
-    if (!(check as any)?.allowed) {
-      setBusy(false);
-      return toast.error((check as any)?.reason ?? "Nu te poți înscrie");
-    }
-    const { error } = await supabase.from("club_enrollments").insert({
-      club_id: clubId, student_id: studentId, status: "enrolled",
-    });
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success("Te-ai înscris cu succes");
-    qc.invalidateQueries({ queryKey: ["club-enrollments", clubId] });
-  }
 
   async function withdraw() {
     if (!enrollmentId) return;
@@ -363,27 +344,33 @@ function StudentEnrollmentBar({
     if (error) return toast.error(error.message);
     toast.success("Te-ai retras din club");
     qc.invalidateQueries({ queryKey: ["club-enrollments", clubId] });
+    qc.invalidateQueries({ queryKey: ["club-my-enrollment", clubId] });
   }
+
+  const label =
+    status === "enrolled" ? "Ești membru al acestui club"
+    : status === "pending" ? "Cererea ta așteaptă aprobarea coordonatorului"
+    : status === "rejected" ? "Cererea ta a fost respinsă"
+    : "Nu ești înscris la acest club";
+
+  const hint =
+    status === "pending"
+      ? "Vei deveni membru după ce cererea este aprobată."
+      : "Înscrierea trebuie aprobată de coordonator sau de elevul asistent.";
 
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium">
-            {enrolled ? "Ești înscris la acest club" : "Nu ești înscris la acest club"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Te poți retrage oricând cât perioada de înscriere e deschisă.
-          </p>
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{hint}</p>
         </div>
-        {enrolled ? (
+        {status === "enrolled" || status === "pending" ? (
           <Button variant="outline" size="sm" disabled={busy} onClick={withdraw}>
-            Retrage-mă
+            {status === "pending" ? "Anulează cererea" : "Retrage-mă"}
           </Button>
         ) : (
-          <Button size="sm" disabled={busy} onClick={enroll}>
-            Înscrie-mă
-          </Button>
+          <ClubEnrollDialog clubId={clubId} />
         )}
       </CardContent>
     </Card>
