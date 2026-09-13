@@ -179,6 +179,35 @@ export default function ClubDetailPage({ mode }: Props) {
     [enrollments, user?.id],
   );
 
+  const { data: myRequest } = useQuery({
+    queryKey: ["club-my-enrollment", clubId, user?.id],
+    enabled: !!clubId && !!user && mode === "student",
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("club_enrollments")
+        .select("id, status")
+        .eq("club_id", clubId!)
+        .eq("student_id", user!.id)
+        .order("enrolled_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const { data: pendingCount = 0 } = useQuery({
+    queryKey: ["club-pending-count", clubId],
+    enabled: !!clubId && canManage,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("club_enrollments")
+        .select("id", { count: "exact", head: true })
+        .eq("club_id", clubId!)
+        .eq("status", "pending");
+      return count ?? 0;
+    },
+  });
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Se încarcă…</p>;
   if (!club) return <p className="text-sm text-muted-foreground">Clubul nu a fost găsit.</p>;
 
@@ -205,23 +234,42 @@ export default function ClubDetailPage({ mode }: Props) {
       {mode === "student" && (
         <StudentEnrollmentBar
           clubId={clubId!}
-          studentId={user!.id}
-          enrolled={!!myEnrollment}
-          enrollmentId={myEnrollment?.id}
+          status={(myRequest?.status as string) ?? null}
+          enrollmentId={myRequest?.id}
         />
       )}
 
       <Tabs defaultValue="general">
         <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="general">General</TabsTrigger>
+          {canManage && <TabsTrigger value="form">Formular</TabsTrigger>}
+          {canManage && (
+            <TabsTrigger value="requests">
+              Cereri{pendingCount > 0 ? ` (${pendingCount})` : ""}
+            </TabsTrigger>
+          )}
           {showCoordsTab && <TabsTrigger value="coords">Coordonatori</TabsTrigger>}
+          {canManage && <TabsTrigger value="assistants">Asistenți</TabsTrigger>}
           {showMembersTab && <TabsTrigger value="members">Membri ({enrollments.length})</TabsTrigger>}
+          {canManage && <TabsTrigger value="departments">Departamente</TabsTrigger>}
           {showMeetingsTab && <TabsTrigger value="meetings">Întâlniri</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="general" className="space-y-3 pt-3">
           <GeneralTab club={club} canEdit={canManage} onSaved={() => qc.invalidateQueries({ queryKey: ["club", clubId] })} />
         </TabsContent>
+
+        {canManage && (
+          <TabsContent value="form" className="space-y-3 pt-3">
+            <ClubFormTab clubId={clubId!} canEdit={canManage} />
+          </TabsContent>
+        )}
+
+        {canManage && (
+          <TabsContent value="requests" className="space-y-3 pt-3">
+            <ClubRequestsTab clubId={clubId!} canManage={canManage} />
+          </TabsContent>
+        )}
 
         {showCoordsTab && (
           <TabsContent value="coords" className="space-y-3 pt-3">
@@ -235,14 +283,25 @@ export default function ClubDetailPage({ mode }: Props) {
           </TabsContent>
         )}
 
+        {canManage && (
+          <TabsContent value="assistants" className="space-y-3 pt-3">
+            <ClubAssistantsTab clubId={clubId!} canManage={canManageAssistants} userId={user!.id} />
+          </TabsContent>
+        )}
+
         {showMembersTab && (
           <TabsContent value="members" className="space-y-3 pt-3">
-            <MembersTab
+            <ClubMembersTab
               clubId={clubId!}
               enrollments={enrollments}
               canManage={canManage}
-              onChange={() => qc.invalidateQueries({ queryKey: ["club-enrollments", clubId] })}
             />
+          </TabsContent>
+        )}
+
+        {canManage && (
+          <TabsContent value="departments" className="space-y-3 pt-3">
+            <ClubDepartmentsTab clubId={clubId!} canManage={canManage} />
           </TabsContent>
         )}
 
