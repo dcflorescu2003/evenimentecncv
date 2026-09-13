@@ -181,8 +181,7 @@ export default function StudentTicketsPage() {
 
           {/* Past */}
           {(pastReservations.length > 0 || pastAssistantTickets.length > 0) && (
-            <div className="space-y-3">
-              <h2 className="font-display text-lg font-semibold text-muted-foreground">Istoric ({pastReservations.length + pastAssistantTickets.length})</h2>
+            <CollapsibleSection title="Istoric" count={pastReservations.length + pastAssistantTickets.length}>
               {pastAssistantTickets.map((a: any) => (
                 <AssistantTicketCard
                   key={`assist-${a.id}`}
