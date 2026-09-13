@@ -134,7 +134,7 @@ export default function ClubDetailPage({ mode }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("club_enrollments")
-        .select("id, student_id, status, enrolled_at, withdrawn_at")
+        .select("id, student_id, status, enrolled_at, withdrawn_at, department_id")
         .eq("club_id", clubId!)
         .eq("status", "enrolled");
       if (error) throw error;
