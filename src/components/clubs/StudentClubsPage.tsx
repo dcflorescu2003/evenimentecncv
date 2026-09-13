@@ -50,7 +50,7 @@ export default function StudentClubsPage() {
         .from("club_enrollments")
         .select("id, club_id, status, enrolled_at, clubs:club_id (id, name, description, frequency_label, status)")
         .eq("student_id", user!.id)
-        .eq("status", "enrolled")
+        .in("status", ["enrolled", "pending"])
         .order("enrolled_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
