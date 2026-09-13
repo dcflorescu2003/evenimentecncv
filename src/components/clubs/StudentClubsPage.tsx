@@ -167,11 +167,11 @@ export default function StudentClubsPage() {
             )}
           />
 
-          <section className="space-y-3">
-            <div className="flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">Istoricul participărilor</h2>
-            </div>
+          <CollapsibleSection
+            title="Istoricul participărilor"
+            count={volunteerHistory.length}
+            icon={<History className="h-5 w-5 text-primary" />}
+          >
             {volunteerHistory.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Nu ai participări înregistrate la evenimente de voluntariat.
