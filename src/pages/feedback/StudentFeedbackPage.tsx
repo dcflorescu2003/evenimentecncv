@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ArrowRight, Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { formatDate } from "@/lib/time";
+import { CollapsibleSection } from "@/components/CollapsibleSection";
 
 const TYPE_LABEL: Record<string, string> = {
   general: "General",
@@ -111,8 +112,7 @@ export default function StudentFeedbackPage() {
             )}
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold">Istoric</h2>
+          <CollapsibleSection title="Istoric" count={history.length}>
             {history.length === 0 ? (
               <p className="text-sm text-muted-foreground">Niciun chestionar închis.</p>
             ) : (
@@ -122,7 +122,7 @@ export default function StudentFeedbackPage() {
                 ))}
               </div>
             )}
-          </section>
+          </CollapsibleSection>
         </TabsContent>
 
         {/* === FEEDBACKUL MEU === */}
