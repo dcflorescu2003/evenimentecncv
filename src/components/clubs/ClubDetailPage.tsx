@@ -28,6 +28,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
+import ClubFormTab from "./ClubFormTab";
+import ClubEnrollDialog from "./ClubEnrollDialog";
+import {
+  ClubRequestsTab, ClubDepartmentsTab, ClubAssistantsTab, ClubMembersTab,
+} from "./ClubManagementTabs";
 
 type Mode = "admin" | "cse" | "student";
 
