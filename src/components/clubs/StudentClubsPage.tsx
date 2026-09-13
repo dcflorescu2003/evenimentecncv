@@ -249,11 +249,11 @@ function Section({
 
 function ClubCard({
   club,
-  enrolled,
+  status,
   onOpen,
 }: {
   club: any;
-  enrolled?: boolean;
+  status?: string;
   onOpen: () => void;
 }) {
   return (
@@ -261,7 +261,8 @@ function ClubCard({
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">{club.name}</CardTitle>
-          {enrolled && <Badge variant="default">Înscris</Badge>}
+          {status === "enrolled" && <Badge variant="default">Înscris</Badge>}
+          {status === "pending" && <Badge variant="secondary">În așteptare</Badge>}
         </div>
         {club.frequency_label && (
           <CardDescription className="text-xs flex items-center gap-1">
