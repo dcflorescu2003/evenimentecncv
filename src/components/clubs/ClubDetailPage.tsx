@@ -101,7 +101,7 @@ export default function ClubDetailPage({ mode }: Props) {
   const isCoordinator = !!user && coordinators.some((c: any) => c.user_id === user.id);
   const isCreator = !!user && club?.created_by === user.id;
   const isAssistant = !!user && assistants.includes(user.id);
-  const canManage = isAdmin || isCse || (isTeacher && isCreator) || isCoordinator || isAssistant;
+  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator || isAssistant;
   const canManageCoords = isAdmin || isCse || (isTeacher && isCreator);
   const canManageAssistants = canManageCoords || isCoordinator;
 
@@ -214,7 +214,7 @@ export default function ClubDetailPage({ mode }: Props) {
   const backPath =
     mode === "admin" ? "/admin/clubs" : mode === "cse" ? "/prof/clubs" : "/student/clubs";
 
-  const showCoordsTab = canManage;
+  const showCoordsTab = canManage || canManageCoords;
   const showMembersTab = canManage;
   const showMeetingsTab = viewMode !== "general_only";
 
