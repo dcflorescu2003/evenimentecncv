@@ -102,7 +102,7 @@ export default function StudentClubsPage() {
               <ClubCard
                 key={c.id}
                 club={c}
-                enrolled={enrolledClubIds.has(c.id)}
+                status={statusByClubId.get(c.id)}
                 onOpen={() => navigate(`/student/clubs/${c.id}`)}
               />
             )}
