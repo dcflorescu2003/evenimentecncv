@@ -30,7 +30,8 @@ export default function StudentBadgePage() {
       const { data, error } = await supabase.rpc("issue_student_qr" as any);
       const res = (data ?? {}) as any;
       if (error || !res?.success) {
-        setOffline(true);
+        setOffline(navigator.onLine === false);
+        setGenError(navigator.onLine === false ? null : "Codul nu a putut fi generat. Reîncearcă.");
         return;
       }
       setToken(res.token as string);
