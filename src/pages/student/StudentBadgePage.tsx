@@ -20,6 +20,7 @@ export default function StudentBadgePage() {
   const [expiresAt, setExpiresAt] = useState<number>(0);
   const [issuedAt, setIssuedAt] = useState<number>(0);
   const [offline, setOffline] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
   const [, setTick] = useState(0);
   const issuing = useRef(false);
 
@@ -30,15 +31,18 @@ export default function StudentBadgePage() {
       const { data, error } = await supabase.rpc("issue_student_qr" as any);
       const res = (data ?? {}) as any;
       if (error || !res?.success) {
-        setOffline(true);
+        setOffline(navigator.onLine === false);
+        setGenError(navigator.onLine === false ? null : "Codul nu a putut fi generat. Reîncearcă.");
         return;
       }
       setToken(res.token as string);
       setExpiresAt(new Date(res.expires_at as string).getTime());
       setIssuedAt(Date.now());
       setOffline(false);
+      setGenError(null);
     } catch {
-      setOffline(true);
+      setOffline(navigator.onLine === false);
+      setGenError(navigator.onLine === false ? null : "Codul nu a putut fi generat. Reîncearcă.");
     } finally {
       issuing.current = false;
     }
@@ -140,6 +144,11 @@ export default function StudentBadgePage() {
                   <>
                     <WifiOff className="h-6 w-6" />
                     <span>Reconectează-te pentru a genera un cod nou</span>
+                  </>
+                ) : genError ? (
+                  <>
+                    <RefreshCw className="h-6 w-6" />
+                    <span>{genError}</span>
                   </>
                 ) : (
                   <>
