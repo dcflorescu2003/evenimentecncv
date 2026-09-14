@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake, Users, MessageSquare, Inbox, FolderKanban, ClipboardList } from "lucide-react";
+import { GraduationCap, LayoutDashboard, CalendarDays, Ticket, LogOut, CalendarRange, HeartHandshake, Users, MessageSquare, Inbox, FolderKanban, ClipboardList, QrCode } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import PushNotificationToggle from "@/components/PushNotificationToggle";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
@@ -11,6 +11,7 @@ const eventsNav = [
   { title: "Panou", icon: LayoutDashboard, path: "/student" },
   { title: "Evenimente", icon: CalendarDays, path: "/student/events" },
   { title: "Bilete", icon: Ticket, path: "/student/tickets" },
+  { title: "Legitimație", icon: QrCode, path: "/student/badge" },
 ];
 
 const scheduleNav = [
@@ -21,6 +22,13 @@ const clubsNav = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/student/clubs", tab: "dashboard" },
   { title: "Cluburile mele", icon: Users, path: "/student/clubs", tab: "my-clubs" },
   { title: "Voluntariat", icon: HeartHandshake, path: "/student/clubs", tab: "volunteer" },
+  { title: "Legitimație", icon: QrCode, path: "/student/badge" },
+];
+
+const badgeNav = [
+  { title: "Legitimație", icon: QrCode, path: "/student/badge" },
+  { title: "Cluburi", icon: Users, path: "/student/clubs", tab: "dashboard" },
+  { title: "Panou", icon: LayoutDashboard, path: "/student" },
 ];
 
 const feedbackNav = [
@@ -41,7 +49,8 @@ export default function StudentLayout() {
   const isClubs = location.pathname.startsWith("/student/clubs") || location.pathname.startsWith("/student/volunteer");
   const isFeedback = location.pathname.startsWith("/student/feedback");
   const isPortfolio = location.pathname.startsWith("/student/portfolio");
-  const navItems = isPortfolio ? portfolioNav : isFeedback ? feedbackNav : isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
+  const isBadge = location.pathname.startsWith("/student/badge");
+  const navItems = isBadge ? badgeNav : isPortfolio ? portfolioNav : isFeedback ? feedbackNav : isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
   const useTabs = isClubs || isFeedback;
   const currentTab = new URLSearchParams(location.search).get("tab") ?? "dashboard";
 

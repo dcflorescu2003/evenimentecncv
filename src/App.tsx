@@ -42,6 +42,7 @@ import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentEventsPage from "./pages/student/StudentEventsPage";
 import StudentEventDetailPage from "./pages/student/StudentEventDetailPage";
 import StudentTicketsPage from "./pages/student/StudentTicketsPage";
+import StudentBadgePage from "./pages/student/StudentBadgePage";
 import StudentScanPage from "./pages/student/StudentScanPage";
 import StudentSchedulePage from "./pages/student/StudentSchedulePage";
 
@@ -167,6 +168,7 @@ const App = () => (
               <Route path="/student/events" element={<StudentEventsPage />} />
               <Route path="/student/events/:id" element={<StudentEventDetailPage />} />
               <Route path="/student/tickets" element={<StudentTicketsPage />} />
+              <Route path="/student/badge" element={<StudentBadgePage />} />
               <Route path="/student/scan/:eventId" element={<StudentScanPage />} />
               <Route path="/student/orar" element={<StudentSchedulePage />} />
               <Route path="/student/clubs" element={<StudentClubsPage />} />

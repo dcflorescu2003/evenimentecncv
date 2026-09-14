@@ -23,6 +23,8 @@ import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import AttendanceScanDialog from "@/components/scan/AttendanceScanDialog";
+import SessionQrDialog from "@/components/scan/SessionQrDialog";
 import {
   ArrowLeft, Plus, Trash2, Check, ChevronsUpDown, Save, UserPlus, Calendar as CalendarIcon,
 } from "lucide-react";
@@ -166,7 +168,7 @@ export default function ClubDetailPage({ mode }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("club_meetings")
-        .select("id, date, start_time, end_time, location, notes")
+        .select("id, date, start_time, end_time, location, notes, qr_code_data")
         .eq("club_id", clubId!)
         .order("date", { ascending: false });
       if (error) throw error;
@@ -588,6 +590,7 @@ function MeetingsTab({
   isStudent: boolean;
   onChange: () => void;
 }) {
+  const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [newDate, setNewDate] = useState(today);
   const [newStart, setNewStart] = useState("");
@@ -655,7 +658,21 @@ function MeetingsTab({
                     <p className="text-xs text-muted-foreground">{m.location}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center justify-end gap-1">
+                  {canManage && m.qr_code_data && (
+                    <SessionQrDialog
+                      value={m.qr_code_data}
+                      title={`QR întâlnire · ${formatDate(m.date)}`}
+                    />
+                  )}
+                  {canManage && (
+                    <AttendanceScanDialog
+                      kind="club"
+                      targetId={m.id}
+                      title={formatDate(m.date)}
+                      onMarked={() => qc.invalidateQueries({ queryKey: ["club-att", m.id] })}
+                    />
+                  )}
                   {(canManage || readOnlyAttendance) && (
                     <Button
                       size="sm"

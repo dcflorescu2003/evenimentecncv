@@ -2990,6 +2990,14 @@ export type Database = {
         Returns: boolean
       }
       lookup_public_reservation: { Args: { p_code: string }; Returns: Json }
+      mark_club_attendance_by_qr: {
+        Args: { _meeting_id: string; _student_qr: string }
+        Returns: Json
+      }
+      mark_volunteer_attendance_by_qr: {
+        Args: { _day_id: string; _student_qr: string }
+        Returns: Json
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -2999,6 +3007,11 @@ export type Database = {
         }
         Returns: number
       }
+      parse_student_qr: { Args: { _qr: string }; Returns: string }
+      qr_auto_status: {
+        Args: { _date: string; _start_time: string }
+        Returns: Database["public"]["Enums"]["club_attendance_status"]
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
@@ -3007,6 +3020,8 @@ export type Database = {
           read_ct: number
         }[]
       }
+      self_checkin_club: { Args: { _qr_code_data: string }; Returns: Json }
+      self_checkin_volunteer: { Args: { _qr_code_data: string }; Returns: Json }
       submit_club_enrollment: {
         Args: { _answers?: Json; _club_id: string }
         Returns: string

@@ -17,6 +17,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ArrowLeft, Plus, Trash2, Save, Lock, UserPlus, Check, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
+import AttendanceScanDialog from "@/components/scan/AttendanceScanDialog";
+import SessionQrDialog from "@/components/scan/SessionQrDialog";
 
 type Mode = "admin" | "cse" | "student";
 
@@ -65,7 +67,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("volunteer_days")
-        .select("id, date, start_time, end_time, location")
+        .select("id, date, start_time, end_time, location, qr_code_data")
         .eq("project_id", projectId!).order("date");
       return data ?? [];
     },
@@ -428,6 +430,7 @@ function MembersTab({
 }
 
 function DaysTab({ projectId, days, enrollments, canManage, readOnlyAttendance, userId, onChange }: any) {
+  const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [d, setD] = useState(today); const [s, setS] = useState(""); const [e, setE] = useState("");
   const [loc, setLoc] = useState("");
@@ -468,7 +471,18 @@ function DaysTab({ projectId, days, enrollments, canManage, readOnlyAttendance, 
               <p className="font-medium text-sm">{formatDate(day.date)} · {day.start_time.slice(0,5)} – {day.end_time.slice(0,5)}</p>
               {day.location && <p className="text-xs text-muted-foreground">{day.location}</p>}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              {canManage && day.qr_code_data && (
+                <SessionQrDialog value={day.qr_code_data} title={`QR zi · ${formatDate(day.date)}`} />
+              )}
+              {canManage && (
+                <AttendanceScanDialog
+                  kind="volunteer"
+                  targetId={day.id}
+                  title={formatDate(day.date)}
+                  onMarked={() => qc.invalidateQueries({ queryKey: ["v-att", day.id] })}
+                />
+              )}
               {(canManage || readOnlyAttendance) && (
                 <Button size="sm" variant="outline" onClick={() => setOpen(open === day.id ? null : day.id)}>
                   {open === day.id ? "Închide" : "Prezență"}
