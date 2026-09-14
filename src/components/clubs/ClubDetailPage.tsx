@@ -590,6 +590,7 @@ function MeetingsTab({
   isStudent: boolean;
   onChange: () => void;
 }) {
+  const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [newDate, setNewDate] = useState(today);
   const [newStart, setNewStart] = useState("");
