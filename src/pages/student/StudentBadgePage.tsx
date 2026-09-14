@@ -161,7 +161,7 @@ export default function StudentBadgePage() {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center gap-2">
             <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
               <circle cx="32" cy="32" r={R} className="fill-none stroke-muted" strokeWidth="5" />
               <circle
@@ -173,16 +173,13 @@ export default function StudentBadgePage() {
                 strokeDashoffset={C * (1 - progress)}
               />
             </svg>
-            <div className="text-sm">
-              <p className="font-medium">{expired ? "Cod expirat" : `Cod nou în ${secondsLeft}s`}</p>
-              <button
-                type="button"
-                className="text-muted-foreground underline underline-offset-2"
-                onClick={() => void issue()}
-              >
-                Generează acum
-              </button>
-            </div>
+            <button
+              type="button"
+              className="text-sm text-muted-foreground underline underline-offset-2"
+              onClick={() => void issue()}
+            >
+              Generează cod nou
+            </button>
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
