@@ -17,6 +17,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ArrowLeft, Plus, Trash2, Save, Lock, UserPlus, Check, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
+import AttendanceScanDialog from "@/components/scan/AttendanceScanDialog";
+import SessionQrDialog from "@/components/scan/SessionQrDialog";
 
 type Mode = "admin" | "cse" | "student";
 
