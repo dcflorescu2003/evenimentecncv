@@ -468,7 +468,18 @@ function DaysTab({ projectId, days, enrollments, canManage, readOnlyAttendance, 
               <p className="font-medium text-sm">{formatDate(day.date)} · {day.start_time.slice(0,5)} – {day.end_time.slice(0,5)}</p>
               {day.location && <p className="text-xs text-muted-foreground">{day.location}</p>}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              {canManage && day.qr_code_data && (
+                <SessionQrDialog value={day.qr_code_data} title={`QR zi · ${formatDate(day.date)}`} />
+              )}
+              {canManage && (
+                <AttendanceScanDialog
+                  kind="volunteer"
+                  targetId={day.id}
+                  title={formatDate(day.date)}
+                  onMarked={() => qc.invalidateQueries({ queryKey: ["v-att", day.id] })}
+                />
+              )}
               {(canManage || readOnlyAttendance) && (
                 <Button size="sm" variant="outline" onClick={() => setOpen(open === day.id ? null : day.id)}>
                   {open === day.id ? "Închide" : "Prezență"}
