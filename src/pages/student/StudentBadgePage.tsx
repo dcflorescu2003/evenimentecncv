@@ -20,7 +20,7 @@ export default function StudentBadgePage() {
   const [expiresAt, setExpiresAt] = useState<number>(0);
   const [issuedAt, setIssuedAt] = useState<number>(0);
   const [offline, setOffline] = useState(false);
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   const issuing = useRef(false);
 
   const issue = useCallback(async () => {
