@@ -48,7 +48,8 @@ export default function StudentLayout() {
   const isClubs = location.pathname.startsWith("/student/clubs") || location.pathname.startsWith("/student/volunteer");
   const isFeedback = location.pathname.startsWith("/student/feedback");
   const isPortfolio = location.pathname.startsWith("/student/portfolio");
-  const navItems = isPortfolio ? portfolioNav : isFeedback ? feedbackNav : isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
+  const isBadge = location.pathname.startsWith("/student/badge");
+  const navItems = isBadge ? badgeNav : isPortfolio ? portfolioNav : isFeedback ? feedbackNav : isClubs ? clubsNav : isSchedule ? scheduleNav : eventsNav;
   const useTabs = isClubs || isFeedback;
   const currentTab = new URLSearchParams(location.search).get("tab") ?? "dashboard";
 
