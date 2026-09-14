@@ -65,7 +65,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("volunteer_days")
-        .select("id, date, start_time, end_time, location")
+        .select("id, date, start_time, end_time, location, qr_code_data")
         .eq("project_id", projectId!).order("date");
       return data ?? [];
     },
