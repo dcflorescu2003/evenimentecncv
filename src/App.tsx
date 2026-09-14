@@ -42,6 +42,7 @@ import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentEventsPage from "./pages/student/StudentEventsPage";
 import StudentEventDetailPage from "./pages/student/StudentEventDetailPage";
 import StudentTicketsPage from "./pages/student/StudentTicketsPage";
+import StudentBadgePage from "./pages/student/StudentBadgePage";
 import StudentScanPage from "./pages/student/StudentScanPage";
 import StudentSchedulePage from "./pages/student/StudentSchedulePage";
 
