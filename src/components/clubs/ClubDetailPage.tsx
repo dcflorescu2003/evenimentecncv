@@ -655,7 +655,21 @@ function MeetingsTab({
                     <p className="text-xs text-muted-foreground">{m.location}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center justify-end gap-1">
+                  {canManage && m.qr_code_data && (
+                    <SessionQrDialog
+                      value={m.qr_code_data}
+                      title={`QR întâlnire · ${formatDate(m.date)}`}
+                    />
+                  )}
+                  {canManage && (
+                    <AttendanceScanDialog
+                      kind="club"
+                      targetId={m.id}
+                      title={formatDate(m.date)}
+                      onMarked={() => qc.invalidateQueries({ queryKey: ["club-att", m.id] })}
+                    />
+                  )}
                   {(canManage || readOnlyAttendance) && (
                     <Button
                       size="sm"
