@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScanLine, WifiOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import QrCameraScanner from "@/components/scan/QrCameraScanner";
+import cncvLogo from "@/assets/cncv-logo.jpg";
 
 const statusLabel: Record<string, string> = { present: "Prezent", late: "Întârziat" };
 const REFRESH_MS = 20_000;
