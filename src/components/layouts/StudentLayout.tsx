@@ -11,6 +11,7 @@ const eventsNav = [
   { title: "Panou", icon: LayoutDashboard, path: "/student" },
   { title: "Evenimente", icon: CalendarDays, path: "/student/events" },
   { title: "Bilete", icon: Ticket, path: "/student/tickets" },
+  { title: "Legitimație", icon: QrCode, path: "/student/badge" },
 ];
 
 const scheduleNav = [
