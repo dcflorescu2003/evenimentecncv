@@ -183,7 +183,7 @@ export default function StudentBadgePage() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            Codul se schimbă automat. Arată-l coordonatorului la club sau la voluntariat pentru a-ți marca prezența.
+            Codul se schimbă automat. Arată codul coordonatorului la club sau la voluntariat pentru a-ți marca prezența.
           </p>
         </CardContent>
       </Card>
