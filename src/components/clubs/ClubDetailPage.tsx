@@ -166,7 +166,7 @@ export default function ClubDetailPage({ mode }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("club_meetings")
-        .select("id, date, start_time, end_time, location, notes")
+        .select("id, date, start_time, end_time, location, notes, qr_code_data")
         .eq("club_id", clubId!)
         .order("date", { ascending: false });
       if (error) throw error;
