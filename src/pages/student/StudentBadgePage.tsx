@@ -133,7 +133,7 @@ export default function StudentBadgePage() {
                   className="animate-qr-pop overflow-hidden rounded-md"
                   style={{ opacity: 0.35 + 0.65 * progress }}
                 >
-                  <QRCodeSVG value={badgeValue} size={240} level="M" />
+                  <QRCodeSVG value={badgeValue} size={240} level="H" fgColor="#7A1F2E" imageSettings={{ src: cncvLogo, height: 44, width: 44, excavate: true }} />
                 </div>
                 <div className="pointer-events-none absolute inset-4 overflow-hidden rounded-md">
                   <div className="animate-qr-sweep absolute inset-x-0 h-16 bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
