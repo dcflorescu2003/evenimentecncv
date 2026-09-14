@@ -23,6 +23,8 @@ import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import AttendanceScanDialog from "@/components/scan/AttendanceScanDialog";
+import SessionQrDialog from "@/components/scan/SessionQrDialog";
 import {
   ArrowLeft, Plus, Trash2, Check, ChevronsUpDown, Save, UserPlus, Calendar as CalendarIcon,
 } from "lucide-react";
