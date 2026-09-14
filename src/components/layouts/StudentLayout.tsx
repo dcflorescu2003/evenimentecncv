@@ -21,6 +21,13 @@ const clubsNav = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/student/clubs", tab: "dashboard" },
   { title: "Cluburile mele", icon: Users, path: "/student/clubs", tab: "my-clubs" },
   { title: "Voluntariat", icon: HeartHandshake, path: "/student/clubs", tab: "volunteer" },
+  { title: "Legitimație", icon: QrCode, path: "/student/badge" },
+];
+
+const badgeNav = [
+  { title: "Legitimație", icon: QrCode, path: "/student/badge" },
+  { title: "Cluburi", icon: Users, path: "/student/clubs", tab: "dashboard" },
+  { title: "Panou", icon: LayoutDashboard, path: "/student" },
 ];
 
 const feedbackNav = [
