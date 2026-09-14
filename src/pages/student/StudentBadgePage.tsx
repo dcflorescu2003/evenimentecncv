@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScanLine, WifiOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import QrCameraScanner from "@/components/scan/QrCameraScanner";
+import cncvLogo from "@/assets/cncv-logo.jpg";
 
 const statusLabel: Record<string, string> = { present: "Prezent", late: "Întârziat" };
 const REFRESH_MS = 20_000;
@@ -132,7 +133,7 @@ export default function StudentBadgePage() {
                   className="animate-qr-pop overflow-hidden rounded-md"
                   style={{ opacity: 0.35 + 0.65 * progress }}
                 >
-                  <QRCodeSVG value={badgeValue} size={240} level="M" />
+                  <QRCodeSVG value={badgeValue} size={240} level="H" fgColor="#7A1F2E" imageSettings={{ src: cncvLogo, height: 44, width: 44, excavate: true }} />
                 </div>
                 <div className="pointer-events-none absolute inset-4 overflow-hidden rounded-md">
                   <div className="animate-qr-sweep absolute inset-x-0 h-16 bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
@@ -160,7 +161,7 @@ export default function StudentBadgePage() {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center gap-2">
             <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
               <circle cx="32" cy="32" r={R} className="fill-none stroke-muted" strokeWidth="5" />
               <circle
@@ -172,20 +173,17 @@ export default function StudentBadgePage() {
                 strokeDashoffset={C * (1 - progress)}
               />
             </svg>
-            <div className="text-sm">
-              <p className="font-medium">{expired ? "Cod expirat" : `Cod nou în ${secondsLeft}s`}</p>
-              <button
-                type="button"
-                className="text-muted-foreground underline underline-offset-2"
-                onClick={() => void issue()}
-              >
-                Generează acum
-              </button>
-            </div>
+            <button
+              type="button"
+              className="text-sm text-muted-foreground underline underline-offset-2"
+              onClick={() => void issue()}
+            >
+              Generează cod nou
+            </button>
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            Codul se schimbă automat. Arată-l coordonatorului la club sau la voluntariat pentru a-ți marca prezența.
+            Codul se schimbă automat. Arată codul coordonatorului la club sau la voluntariat pentru a-ți marca prezența.
           </p>
         </CardContent>
       </Card>
