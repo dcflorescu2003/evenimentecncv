@@ -145,6 +145,11 @@ export default function StudentBadgePage() {
                     <WifiOff className="h-6 w-6" />
                     <span>Reconectează-te pentru a genera un cod nou</span>
                   </>
+                ) : genError ? (
+                  <>
+                    <RefreshCw className="h-6 w-6" />
+                    <span>{genError}</span>
+                  </>
                 ) : (
                   <>
                     <RefreshCw className="h-6 w-6 animate-spin" />
