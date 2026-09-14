@@ -428,6 +428,7 @@ function MembersTab({
 }
 
 function DaysTab({ projectId, days, enrollments, canManage, readOnlyAttendance, userId, onChange }: any) {
+  const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [d, setD] = useState(today); const [s, setS] = useState(""); const [e, setE] = useState("");
   const [loc, setLoc] = useState("");
