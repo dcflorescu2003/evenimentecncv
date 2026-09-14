@@ -92,11 +92,21 @@ export default {
           "60%": { transform: "rotate(-6deg)" },
           "75%": { transform: "rotate(3deg)" },
         },
+        "qr-pop": {
+          "0%": { opacity: "0", transform: "scale(0.94)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        "qr-sweep": {
+          "0%": { transform: "translateY(-4rem)" },
+          "100%": { transform: "translateY(240px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         wiggle: "wiggle 1s ease-in-out 3",
+        "qr-pop": "qr-pop 0.35s ease-out",
+        "qr-sweep": "qr-sweep 2.2s ease-in-out infinite",
       },
     },
   },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,15 +6,61 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScanLine } from "lucide-react";
+import { ScanLine, WifiOff, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import QrCameraScanner from "@/components/scan/QrCameraScanner";
 
 const statusLabel: Record<string, string> = { present: "Prezent", late: "Întârziat" };
+const REFRESH_MS = 20_000;
 
 export default function StudentBadgePage() {
   const { user, profile } = useAuth();
   const [scanOpen, setScanOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<number>(0);
+  const [issuedAt, setIssuedAt] = useState<number>(0);
+  const [offline, setOffline] = useState(false);
+  const [, setTick] = useState(0);
+  const issuing = useRef(false);
+
+  const issue = useCallback(async () => {
+    if (issuing.current) return;
+    issuing.current = true;
+    try {
+      const { data, error } = await supabase.rpc("issue_student_qr" as any);
+      const res = (data ?? {}) as any;
+      if (error || !res?.success) {
+        setOffline(true);
+        return;
+      }
+      setToken(res.token as string);
+      setExpiresAt(new Date(res.expires_at as string).getTime());
+      setIssuedAt(Date.now());
+      setOffline(false);
+    } catch {
+      setOffline(true);
+    } finally {
+      issuing.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    void issue();
+    const interval = setInterval(() => { void issue(); }, REFRESH_MS);
+    const onVisible = () => { if (document.visibilityState === "visible") void issue(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [user, issue]);
+
+  // ceas pentru numărătoarea inversă
+  useEffect(() => {
+    const t = setInterval(() => setTick((v) => v + 1), 250);
+    return () => clearInterval(t);
+  }, []);
 
   const { data: className } = useQuery({
     queryKey: ["my-class", user?.id],
@@ -31,7 +77,16 @@ export default function StudentBadgePage() {
     },
   });
 
-  const badgeValue = user ? `CNCV-STU:${user.id}` : "";
+  const now = Date.now();
+  const msLeft = Math.max(0, expiresAt - now);
+  const secondsLeft = Math.ceil(msLeft / 1000);
+  const total = Math.max(1, expiresAt - issuedAt);
+  const progress = Math.min(1, Math.max(0, msLeft / total));
+  const expired = !!token && msLeft <= 0;
+  const badgeValue = token ? `CNCV-STU2:${token}` : "";
+
+  const R = 26;
+  const C = 2 * Math.PI * R;
 
   async function handleMeetingScan(code: string) {
     const club = await supabase.rpc("self_checkin_club" as any, { _qr_code_data: code } as any);
@@ -64,11 +119,64 @@ export default function StudentBadgePage() {
             <p className="font-medium">{profile?.display_name ?? `${profile?.last_name ?? ""} ${profile?.first_name ?? ""}`}</p>
             {className && <p className="text-sm text-muted-foreground">Clasa {className}</p>}
           </div>
-          <div className="rounded-xl bg-white p-4">
-            {badgeValue && <QRCodeSVG value={badgeValue} size={240} level="M" />}
+
+          <div className="relative rounded-xl bg-white p-4 shadow-sm">
+            {badgeValue && !expired ? (
+              <>
+                <div
+                  key={token}
+                  className="animate-qr-pop overflow-hidden rounded-md"
+                  style={{ opacity: 0.35 + 0.65 * progress }}
+                >
+                  <QRCodeSVG value={badgeValue} size={240} level="M" />
+                </div>
+                <div className="pointer-events-none absolute inset-4 overflow-hidden rounded-md">
+                  <div className="animate-qr-sweep absolute inset-x-0 h-16 bg-gradient-to-b from-transparent via-primary/20 to-transparent" />
+                </div>
+              </>
+            ) : (
+              <div className="flex h-[240px] w-[240px] flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+                {offline ? (
+                  <>
+                    <WifiOff className="h-6 w-6" />
+                    <span>Reconectează-te pentru a genera un cod nou</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-6 w-6 animate-spin" />
+                    <span>Se generează codul…</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
+
+          <div className="flex items-center gap-3">
+            <svg width="64" height="64" viewBox="0 0 64 64" className="-rotate-90">
+              <circle cx="32" cy="32" r={R} className="fill-none stroke-muted" strokeWidth="5" />
+              <circle
+                cx="32" cy="32" r={R}
+                className="fill-none stroke-primary transition-[stroke-dashoffset] duration-200 ease-linear"
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={C}
+                strokeDashoffset={C * (1 - progress)}
+              />
+            </svg>
+            <div className="text-sm">
+              <p className="font-medium">{expired ? "Cod expirat" : `Cod nou în ${secondsLeft}s`}</p>
+              <button
+                type="button"
+                className="text-muted-foreground underline underline-offset-2"
+                onClick={() => void issue()}
+              >
+                Generează acum
+              </button>
+            </div>
+          </div>
+
           <p className="text-center text-sm text-muted-foreground">
-            Arată acest cod coordonatorului la club sau la voluntariat pentru a-ți marca prezența.
+            Codul se schimbă automat. Arată-l coordonatorului la club sau la voluntariat pentru a-ți marca prezența.
           </p>
         </CardContent>
       </Card>

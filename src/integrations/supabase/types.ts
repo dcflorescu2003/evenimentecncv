@@ -2427,6 +2427,33 @@ export type Database = {
           },
         ]
       }
+      student_qr_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          student_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          student_id: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          student_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           created_at: string
@@ -2989,6 +3016,7 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      issue_student_qr: { Args: never; Returns: Json }
       lookup_public_reservation: { Args: { p_code: string }; Returns: Json }
       mark_club_attendance_by_qr: {
         Args: { _meeting_id: string; _student_qr: string }
@@ -3020,6 +3048,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      resolve_student_qr: { Args: { _qr: string }; Returns: Json }
       self_checkin_club: { Args: { _qr_code_data: string }; Returns: Json }
       self_checkin_volunteer: { Args: { _qr_code_data: string }; Returns: Json }
       submit_club_enrollment: {
