@@ -1,5 +1,5 @@
 import type { EditorEntry } from "@/components/schedule/ScheduleGridEditor";
-import { applySubjectAlias } from "@/lib/schedule-aliases";
+import { applySubjectAlias, SUBJECT_ALIASES } from "@/lib/schedule-aliases";
 
 const DAY_MAP: Record<string, number> = { Lu: 1, Ma: 2, Mi: 3, Jo: 4, Vi: 5 };
 
@@ -15,7 +15,7 @@ interface ParsedCell {
  * - penultimul = sala DOAR dacă este numeric sau cod scurt majuscule (ex. "AEL", "B")
  * - restul = materie
  */
-export function parseScheduleCell(raw: string): ParsedCell | null {
+function parseSegment(raw: string): ParsedCell | null {
   const tokens = raw.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
   if (tokens.length === 0) return null;
   if (tokens.length === 1) return { subject: tokens[0], room: null, teacher: null };
@@ -25,9 +25,11 @@ export function parseScheduleCell(raw: string): ParsedCell | null {
   let room: string | null = null;
   let subjectTokens = rest;
 
-  if (rest.length >= 2) {
+  // Dacă întregul rest este o materie cunoscută (ex. "Info AEL", "Ef sport"),
+  // nu interpreta ultimul token drept sală.
+  if (!(rest.join(" ") in SUBJECT_ALIASES) && rest.length >= 2) {
     const last = rest[rest.length - 1];
-    const looksLikeRoom = /^[0-9]+$/.test(last) || /^[A-Z][A-Z0-9-]{0,4}$/.test(last);
+    const looksLikeRoom = /^[0-9]+$/.test(last) || /^[A-Z][A-Za-z0-9-]{0,3}$/.test(last);
     if (looksLikeRoom) {
       room = last;
       subjectTokens = rest.slice(0, -1);
@@ -35,6 +37,35 @@ export function parseScheduleCell(raw: string): ParsedCell | null {
   }
 
   return { subject: subjectTokens.join(" "), room, teacher };
+}
+
+/**
+ * Tokenizează o celulă. Suportă și ore împărțite pe grupe,
+ * separate prin "/" (ex. "Lf 1 TS / Lf Lb CIS").
+ */
+export function parseScheduleCell(raw: string): ParsedCell | null {
+  const segments = raw
+    .split("/")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (segments.length <= 1) return parseSegment(raw);
+
+  const parsed = segments.map(parseSegment).filter(Boolean) as ParsedCell[];
+  if (parsed.length === 0) return null;
+
+  const teachers = Array.from(
+    new Set(parsed.map((p) => p.teacher).filter((t): t is string => Boolean(t))),
+  );
+  const rooms = Array.from(
+    new Set(parsed.map((p) => p.room).filter((r): r is string => Boolean(r))),
+  );
+
+  return {
+    subject: parsed[0].subject,
+    room: rooms.length ? rooms.join(" / ") : null,
+    teacher: teachers.length ? teachers.join(" / ") : null,
+  };
 }
 
 /**
