@@ -1,5 +1,5 @@
 import type { EditorEntry } from "@/components/schedule/ScheduleGridEditor";
-import { applySubjectAlias } from "@/lib/schedule-aliases";
+import { applySubjectAlias, SUBJECT_ALIASES } from "@/lib/schedule-aliases";
 
 const DAY_MAP: Record<string, number> = { Lu: 1, Ma: 2, Mi: 3, Jo: 4, Vi: 5 };
 
@@ -15,7 +15,7 @@ interface ParsedCell {
  * - penultimul = sala DOAR dacă este numeric sau cod scurt majuscule (ex. "AEL", "B")
  * - restul = materie
  */
-export function parseScheduleCell(raw: string): ParsedCell | null {
+function parseSegment(raw: string): ParsedCell | null {
   const tokens = raw.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
   if (tokens.length === 0) return null;
   if (tokens.length === 1) return { subject: tokens[0], room: null, teacher: null };
@@ -25,9 +25,11 @@ export function parseScheduleCell(raw: string): ParsedCell | null {
   let room: string | null = null;
   let subjectTokens = rest;
 
-  if (rest.length >= 2) {
+  // Dacă întregul rest este o materie cunoscută (ex. "Info AEL", "Ef sport"),
+  // nu interpreta ultimul token drept sală.
+  if (!(rest.join(" ") in SUBJECT_ALIASES) && rest.length >= 2) {
     const last = rest[rest.length - 1];
-    const looksLikeRoom = /^[0-9]+$/.test(last) || /^[A-Z][A-Z0-9-]{0,4}$/.test(last);
+    const looksLikeRoom = /^[0-9]+$/.test(last) || /^[A-Z][A-Za-z0-9-]{0,3}$/.test(last);
     if (looksLikeRoom) {
       room = last;
       subjectTokens = rest.slice(0, -1);
@@ -35,6 +37,35 @@ export function parseScheduleCell(raw: string): ParsedCell | null {
   }
 
   return { subject: subjectTokens.join(" "), room, teacher };
+}
+
+/**
+ * Tokenizează o celulă. Suportă și ore împărțite pe grupe,
+ * separate prin "/" (ex. "Lf 1 TS / Lf Lb CIS").
+ */
+export function parseScheduleCell(raw: string): ParsedCell | null {
+  const segments = raw
+    .split(/\s+\/\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (segments.length <= 1) return parseSegment(raw);
+
+  const parsed = segments.map(parseSegment).filter(Boolean) as ParsedCell[];
+  if (parsed.length === 0) return null;
+
+  const teachers = Array.from(
+    new Set(parsed.map((p) => p.teacher).filter((t): t is string => Boolean(t))),
+  );
+  const rooms = Array.from(
+    new Set(parsed.map((p) => p.room).filter((r): r is string => Boolean(r))),
+  );
+
+  return {
+    subject: parsed[0].subject,
+    room: rooms.length ? rooms.join(" / ") : null,
+    teacher: teachers.length ? teachers.join(" / ") : null,
+  };
 }
 
 /**
@@ -101,16 +132,25 @@ export function extractClassSchedule(
   if (!target) return { entries: [], matchedLabel: labelFound ? needle : null };
 
   const entries: EditorEntry[] = [];
-  Array.from(target.querySelectorAll("TR")).forEach((tr) => {
+  const dayRows = Array.from(target.querySelectorAll("TR")).filter((tr) => {
+    const th = tr.querySelector("TH");
+    return (th?.textContent?.trim() ?? "") in DAY_MAP;
+  });
+
+  // Unele exporturi (artefact PDF) au o coloană fantomă pe poziția 2.
+  // O ignorăm DOAR dacă rândurile chiar au mai mult de 12 celule de oră.
+  const maxCells = dayRows.reduce((m, tr) => Math.max(m, tr.querySelectorAll("TD").length), 0);
+  const hasPhantom = maxCells > 12;
+
+  dayRows.forEach((tr) => {
     const th = tr.querySelector("TH");
     const dayLabel = th?.textContent?.trim() ?? "";
-    if (!(dayLabel in DAY_MAP)) return;
     const day = DAY_MAP[dayLabel];
     const tds = Array.from(tr.querySelectorAll("TD"));
-    // tds[0] = ora 1, tds[1] = coloană fantomă (artefact PDF), tds[2..12] = ore 2..12
     tds.forEach((td, idx) => {
       let period: number;
-      if (idx === 0) period = 1;
+      if (!hasPhantom) period = idx + 1;
+      else if (idx === 0) period = 1;
       else if (idx === 1) return; // skip phantom
       else period = idx;
       if (period < 1 || period > 12) return;
