@@ -2823,6 +2823,201 @@ export type Database = {
         }
         Relationships: []
       }
+      vr_materials: {
+        Row: {
+          created_at: string
+          id: string
+          media_type: string | null
+          name: string
+          preview_url: string | null
+          size_label: string | null
+          subject: string
+          track_id: number | null
+          track_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          media_type?: string | null
+          name: string
+          preview_url?: string | null
+          size_label?: string | null
+          subject: string
+          track_id?: number | null
+          track_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          media_type?: string | null
+          name?: string
+          preview_url?: string | null
+          size_label?: string | null
+          subject?: string
+          track_id?: number | null
+          track_url?: string | null
+        }
+        Relationships: []
+      }
+      vr_reservation_materials: {
+        Row: {
+          created_at: string
+          id: string
+          material_id: string
+          reservation_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          material_id: string
+          reservation_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          material_id?: string
+          reservation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vr_reservation_materials_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "vr_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vr_reservation_materials_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "vr_reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vr_reservations: {
+        Row: {
+          class_id: string
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          prepared_at: string | null
+          prepared_by: string | null
+          room_id: string
+          start_time: string
+          status: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          date: string
+          id?: string
+          notes?: string | null
+          prepared_at?: string | null
+          prepared_by?: string | null
+          room_id: string
+          start_time: string
+          status?: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          prepared_at?: string | null
+          prepared_by?: string | null
+          room_id?: string
+          start_time?: string
+          status?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vr_reservations_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vr_reservations_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "vr_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vr_rooms: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      vr_volunteers: {
+        Row: {
+          assigned_by: string | null
+          class_id: string
+          created_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          class_id: string
+          created_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          class_id?: string
+          created_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vr_volunteers_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vr_volunteers_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -3016,6 +3211,11 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      is_vr_reservation_owner: {
+        Args: { _reservation_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_vr_volunteer: { Args: { _user_id: string }; Returns: boolean }
       issue_student_qr: { Args: never; Returns: Json }
       lookup_public_reservation: { Args: { p_code: string }; Returns: Json }
       mark_club_attendance_by_qr: {
@@ -3064,6 +3264,10 @@ export type Database = {
           _teacher_id: string
         }
         Returns: string
+      }
+      vr_mark_prepared: {
+        Args: { _prepared: boolean; _reservation_id: string }
+        Returns: Json
       }
     }
     Enums: {
