@@ -4,11 +4,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LogOut, GraduationCap } from "lucide-react";
 import { getEnabledModules } from "@/modules/registry";
+import { useCanAccessSmartLab } from "@/hooks/useIsVrVolunteer";
 
 export default function AppHub() {
   const { profile, roles, moduleAccess, signOut } = useAuth();
   const navigate = useNavigate();
-  const items = getEnabledModules(roles, moduleAccess);
+  const canSmartLab = useCanAccessSmartLab();
+  const items = getEnabledModules(roles, moduleAccess).filter(
+    (m) => m.module.key !== "smartlab" || canSmartLab,
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/30">

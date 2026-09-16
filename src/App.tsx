@@ -100,6 +100,11 @@ import PortfolioTeacherPage from "./pages/portfolio/PortfolioTeacherPage";
 import PortfolioReportsPage from "./pages/portfolio/PortfolioReportsPage";
 import StudentPortfolioPage from "./pages/student/StudentPortfolioPage";
 
+import SmartLabLayout from "./components/layouts/SmartLabLayout";
+import { SmartLabRoute } from "./components/SmartLabRoute";
+import SmartLabPage from "./pages/smartlab/SmartLabPage";
+import VrVolunteersPage from "./pages/smartlab/VrVolunteersPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -273,6 +278,18 @@ const App = () => (
               <Route path="/portfolio/journal" element={<PortfolioJournalPage />} />
               <Route path="/portfolio/teacher" element={<PortfolioTeacherPage />} />
               <Route path="/portfolio/reports" element={<PortfolioReportsPage />} />
+            </Route>
+
+            {/* Smart Lab (rezervări VR) */}
+            <Route
+              element={
+                <SmartLabRoute>
+                  <SmartLabLayout />
+                </SmartLabRoute>
+              }
+            >
+              <Route path="/smartlab" element={<SmartLabPage />} />
+              <Route path="/smartlab/volunteers" element={<VrVolunteersPage />} />
             </Route>
 
             {/* Public routes (no auth) */}
