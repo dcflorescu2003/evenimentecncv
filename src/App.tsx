@@ -100,6 +100,11 @@ import PortfolioTeacherPage from "./pages/portfolio/PortfolioTeacherPage";
 import PortfolioReportsPage from "./pages/portfolio/PortfolioReportsPage";
 import StudentPortfolioPage from "./pages/student/StudentPortfolioPage";
 
+import SmartLabLayout from "./components/layouts/SmartLabLayout";
+import { SmartLabRoute } from "./components/SmartLabRoute";
+import SmartLabPage from "./pages/smartlab/SmartLabPage";
+import VrVolunteersPage from "./pages/smartlab/VrVolunteersPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
