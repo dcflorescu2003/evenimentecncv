@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { getEnabledModules } from "@/modules/registry";
+import { useCanAccessSmartLab } from "@/hooks/useIsVrVolunteer";
 
 interface Props {
   variant?: "icon" | "labeled";
@@ -19,6 +20,7 @@ interface Props {
 
 function detectCurrentKey(pathname: string): string {
   if (pathname.startsWith("/portfolio")) return "portfolio";
+  if (pathname.startsWith("/smartlab")) return "smartlab";
   if (
     pathname.startsWith("/admin/feedback") ||
     pathname.startsWith("/prof/feedback") ||
@@ -42,7 +44,10 @@ export function ModuleSwitcher({ variant = "icon", className }: Props) {
   const location = useLocation();
   const { roles, moduleAccess } = useAuth();
 
-  const modules = getEnabledModules(roles ?? [], moduleAccess ?? []);
+  const canSmartLab = useCanAccessSmartLab();
+  const modules = getEnabledModules(roles ?? [], moduleAccess ?? []).filter(
+    (m) => m.module.key !== "smartlab" || canSmartLab,
+  );
   const detectedKey = detectCurrentKey(location.pathname);
   const current =
     modules.find((m) => m.module.key === detectedKey) ??
