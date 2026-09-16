@@ -280,6 +280,18 @@ const App = () => (
               <Route path="/portfolio/reports" element={<PortfolioReportsPage />} />
             </Route>
 
+            {/* Smart Lab (rezervări VR) */}
+            <Route
+              element={
+                <SmartLabRoute>
+                  <SmartLabLayout />
+                </SmartLabRoute>
+              }
+            >
+              <Route path="/smartlab" element={<SmartLabPage />} />
+              <Route path="/smartlab/volunteers" element={<VrVolunteersPage />} />
+            </Route>
+
             {/* Public routes (no auth) */}
             <Route path="/public/events" element={<PublicEventsPage />} />
             <Route path="/public/events/:id" element={<PublicEventBookingPage />} />
