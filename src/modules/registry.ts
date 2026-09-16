@@ -1,4 +1,4 @@
-import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, type LucideIcon } from "lucide-react";
+import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, Headset, type LucideIcon } from "lucide-react";
 
 export type AppRole =
   | "admin"
@@ -86,6 +86,21 @@ export const MODULES: AppModule[] = [
       student: "/student/portfolio",
     },
     requiresModuleAccess: "portfolio",
+  },
+  {
+    key: "smartlab",
+    label: "Smart Lab",
+    description: "Rezervări pentru echipamentele VR și voluntarii care le pregătesc.",
+    icon: Headset,
+    pathByRole: {
+      admin: "/smartlab",
+      teacher: "/smartlab",
+      homeroom_teacher: "/smartlab",
+      cse: "/smartlab",
+      coordinator_teacher: "/smartlab",
+      manager: "/smartlab",
+      student: "/smartlab",
+    },
   },
 ];
 

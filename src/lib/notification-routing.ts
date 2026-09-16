@@ -23,6 +23,11 @@ export function getNotificationUrl(
   const eventId = notification.related_event_id;
   const type = notification.type;
 
+  // Smart Lab (rezervări echipamente VR)
+  if (type === "vr_reservation") {
+    return "/smartlab";
+  }
+
   // Tipuri specifice pentru elev
   if (type === "morning_reminder" || type === "event_reminder") {
     if (roles.includes("student") && eventId) {
