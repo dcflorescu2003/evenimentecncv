@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
 import AttendanceScanDialog from "@/components/scan/AttendanceScanDialog";
 import SessionQrDialog from "@/components/scan/SessionQrDialog";
+import { searchProfiles, STAFF_ROLES } from "@/lib/search";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 type Mode = "admin" | "cse" | "student";
 
@@ -296,6 +298,7 @@ function CoordinatorsTab({ projectId, canManage }: { projectId: string; canManag
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 250);
 
   const { data: coordinators = [] } = useQuery({
     queryKey: ["volunteer-coordinators", projectId],
@@ -324,28 +327,16 @@ function CoordinatorsTab({ projectId, canManage }: { projectId: string; canManag
   const studentCount = coordinators.filter((c: any) => c.isStudent).length;
 
   const { data: candidates = [] } = useQuery({
-    queryKey: ["volunteer-coordinator-candidates", search],
-    enabled: open && search.length >= 2,
+    queryKey: ["volunteer-coordinator-candidates", debouncedSearch],
+    enabled: open && debouncedSearch.trim().length >= 2,
+    placeholderData: (prev) => prev,
     queryFn: async () => {
-      const term = `%${search}%`;
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .or(`first_name.ilike.${term},last_name.ilike.${term},display_name.ilike.${term}`)
-        .limit(20);
-      if (!profs?.length) return [];
-      const { data: ur } = await supabase
-        .from("user_roles").select("user_id, role")
-        .in("user_id", profs.map((p: any) => p.id))
-        .in("role", ["teacher", "homeroom_teacher", "coordinator_teacher", "cse", "student"]);
-      const students = new Set(
-        (ur ?? []).filter((r: any) => r.role === "student").map((r: any) => r.user_id)
+      const rows = await searchProfiles(
+        debouncedSearch,
+        [...STAFF_ROLES, "student"],
+        20,
       );
-      const allowed = new Set(ur?.map((r: any) => r.user_id) ?? []);
-      return profs
-        .filter((p: any) => allowed.has(p.id))
-        .map((p: any) => ({ ...p, isStudent: students.has(p.id) }))
-        .sort((a: any, b: any) => a.last_name.localeCompare(b.last_name, "ro"));
+      return rows.map((p) => ({ ...p, isStudent: p.roles.includes("student") }));
     },
   });
 
@@ -445,6 +436,7 @@ function VolunteerAssistantsTab({
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 250);
 
   const { data: assistants = [] } = useQuery({
     queryKey: ["volunteer-assistants", projectId],
@@ -465,23 +457,10 @@ function VolunteerAssistantsTab({
   });
 
   const { data: candidates = [] } = useQuery({
-    queryKey: ["volunteer-assistant-candidates", search],
-    enabled: open && search.length >= 2,
-    queryFn: async () => {
-      const term = `%${search}%`;
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .or(`first_name.ilike.${term},last_name.ilike.${term},display_name.ilike.${term}`)
-        .limit(20);
-      if (!profs?.length) return [];
-      const { data: ur } = await supabase
-        .from("user_roles").select("user_id")
-        .in("user_id", profs.map((p: any) => p.id))
-        .eq("role", "student");
-      const allowed = new Set(ur?.map((r: any) => r.user_id) ?? []);
-      return profs.filter((p: any) => allowed.has(p.id));
-    },
+    queryKey: ["volunteer-assistant-candidates", debouncedSearch],
+    enabled: open && debouncedSearch.trim().length >= 2,
+    placeholderData: (prev) => prev,
+    queryFn: () => searchProfiles(debouncedSearch, ["student"], 20),
   });
 
   async function add(sid: string) {
