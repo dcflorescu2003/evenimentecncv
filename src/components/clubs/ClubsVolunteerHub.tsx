@@ -95,6 +95,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
   }, [projects, mode]);
 
   const canCreate = mode === "admin" || mode === "cse";
+  const isAdmin = roles.includes("admin");
 
   return (
     <div className="space-y-8">
@@ -156,11 +157,12 @@ export default function ClubsVolunteerHub({ mode }: Props) {
                     {p.description || "Fără descriere"}
                   </p>
                   <div className="flex flex-wrap gap-2 self-end">
-                    {canCreate && p.status === "draft" && (
-                      <DeleteDraftButton
+                    {((canCreate && p.status === "draft") || (isAdmin && p.status === "closed")) && (
+                      <DeleteEntityButton
                         table="volunteer_projects"
                         id={p.id}
                         name={p.name}
+                        kind={p.status === "draft" ? "draft" : "closed_project"}
                         onDeleted={() => qc.invalidateQueries({ queryKey: ["volunteer-hub", mode] })}
                       />
                     )}
@@ -224,11 +226,12 @@ export default function ClubsVolunteerHub({ mode }: Props) {
                     {c.description || "Fără descriere"}
                   </p>
                   <div className="flex flex-wrap gap-2 self-end">
-                    {canCreate && c.status === "draft" && (
-                      <DeleteDraftButton
+                    {((canCreate && c.status === "draft") || (isAdmin && c.status === "archived")) && (
+                      <DeleteEntityButton
                         table="clubs"
                         id={c.id}
                         name={c.name}
+                        kind={c.status === "draft" ? "draft" : "archived_club"}
                         onDeleted={() => qc.invalidateQueries({ queryKey: ["clubs-hub", mode] })}
                       />
                     )}
