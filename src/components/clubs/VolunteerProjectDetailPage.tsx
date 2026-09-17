@@ -253,6 +253,14 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
               onChange={() => qc.invalidateQueries({ queryKey: ["volunteer-days", projectId] })} />
           </TabsContent>
         )}
+        {canManage && (
+          <TabsContent value="coordinators" className="pt-3">
+            <CoordinatorsTab
+              projectId={projectId!}
+              canManage={canManageCoords}
+            />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
