@@ -90,8 +90,24 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
     },
   });
 
+  const { data: isProjectAssistant = false } = useQuery({
+    queryKey: ["volunteer-is-assistant", projectId, user?.id],
+    enabled: !!projectId && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("volunteer_student_assistants")
+        .select("id")
+        .eq("project_id", projectId!)
+        .eq("student_id", user!.id)
+        .limit(1);
+      if (error) return false;
+      return (data?.length ?? 0) > 0;
+    },
+  });
+
   const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isProjectCoordinator;
-  const canManageCoords = isAdmin || ((isCse || isTeacher) && isCreator);
+  const canManageCoords = isAdmin || ((isCse || isTeacher) && isCreator) || isProjectCoordinator;
+  const assistantMode = isProjectAssistant && !canManage;
   const myEnrollment = enrollments.find((e: any) => e.student_id === user?.id);
 
   const viewMode: "full" | "homeroom_filtered" | "general_only" | "student" =
@@ -150,8 +166,8 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
     qc.invalidateQueries({ queryKey: ["volunteer-enroll", projectId] });
   }
 
-  const showMembersTab = canManage;
-  const showDaysTab = viewMode !== "general_only";
+  const showMembersTab = canManage || assistantMode;
+  const showDaysTab = viewMode !== "general_only" || assistantMode;
 
   return (
     <div className="space-y-4">
@@ -229,6 +245,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
           {showMembersTab && <TabsTrigger value="members">Înscriși ({enrollments.length})</TabsTrigger>}
           {showDaysTab && <TabsTrigger value="days">Zile & prezență</TabsTrigger>}
           {canManage && <TabsTrigger value="coordinators">Coordonatori</TabsTrigger>}
+          {canManage && <TabsTrigger value="assistants">Asistenți</TabsTrigger>}
         </TabsList>
         <TabsContent value="general" className="pt-3">
           <ProjectGeneralTab project={project} canEdit={canManage}
@@ -240,14 +257,17 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
               projectId={projectId!}
               enrollments={enrollments}
               enrolledIds={enrollments.map((e: any) => e.student_id)}
+              readOnly={assistantMode}
               onChange={() => qc.invalidateQueries({ queryKey: ["volunteer-enroll", projectId] })}
             />
           </TabsContent>
         )}
         {showDaysTab && (
           <TabsContent value="days" className="pt-3">
-            <DaysTab projectId={projectId!} days={days} enrollments={visibleEnrollments}
+            <DaysTab projectId={projectId!} days={days}
+              enrollments={assistantMode ? enrollments : visibleEnrollments}
               canManage={canManage}
+              attendanceMode={assistantMode}
               readOnlyAttendance={viewMode === "homeroom_filtered"}
               userId={user!.id}
               onChange={() => qc.invalidateQueries({ queryKey: ["volunteer-days", projectId] })} />
@@ -259,6 +279,11 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
               projectId={projectId!}
               canManage={canManageCoords}
             />
+          </TabsContent>
+        )}
+        {canManage && (
+          <TabsContent value="assistants" className="pt-3">
+            <VolunteerAssistantsTab projectId={projectId!} canManage={canManageCoords} userId={user!.id} />
           </TabsContent>
         )}
       </Tabs>
