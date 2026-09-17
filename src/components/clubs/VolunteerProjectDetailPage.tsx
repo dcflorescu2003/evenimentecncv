@@ -74,7 +74,24 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
   });
 
   const isCreator = !!user && project?.created_by === user.id;
-  const canManage = isAdmin || ((isCse || isTeacher) && isCreator);
+
+  const { data: isProjectCoordinator = false } = useQuery({
+    queryKey: ["volunteer-is-coordinator", projectId, user?.id],
+    enabled: !!projectId && !!user && !isCreator,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("volunteer_coordinators")
+        .select("id")
+        .eq("project_id", projectId!)
+        .eq("user_id", user!.id)
+        .limit(1);
+      if (error) return false;
+      return (data?.length ?? 0) > 0;
+    },
+  });
+
+  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isProjectCoordinator;
+  const canManageCoords = isAdmin || ((isCse || isTeacher) && isCreator);
   const myEnrollment = enrollments.find((e: any) => e.student_id === user?.id);
 
   const viewMode: "full" | "homeroom_filtered" | "general_only" | "student" =
@@ -211,6 +228,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
           <TabsTrigger value="general">General</TabsTrigger>
           {showMembersTab && <TabsTrigger value="members">Înscriși ({enrollments.length})</TabsTrigger>}
           {showDaysTab && <TabsTrigger value="days">Zile & prezență</TabsTrigger>}
+          {canManage && <TabsTrigger value="coordinators">Coordonatori</TabsTrigger>}
         </TabsList>
         <TabsContent value="general" className="pt-3">
           <ProjectGeneralTab project={project} canEdit={canManage}
@@ -235,8 +253,132 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
               onChange={() => qc.invalidateQueries({ queryKey: ["volunteer-days", projectId] })} />
           </TabsContent>
         )}
+        {canManage && (
+          <TabsContent value="coordinators" className="pt-3">
+            <CoordinatorsTab
+              projectId={projectId!}
+              canManage={canManageCoords}
+            />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
+  );
+}
+
+function CoordinatorsTab({ projectId, canManage }: { projectId: string; canManage: boolean }) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data: coordinators = [] } = useQuery({
+    queryKey: ["volunteer-coordinators", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("volunteer_coordinators")
+        .select("id, user_id")
+        .eq("project_id", projectId);
+      if (error) throw error;
+      if (!data?.length) return [];
+      const { data: profs } = await supabase
+        .from("profiles").select("id, first_name, last_name")
+        .in("id", data.map((c: any) => c.user_id));
+      return data.map((c: any) => ({ ...c, profile: profs?.find((p: any) => p.id === c.user_id) }))
+        .sort((a: any, b: any) =>
+          (a.profile?.last_name ?? "").localeCompare(b.profile?.last_name ?? "", "ro"));
+    },
+  });
+
+  const { data: candidates = [] } = useQuery({
+    queryKey: ["volunteer-coordinator-candidates", search],
+    enabled: open && search.length >= 2,
+    queryFn: async () => {
+      const term = `%${search}%`;
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .or(`first_name.ilike.${term},last_name.ilike.${term},display_name.ilike.${term}`)
+        .limit(20);
+      if (!profs?.length) return [];
+      const { data: ur } = await supabase
+        .from("user_roles").select("user_id")
+        .in("user_id", profs.map((p: any) => p.id))
+        .in("role", ["teacher", "homeroom_teacher", "coordinator_teacher", "cse"]);
+      const allowed = new Set(ur?.map((r: any) => r.user_id) ?? []);
+      return profs
+        .filter((p: any) => allowed.has(p.id))
+        .sort((a: any, b: any) => a.last_name.localeCompare(b.last_name, "ro"));
+    },
+  });
+
+  async function add(uid: string) {
+    if (coordinators.some((c: any) => c.user_id === uid)) {
+      return toast.info("Este deja coordonator");
+    }
+    const { error } = await supabase.from("volunteer_coordinators").insert({
+      project_id: projectId, user_id: uid, assigned_by: user!.id,
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Coordonator adăugat");
+    setOpen(false); setSearch("");
+    qc.invalidateQueries({ queryKey: ["volunteer-coordinators", projectId] });
+  }
+
+  async function remove(id: string) {
+    const { error } = await supabase.from("volunteer_coordinators").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Coordonator eliminat");
+    qc.invalidateQueries({ queryKey: ["volunteer-coordinators", projectId] });
+    qc.invalidateQueries({ queryKey: ["volunteer-is-coordinator", projectId] });
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 pt-4">
+        {canManage && (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <UserPlus className="h-4 w-4 mr-1" /> Adaugă coordonator
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[320px] p-0" align="start">
+              <Command shouldFilter={false}>
+                <CommandInput placeholder="Caută profesor…" value={search} onValueChange={setSearch} />
+                <CommandList>
+                  <CommandEmpty>
+                    {search.length < 2 ? "Tastează minim 2 litere" : "Niciun rezultat"}
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {candidates.map((p: any) => (
+                      <CommandItem key={p.id} onSelect={() => add(p.id)}>
+                        {p.last_name} {p.first_name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )}
+        {coordinators.length === 0 && (
+          <p className="text-sm text-muted-foreground">Niciun coordonator adăugat.</p>
+        )}
+        {coordinators.map((c: any) => (
+          <div key={c.id} className="flex items-center justify-between rounded border p-2">
+            <span className="text-sm">
+              {c.profile ? `${c.profile.last_name} ${c.profile.first_name}` : c.user_id}
+            </span>
+            {canManage && (
+              <Button variant="ghost" size="sm" onClick={() => remove(c.id)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
