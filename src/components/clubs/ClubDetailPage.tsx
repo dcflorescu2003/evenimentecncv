@@ -314,11 +314,12 @@ export default function ClubDetailPage({ mode }: Props) {
             <MeetingsTab
               clubId={clubId!}
               meetings={meetings}
-              enrollments={visibleEnrollments}
+              enrollments={assistantMode ? enrollments : visibleEnrollments}
               canManage={canManage}
+              attendanceMode={assistantMode}
               readOnlyAttendance={viewMode === "homeroom_filtered"}
               userId={user!.id}
-              isStudent={mode === "student"}
+              isStudent={mode === "student" && !assistantMode}
               onChange={() => qc.invalidateQueries({ queryKey: ["club-meetings", clubId] })}
             />
           </TabsContent>
