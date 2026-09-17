@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useClubQuestions } from "./ClubEnrollDialog";
+import { searchProfiles } from "@/lib/search";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 const NO_DEPT = "__none__";
 
@@ -206,6 +208,7 @@ export function ClubAssistantsTab({
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 250);
 
   const { data: assistants = [] } = useQuery({
     queryKey: ["club-assistants", clubId],
@@ -224,23 +227,10 @@ export function ClubAssistantsTab({
   });
 
   const { data: candidates = [] } = useQuery({
-    queryKey: ["club-assistant-candidates", search],
-    enabled: open && search.length >= 2,
-    queryFn: async () => {
-      const term = `%${search}%`;
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .or(`first_name.ilike.${term},last_name.ilike.${term},display_name.ilike.${term}`)
-        .limit(20);
-      if (!profs?.length) return [];
-      const { data: ur } = await supabase
-        .from("user_roles").select("user_id")
-        .in("user_id", profs.map((p: any) => p.id))
-        .eq("role", "student");
-      const allowed = new Set(ur?.map((r: any) => r.user_id) ?? []);
-      return profs.filter((p: any) => allowed.has(p.id));
-    },
+    queryKey: ["club-assistant-candidates", debouncedSearch],
+    enabled: open && debouncedSearch.trim().length >= 2,
+    placeholderData: (prev) => prev,
+    queryFn: () => searchProfiles(debouncedSearch, ["student"], 20),
   });
 
   async function add(sid: string) {
@@ -317,6 +307,7 @@ export function ClubMembersTab({
   const [filterDept, setFilterDept] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 250);
 
   const { data: questions = [] } = useClubQuestions(clubId);
   const phoneQuestion = questions.find((q: any) => q.is_phone);
@@ -357,23 +348,10 @@ export function ClubMembersTab({
   }, [enrollments, filterDept]);
 
   const { data: candidates = [] } = useQuery({
-    queryKey: ["club-member-candidates", search],
-    enabled: addOpen && search.length >= 2,
-    queryFn: async () => {
-      const term = `%${search}%`;
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .or(`first_name.ilike.${term},last_name.ilike.${term},display_name.ilike.${term}`)
-        .limit(20);
-      if (!profs?.length) return [];
-      const { data: ur } = await supabase
-        .from("user_roles").select("user_id")
-        .in("user_id", profs.map((p: any) => p.id))
-        .eq("role", "student");
-      const allowed = new Set(ur?.map((r: any) => r.user_id) ?? []);
-      return profs.filter((p: any) => allowed.has(p.id));
-    },
+    queryKey: ["club-member-candidates", debouncedSearch],
+    enabled: addOpen && debouncedSearch.trim().length >= 2,
+    placeholderData: (prev) => prev,
+    queryFn: () => searchProfiles(debouncedSearch, ["student"], 20),
   });
 
   async function addMember(sid: string) {
