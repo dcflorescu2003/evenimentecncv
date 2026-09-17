@@ -103,9 +103,11 @@ export default function ClubDetailPage({ mode }: Props) {
   const isCoordinator = !!user && coordinators.some((c: any) => c.user_id === user.id);
   const isCreator = !!user && club?.created_by === user.id;
   const isAssistant = !!user && assistants.includes(user.id);
-  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator || isAssistant;
-  const canManageCoords = isAdmin || isCse || (isTeacher && isCreator);
-  const canManageAssistants = canManageCoords || isCoordinator;
+  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator;
+  const canManageCoords = isAdmin || isCse || (isTeacher && isCreator) || isCoordinator;
+  const canManageAssistants = canManageCoords;
+  // Elev asistent: vede membrii (doar citire) și marchează prezența
+  const assistantMode = isAssistant && !canManage;
 
   // View mode for non-creator, non-coordinator, non-admin teachers
   const viewMode: "full" | "homeroom_filtered" | "general_only" | "student" =
@@ -217,8 +219,8 @@ export default function ClubDetailPage({ mode }: Props) {
     mode === "admin" ? "/admin/clubs" : mode === "cse" ? "/prof/clubs" : "/student/clubs";
 
   const showCoordsTab = canManage || canManageCoords;
-  const showMembersTab = canManage;
-  const showMeetingsTab = viewMode !== "general_only";
+  const showMembersTab = canManage || assistantMode;
+  const showMeetingsTab = viewMode !== "general_only" || assistantMode;
 
   return (
     <div className="space-y-4">
@@ -312,11 +314,12 @@ export default function ClubDetailPage({ mode }: Props) {
             <MeetingsTab
               clubId={clubId!}
               meetings={meetings}
-              enrollments={visibleEnrollments}
+              enrollments={assistantMode ? enrollments : visibleEnrollments}
               canManage={canManage}
+              attendanceMode={assistantMode}
               readOnlyAttendance={viewMode === "homeroom_filtered"}
               userId={user!.id}
-              isStudent={mode === "student"}
+              isStudent={mode === "student" && !assistantMode}
               onChange={() => qc.invalidateQueries({ queryKey: ["club-meetings", clubId] })}
             />
           </TabsContent>
@@ -483,6 +486,22 @@ function CoordinatorsTab({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
+  const coordIds = coordinators.map((c: any) => c.user_id).sort().join(",");
+  const { data: studentCoordIds = [] } = useQuery({
+    queryKey: ["club-coord-roles", coordIds],
+    enabled: coordinators.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .in("user_id", coordinators.map((c: any) => c.user_id))
+        .eq("role", "student");
+      return (data ?? []).map((r: any) => r.user_id as string);
+    },
+  });
+
+  const studentCount = coordinators.filter((c: any) => studentCoordIds.includes(c.user_id)).length;
+
   const { data: candidates = [] } = useQuery({
     queryKey: ["coord-candidates", search],
     enabled: open && search.length >= 2,
@@ -500,20 +519,32 @@ function CoordinatorsTab({
         .select("user_id, role")
         .in("user_id", ids)
         .in("role", ["teacher", "homeroom_teacher", "coordinator_teacher", "cse", "student"]);
+      const students = new Set(
+        (ur ?? []).filter((r: any) => r.role === "student").map((r: any) => r.user_id)
+      );
       const allowed = new Set(ur?.map((r: any) => r.user_id) ?? []);
-      return profs.filter((p: any) => allowed.has(p.id));
+      return profs
+        .filter((p: any) => allowed.has(p.id))
+        .map((p: any) => ({ ...p, isStudent: students.has(p.id) }));
     },
   });
 
-  async function add(uid: string) {
+  async function add(uid: string, isStudentCandidate: boolean) {
     if (coordinators.some((c: any) => c.user_id === uid)) {
       toast.info("Este deja coordonator");
       return;
     }
+    if (isStudentCandidate && studentCount >= 2) {
+      return toast.error("Poți avea maxim 2 elevi coordonatori.");
+    }
     const { error } = await supabase.from("club_coordinators").insert({
       club_id: clubId, user_id: uid, assigned_by: userId,
     });
-    if (error) return toast.error(error.message);
+    if (error) {
+      return toast.error(
+        error.message.includes("maxim 2") ? "Poți avea maxim 2 elevi coordonatori." : error.message
+      );
+    }
     toast.success("Coordonator adăugat");
     setOpen(false); setSearch("");
     onChange();
@@ -530,47 +561,61 @@ function CoordinatorsTab({
     <Card>
       <CardContent className="space-y-3 pt-4">
         {canManage && (
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                <UserPlus className="h-4 w-4 mr-1" /> Adaugă coordonator
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[320px] p-0" align="start">
-              <Command shouldFilter={false}>
-                <CommandInput placeholder="Caută profesor sau elev…" value={search} onValueChange={setSearch} />
-                <CommandList>
-                  <CommandEmpty>
-                    {search.length < 2 ? "Tastează minim 2 litere" : "Niciun rezultat"}
-                  </CommandEmpty>
-                  <CommandGroup>
-                    {candidates.map((p: any) => (
-                      <CommandItem key={p.id} onSelect={() => add(p.id)}>
-                        {p.last_name} {p.first_name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <div className="space-y-2">
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <UserPlus className="h-4 w-4 mr-1" /> Adaugă coordonator
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[320px] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput placeholder="Caută profesor sau elev…" value={search} onValueChange={setSearch} />
+                  <CommandList>
+                    <CommandEmpty>
+                      {search.length < 2 ? "Tastează minim 2 litere" : "Niciun rezultat"}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {candidates.map((p: any) => (
+                        <CommandItem key={p.id} onSelect={() => add(p.id, p.isStudent)}>
+                          <span className="flex-1">{p.last_name} {p.first_name}</span>
+                          <Badge variant={p.isStudent ? "secondary" : "outline"} className="ml-2">
+                            {p.isStudent ? "Elev" : "Profesor"}
+                          </Badge>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">
+              Oricâți profesori și diriginți, maxim 2 elevi coordonatori ({studentCount}/2).
+            </p>
+          </div>
         )}
         <div className="space-y-2">
           {coordinators.length === 0 && (
             <p className="text-sm text-muted-foreground">Niciun coordonator încă.</p>
           )}
-          {coordinators.map((c: any) => (
-            <div key={c.id} className="flex items-center justify-between rounded border p-2">
-              <span className="text-sm">
-                {c.profile ? `${c.profile.last_name} ${c.profile.first_name}` : c.user_id}
-              </span>
-              {canManage && (
-                <Button variant="ghost" size="sm" onClick={() => remove(c.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              )}
-            </div>
-          ))}
+          {coordinators.map((c: any) => {
+            const isStudentCoord = studentCoordIds.includes(c.user_id);
+            return (
+              <div key={c.id} className="flex items-center justify-between rounded border p-2">
+                <span className="text-sm flex items-center gap-2">
+                  {c.profile ? `${c.profile.last_name} ${c.profile.first_name}` : c.user_id}
+                  <Badge variant={isStudentCoord ? "secondary" : "outline"}>
+                    {isStudentCoord ? "Elev" : "Profesor"}
+                  </Badge>
+                </span>
+                {canManage && (
+                  <Button variant="ghost" size="sm" onClick={() => remove(c.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
@@ -579,17 +624,19 @@ function CoordinatorsTab({
 
 // ============================================================
 function MeetingsTab({
-  clubId, meetings, enrollments, canManage, readOnlyAttendance, userId, isStudent, onChange,
+  clubId, meetings, enrollments, canManage, attendanceMode, readOnlyAttendance, userId, isStudent, onChange,
 }: {
   clubId: string;
   meetings: any[];
   enrollments: any[];
   canManage: boolean;
+  attendanceMode?: boolean;
   readOnlyAttendance?: boolean;
   userId: string;
   isStudent: boolean;
   onChange: () => void;
 }) {
+  const canMark = canManage || !!attendanceMode;
   const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [newDate, setNewDate] = useState(today);
@@ -659,13 +706,13 @@ function MeetingsTab({
                   )}
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-1">
-                  {canManage && m.qr_code_data && (
+                  {canMark && m.qr_code_data && (
                     <SessionQrDialog
                       value={m.qr_code_data}
                       title={`QR întâlnire · ${formatDate(m.date)}`}
                     />
                   )}
-                  {canManage && (
+                  {canMark && (
                     <AttendanceScanDialog
                       kind="club"
                       targetId={m.id}
@@ -673,7 +720,7 @@ function MeetingsTab({
                       onMarked={() => qc.invalidateQueries({ queryKey: ["club-att", m.id] })}
                     />
                   )}
-                  {(canManage || readOnlyAttendance) && (
+                  {(canMark || readOnlyAttendance) && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -689,14 +736,14 @@ function MeetingsTab({
                   )}
                 </div>
               </div>
-              {openMeeting === m.id && canManage && (
+              {openMeeting === m.id && canMark && (
                 <AttendancePanel
                   meetingId={m.id}
                   enrollments={enrollments}
                   userId={userId}
                 />
               )}
-              {openMeeting === m.id && !canManage && readOnlyAttendance && (
+              {openMeeting === m.id && !canMark && readOnlyAttendance && (
                 <ReadOnlyAttendancePanel meetingId={m.id} enrollments={enrollments} />
               )}
               {isStudent && <StudentOwnAttendance meetingId={m.id} studentId={userId} />}

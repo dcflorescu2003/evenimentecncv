@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.enforce_student_coordinator_limit() FROM anon, authenticated, public;
