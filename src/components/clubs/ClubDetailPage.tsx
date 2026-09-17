@@ -32,6 +32,8 @@ import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
 import ClubFormTab from "./ClubFormTab";
 import ClubEnrollDialog from "./ClubEnrollDialog";
+import { searchProfiles, STAFF_ROLES } from "@/lib/search";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   ClubRequestsTab, ClubDepartmentsTab, ClubAssistantsTab, ClubMembersTab,
 } from "./ClubManagementTabs";
@@ -485,6 +487,7 @@ function CoordinatorsTab({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 250);
 
   const coordIds = coordinators.map((c: any) => c.user_id).sort().join(",");
   const { data: studentCoordIds = [] } = useQuery({
@@ -503,29 +506,16 @@ function CoordinatorsTab({
   const studentCount = coordinators.filter((c: any) => studentCoordIds.includes(c.user_id)).length;
 
   const { data: candidates = [] } = useQuery({
-    queryKey: ["coord-candidates", search],
-    enabled: open && search.length >= 2,
+    queryKey: ["coord-candidates", debouncedSearch],
+    enabled: open && debouncedSearch.trim().length >= 2,
+    placeholderData: (prev) => prev,
     queryFn: async () => {
-      const term = `%${search}%`;
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, display_name")
-        .or(`first_name.ilike.${term},last_name.ilike.${term},display_name.ilike.${term}`)
-        .limit(20);
-      if (!profs?.length) return [];
-      const ids = profs.map((p: any) => p.id);
-      const { data: ur } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .in("user_id", ids)
-        .in("role", ["teacher", "homeroom_teacher", "coordinator_teacher", "cse", "student"]);
-      const students = new Set(
-        (ur ?? []).filter((r: any) => r.role === "student").map((r: any) => r.user_id)
+      const rows = await searchProfiles(
+        debouncedSearch,
+        [...STAFF_ROLES, "student"],
+        20,
       );
-      const allowed = new Set(ur?.map((r: any) => r.user_id) ?? []);
-      return profs
-        .filter((p: any) => allowed.has(p.id))
-        .map((p: any) => ({ ...p, isStudent: students.has(p.id) }));
+      return rows.map((p) => ({ ...p, isStudent: p.roles.includes("student") }));
     },
   });
 
