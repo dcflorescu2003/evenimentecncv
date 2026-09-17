@@ -620,7 +620,7 @@ function DeleteEntityButton({
       toast.error("Eroare la ștergere: " + error.message);
       return;
     }
-    toast.success("Ciornă ștearsă");
+    toast.success(copy.success);
     setOpen(false);
     onDeleted();
   }
@@ -635,10 +635,8 @@ function DeleteEntityButton({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Ștergi ciorna „{name}"?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Această acțiune este definitivă și nu poate fi anulată.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{copy.title(name)}</AlertDialogTitle>
+          <AlertDialogDescription>{copy.desc}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>Anulează</AlertDialogCancel>
