@@ -32,7 +32,9 @@ export default function NotificationBell() {
       return data;
     },
     enabled: !!user,
-    refetchInterval: 60000,
+    refetchInterval: 180000,
+    refetchIntervalInBackground: false,
+    staleTime: 60000,
   });
 
   const unreadCount = notifications.filter((n: any) => !n.is_read).length;
