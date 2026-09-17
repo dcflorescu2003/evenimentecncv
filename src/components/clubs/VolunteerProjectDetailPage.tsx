@@ -74,7 +74,24 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
   });
 
   const isCreator = !!user && project?.created_by === user.id;
-  const canManage = isAdmin || ((isCse || isTeacher) && isCreator);
+
+  const { data: isProjectCoordinator = false } = useQuery({
+    queryKey: ["volunteer-is-coordinator", projectId, user?.id],
+    enabled: !!projectId && !!user && !isCreator,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("volunteer_coordinators")
+        .select("id")
+        .eq("project_id", projectId!)
+        .eq("user_id", user!.id)
+        .limit(1);
+      if (error) return false;
+      return (data?.length ?? 0) > 0;
+    },
+  });
+
+  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isProjectCoordinator;
+  const canManageCoords = isAdmin || ((isCse || isTeacher) && isCreator);
   const myEnrollment = enrollments.find((e: any) => e.student_id === user?.id);
 
   const viewMode: "full" | "homeroom_filtered" | "general_only" | "student" =
