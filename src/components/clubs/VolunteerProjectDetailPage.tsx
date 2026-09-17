@@ -621,11 +621,12 @@ function ProjectGeneralTab({ project, canEdit, onSaved }: any) {
 }
 
 function MembersTab({
-  projectId, enrollments, enrolledIds, onChange,
+  projectId, enrollments, enrolledIds, readOnly, onChange,
 }: {
   projectId: string;
   enrollments: any[];
   enrolledIds: string[];
+  readOnly?: boolean;
   onChange: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -701,6 +702,7 @@ function MembersTab({
           <p className="text-sm text-muted-foreground">
             {enrollments.length} participant{enrollments.length === 1 ? "" : "i"}
           </p>
+          {!readOnly && (
           <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
             <PopoverTrigger asChild>
               <Button size="sm"><UserPlus className="h-4 w-4 mr-1" />Adaugă elev</Button>
@@ -727,14 +729,17 @@ function MembersTab({
               </Command>
             </PopoverContent>
           </Popover>
+          )}
         </div>
         {enrollments.length === 0 && <p className="text-sm text-muted-foreground">Niciun înscris.</p>}
         {enrollments.map((e: any) => (
           <div key={e.id} className="flex items-center justify-between rounded border p-2 text-sm">
             <span>{e.profile ? `${e.profile.last_name} ${e.profile.first_name}` : e.student_id}</span>
-            <Button variant="ghost" size="sm" onClick={() => removeStudent(e.id)}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            {!readOnly && (
+              <Button variant="ghost" size="sm" onClick={() => removeStudent(e.id)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
           </div>
         ))}
       </CardContent>
@@ -742,7 +747,8 @@ function MembersTab({
   );
 }
 
-function DaysTab({ projectId, days, enrollments, canManage, readOnlyAttendance, userId, onChange }: any) {
+function DaysTab({ projectId, days, enrollments, canManage, attendanceMode, readOnlyAttendance, userId, onChange }: any) {
+  const canMark = canManage || !!attendanceMode;
   const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [d, setD] = useState(today); const [s, setS] = useState(""); const [e, setE] = useState("");
@@ -785,10 +791,10 @@ function DaysTab({ projectId, days, enrollments, canManage, readOnlyAttendance, 
               {day.location && <p className="text-xs text-muted-foreground">{day.location}</p>}
             </div>
             <div className="flex flex-wrap items-center justify-end gap-1">
-              {canManage && day.qr_code_data && (
+              {canMark && day.qr_code_data && (
                 <SessionQrDialog value={day.qr_code_data} title={`QR zi · ${formatDate(day.date)}`} />
               )}
-              {canManage && (
+              {canMark && (
                 <AttendanceScanDialog
                   kind="volunteer"
                   targetId={day.id}
@@ -796,7 +802,7 @@ function DaysTab({ projectId, days, enrollments, canManage, readOnlyAttendance, 
                   onMarked={() => qc.invalidateQueries({ queryKey: ["v-att", day.id] })}
                 />
               )}
-              {(canManage || readOnlyAttendance) && (
+              {(canMark || readOnlyAttendance) && (
                 <Button size="sm" variant="outline" onClick={() => setOpen(open === day.id ? null : day.id)}>
                   {open === day.id ? "Închide" : "Prezență"}
                 </Button>
@@ -808,10 +814,10 @@ function DaysTab({ projectId, days, enrollments, canManage, readOnlyAttendance, 
               )}
             </div>
           </div>
-          {open === day.id && canManage && (
+          {open === day.id && canMark && (
             <DayAttendancePanel dayId={day.id} enrollments={enrollments} userId={userId} />
           )}
-          {open === day.id && !canManage && readOnlyAttendance && (
+          {open === day.id && !canMark && readOnlyAttendance && (
             <ReadOnlyDayAttendancePanel dayId={day.id} enrollments={enrollments} />
           )}
         </CardContent></Card>
