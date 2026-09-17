@@ -95,6 +95,7 @@ export default function ClubsVolunteerHub({ mode }: Props) {
   }, [projects, mode]);
 
   const canCreate = mode === "admin" || mode === "cse";
+  const isAdmin = roles.includes("admin");
 
   return (
     <div className="space-y-8">
@@ -156,11 +157,12 @@ export default function ClubsVolunteerHub({ mode }: Props) {
                     {p.description || "Fără descriere"}
                   </p>
                   <div className="flex flex-wrap gap-2 self-end">
-                    {canCreate && p.status === "draft" && (
-                      <DeleteDraftButton
+                    {((canCreate && p.status === "draft") || (isAdmin && p.status === "closed")) && (
+                      <DeleteEntityButton
                         table="volunteer_projects"
                         id={p.id}
                         name={p.name}
+                        kind={p.status === "draft" ? "draft" : "closed_project"}
                         onDeleted={() => qc.invalidateQueries({ queryKey: ["volunteer-hub", mode] })}
                       />
                     )}
@@ -224,11 +226,12 @@ export default function ClubsVolunteerHub({ mode }: Props) {
                     {c.description || "Fără descriere"}
                   </p>
                   <div className="flex flex-wrap gap-2 self-end">
-                    {canCreate && c.status === "draft" && (
-                      <DeleteDraftButton
+                    {((canCreate && c.status === "draft") || (isAdmin && c.status === "archived")) && (
+                      <DeleteEntityButton
                         table="clubs"
                         id={c.id}
                         name={c.name}
+                        kind={c.status === "draft" ? "draft" : "archived_club"}
                         onDeleted={() => qc.invalidateQueries({ queryKey: ["clubs-hub", mode] })}
                       />
                     )}
@@ -572,17 +575,40 @@ function CreateProjectDialog({
   );
 }
 
-function DeleteDraftButton({
+type DeleteKind = "draft" | "archived_club" | "closed_project";
+
+const DELETE_COPY: Record<DeleteKind, { title: (n: string) => string; desc: string; success: string }> = {
+  draft: {
+    title: (n) => `Ștergi ciorna „${n}”?`,
+    desc: "Această acțiune este definitivă și nu poate fi anulată.",
+    success: "Ciornă ștearsă",
+  },
+  archived_club: {
+    title: (n) => `Ștergi definitiv clubul arhivat „${n}”?`,
+    desc: "Se șterg și înscrierile, întâlnirile, prezența, coordonatorii, asistenții, departamentele și formularul de înscriere. Această acțiune este definitivă.",
+    success: "Club șters",
+  },
+  closed_project: {
+    title: (n) => `Ștergi definitiv proiectul finalizat „${n}”?`,
+    desc: "Se șterg și înscrierile, zilele de voluntariat, prezența, coordonatorii și asistenții. Această acțiune este definitivă.",
+    success: "Proiect șters",
+  },
+};
+
+function DeleteEntityButton({
   table,
   id,
   name,
+  kind,
   onDeleted,
 }: {
   table: "clubs" | "volunteer_projects";
   id: string;
   name: string;
+  kind: DeleteKind;
   onDeleted: () => void;
 }) {
+  const copy = DELETE_COPY[kind];
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -594,7 +620,7 @@ function DeleteDraftButton({
       toast.error("Eroare la ștergere: " + error.message);
       return;
     }
-    toast.success("Ciornă ștearsă");
+    toast.success(copy.success);
     setOpen(false);
     onDeleted();
   }
@@ -609,10 +635,8 @@ function DeleteDraftButton({
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Ștergi ciorna „{name}"?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Această acțiune este definitivă și nu poate fi anulată.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{copy.title(name)}</AlertDialogTitle>
+          <AlertDialogDescription>{copy.desc}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>Anulează</AlertDialogCancel>
