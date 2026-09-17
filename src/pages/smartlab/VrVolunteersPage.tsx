@@ -16,6 +16,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Plus, X, Loader2 } from "lucide-react";
+import { normalizeText } from "@/lib/search";
 
 interface ClassRow {
   id: string;
@@ -187,7 +188,7 @@ function StudentPicker({ classId, onPick }: { classId: string; onPick: (id: stri
                   {(students ?? []).map((s) => (
                     <CommandItem
                       key={s.id}
-                      value={`${s.last_name} ${s.first_name}`}
+                      value={`${s.last_name} ${s.first_name} ${normalizeText(`${s.last_name} ${s.first_name}`)}`}
                       onSelect={() => {
                         onPick(s.id);
                         setOpen(false);

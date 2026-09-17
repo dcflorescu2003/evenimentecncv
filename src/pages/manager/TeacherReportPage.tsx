@@ -12,6 +12,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 import { getHeldEventIds } from "@/lib/held-events";
 import { fetchInChunks } from "@/lib/supabase-chunk";
+import { matchesSearch } from "@/lib/search";
 
 export default function TeacherReportPage() {
   const { sessionId, sessionName } = useManagerSession();
@@ -37,11 +38,9 @@ export default function TeacherReportPage() {
     },
   });
 
-  const filteredTeachers = (teachers || []).filter((t) => {
-    if (!search) return true;
-    const name = (`${t.last_name} ${t.first_name}`).toLowerCase();
-    return name.includes(search.toLowerCase());
-  });
+  const filteredTeachers = (teachers || []).filter((t) =>
+    matchesSearch(search, `${t.last_name} ${t.first_name}`, `${t.first_name} ${t.last_name}`)
+  );
 
   // Summary scoped to session — only held events count
   const { data: summary } = useQuery({

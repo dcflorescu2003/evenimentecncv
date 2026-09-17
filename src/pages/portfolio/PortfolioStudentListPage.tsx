@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { matchesSearch } from "@/lib/search";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 interface Student {
   id: string;
@@ -19,6 +21,7 @@ export default function PortfolioStudentListPage() {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 200);
 
   const { data: cls } = useQuery({
     queryKey: ["portfolio_class_info", classId],
@@ -56,15 +59,16 @@ export default function PortfolioStudentListPage() {
     },
   });
 
-  const filtered = students.filter((s) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      s.last_name.toLowerCase().includes(q) ||
-      s.first_name.toLowerCase().includes(q) ||
-      s.username.toLowerCase().includes(q)
-    );
-  });
+  const filtered = students.filter((s) =>
+    matchesSearch(
+      debouncedSearch,
+      s.last_name,
+      s.first_name,
+      s.username,
+      `${s.last_name} ${s.first_name}`,
+      `${s.first_name} ${s.last_name}`,
+    )
+  );
 
   return (
     <div className="space-y-4">

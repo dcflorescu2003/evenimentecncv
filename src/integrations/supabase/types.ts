@@ -3092,6 +3092,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      f_unaccent: { Args: { "": string }; Returns: string }
       get_assistant_event_student_ids: {
         Args: { _assistant_id: string }
         Returns: string[]
@@ -3285,6 +3286,21 @@ export type Database = {
         }[]
       }
       resolve_student_qr: { Args: { _qr: string }; Returns: Json }
+      search_profiles: {
+        Args: {
+          _limit?: number
+          _roles?: Database["public"]["Enums"]["app_role"][]
+          _term: string
+        }
+        Returns: {
+          display_name: string
+          first_name: string
+          id: string
+          last_name: string
+          roles: string[]
+          username: string
+        }[]
+      }
       self_checkin_club: { Args: { _qr_code_data: string }; Returns: Json }
       self_checkin_volunteer: { Args: { _qr_code_data: string }; Returns: Json }
       submit_club_enrollment: {
