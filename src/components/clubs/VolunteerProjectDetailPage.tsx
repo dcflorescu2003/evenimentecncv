@@ -306,14 +306,22 @@ function CoordinatorsTab({ projectId, canManage }: { projectId: string; canManag
         .eq("project_id", projectId);
       if (error) throw error;
       if (!data?.length) return [];
+      const ids = data.map((c: any) => c.user_id);
       const { data: profs } = await supabase
-        .from("profiles").select("id, first_name, last_name")
-        .in("id", data.map((c: any) => c.user_id));
-      return data.map((c: any) => ({ ...c, profile: profs?.find((p: any) => p.id === c.user_id) }))
-        .sort((a: any, b: any) =>
-          (a.profile?.last_name ?? "").localeCompare(b.profile?.last_name ?? "", "ro"));
+        .from("profiles").select("id, first_name, last_name").in("id", ids);
+      const { data: ur } = await supabase
+        .from("user_roles").select("user_id").in("user_id", ids).eq("role", "student");
+      const students = new Set((ur ?? []).map((r: any) => r.user_id));
+      return data.map((c: any) => ({
+        ...c,
+        profile: profs?.find((p: any) => p.id === c.user_id),
+        isStudent: students.has(c.user_id),
+      })).sort((a: any, b: any) =>
+        (a.profile?.last_name ?? "").localeCompare(b.profile?.last_name ?? "", "ro"));
     },
   });
+
+  const studentCount = coordinators.filter((c: any) => c.isStudent).length;
 
   const { data: candidates = [] } = useQuery({
     queryKey: ["volunteer-coordinator-candidates", search],
@@ -327,24 +335,35 @@ function CoordinatorsTab({ projectId, canManage }: { projectId: string; canManag
         .limit(20);
       if (!profs?.length) return [];
       const { data: ur } = await supabase
-        .from("user_roles").select("user_id")
+        .from("user_roles").select("user_id, role")
         .in("user_id", profs.map((p: any) => p.id))
-        .in("role", ["teacher", "homeroom_teacher", "coordinator_teacher", "cse"]);
+        .in("role", ["teacher", "homeroom_teacher", "coordinator_teacher", "cse", "student"]);
+      const students = new Set(
+        (ur ?? []).filter((r: any) => r.role === "student").map((r: any) => r.user_id)
+      );
       const allowed = new Set(ur?.map((r: any) => r.user_id) ?? []);
       return profs
         .filter((p: any) => allowed.has(p.id))
+        .map((p: any) => ({ ...p, isStudent: students.has(p.id) }))
         .sort((a: any, b: any) => a.last_name.localeCompare(b.last_name, "ro"));
     },
   });
 
-  async function add(uid: string) {
+  async function add(uid: string, isStudentCandidate: boolean) {
     if (coordinators.some((c: any) => c.user_id === uid)) {
       return toast.info("Este deja coordonator");
+    }
+    if (isStudentCandidate && studentCount >= 2) {
+      return toast.error("Poți avea maxim 2 elevi coordonatori.");
     }
     const { error } = await supabase.from("volunteer_coordinators").insert({
       project_id: projectId, user_id: uid, assigned_by: user!.id,
     });
-    if (error) return toast.error(error.message);
+    if (error) {
+      return toast.error(
+        error.message.includes("maxim 2") ? "Poți avea maxim 2 elevi coordonatori." : error.message
+      );
+    }
     toast.success("Coordonator adăugat");
     setOpen(false); setSearch("");
     qc.invalidateQueries({ queryKey: ["volunteer-coordinators", projectId] });
@@ -362,15 +381,142 @@ function CoordinatorsTab({ projectId, canManage }: { projectId: string; canManag
     <Card>
       <CardContent className="space-y-3 pt-4">
         {canManage && (
+          <div className="space-y-2">
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <UserPlus className="h-4 w-4 mr-1" /> Adaugă coordonator
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[320px] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput placeholder="Caută profesor sau elev…" value={search} onValueChange={setSearch} />
+                  <CommandList>
+                    <CommandEmpty>
+                      {search.length < 2 ? "Tastează minim 2 litere" : "Niciun rezultat"}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {candidates.map((p: any) => (
+                        <CommandItem key={p.id} onSelect={() => add(p.id, p.isStudent)}>
+                          <span className="flex-1">{p.last_name} {p.first_name}</span>
+                          <Badge variant={p.isStudent ? "secondary" : "outline"} className="ml-2">
+                            {p.isStudent ? "Elev" : "Profesor"}
+                          </Badge>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">
+              Oricâți profesori și diriginți, maxim 2 elevi coordonatori ({studentCount}/2).
+            </p>
+          </div>
+        )}
+        {coordinators.length === 0 && (
+          <p className="text-sm text-muted-foreground">Niciun coordonator adăugat.</p>
+        )}
+        {coordinators.map((c: any) => (
+          <div key={c.id} className="flex items-center justify-between rounded border p-2">
+            <span className="text-sm flex items-center gap-2">
+              {c.profile ? `${c.profile.last_name} ${c.profile.first_name}` : c.user_id}
+              <Badge variant={c.isStudent ? "secondary" : "outline"}>
+                {c.isStudent ? "Elev" : "Profesor"}
+              </Badge>
+            </span>
+            {canManage && (
+              <Button variant="ghost" size="sm" onClick={() => remove(c.id)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function VolunteerAssistantsTab({
+  projectId, canManage, userId,
+}: {
+  projectId: string; canManage: boolean; userId: string;
+}) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const { data: assistants = [] } = useQuery({
+    queryKey: ["volunteer-assistants", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("volunteer_student_assistants")
+        .select("id, student_id")
+        .eq("project_id", projectId);
+      if (error) throw error;
+      if (!data?.length) return [];
+      const { data: profs } = await supabase
+        .from("profiles").select("id, first_name, last_name")
+        .in("id", data.map((a: any) => a.student_id));
+      return data.map((a: any) => ({ ...a, profile: profs?.find((p: any) => p.id === a.student_id) }))
+        .sort((a: any, b: any) =>
+          (a.profile?.last_name ?? "").localeCompare(b.profile?.last_name ?? "", "ro"));
+    },
+  });
+
+  const { data: candidates = [] } = useQuery({
+    queryKey: ["volunteer-assistant-candidates", search],
+    enabled: open && search.length >= 2,
+    queryFn: async () => {
+      const term = `%${search}%`;
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .or(`first_name.ilike.${term},last_name.ilike.${term},display_name.ilike.${term}`)
+        .limit(20);
+      if (!profs?.length) return [];
+      const { data: ur } = await supabase
+        .from("user_roles").select("user_id")
+        .in("user_id", profs.map((p: any) => p.id))
+        .eq("role", "student");
+      const allowed = new Set(ur?.map((r: any) => r.user_id) ?? []);
+      return profs.filter((p: any) => allowed.has(p.id));
+    },
+  });
+
+  async function add(sid: string) {
+    const { error } = await supabase.from("volunteer_student_assistants").insert({
+      project_id: projectId, student_id: sid, assigned_by: userId,
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Elev asistent adăugat");
+    setOpen(false); setSearch("");
+    qc.invalidateQueries({ queryKey: ["volunteer-assistants", projectId] });
+  }
+
+  async function remove(id: string) {
+    const { error } = await supabase.from("volunteer_student_assistants").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Eliminat");
+    qc.invalidateQueries({ queryKey: ["volunteer-assistants", projectId] });
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 pt-4">
+        <p className="text-xs text-muted-foreground">
+          Asistenții văd lista înscrișilor și pot face prezența, fără a modifica proiectul.
+        </p>
+        {canManage && (
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm">
-                <UserPlus className="h-4 w-4 mr-1" /> Adaugă coordonator
+                <UserPlus className="h-4 w-4 mr-1" /> Adaugă elev asistent
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[320px] p-0" align="start">
               <Command shouldFilter={false}>
-                <CommandInput placeholder="Caută profesor…" value={search} onValueChange={setSearch} />
+                <CommandInput placeholder="Caută elev…" value={search} onValueChange={setSearch} />
                 <CommandList>
                   <CommandEmpty>
                     {search.length < 2 ? "Tastează minim 2 litere" : "Niciun rezultat"}
@@ -387,16 +533,16 @@ function CoordinatorsTab({ projectId, canManage }: { projectId: string; canManag
             </PopoverContent>
           </Popover>
         )}
-        {coordinators.length === 0 && (
-          <p className="text-sm text-muted-foreground">Niciun coordonator adăugat.</p>
+        {assistants.length === 0 && (
+          <p className="text-sm text-muted-foreground">Niciun elev asistent.</p>
         )}
-        {coordinators.map((c: any) => (
-          <div key={c.id} className="flex items-center justify-between rounded border p-2">
+        {assistants.map((a: any) => (
+          <div key={a.id} className="flex items-center justify-between rounded border p-2">
             <span className="text-sm">
-              {c.profile ? `${c.profile.last_name} ${c.profile.first_name}` : c.user_id}
+              {a.profile ? `${a.profile.last_name} ${a.profile.first_name}` : a.student_id}
             </span>
             {canManage && (
-              <Button variant="ghost" size="sm" onClick={() => remove(c.id)}>
+              <Button variant="ghost" size="sm" onClick={() => remove(a.id)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             )}
