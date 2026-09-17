@@ -151,15 +151,19 @@ export default function UsersPage() {
     return allTeacherSubjects.filter((t) => t.teacher_id === userId).map((t) => t.subject_id);
   }
 
-  const filteredProfiles = profiles.filter((p) => {
-    const matchesSearch = !search ||
-      p.display_name?.toLowerCase().includes(search.toLowerCase()) ||
-      p.username.toLowerCase().includes(search.toLowerCase()) ||
-      p.first_name.toLowerCase().includes(search.toLowerCase()) ||
-      p.last_name.toLowerCase().includes(search.toLowerCase());
+  const filteredProfiles = useMemo(() => profiles.filter((p) => {
+    const nameMatch = matchesSearch(
+      debouncedSearch,
+      p.display_name,
+      p.username,
+      p.first_name,
+      p.last_name,
+      `${p.last_name} ${p.first_name}`,
+      `${p.first_name} ${p.last_name}`,
+    );
     const matchesRole = roleFilter === "all" || getRoles(p.id).includes(roleFilter as any);
-    return matchesSearch && matchesRole;
-  });
+    return nameMatch && matchesRole;
+  }), [profiles, debouncedSearch, roleFilter, allRoles]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
