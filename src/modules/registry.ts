@@ -1,4 +1,4 @@
-import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, Headset, type LucideIcon } from "lucide-react";
+import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, Headset, QrCode, type LucideIcon } from "lucide-react";
 
 export type AppRole =
   | "admin"
@@ -100,6 +100,15 @@ export const MODULES: AppModule[] = [
       coordinator_teacher: "/smartlab",
       manager: "/smartlab",
       student: "/smartlab",
+    },
+  },
+  {
+    key: "badge",
+    label: "Legitimație",
+    description: "Codul QR personal pentru prezența la cluburi și voluntariat.",
+    icon: QrCode,
+    pathByRole: {
+      student: "/student/badge",
     },
   },
 ];
