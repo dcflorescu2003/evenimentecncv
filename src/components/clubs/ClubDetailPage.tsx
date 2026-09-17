@@ -103,9 +103,11 @@ export default function ClubDetailPage({ mode }: Props) {
   const isCoordinator = !!user && coordinators.some((c: any) => c.user_id === user.id);
   const isCreator = !!user && club?.created_by === user.id;
   const isAssistant = !!user && assistants.includes(user.id);
-  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator || isAssistant;
-  const canManageCoords = isAdmin || isCse || (isTeacher && isCreator);
-  const canManageAssistants = canManageCoords || isCoordinator;
+  const canManage = isAdmin || ((isCse || isTeacher) && isCreator) || isCoordinator;
+  const canManageCoords = isAdmin || isCse || (isTeacher && isCreator) || isCoordinator;
+  const canManageAssistants = canManageCoords;
+  // Elev asistent: vede membrii (doar citire) și marchează prezența
+  const assistantMode = isAssistant && !canManage;
 
   // View mode for non-creator, non-coordinator, non-admin teachers
   const viewMode: "full" | "homeroom_filtered" | "general_only" | "student" =
@@ -217,8 +219,8 @@ export default function ClubDetailPage({ mode }: Props) {
     mode === "admin" ? "/admin/clubs" : mode === "cse" ? "/prof/clubs" : "/student/clubs";
 
   const showCoordsTab = canManage || canManageCoords;
-  const showMembersTab = canManage;
-  const showMeetingsTab = viewMode !== "general_only";
+  const showMembersTab = canManage || assistantMode;
+  const showMeetingsTab = viewMode !== "general_only" || assistantMode;
 
   return (
     <div className="space-y-4">
