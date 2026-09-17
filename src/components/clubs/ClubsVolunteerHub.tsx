@@ -575,17 +575,40 @@ function CreateProjectDialog({
   );
 }
 
-function DeleteDraftButton({
+type DeleteKind = "draft" | "archived_club" | "closed_project";
+
+const DELETE_COPY: Record<DeleteKind, { title: (n: string) => string; desc: string; success: string }> = {
+  draft: {
+    title: (n) => `Ștergi ciorna „${n}”?`,
+    desc: "Această acțiune este definitivă și nu poate fi anulată.",
+    success: "Ciornă ștearsă",
+  },
+  archived_club: {
+    title: (n) => `Ștergi definitiv clubul arhivat „${n}”?`,
+    desc: "Se șterg și înscrierile, întâlnirile, prezența, coordonatorii, asistenții, departamentele și formularul de înscriere. Această acțiune este definitivă.",
+    success: "Club șters",
+  },
+  closed_project: {
+    title: (n) => `Ștergi definitiv proiectul finalizat „${n}”?`,
+    desc: "Se șterg și înscrierile, zilele de voluntariat, prezența, coordonatorii și asistenții. Această acțiune este definitivă.",
+    success: "Proiect șters",
+  },
+};
+
+function DeleteEntityButton({
   table,
   id,
   name,
+  kind,
   onDeleted,
 }: {
   table: "clubs" | "volunteer_projects";
   id: string;
   name: string;
+  kind: DeleteKind;
   onDeleted: () => void;
 }) {
+  const copy = DELETE_COPY[kind];
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
