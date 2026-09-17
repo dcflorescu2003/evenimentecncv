@@ -624,17 +624,19 @@ function CoordinatorsTab({
 
 // ============================================================
 function MeetingsTab({
-  clubId, meetings, enrollments, canManage, readOnlyAttendance, userId, isStudent, onChange,
+  clubId, meetings, enrollments, canManage, attendanceMode, readOnlyAttendance, userId, isStudent, onChange,
 }: {
   clubId: string;
   meetings: any[];
   enrollments: any[];
   canManage: boolean;
+  attendanceMode?: boolean;
   readOnlyAttendance?: boolean;
   userId: string;
   isStudent: boolean;
   onChange: () => void;
 }) {
+  const canMark = canManage || !!attendanceMode;
   const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [newDate, setNewDate] = useState(today);
