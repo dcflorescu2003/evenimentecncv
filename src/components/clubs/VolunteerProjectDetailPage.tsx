@@ -228,6 +228,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
           <TabsTrigger value="general">General</TabsTrigger>
           {showMembersTab && <TabsTrigger value="members">Înscriși ({enrollments.length})</TabsTrigger>}
           {showDaysTab && <TabsTrigger value="days">Zile & prezență</TabsTrigger>}
+          {canManage && <TabsTrigger value="coordinators">Coordonatori</TabsTrigger>}
         </TabsList>
         <TabsContent value="general" className="pt-3">
           <ProjectGeneralTab project={project} canEdit={canManage}
