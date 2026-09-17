@@ -2823,6 +2823,38 @@ export type Database = {
         }
         Relationships: []
       }
+      volunteer_student_assistants: {
+        Row: {
+          assigned_by: string
+          created_at: string
+          id: string
+          project_id: string
+          student_id: string
+        }
+        Insert: {
+          assigned_by: string
+          created_at?: string
+          id?: string
+          project_id: string
+          student_id: string
+        }
+        Update: {
+          assigned_by?: string
+          created_at?: string
+          id?: string
+          project_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_student_assistants_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vr_materials: {
         Row: {
           created_at: string
@@ -3208,6 +3240,10 @@ export type Database = {
         Returns: boolean
       }
       is_volunteer_enrolled: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_volunteer_student_assistant: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
