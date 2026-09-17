@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
 import AttendanceScanDialog from "@/components/scan/AttendanceScanDialog";
 import SessionQrDialog from "@/components/scan/SessionQrDialog";
-import { searchProfiles, STAFF_ROLES } from "@/lib/search";
+import { searchProfiles, STAFF_ROLES, normalizeText } from "@/lib/search";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 type Mode = "admin" | "cse" | "student";
@@ -695,7 +695,7 @@ function MembersTab({
                     {available.map((s: any) => (
                       <CommandItem
                         key={s.id}
-                        value={`${s.last_name} ${s.first_name}`}
+                        value={`${s.last_name} ${s.first_name} ${normalizeText(`${s.last_name} ${s.first_name}`)}`}
                         onSelect={() => addStudent(s.id)}
                         disabled={adding === s.id}
                       >
