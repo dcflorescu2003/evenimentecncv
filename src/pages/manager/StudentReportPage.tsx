@@ -11,6 +11,8 @@ import { exportReportPdf } from "@/lib/report-pdf";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 import { formatHoursVsRequired } from "@/lib/hours-format";
+import { searchProfiles } from "@/lib/search";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 const statusLabel = (s: string) => {
   if (s === "present" || s === "late") return "Prezent";
@@ -24,6 +26,7 @@ export default function StudentReportPage() {
   const [searchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState(searchParams.get("id") || "");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 250);
   const navigate = useNavigate();
   const fromPage = searchParams.get("from");
 
@@ -33,20 +36,10 @@ export default function StudentReportPage() {
   }, [searchParams]);
 
   const { data: students } = useQuery({
-    queryKey: ["mgr-students-search", search],
-    enabled: search.length >= 2,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, display_name")
-        .or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,display_name.ilike.%${search}%`)
-        .limit(20);
-      if (!data?.length) return [];
-      const ids = data.map((p) => p.id);
-      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "student").in("user_id", ids);
-      const studentIds = new Set((roles || []).map((r) => r.user_id));
-      return data.filter((p) => studentIds.has(p.id));
-    },
+    queryKey: ["mgr-students-search", debouncedSearch],
+    enabled: debouncedSearch.trim().length >= 2,
+    placeholderData: (prev) => prev,
+    queryFn: () => searchProfiles(debouncedSearch, ["student"], 20),
   });
 
   const { data: report, isLoading } = useQuery({
