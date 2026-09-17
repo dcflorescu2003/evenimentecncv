@@ -706,13 +706,13 @@ function MeetingsTab({
                   )}
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-1">
-                  {canManage && m.qr_code_data && (
+                  {canMark && m.qr_code_data && (
                     <SessionQrDialog
                       value={m.qr_code_data}
                       title={`QR întâlnire · ${formatDate(m.date)}`}
                     />
                   )}
-                  {canManage && (
+                  {canMark && (
                     <AttendanceScanDialog
                       kind="club"
                       targetId={m.id}
@@ -720,7 +720,7 @@ function MeetingsTab({
                       onMarked={() => qc.invalidateQueries({ queryKey: ["club-att", m.id] })}
                     />
                   )}
-                  {(canManage || readOnlyAttendance) && (
+                  {(canMark || readOnlyAttendance) && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -736,14 +736,14 @@ function MeetingsTab({
                   )}
                 </div>
               </div>
-              {openMeeting === m.id && canManage && (
+              {openMeeting === m.id && canMark && (
                 <AttendancePanel
                   meetingId={m.id}
                   enrollments={enrollments}
                   userId={userId}
                 />
               )}
-              {openMeeting === m.id && !canManage && readOnlyAttendance && (
+              {openMeeting === m.id && !canMark && readOnlyAttendance && (
                 <ReadOnlyAttendancePanel meetingId={m.id} enrollments={enrollments} />
               )}
               {isStudent && <StudentOwnAttendance meetingId={m.id} studentId={userId} />}
