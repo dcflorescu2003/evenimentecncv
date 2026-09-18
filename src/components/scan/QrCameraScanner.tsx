@@ -8,14 +8,32 @@ import { toast } from "sonner";
 let domIdCounter = 0;
 
 /**
+ * Configurație comună, optimizată pentru viteză:
+ * - doar coduri QR (fără alte formate de coduri de bare);
+ * - fără decodare oglindită (disableFlip);
+ * - fps mai mare — costul per cadru e mult mai mic cu optimizările de mai sus.
+ */
+export async function buildQrScannerConfig() {
+  const { Html5QrcodeSupportedFormats } = await import("html5-qrcode");
+  return {
+    fps: 20,
+    qrbox: { width: 250, height: 250 },
+    aspectRatio: 1.333334,
+    disableFlip: true,
+    formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+    videoConstraints: { width: { ideal: 1280 }, height: { ideal: 720 } },
+  } as const;
+}
+
+/**
  * Scanner QR reutilizabil (cluburi, voluntariat, legitimații).
- * Apelează onScan pentru fiecare cod citit; scanarea continuă după un scurt
- * interval de pauză pentru a evita citirile duplicate.
+ * Apelează onScan pentru fiecare cod citit; scanarea continuă imediat pentru
+ * un cod diferit, iar același cod este ignorat pe durata pauseMs (anti-duplicat).
  */
 export default function QrCameraScanner({
   onScan,
   autoStart = true,
-  pauseMs = 1500,
+  pauseMs = 800,
 }: {
   onScan: (text: string) => void | Promise<void>;
   autoStart?: boolean;
@@ -28,8 +46,11 @@ export default function QrCameraScanner({
   const [ready, setReady] = useState(false);
   const scannerRef = useRef<any>(null);
   const busyRef = useRef(false);
+  const lastScanRef = useRef<{ text: string; at: number } | null>(null);
   const onScanRef = useRef(onScan);
+  const pauseRef = useRef(pauseMs);
   onScanRef.current = onScan;
+  pauseRef.current = pauseMs;
 
   useEffect(() => {
     (async () => {
@@ -72,17 +93,21 @@ export default function QrCameraScanner({
       scannerRef.current = scanner;
       const cId = cameraOverride || selectedCameraId;
       const config = cId && cId !== "auto" ? cId : { facingMode: "environment" };
+      const scanConfig = await buildQrScannerConfig();
       await scanner.start(
         config as any,
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        async (decoded: string) => {
+        scanConfig as any,
+        (decoded: string) => {
+          // Anti-duplicat: același cod e ignorat pe durata pauseMs,
+          // dar un cod diferit trece imediat (flux continuu la rând de elevi).
+          const last = lastScanRef.current;
+          if (last && last.text === decoded && Date.now() - last.at < pauseRef.current) return;
           if (busyRef.current) return;
+          lastScanRef.current = { text: decoded, at: Date.now() };
           busyRef.current = true;
-          try {
-            await onScanRef.current(decoded);
-          } finally {
-            setTimeout(() => { busyRef.current = false; }, pauseMs);
-          }
+          void Promise.resolve(onScanRef.current(decoded))
+            .catch(() => { /* erorile sunt afișate de handler */ })
+            .finally(() => { busyRef.current = false; });
         },
         () => {},
       );
@@ -92,7 +117,7 @@ export default function QrCameraScanner({
       scannerRef.current = null;
       setActive(false);
     }
-  }, [domId, pauseMs, selectedCameraId]);
+  }, [domId, selectedCameraId]);
 
   useEffect(() => {
     if (ready && autoStart) {
