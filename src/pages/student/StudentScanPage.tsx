@@ -343,7 +343,7 @@ export default function StudentScanPage() {
               }} />
             </div>
           )}
-          {!scannerActive && (
+          {cameras.length > 0 && (
             <Select value={selectedCameraId} onValueChange={(val) => {
               setSelectedCameraId(val);
               rememberQrCamera(val);

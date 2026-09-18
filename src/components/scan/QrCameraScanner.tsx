@@ -176,8 +176,12 @@ export default function QrCameraScanner({
   return (
     <div className="space-y-3">
       <div id={domId} className="mx-auto w-full max-w-sm overflow-hidden rounded-lg border bg-muted" style={{ minHeight: 260 }} />
-      {!active && cameras.length > 1 && (
-        <Select value={selectedCameraId} onValueChange={(cameraId) => { setSelectedCameraId(cameraId); rememberQrCamera(cameraId); }}>
+      {cameras.length > 1 && (
+        <Select value={selectedCameraId} onValueChange={(cameraId) => {
+          setSelectedCameraId(cameraId);
+          rememberQrCamera(cameraId);
+          if (active) void stop().then(() => start(cameraId));
+        }}>
           <SelectTrigger><SelectValue placeholder="Alege camera" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="auto">Automată (spate)</SelectItem>

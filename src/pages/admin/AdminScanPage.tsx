@@ -204,6 +204,8 @@ export default function AdminScanPage() {
       }, 500);
     } catch (err: any) {
       toast.error("Nu s-a putut porni camera: " + (err.message || err));
+      scannerRef.current = null;
+      setScannerActive(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cameras, selectedCameraId, zoom, eventId]);

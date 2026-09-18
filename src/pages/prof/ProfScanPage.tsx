@@ -146,6 +146,8 @@ export default function ProfScanPage() {
       }, 500);
     } catch (err: any) {
       toast.error("Nu s-a putut porni camera: " + (err.message || err));
+      scannerRef.current = null;
+      setScannerActive(false);
     }
   }, [cameras, selectedCameraId, zoom]);
 
