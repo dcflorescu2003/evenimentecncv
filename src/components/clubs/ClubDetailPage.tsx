@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -29,7 +31,7 @@ import {
   ArrowLeft, Plus, Trash2, Check, ChevronsUpDown, Save, UserPlus, Calendar as CalendarIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate } from "@/lib/time";
+import { formatDate, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
 import ClubFormTab from "./ClubFormTab";
 import ClubEnrollDialog from "./ClubEnrollDialog";
 import { searchProfiles, STAFF_ROLES } from "@/lib/search";
@@ -392,11 +394,18 @@ function GeneralTab({ club, canEdit, onSaved }: { club: any; canEdit: boolean; o
   const [location, setLocation] = useState(club.location ?? "");
   const [maxCap, setMaxCap] = useState<string>(club.max_capacity?.toString() ?? "");
   const [status, setStatus] = useState(club.status);
-  const [openAt, setOpenAt] = useState(club.enrollment_open_at?.slice(0, 16) ?? "");
-  const [closeAt, setCloseAt] = useState(club.enrollment_close_at?.slice(0, 16) ?? "");
+  const initialOpen = splitDatetime(club.enrollment_open_at);
+  const initialClose = splitDatetime(club.enrollment_close_at);
+  const [openDate, setOpenDate] = useState(initialOpen.date);
+  const [openTime, setOpenTime] = useState(initialOpen.time);
+  const [closeDate, setCloseDate] = useState(initialClose.date);
+  const [closeTime, setCloseTime] = useState(initialClose.time);
   const [saving, setSaving] = useState(false);
 
   async function save() {
+    if ((openDate && !isValidTime24h(openTime)) || (closeDate && !isValidTime24h(closeTime))) {
+      return toast.error("Orele trebuie să fie în format HH:MM (00:00–23:59)");
+    }
     setSaving(true);
     const { error } = await supabase
       .from("clubs")
@@ -407,8 +416,8 @@ function GeneralTab({ club, canEdit, onSaved }: { club: any; canEdit: boolean; o
         location: location.trim() || null,
         max_capacity: maxCap ? Number(maxCap) : null,
         status,
-        enrollment_open_at: openAt ? new Date(openAt).toISOString() : null,
-        enrollment_close_at: closeAt ? new Date(closeAt).toISOString() : null,
+        enrollment_open_at: openDate ? joinDatetime(openDate, openTime) : null,
+        enrollment_close_at: closeDate ? joinDatetime(closeDate, closeTime) : null,
       })
       .eq("id", club.id);
     setSaving(false);
@@ -460,11 +469,17 @@ function GeneralTab({ club, canEdit, onSaved }: { club: any; canEdit: boolean; o
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <Label>Înscrieri deschise de la</Label>
-            <Input type="datetime-local" value={openAt} onChange={(e) => setOpenAt(e.target.value)} disabled={ro} />
+            <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
+              <DateInput value={openDate} onChange={setOpenDate} />
+              <TimeInput value={openTime} onChange={setOpenTime} disabled={ro} aria-label="Ora deschiderii înscrierilor" />
+            </div>
           </div>
           <div className="space-y-1">
             <Label>Înscrieri închise la</Label>
-            <Input type="datetime-local" value={closeAt} onChange={(e) => setCloseAt(e.target.value)} disabled={ro} />
+            <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
+              <DateInput value={closeDate} onChange={setCloseDate} />
+              <TimeInput value={closeTime} onChange={setCloseTime} disabled={ro} aria-label="Ora închiderii înscrierilor" />
+            </div>
           </div>
         </div>
         {canEdit && (
@@ -638,6 +653,8 @@ function MeetingsTab({
 
   async function createMeeting() {
     if (!newDate || !newStart || !newEnd) return toast.error("Completează data și intervalul");
+    if (!isValidTime24h(newStart) || !isValidTime24h(newEnd)) return toast.error("Orele trebuie să fie în format HH:MM (00:00–23:59)");
+    if (newEnd <= newStart) return toast.error("Ora de sfârșit trebuie să fie după ora de început");
     setCreating(true);
     const { error } = await supabase.from("club_meetings").insert({
       club_id: clubId,
@@ -669,8 +686,8 @@ function MeetingsTab({
           <CardHeader className="pb-2"><CardTitle className="text-sm">Adaugă întâlnire</CardTitle></CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-5">
             <Input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
-            <Input type="time" value={newStart} onChange={(e) => setNewStart(e.target.value)} />
-            <Input type="time" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} />
+            <TimeInput value={newStart} onChange={setNewStart} aria-label="Ora de început" required />
+            <TimeInput value={newEnd} onChange={setNewEnd} aria-label="Ora de sfârșit" required />
             <Input placeholder="Locație" value={newLoc} onChange={(e) => setNewLoc(e.target.value)} />
             <Button onClick={createMeeting} disabled={creating}>
               <Plus className="h-4 w-4 mr-1" />Adaugă

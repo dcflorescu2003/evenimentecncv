@@ -228,7 +228,8 @@ export default function PortfolioAssignmentDetailPage() {
                             Trimis{" "}
                             {new Date(s.submitted_at).toLocaleString("ro-RO", {
                               day: "2-digit", month: "2-digit", year: "numeric",
-                              hour: "2-digit", minute: "2-digit",
+                              hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+                              timeZone: "Europe/Bucharest",
                             })}
                           </span>
                           {s.portfolio_submission_files.length > 0 && (
