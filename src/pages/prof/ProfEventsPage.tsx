@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +27,7 @@ import {
 import { Plus, Pencil, Trash2, Eye, Search } from "lucide-react";
 import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
-import { formatDate, isValidTime24h, normalizeTimeInput, joinDatetime, splitDatetime } from "@/lib/time";
+import { formatDate, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
 
 type EventStatus = "draft" | "published" | "closed" | "cancelled";
 
@@ -256,6 +257,10 @@ export default function ProfEventsPage() {
       toast.error("Orele trebuie în format 24h HH:MM (00:00–23:59)");
       return;
     }
+    if ((form.booking_open_time && !isValidTime24h(form.booking_open_time)) || (form.booking_close_time && !isValidTime24h(form.booking_close_time))) {
+      toast.error("Orele de înscriere trebuie în format 24h HH:MM (00:00–23:59)");
+      return;
+    }
     if (form.end_time <= form.start_time) {
       toast.error("Ora de sfârșit trebuie să fie după ora de început");
       return;
@@ -443,24 +448,18 @@ export default function ProfEventsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Ora început *</Label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={5}
-                  placeholder="HH:MM"
+                <TimeInput
                   value={form.start_time}
-                  onChange={(e) => setForm({ ...form, start_time: normalizeTimeInput(e.target.value) })}
+                  onChange={(value) => setForm({ ...form, start_time: value })}
+                  required
                 />
               </div>
               <div className="space-y-2">
                 <Label>Ora sfârșit *</Label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={5}
-                  placeholder="HH:MM"
+                <TimeInput
                   value={form.end_time}
-                  onChange={(e) => setForm({ ...form, end_time: normalizeTimeInput(e.target.value) })}
+                  onChange={(value) => setForm({ ...form, end_time: value })}
+                  required
                 />
               </div>
             </div>
@@ -578,13 +577,9 @@ export default function ProfEventsPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">De la - Ora</Label>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={5}
-                    placeholder="HH:MM"
+                  <TimeInput
                     value={form.booking_open_time}
-                    onChange={(e) => setForm({ ...form, booking_open_time: normalizeTimeInput(e.target.value) })}
+                    onChange={(value) => setForm({ ...form, booking_open_time: value })}
                   />
                 </div>
                 <div className="space-y-1">
@@ -593,13 +588,9 @@ export default function ProfEventsPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Până la - Ora</Label>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={5}
-                    placeholder="HH:MM"
+                  <TimeInput
                     value={form.booking_close_time}
-                    onChange={(e) => setForm({ ...form, booking_close_time: normalizeTimeInput(e.target.value) })}
+                    onChange={(value) => setForm({ ...form, booking_close_time: value })}
                   />
                 </div>
               </div>

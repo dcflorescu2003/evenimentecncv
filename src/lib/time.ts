@@ -1,4 +1,7 @@
+import { z } from "zod";
+
 export const TIME_24H_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
+export const time24hSchema = z.string().regex(TIME_24H_REGEX, "Ora trebuie să fie în format HH:MM (00:00–23:59)");
 
 export function normalizeTimeInput(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 4);
@@ -7,7 +10,13 @@ export function normalizeTimeInput(value: string): string {
 }
 
 export function isValidTime24h(value: string): boolean {
-  return TIME_24H_REGEX.test(value);
+  return time24hSchema.safeParse(value).success;
+}
+
+export function formatTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const match = value.match(/^(\d{2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : value;
 }
 
 /**
@@ -30,13 +39,17 @@ export function formatDateTime(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
-  const ro = new Date(d.toLocaleString("en-US", { timeZone: "Europe/Bucharest" }));
-  const day = String(ro.getDate()).padStart(2, "0");
-  const month = String(ro.getMonth() + 1).padStart(2, "0");
-  const year = ro.getFullYear();
-  const hours = String(ro.getHours()).padStart(2, "0");
-  const minutes = String(ro.getMinutes()).padStart(2, "0");
-  return `${day}.${month}.${year} ${hours}:${minutes}`;
+  const parts = new Intl.DateTimeFormat("ro-RO", {
+    timeZone: "Europe/Bucharest",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("day")}.${get("month")}.${get("year")} ${get("hour")}:${get("minute")}`;
 }
 
 /**

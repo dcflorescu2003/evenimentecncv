@@ -34,7 +34,7 @@ function buildSheet(questions: FbQuestion[], responses: FbResponse[]) {
   const rows = responses.map((r) => {
     const ansMap = new Map(r.answers.map((a) => [a.question_id, a.value]));
     return [
-      new Date(r.submitted_at).toLocaleString("ro-RO"),
+      new Date(r.submitted_at).toLocaleString("ro-RO", { hourCycle: "h23", timeZone: "Europe/Bucharest" }),
       r.is_identified ? (r.respondent_name ?? "Identificat") : "Anonim",
       r.subject_teacher_name ?? "",
       ...sorted.map((q) => valueToString(ansMap.get(q.id))),

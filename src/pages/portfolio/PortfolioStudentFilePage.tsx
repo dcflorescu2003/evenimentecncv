@@ -159,7 +159,8 @@ export default function PortfolioStudentFilePage() {
                       <p className="text-xs text-muted-foreground mt-2">
                         {new Date(n.created_at).toLocaleString("ro-RO", {
                           day: "2-digit", month: "2-digit", year: "numeric",
-                          hour: "2-digit", minute: "2-digit",
+                          hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+                          timeZone: "Europe/Bucharest",
                         })}
                       </p>
                     </div>

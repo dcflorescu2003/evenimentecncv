@@ -1,4 +1,4 @@
-import { formatDate } from "@/lib/time";
+import { formatDate, formatDateTime } from "@/lib/time";
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -361,11 +361,11 @@ export default function StudentEventDetailPage() {
             <p className="text-sm font-medium mb-1">Perioada de înscriere</p>
             <p className="text-sm text-muted-foreground">
               {event.booking_open_at && (
-                <>De la: {new Date(event.booking_open_at).toLocaleString("ro-RO", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</>
+                <>De la: {formatDateTime(event.booking_open_at)}</>
               )}
               {event.booking_open_at && event.booking_close_at && " — "}
               {event.booking_close_at && (
-                <>Până la: {new Date(event.booking_close_at).toLocaleString("ro-RO", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</>
+                <>Până la: {formatDateTime(event.booking_close_at)}</>
               )}
             </p>
           </CardContent>

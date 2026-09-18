@@ -103,7 +103,7 @@ export async function exportAttendancePdf(
     p.identifier || "-",
     statusLabels[p.status] || p.status,
     p.isPublic ? "Vizitator" : "Elev",
-    p.checkinTimestamp ? new Date(p.checkinTimestamp).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "-",
+    p.checkinTimestamp ? new Date(p.checkinTimestamp).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Europe/Bucharest" }) : "-",
   ]);
 
   autoTable(doc, {

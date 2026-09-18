@@ -1,4 +1,4 @@
-import { formatDate, formatDateTime, isValidTime24h, normalizeTimeInput, joinDatetime, splitDatetime } from "@/lib/time";
+import { formatDate, formatDateTime, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
 import { useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/date-input";
+import { TimeInput } from "@/components/ui/time-input";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -747,6 +748,10 @@ export default function ProfEventDetailPage() {
     }
     if (!isValidTime24h(editForm.start_time) || !isValidTime24h(editForm.end_time)) {
       toast.error("Orele trebuie în format 24h HH:MM (00:00–23:59)");
+      return;
+    }
+    if ((editForm.booking_open_time && !isValidTime24h(editForm.booking_open_time)) || (editForm.booking_close_time && !isValidTime24h(editForm.booking_close_time))) {
+      toast.error("Orele de înscriere trebuie în format 24h HH:MM (00:00–23:59)");
       return;
     }
     if (editForm.end_time <= editForm.start_time) {
@@ -1576,24 +1581,18 @@ export default function ProfEventDetailPage() {
               </div>
               <div className="space-y-2">
                 <Label>Ora început *</Label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={5}
-                  placeholder="HH:MM"
+                <TimeInput
                   value={editForm.start_time}
-                  onChange={(e) => setEditForm({ ...editForm, start_time: normalizeTimeInput(e.target.value) })}
+                  onChange={(value) => setEditForm({ ...editForm, start_time: value })}
+                  required
                 />
               </div>
               <div className="space-y-2">
                 <Label>Ora sfârșit *</Label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={5}
-                  placeholder="HH:MM"
+                <TimeInput
                   value={editForm.end_time}
-                  onChange={(e) => setEditForm({ ...editForm, end_time: normalizeTimeInput(e.target.value) })}
+                  onChange={(value) => setEditForm({ ...editForm, end_time: value })}
+                  required
                 />
               </div>
             </div>
@@ -1697,13 +1696,9 @@ export default function ProfEventDetailPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">De la - Ora</Label>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={5}
-                    placeholder="HH:MM"
+                  <TimeInput
                     value={editForm.booking_open_time}
-                    onChange={(e) => setEditForm({ ...editForm, booking_open_time: normalizeTimeInput(e.target.value) })}
+                    onChange={(value) => setEditForm({ ...editForm, booking_open_time: value })}
                   />
                 </div>
                 <div className="space-y-1">
@@ -1712,13 +1707,9 @@ export default function ProfEventDetailPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Până la - Ora</Label>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={5}
-                    placeholder="HH:MM"
+                  <TimeInput
                     value={editForm.booking_close_time}
-                    onChange={(e) => setEditForm({ ...editForm, booking_close_time: normalizeTimeInput(e.target.value) })}
+                    onChange={(value) => setEditForm({ ...editForm, booking_close_time: value })}
                   />
                 </div>
               </div>

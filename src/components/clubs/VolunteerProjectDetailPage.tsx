@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { TimeInput } from "@/components/ui/time-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ArrowLeft, Plus, Trash2, Save, Lock, UserPlus, Check, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate } from "@/lib/time";
+import { formatDate, isValidTime24h } from "@/lib/time";
 import AttendanceScanDialog from "@/components/scan/AttendanceScanDialog";
 import SessionQrDialog from "@/components/scan/SessionQrDialog";
 import { searchProfiles, STAFF_ROLES, normalizeText } from "@/lib/search";
@@ -735,6 +736,8 @@ function DaysTab({ projectId, days, enrollments, canManage, attendanceMode, read
   const [open, setOpen] = useState<string | null>(null);
   async function add() {
     if (!d || !s || !e) return toast.error("Completează data și intervalul");
+    if (!isValidTime24h(s) || !isValidTime24h(e)) return toast.error("Orele trebuie să fie în format HH:MM (00:00–23:59)");
+    if (e <= s) return toast.error("Ora de sfârșit trebuie să fie după ora de început");
     const { error } = await supabase.from("volunteer_days").insert({
       project_id: projectId, date: d, start_time: s, end_time: e,
       location: loc.trim() || null, created_by: userId,
@@ -754,8 +757,8 @@ function DaysTab({ projectId, days, enrollments, canManage, attendanceMode, read
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm">Adaugă zi</CardTitle></CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-5">
             <Input type="date" value={d} onChange={(ev) => setD(ev.target.value)} />
-            <Input type="time" value={s} onChange={(ev) => setS(ev.target.value)} />
-            <Input type="time" value={e} onChange={(ev) => setE(ev.target.value)} />
+            <TimeInput value={s} onChange={setS} aria-label="Ora de început" required />
+            <TimeInput value={e} onChange={setE} aria-label="Ora de sfârșit" required />
             <Input placeholder="Locație" value={loc} onChange={(ev) => setLoc(ev.target.value)} />
             <Button onClick={add}><Plus className="h-4 w-4 mr-1" />Adaugă</Button>
           </CardContent>

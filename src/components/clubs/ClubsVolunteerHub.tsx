@@ -21,6 +21,7 @@ import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
 import { DateInput } from "@/components/ui/date-input";
+import { TimeInput } from "@/components/ui/time-input";
 import { ClassEligibilityPicker } from "./ClassEligibilityPicker";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -28,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
+import { isValidTime24h, joinDatetime } from "@/lib/time";
 
 type Mode = "admin" | "cse" | "student";
 
@@ -264,12 +266,6 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
 }
 
-function combineDateTime(date: string, time: string): string | null {
-  if (!date) return null;
-  const t = time && /^\d{2}:\d{2}$/.test(time) ? time : "00:00";
-  return new Date(`${date}T${t}:00`).toISOString();
-}
-
 function CreateClubDialog({
   userId,
   isCse,
@@ -306,6 +302,9 @@ function CreateClubDialog({
       toast.error("Numele clubului este obligatoriu");
       return;
     }
+    if ((enrollOpenDate && !isValidTime24h(enrollOpenTime)) || (enrollCloseDate && !isValidTime24h(enrollCloseTime))) {
+      return toast.error("Orele trebuie să fie în format HH:MM (00:00–23:59)");
+    }
     setSaving(true);
     const { error } = await supabase.from("clubs").insert({
       name: name.trim(),
@@ -315,8 +314,8 @@ function CreateClubDialog({
       max_per_class: maxPerClass ? Number(maxPerClass) : null,
       eligible_grades: eligibleGrades.length > 0 ? eligibleGrades : null,
       eligible_classes: eligibleClasses.length > 0 ? eligibleClasses : null,
-      enrollment_open_at: combineDateTime(enrollOpenDate, enrollOpenTime),
-      enrollment_close_at: combineDateTime(enrollCloseDate, enrollCloseTime),
+      enrollment_open_at: joinDatetime(enrollOpenDate, enrollOpenTime),
+      enrollment_close_at: joinDatetime(enrollCloseDate, enrollCloseTime),
       status,
       created_by: userId,
       is_cse: isCse,
@@ -388,14 +387,14 @@ function CreateClubDialog({
                 <Label className="text-xs text-muted-foreground">De la</Label>
                 <div className="flex gap-2">
                   <DateInput value={enrollOpenDate} onChange={setEnrollOpenDate} />
-                  <Input type="time" value={enrollOpenTime} onChange={(e) => setEnrollOpenTime(e.target.value)} className="w-28" />
+                  <TimeInput value={enrollOpenTime} onChange={setEnrollOpenTime} className="w-28" aria-label="Ora deschiderii înscrierilor" />
                 </div>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Până la</Label>
                 <div className="flex gap-2">
                   <DateInput value={enrollCloseDate} onChange={setEnrollCloseDate} />
-                  <Input type="time" value={enrollCloseTime} onChange={(e) => setEnrollCloseTime(e.target.value)} className="w-28" />
+                  <TimeInput value={enrollCloseTime} onChange={setEnrollCloseTime} className="w-28" aria-label="Ora închiderii înscrierilor" />
                 </div>
               </div>
             </div>
@@ -448,6 +447,9 @@ function CreateProjectDialog({
   async function submit() {
     if (!name.trim()) return toast.error("Numele proiectului este obligatoriu");
     if (!startDate || !endDate) return toast.error("Setează perioada proiectului");
+    if ((enrollOpenDate && !isValidTime24h(enrollOpenTime)) || (enrollCloseDate && !isValidTime24h(enrollCloseTime))) {
+      return toast.error("Orele trebuie să fie în format HH:MM (00:00–23:59)");
+    }
     setSaving(true);
     const { error } = await supabase.from("volunteer_projects").insert({
       name: name.trim(),
@@ -458,8 +460,8 @@ function CreateProjectDialog({
       max_per_class: maxPerClass ? Number(maxPerClass) : null,
       eligible_grades: eligibleGrades.length > 0 ? eligibleGrades : null,
       eligible_classes: eligibleClasses.length > 0 ? eligibleClasses : null,
-      enrollment_open_at: combineDateTime(enrollOpenDate, enrollOpenTime),
-      enrollment_close_at: combineDateTime(enrollCloseDate, enrollCloseTime),
+      enrollment_open_at: joinDatetime(enrollOpenDate, enrollOpenTime),
+      enrollment_close_at: joinDatetime(enrollCloseDate, enrollCloseTime),
       status,
       is_private: isPrivate,
       created_by: userId,
@@ -535,14 +537,14 @@ function CreateProjectDialog({
                 <Label className="text-xs text-muted-foreground">De la</Label>
                 <div className="flex gap-2">
                   <DateInput value={enrollOpenDate} onChange={setEnrollOpenDate} />
-                  <Input type="time" value={enrollOpenTime} onChange={(e) => setEnrollOpenTime(e.target.value)} className="w-28" />
+                  <TimeInput value={enrollOpenTime} onChange={setEnrollOpenTime} className="w-28" aria-label="Ora deschiderii înscrierilor" />
                 </div>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Până la</Label>
                 <div className="flex gap-2">
                   <DateInput value={enrollCloseDate} onChange={setEnrollCloseDate} />
-                  <Input type="time" value={enrollCloseTime} onChange={(e) => setEnrollCloseTime(e.target.value)} className="w-28" />
+                  <TimeInput value={enrollCloseTime} onChange={setEnrollCloseTime} className="w-28" aria-label="Ora închiderii înscrierilor" />
                 </div>
               </div>
             </div>

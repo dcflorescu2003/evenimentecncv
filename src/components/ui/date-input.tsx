@@ -11,6 +11,7 @@ interface DateInputProps {
   className?: string;
   id?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 function toDisplay(isoDate: string): string {
@@ -43,7 +44,7 @@ function dateToIso(d: Date): string {
  * Custom date input — display dd.mm.yyyy, storage yyyy-mm-dd.
  * Calendar picker works in cross-origin iframes (preview), unlike native showPicker.
  */
-export function DateInput({ value, onChange, className, id, placeholder = "zz.ll.aaaa" }: DateInputProps) {
+export function DateInput({ value, onChange, className, id, placeholder = "zz.ll.aaaa", disabled = false }: DateInputProps) {
   const [displayValue, setDisplayValue] = React.useState(toDisplay(value));
   const [open, setOpen] = React.useState(false);
 
@@ -78,6 +79,7 @@ export function DateInput({ value, onChange, className, id, placeholder = "zz.ll
         value={displayValue}
         onChange={handleTextChange}
         placeholder={placeholder}
+        disabled={disabled}
         className={cn(
           "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pr-10 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           className,
@@ -90,6 +92,7 @@ export function DateInput({ value, onChange, className, id, placeholder = "zz.ll
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             tabIndex={-1}
             aria-label="Deschide calendarul"
+            disabled={disabled}
           >
             <CalendarDays className="h-4 w-4" />
           </button>
