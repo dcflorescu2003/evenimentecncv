@@ -418,6 +418,7 @@ export default function AdminScanPage() {
             {cameras.length > 0 && (
               <Select value={selectedCameraId} onValueChange={(val) => {
                 setSelectedCameraId(val);
+                rememberQrCamera(val);
                 if (scannerActive) { stopScanner().then(() => startScanner(val)); }
               }}>
                 <SelectTrigger><SelectValue placeholder="Alege camera" /></SelectTrigger>
@@ -498,7 +499,7 @@ export default function AdminScanPage() {
         </Tabs>
       )}
 
-      <AlertDialog open={!!scanResult} onOpenChange={(o) => { if (!o) { setScanResult(null); if (activeTab === "scan" && eventId) setTimeout(startScanner, 300); } }}>
+      <AlertDialog open={!!scanResult} onOpenChange={(o) => { if (!o) { setScanResult(null); if (activeTab === "scan" && eventId) resumeScanner(); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">

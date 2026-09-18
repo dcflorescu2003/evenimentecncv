@@ -51,7 +51,7 @@ export async function initializeQrCameras(): Promise<{ cameras: QrCameraDevice[]
 }
 
 export function resolveQrCamera(cameraId: string) {
-  return cameraId && cameraId !== "auto" ? cameraId : { facingMode: { exact: "environment" } };
+  return cameraId && cameraId !== "auto" ? cameraId : { facingMode: "environment" };
 }
 
 export async function createQrScanner(domId: string) {
@@ -67,7 +67,7 @@ export async function createQrScanner(domId: string) {
  * Configurație comună, optimizată pentru viteză:
  * - doar coduri QR (fără alte formate de coduri de bare);
  * - fără decodare oglindită (disableFlip);
- * - fps mai mare — costul per cadru e mult mai mic cu optimizările de mai sus.
+ * - frecvență echilibrată pentru telefoane, cu zonă de scanare adaptivă.
  */
 export async function buildQrScannerConfig(disableFlip = true) {
   return {
@@ -165,7 +165,7 @@ export default function QrCameraScanner({
 
   useEffect(() => {
     if (ready && autoStart) {
-      const t = setTimeout(() => { if (!scannerRef.current) start(); }, 300);
+      const t = setTimeout(() => { if (!scannerRef.current) start(); }, 100);
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
