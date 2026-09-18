@@ -1,3 +1,4 @@
+import { buildQrScannerConfig } from "@/components/scan/QrCameraScanner";
 import { formatDate } from "@/lib/time";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -209,7 +210,7 @@ export default function AdminScanPage() {
       const config = (cId && cId !== "auto") ? cId : { facingMode: "environment" };
       await scanner.start(
         config,
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (await buildQrScannerConfig()) as any,
         (decodedText) => handleQrResult(decodedText),
         () => {}
       );
