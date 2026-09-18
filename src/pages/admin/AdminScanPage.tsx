@@ -1,4 +1,7 @@
-import { buildQrScannerConfig } from "@/components/scan/QrCameraScanner";
+import {
+  buildQrScannerConfig, cameraDisplayLabel, createQrScanner, initializeQrCameras,
+  isFrontCamera, rememberQrCamera, resolveQrCamera,
+} from "@/components/scan/QrCameraScanner";
 import { formatDate } from "@/lib/time";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -12,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Camera as CameraIcon, CameraOff } from "lucide-react";
-import { Camera } from "@capacitor/camera";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -122,25 +124,12 @@ export default function AdminScanPage() {
 
   useEffect(() => {
     async function initCams() {
-      try {
-        try {
-          let status = await Camera.checkPermissions();
-          if (status.camera !== 'granted') status = await Camera.requestPermissions();
-          if (status.camera !== 'granted') {
-             setIsCamsInitialized(true);
-             return;
-          }
-        } catch(e) {}
-
-        const { Html5Qrcode } = await import("html5-qrcode");
-        const devices = await Html5Qrcode.getCameras();
-        if (devices && devices.length > 0) {
-          setCameras(devices);
-        }
-      } catch (err) {}
+      const initialized = await initializeQrCameras();
+      setCameras(initialized.cameras);
+      setSelectedCameraId(initialized.selectedId);
       setIsCamsInitialized(true);
     }
-    initCams();
+    void initCams();
   }, []);
 
   const { data: searchResults = [] } = useQuery({
@@ -194,23 +183,13 @@ export default function AdminScanPage() {
       return;
     }
     try {
-      try {
-        let status = await Camera.checkPermissions();
-        if (status.camera !== 'granted') status = await Camera.requestPermissions();
-        if (status.camera !== 'granted') {
-          toast.error("Permisiune cameră refuzată!");
-          return;
-        }
-      } catch(e) {}
-
-      const { Html5Qrcode } = await import("html5-qrcode");
-      const scanner = new Html5Qrcode("admin-qr-reader");
+      const scanner = await createQrScanner("admin-qr-reader");
       scannerRef.current = scanner;
       const cId = cameraIdOverride || selectedCameraId;
-      const config = (cId && cId !== "auto") ? cId : { facingMode: "environment" };
+      const config = resolveQrCamera(cId);
       await scanner.start(
         config,
-        (await buildQrScannerConfig()) as any,
+        (await buildQrScannerConfig(!isFrontCamera(cId, cameras))) as any,
         (decodedText) => handleQrResult(decodedText),
         () => {}
       );
@@ -227,7 +206,7 @@ export default function AdminScanPage() {
       toast.error("Nu s-a putut porni camera: " + (err.message || err));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCameraId, zoom, eventId]);
+  }, [cameras, selectedCameraId, zoom, eventId]);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -243,15 +222,21 @@ export default function AdminScanPage() {
     if (activeTab === "scan" && isCamsInitialized && eventId) {
       const t = setTimeout(() => {
         if (!scannerRef.current) startScanner();
-      }, 500);
+      }, 100);
       return () => clearTimeout(t);
     } else { stopScanner(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isCamsInitialized, eventId]);
 
   async function handleQrResult(qrData: string) {
-    await stopScanner();
+    try { scannerRef.current?.pause(true); } catch { /* scanner deja pus pe pauză */ }
     await processTicket(qrData);
+  }
+
+  function resumeScanner() {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+    try { scanner.resume(); } catch { /* scannerul a fost oprit între timp */ }
   }
 
   async function processTicket(qrCodeData: string) {
@@ -280,7 +265,7 @@ export default function AdminScanPage() {
         const autoStatus = determineAutoStatus(event.date, event.start_time);
         await autoMarkTicket(ticket.id, autoStatus, "reserved", false);
         toast.success(`✓ ${name} — ${statusLabels[autoStatus]}`);
-        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+        if (activeTab === "scan") resumeScanner();
       }
       return;
     }
@@ -305,7 +290,7 @@ export default function AdminScanPage() {
         const autoStatus = determineAutoStatus(event.date, event.start_time);
         await autoMarkTicket(publicTicket.id, autoStatus, "reserved", true);
         toast.success(`✓ ${publicTicket.attendee_name} (Vizitator) — ${statusLabels[autoStatus]}`);
-        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+        if (activeTab === "scan") resumeScanner();
       }
       return;
     }
@@ -438,7 +423,7 @@ export default function AdminScanPage() {
                 <SelectTrigger><SelectValue placeholder="Alege camera" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="auto">Automată (Spate)</SelectItem>
-                  {cameras.map(c => <SelectItem key={c.id} value={c.id}>{c.label || "Cameră " + c.id}</SelectItem>)}
+                  {cameras.map((c, index) => <SelectItem key={c.id} value={c.id}>{cameraDisplayLabel(c, index)}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}

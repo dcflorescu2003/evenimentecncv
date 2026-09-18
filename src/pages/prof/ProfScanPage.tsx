@@ -1,4 +1,7 @@
-import { buildQrScannerConfig } from "@/components/scan/QrCameraScanner";
+import {
+  buildQrScannerConfig, cameraDisplayLabel, createQrScanner, initializeQrCameras,
+  isFrontCamera, rememberQrCamera, resolveQrCamera,
+} from "@/components/scan/QrCameraScanner";
 import { formatDate } from "@/lib/time";
 // Re-export coordinator scan page with prof-specific back navigation
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -13,7 +16,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Camera as CameraIcon, CameraOff } from "lucide-react";
-import { Camera } from "@capacitor/camera";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -58,27 +60,12 @@ export default function ProfScanPage() {
 
   useEffect(() => {
     async function initCams() {
-      try {
-        try {
-          let status = await Camera.checkPermissions();
-          if (status.camera !== 'granted') status = await Camera.requestPermissions();
-          if (status.camera !== 'granted') {
-             setIsCamsInitialized(true);
-             return;
-          }
-        } catch(e) {} // ignore if on web
-
-        const { Html5Qrcode } = await import("html5-qrcode");
-        const devices = await Html5Qrcode.getCameras();
-        if (devices && devices.length > 0) {
-          setCameras(devices);
-        }
-      } catch (err) {
-        // ignore
-      }
+      const initialized = await initializeQrCameras();
+      setCameras(initialized.cameras);
+      setSelectedCameraId(initialized.selectedId);
       setIsCamsInitialized(true);
     }
-    initCams();
+    void initCams();
   }, []);
 
   const { data: event } = useQuery({
@@ -138,23 +125,13 @@ export default function ProfScanPage() {
   const startScanner = useCallback(async (cameraIdOverride?: string) => {
     if (scannerRef.current || !videoRef.current) return;
     try {
-      try {
-        let status = await Camera.checkPermissions();
-        if (status.camera !== 'granted') status = await Camera.requestPermissions();
-        if (status.camera !== 'granted') {
-          toast.error("Permisiune cameră refuzată!");
-          return;
-        }
-      } catch(e) {} // ignore on web
-
-      const { Html5Qrcode } = await import("html5-qrcode");
-      const scanner = new Html5Qrcode("prof-qr-reader");
+      const scanner = await createQrScanner("prof-qr-reader");
       scannerRef.current = scanner;
       const cId = cameraIdOverride || selectedCameraId;
-      const config = (cId && cId !== "auto") ? cId : { facingMode: "environment" };
+      const config = resolveQrCamera(cId);
       await scanner.start(
         config,
-        (await buildQrScannerConfig()) as any,
+        (await buildQrScannerConfig(!isFrontCamera(cId, cameras))) as any,
         (decodedText) => handleQrResult(decodedText),
         () => {}
       );
@@ -170,7 +147,7 @@ export default function ProfScanPage() {
     } catch (err: any) {
       toast.error("Nu s-a putut porni camera: " + (err.message || err));
     }
-  }, [selectedCameraId, zoom]);
+  }, [cameras, selectedCameraId, zoom]);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -186,15 +163,21 @@ export default function ProfScanPage() {
     if (activeTab === "scan" && isCamsInitialized) {
       const t = setTimeout(() => {
         if (!scannerRef.current) startScanner();
-      }, 500);
+      }, 100);
       return () => clearTimeout(t);
     } else { stopScanner(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, isCamsInitialized]);
 
   async function handleQrResult(qrData: string) {
-    await stopScanner();
+    try { scannerRef.current?.pause(true); } catch { /* scanner deja pus pe pauză */ }
     await processTicket(qrData);
+  }
+
+  function resumeScanner() {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+    try { scanner.resume(); } catch { /* scannerul a fost oprit între timp */ }
   }
 
   async function processTicket(qrCodeData: string) {
@@ -219,7 +202,7 @@ export default function ProfScanPage() {
         const autoStatus = determineAutoStatus(event.date, event.start_time);
         await autoMarkTicket(ticket.id, autoStatus, "reserved", false);
         toast.success(`✓ ${name} — ${statusLabels[autoStatus]}`);
-        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+        if (activeTab === "scan") resumeScanner();
       }
       return;
     }
@@ -244,7 +227,7 @@ export default function ProfScanPage() {
         const autoStatus = determineAutoStatus(event.date, event.start_time);
         await autoMarkTicket(publicTicket.id, autoStatus, "reserved", true);
         toast.success(`✓ ${publicTicket.attendee_name} (Vizitator) — ${statusLabels[autoStatus]}`);
-        if (activeTab === "scan") setTimeout(() => startScanner(), 500);
+        if (activeTab === "scan") resumeScanner();
       }
       return;
     }
@@ -318,12 +301,13 @@ export default function ProfScanPage() {
           {cameras.length > 0 && (
             <Select value={selectedCameraId} onValueChange={(val) => {
               setSelectedCameraId(val);
+              rememberQrCamera(val);
               if (scannerActive) { stopScanner().then(() => startScanner(val)); }
             }}>
               <SelectTrigger><SelectValue placeholder="Alege camera" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="auto">Automată (Spate)</SelectItem>
-                {cameras.map(c => <SelectItem key={c.id} value={c.id}>{c.label || "Cameră " + c.id}</SelectItem>)}
+                {cameras.map((c, index) => <SelectItem key={c.id} value={c.id}>{cameraDisplayLabel(c, index)}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
@@ -398,7 +382,7 @@ export default function ProfScanPage() {
       </Tabs>
 
       {/* Scan Result Dialog — only for errors */}
-      <AlertDialog open={!!scanResult} onOpenChange={(o) => { if (!o) { setScanResult(null); if (activeTab === "scan") setTimeout(startScanner, 300); } }}>
+      <AlertDialog open={!!scanResult} onOpenChange={(o) => { if (!o) { setScanResult(null); if (activeTab === "scan") resumeScanner(); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
