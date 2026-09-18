@@ -470,14 +470,14 @@ function GeneralTab({ club, canEdit, onSaved }: { club: any; canEdit: boolean; o
           <div className="space-y-1">
             <Label>Înscrieri deschise de la</Label>
             <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
-              <DateInput value={openDate} onChange={setOpenDate} />
+              <DateInput value={openDate} onChange={setOpenDate} disabled={ro} />
               <TimeInput value={openTime} onChange={setOpenTime} disabled={ro} aria-label="Ora deschiderii înscrierilor" />
             </div>
           </div>
           <div className="space-y-1">
             <Label>Înscrieri închise la</Label>
             <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-2">
-              <DateInput value={closeDate} onChange={setCloseDate} />
+              <DateInput value={closeDate} onChange={setCloseDate} disabled={ro} />
               <TimeInput value={closeTime} onChange={setCloseTime} disabled={ro} aria-label="Ora închiderii înscrierilor" />
             </div>
           </div>
