@@ -1,0 +1,2 @@
+revoke execute on function public.can_view_club_volunteer_member_profile(uuid, uuid) from anon, public;
+grant execute on function public.can_view_club_volunteer_member_profile(uuid, uuid) to authenticated, service_role;
