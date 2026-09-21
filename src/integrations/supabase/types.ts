@@ -3067,6 +3067,10 @@ export type Database = {
         Args: { _ticket_id: string; _user_id: string }
         Returns: boolean
       }
+      can_view_club_volunteer_member_profile: {
+        Args: { _profile_id: string; _viewer: string }
+        Returns: boolean
+      }
       check_booking_eligibility: {
         Args: { _event_id: string; _student_id: string }
         Returns: Json
