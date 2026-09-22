@@ -82,6 +82,33 @@ export type Database = {
         }
         Relationships: []
       }
+      canteen_api_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          message: string | null
+          ok: boolean
+          student_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          ok?: boolean
+          student_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          ok?: boolean
+          student_id?: string | null
+        }
+        Relationships: []
+      }
       cantina_menu_cache: {
         Row: {
           fetched_at: string
@@ -3289,6 +3316,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      resolve_student_badge_public: { Args: { _qr: string }; Returns: Json }
       resolve_student_qr: { Args: { _qr: string }; Returns: Json }
       search_profiles: {
         Args: {
