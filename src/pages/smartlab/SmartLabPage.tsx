@@ -38,7 +38,7 @@ interface Reservation {
   vr_rooms: { name: string } | null;
 }
 
-const STAFF_ROLES = ["admin", "teacher", "homeroom_teacher", "cse", "coordinator_teacher"];
+const BOOKING_ROLES = ["admin", "teacher", "homeroom_teacher", "cse", "manager"];
 
 export default function SmartLabPage() {
   const { user, roles } = useAuth();
@@ -46,8 +46,8 @@ export default function SmartLabPage() {
   const qc = useQueryClient();
 
   const isAdmin = roles.includes("admin");
-  const canBook = roles.some((r) => STAFF_ROLES.includes(r));
-  const isStaff = canBook || roles.includes("manager");
+  const canBook = roles.some((r) => BOOKING_ROLES.includes(r));
+  const isStaff = canBook || roles.includes("coordinator_teacher");
 
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -132,7 +132,7 @@ export default function SmartLabPage() {
         .select("class_id")
         .eq("student_id", user!.id);
       const classIds = (vols ?? []).map((v) => v.class_id);
-      if (classIds.length === 0) return [];
+      if (classIds.length === 0) return { classIds, list: [] as Reservation[] };
       const { data, error } = await supabase
         .from("vr_reservations")
         .select("id, date, start_time, class_id, room_id, teacher_id, notes, status, prepared_at, classes(display_name), vr_rooms(name)")
@@ -142,7 +142,7 @@ export default function SmartLabPage() {
         .order("date")
         .order("start_time");
       if (error) throw error;
-      return (data ?? []) as unknown as Reservation[];
+      return { classIds, list: (data ?? []) as unknown as Reservation[] };
     },
   });
 
@@ -198,72 +198,18 @@ export default function SmartLabPage() {
     },
   });
 
-  // ---------- Vizualizare voluntar (elev) ----------
-  if (!isStaff) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-4">
-        <div>
-          <h1 className="font-display text-2xl font-semibold">Echipamente de pregătit</h1>
-          <p className="text-sm text-muted-foreground">
-            Rezervările viitoare ale claselor pentru care ești voluntar.
-          </p>
-        </div>
-        {(volunteerRes ?? []).length === 0 ? (
-          <Card>
-            <CardContent className="p-6 text-center text-sm text-muted-foreground">
-              Nu există rezervări viitoare.
-            </CardContent>
-          </Card>
-        ) : (
-          (volunteerRes ?? []).map((r) => (
-            <Card key={r.id}>
-              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <div>
-                  <p className="font-medium">
-                    {isoToDisplay(r.date)} · {hhmm(r.start_time)} · {r.vr_rooms?.name}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {r.classes?.display_name} · {teachers?.[r.teacher_id] ?? ""}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setDetail(r)}>
-                    Detalii
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={r.prepared_at ? "secondary" : "default"}
-                    onClick={() => togglePrepared(r)}
-                  >
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    {r.prepared_at ? "Pregătit" : "Marchează pregătit"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-        <ReservationDetailDialog
-          detail={detail}
-          setDetail={setDetail}
-          materials={materialsQuery.data ?? []}
-          teacherName={detail ? teachers?.[detail.teacher_id] : undefined}
-          canManage={false}
-          onEdit={() => {}}
-          onCancel={() => {}}
-        />
-      </div>
-    );
-  }
+  const myClassIds = volunteerRes?.classIds ?? [];
+  const volunteerList = volunteerRes?.list ?? [];
 
-  // ---------- Vizualizare personal ----------
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold">Rezervări echipamente VR</h1>
           <p className="text-sm text-muted-foreground">
-            Un singur set de echipamente: o rezervare per interval orar.
+            {isStaff
+              ? "Un singur set de echipamente: o rezervare per interval orar."
+              : "Rezervările pentru clasa ta sunt evidențiate în calendar."}
           </p>
         </div>
         {canBook && (
@@ -323,16 +269,27 @@ export default function SmartLabPage() {
                       const iso = dateToIso(d);
                       const r = byKey[`${iso}|${slot}`];
                       if (r) {
+                        const mineClass = !isStaff && myClassIds.includes(r.class_id);
+                        const dim = !isStaff && !mineClass;
                         return (
                           <td key={i} className="border-b border-r p-1 align-top">
                             <button
                               type="button"
                               onClick={() => setDetail(r)}
-                              className="w-full rounded-md bg-primary/10 p-2 text-left transition-colors hover:bg-primary/20"
+                              className={
+                                mineClass
+                                  ? "w-full rounded-md bg-primary p-2 text-left text-primary-foreground ring-2 ring-primary/40 transition-opacity hover:opacity-90"
+                                  : dim
+                                  ? "w-full rounded-md bg-muted p-2 text-left opacity-60 transition-opacity hover:opacity-80"
+                                  : "w-full rounded-md bg-primary/10 p-2 text-left transition-colors hover:bg-primary/20"
+                              }
                             >
+                              {mineClass && (
+                                <Badge variant="secondary" className="mb-1 text-[10px]">Clasa ta</Badge>
+                              )}
                               <p className="truncate text-xs font-medium">{r.classes?.display_name}</p>
-                              <p className="truncate text-[11px] text-muted-foreground">
-                                {r.vr_rooms?.name} · {teachers?.[r.teacher_id] ?? ""}
+                              <p className={`truncate text-[11px] ${mineClass ? "opacity-90" : "text-muted-foreground"}`}>
+                                {r.vr_rooms?.name}{teachers?.[r.teacher_id] ? ` · ${teachers[r.teacher_id]}` : ""}
                               </p>
                               {r.prepared_at && (
                                 <Badge variant="secondary" className="mt-1 text-[10px]">
@@ -401,6 +358,50 @@ export default function SmartLabPage() {
           </CardContent>
         </Card>
       )}
+
+      {!isStaff && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Echipamente de pregătit pentru clasa ta</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {volunteerList.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nu există rezervări viitoare.</p>
+            ) : (
+              volunteerList.map((r) => (
+                <div
+                  key={r.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/5 p-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">
+                      {isoToDisplay(r.date)} · {hhmm(r.start_time)} · {r.vr_rooms?.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.classes?.display_name} · {teachers?.[r.teacher_id] ?? ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setDetail(r)}>
+                      Detalii
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={r.prepared_at ? "secondary" : "default"}
+                      onClick={() => togglePrepared(r)}
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      {r.prepared_at ? "Pregătit" : "Marchează pregătit"}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+
 
       <VrReservationDialog
         open={dialogOpen}
