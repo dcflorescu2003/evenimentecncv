@@ -105,10 +105,12 @@ export const MODULES: AppModule[] = [
   {
     key: "badge",
     label: "Legitimație",
-    description: "Codul QR personal pentru prezența la cluburi și voluntariat.",
+    description: "Codul QR personal (cluburi, voluntariat, cantină).",
     icon: QrCode,
     pathByRole: {
       student: "/student/badge",
+      teacher: "/prof/badge",
+      homeroom_teacher: "/prof/badge",
     },
   },
 ];

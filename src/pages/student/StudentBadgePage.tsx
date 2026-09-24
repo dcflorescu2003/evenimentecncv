@@ -15,7 +15,9 @@ const statusLabel: Record<string, string> = { present: "Prezent", late: "Întâr
 const REFRESH_MS = 20_000;
 
 export default function StudentBadgePage() {
-  const { user, profile } = useAuth();
+  const { user, profile, roles } = useAuth();
+  const isStudent = roles.includes("student");
+  const roleLabel = roles.includes("homeroom_teacher") ? "Diriginte" : "Profesor";
   const [scanOpen, setScanOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<number>(0);
@@ -68,9 +70,13 @@ export default function StudentBadgePage() {
   }, []);
 
   const { data: className } = useQuery({
-    queryKey: ["my-class", user?.id],
+    queryKey: ["my-class", user?.id, isStudent],
     enabled: !!user,
     queryFn: async () => {
+      if (!isStudent) {
+        const { data } = await supabase.from("classes").select("display_name").eq("homeroom_teacher_id", user!.id).eq("is_active", true).order("academic_year", { ascending: false }).limit(1).maybeSingle();
+        return (data as any)?.display_name ?? null;
+      }
       const { data } = await supabase
         .from("student_class_assignments")
         .select("classes(display_name)")
@@ -122,7 +128,9 @@ export default function StudentBadgePage() {
         <CardContent className="flex flex-col items-center gap-4 py-6">
           <div className="text-center">
             <p className="font-medium">{profile?.display_name ?? `${profile?.last_name ?? ""} ${profile?.first_name ?? ""}`}</p>
-            {className && <p className="text-sm text-muted-foreground">Clasa {className}</p>}
+            {isStudent ? (className && <p className="text-sm text-muted-foreground">Clasa {className}</p>) : (
+              <p className="text-sm text-muted-foreground">{roleLabel}{className ? ` · Clasa ${className}` : ""}</p>
+            )}
           </div>
 
           <div className="relative rounded-xl bg-white p-4 shadow-sm">
@@ -183,14 +191,16 @@ export default function StudentBadgePage() {
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
-            Codul se schimbă automat. Arată codul coordonatorului la club sau la voluntariat pentru a-ți marca prezența.
+            {isStudent ? "Codul se schimbă automat. Arată codul coordonatorului la club sau la voluntariat pentru a-ți marca prezența." : "Codul se schimbă automat. Arată codul la cantină pentru a-ți ridica rezervarea."}
           </p>
         </CardContent>
       </Card>
 
-      <Button className="w-full" variant="outline" onClick={() => setScanOpen(true)}>
-        <ScanLine className="mr-2 h-4 w-4" /> Scanează QR-ul întâlnirii
-      </Button>
+      {isStudent && (
+        <Button className="w-full" variant="outline" onClick={() => setScanOpen(true)}>
+          <ScanLine className="mr-2 h-4 w-4" /> Scanează QR-ul întâlnirii
+        </Button>
+      )}
 
       <Dialog open={scanOpen} onOpenChange={setScanOpen}>
         <DialogContent className="sm:max-w-md">

@@ -45,18 +45,26 @@ Deno.serve(async (req) => {
   const action = url.pathname.split("/").filter(Boolean).pop() ?? "";
 
   try {
-    if (action === "students") {
+    if (action === "students" || action === "users") {
+      const typeParam = url.searchParams.get("type") ?? (action === "users" ? "all" : "all");
+      const wanted = typeParam === "student" ? ["student"] : typeParam === "teacher" ? ["teacher", "homeroom_teacher"] : ["student", "teacher", "homeroom_teacher"];
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 500), 1), 1000);
       const offset = Math.max(Number(url.searchParams.get("offset") ?? 0), 0);
 
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
-        .select("user_id")
-        .eq("role", "student")
-        .range(offset, offset + limit - 1);
+        .select("user_id, role")
+        .in("role", wanted)
+        .order("user_id")
+        .range(0, 9999);
       if (rolesError) throw rolesError;
 
-      const ids = (roles ?? []).map((r) => r.user_id);
+      const rolesByUser = new Map<string, Set<string>>();
+      for (const r of roles ?? []) {
+        if (!rolesByUser.has(r.user_id)) rolesByUser.set(r.user_id, new Set());
+        rolesByUser.get(r.user_id)!.add(r.role as string);
+      }
+      const ids = [...rolesByUser.keys()].sort().slice(offset, offset + limit);
       if (ids.length === 0) {
         return json({ students: [], limit, offset, count: 0 });
       }
@@ -74,7 +82,17 @@ Deno.serve(async (req) => {
         .order("academic_year", { ascending: false });
       if (assignError) throw assignError;
 
+      const { data: homerooms } = await supabase
+        .from("classes")
+        .select("homeroom_teacher_id, display_name, academic_year")
+        .in("homeroom_teacher_id", ids)
+        .eq("is_active", true)
+        .order("academic_year", { ascending: false });
       const classByStudent = new Map<string, string>();
+      for (const h of homerooms ?? []) {
+        const tid = (h as any).homeroom_teacher_id as string;
+        if (tid && !rolesByUser.get(tid)?.has("student") && !classByStudent.has(tid)) classByStudent.set(tid, (h as any).display_name);
+      }
       for (const a of assignments ?? []) {
         const sid = (a as any).student_id as string;
         if (!classByStudent.has(sid)) {
@@ -88,15 +106,16 @@ Deno.serve(async (req) => {
           first_name: p.first_name,
           last_name: p.last_name,
           display_name: p.display_name,
+          user_type: rolesByUser.get(p.id)?.has("student") ? "student" : "teacher",
           student_identifier: p.student_identifier,
           class: classByStudent.get(p.id) ?? null,
           is_active: p.is_active,
         }))
         .sort((a, b) => (a.last_name ?? "").localeCompare(b.last_name ?? "", "ro"));
 
-      await supabase.from("canteen_api_log").insert({ action: "students", ok: true });
+      await supabase.from("canteen_api_log").insert({ action, ok: true });
 
-      return json({ students, limit, offset, count: students.length });
+      return json({ students, users: students, limit, offset, count: students.length });
     }
 
     if (action === "resolve-badge") {

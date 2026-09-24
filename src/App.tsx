@@ -196,6 +196,7 @@ const App = () => (
               <Route path="/prof" element={<ProfDashboard />} />
               <Route path="/prof/events" element={<ProfEventsPage />} />
               <Route path="/prof/events/:id" element={<ProfEventDetailPage />} />
+              <Route path="/prof/badge" element={<StudentBadgePage />} />
               <Route path="/prof/scan/:eventId" element={<ProfScanPage />} />
               <Route path="/prof/event/:eventId" element={<ProfEventParticipantsPage />} />
               <Route path="/prof/clubs" element={<ClubsVolunteerHub mode="cse" />} />
