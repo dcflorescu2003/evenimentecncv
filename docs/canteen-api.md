@@ -108,3 +108,9 @@ curl -X POST -H "x-api-key: $CNCV_KEY" -H "Content-Type: application/json" \
   acțiune necunoscută sau cod nerezolvat, `500` eroare de server.
 - Cheia de acces este secretă: ține-o pe server, niciodată în codul aplicației
   mobile sau în frontend public.
+
+## Actualizare: profesori și diriginți
+
+- Profesorii și diriginții au și ei legitimație (același format `CNCV-STU2:...`).
+- `/students` (sau `/users`) acceptă `?type=student|teacher|all` (implicit `all`). Fiecare utilizator are câmpul `user_type`: `"student"` sau `"teacher"`. La profesori, `class` = clasa de diriginție (sau `null`).
+- `/resolve-badge` returnează în plus `user_type`, `user_id` și `roles`. Câmpurile vechi (`student_id`, `class` etc.) rămân neschimbate.
