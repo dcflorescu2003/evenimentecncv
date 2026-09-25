@@ -3184,6 +3184,14 @@ export type Database = {
           last_name: string
         }[]
       }
+      get_vr_reservation_teacher_names: {
+        Args: { _ids: string[] }
+        Returns: {
+          first_name: string
+          id: string
+          last_name: string
+        }[]
+      }
       has_module_access: {
         Args: { _module_key: string; _user_id: string }
         Returns: boolean
