@@ -15,8 +15,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import {
-  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, AlertCircle, ShieldAlert, ChevronDown, ChevronUp, UserCircle, FileDown,
+  ArrowLeft, Search, ScanLine, CheckCircle2, Clock, XCircle, AlertCircle, ShieldAlert, ChevronDown, ChevronUp, UserCircle, FileDown, UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
@@ -57,6 +59,9 @@ export default function EventParticipantsPage() {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+  const [enrollSearch, setEnrollSearch] = useState("");
+  const [enrollingStudentId, setEnrollingStudentId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmChange, setConfirmChange] = useState<{
     ticketId?: string;
@@ -103,6 +108,20 @@ export default function EventParticipantsPage() {
       return data as any[];
     },
     enabled: !!eventId,
+  });
+
+  const { data: enrollableStudents = [] } = useQuery({
+    queryKey: ["coordinator_enrollable_students", eventId, enrollSearch],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("search_students_for_event", {
+        _event_id: eventId!,
+        _term: enrollSearch.trim(),
+        _limit: 30,
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!eventId && enrollDialogOpen && enrollSearch.trim().length >= 2,
   });
 
   // Event student assistants
@@ -218,6 +237,28 @@ export default function EventParticipantsPage() {
     return data.id;
   }
 
+  async function enrollStudent(studentId: string, studentName: string) {
+    if (!eventId || !user) return;
+    setEnrollingStudentId(studentId);
+    try {
+      const { enrollStudent: enroll } = await import("@/lib/manual-enrollment");
+      const result = await enroll(eventId, studentId, {
+        enrolledByUserId: user.id,
+        enrolledByRole: "coordinator",
+      });
+      if (!result.ok) {
+        toast.error(`${studentName}: ${result.reason}`);
+        return;
+      }
+      toast.success(result.reactivated ? `${studentName} reactivat` : `${studentName} înscris`);
+      queryClient.invalidateQueries({ queryKey: ["event_participants", eventId] });
+      setEnrollDialogOpen(false);
+      setEnrollSearch("");
+    } finally {
+      setEnrollingStudentId(null);
+    }
+  }
+
   async function updateStatus(ticketId: string | undefined, currentStatus: string, newStatus: TicketStatus, isPublic: boolean, reservationId?: string) {
     let resolvedTicketId = ticketId;
     if (!resolvedTicketId && !isPublic && reservationId) {
@@ -271,6 +312,9 @@ export default function EventParticipantsPage() {
           {event && <p className="text-xs text-muted-foreground">{formatDate(event.date)} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)} • {event.location}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => setEnrollDialogOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" /> Adaugă elev
+          </Button>
           <Button size="sm" variant="outline" onClick={async () => {
             if (!event || unified.length === 0) return;
             const rows = buildAttendancePdfRows({
@@ -454,6 +498,44 @@ export default function EventParticipantsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={enrollDialogOpen} onOpenChange={(open) => {
+        setEnrollDialogOpen(open);
+        if (!open) setEnrollSearch("");
+      }}>
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Adaugă elev</DialogTitle>
+            <DialogDescription>Caută după nume sau clasă. Elevul va primi automat biletul.</DialogDescription>
+          </DialogHeader>
+          <Command className="rounded-md border" shouldFilter={false}>
+            <CommandInput placeholder="Scrie cel puțin 2 caractere..." value={enrollSearch} onValueChange={setEnrollSearch} />
+            <CommandList>
+              <CommandEmpty>{enrollSearch.trim().length < 2 ? "Scrie cel puțin 2 caractere." : "Niciun elev găsit."}</CommandEmpty>
+              <CommandGroup>
+                {enrollableStudents.map((student) => {
+                  const name = `${student.last_name} ${student.first_name}`;
+                  return (
+                    <CommandItem
+                      key={student.id}
+                      value={`${name} ${student.class_name || ""}`}
+                      disabled={enrollingStudentId !== null}
+                      onSelect={() => enrollStudent(student.id, name)}
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      <span>{name}</span>
+                      {student.class_name && <Badge variant="outline" className="ml-2 text-xs">{student.class_name}</Badge>}
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEnrollDialogOpen(false)}>Închide</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

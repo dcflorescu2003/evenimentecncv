@@ -506,7 +506,7 @@ export default function EventsPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "Editare eveniment" : "Eveniment nou"}</DialogTitle>
             <DialogDescription>
@@ -515,7 +515,7 @@ export default function EventsPage() {
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="col-span-2 space-y-2">
+              <div className="sm:col-span-2 space-y-2">
                 <Label htmlFor="ev-title">Titlu *</Label>
                 <Input id="ev-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="ex: Vizită la Muzeu" />
               </div>
@@ -643,7 +643,7 @@ export default function EventsPage() {
                   })}
                 </div>
                 {form.eligible_classes.length === 0 && form.eligible_grades.length === 0 && (
-                  <p className="text-xs text-muted-foreground">Nicio selecție = toate clasele sunt eligibile</p>
+                  <p className="text-xs text-muted-foreground">Nicio selecție = eveniment ascuns elevilor; participanții se adaugă manual</p>
                 )}
               </div>
             )}

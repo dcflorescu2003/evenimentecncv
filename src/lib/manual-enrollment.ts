@@ -16,7 +16,7 @@ export type ClassEnrollmentSummary = {
 
 interface EnrollContext {
   enrolledByUserId: string;
-  enrolledByRole: "admin" | "homeroom_teacher";
+  enrolledByRole: "admin" | "organizer" | "coordinator";
 }
 
 /**
@@ -31,83 +31,34 @@ export async function enrollStudent(
   studentId: string,
   ctx: EnrollContext
 ): Promise<EnrollmentResult> {
-  // 1. Check eligibility
-  const { data: eligibility, error: eligErr } = await supabase.rpc(
-    "check_booking_eligibility",
-    { _student_id: studentId, _event_id: eventId }
-  );
-  if (eligErr) return { ok: false, reason: eligErr.message };
+  const { data, error } = await supabase.rpc("manually_enroll_event_student", {
+    _event_id: eventId,
+    _student_id: studentId,
+  });
+  if (error) return { ok: false, reason: error.message };
 
-  const elig = eligibility as { allowed: boolean; reason?: string } | null;
+  const result = data as {
+    ok?: boolean;
+    reason?: string;
+    reactivated?: boolean;
+    reservation_id?: string;
+  } | null;
+  if (!result?.ok) return { ok: false, reason: result?.reason || "Înscrierea nu a putut fi realizată" };
 
-  // 2. Look for an existing cancelled reservation to reactivate
-  const { data: existing, error: existErr } = await supabase
-    .from("reservations")
-    .select("id, status")
-    .eq("event_id", eventId)
-    .eq("student_id", studentId)
-    .maybeSingle();
-  if (existErr && existErr.code !== "PGRST116") {
-    return { ok: false, reason: existErr.message };
+  try {
+    const title = result.reactivated ? "Rezervare reactivată" : "Ai un bilet nou";
+    await supabase.functions.invoke("send-push-to-user", {
+      body: { user_id: studentId, title, body: "Biletul tău este disponibil în cont.", url: "/student/tickets" },
+    });
+  } catch {
+    // Notificarea din aplicație a fost deja salvată de operația securizată.
   }
 
-  if (existing && existing.status === "cancelled") {
-    // Eligibility check still must pass for capacity/overlap. If RPC blocked it for "ai deja o rezervare" we wouldn't be here (that's status='reserved').
-    if (elig && !elig.allowed) {
-      return { ok: false, reason: elig.reason || "Nu este eligibil" };
-    }
-    // Reactivate
-    const { error: updErr } = await supabase
-      .from("reservations")
-      .update({ status: "reserved", cancelled_at: null })
-      .eq("id", existing.id);
-    if (updErr) return { ok: false, reason: updErr.message };
-
-    // Regenerate ticket QR or create ticket if missing
-    const { data: existingTicket } = await supabase
-      .from("tickets")
-      .select("id")
-      .eq("reservation_id", existing.id)
-      .maybeSingle();
-
-    if (existingTicket) {
-      const { error: tErr } = await supabase
-        .from("tickets")
-        .update({ status: "reserved", qr_code_data: crypto.randomUUID(), checkin_timestamp: null })
-        .eq("id", existingTicket.id);
-      if (tErr) return { ok: false, reason: tErr.message };
-    } else {
-      const { error: tErr } = await supabase
-        .from("tickets")
-        .insert({ reservation_id: existing.id, status: "reserved" });
-      if (tErr) return { ok: false, reason: tErr.message };
-    }
-
-    await logEnrollment(eventId, studentId, existing.id, ctx, true);
-    await notifyStudent(eventId, studentId, ctx, true);
-    return { ok: true, reactivated: true, reservationId: existing.id };
-  }
-
-  // 3. Standard new enrollment — eligibility must pass
-  if (elig && !elig.allowed) {
-    return { ok: false, reason: elig.reason || "Nu este eligibil" };
-  }
-
-  const { data: newRes, error: insErr } = await supabase
-    .from("reservations")
-    .insert({ event_id: eventId, student_id: studentId, status: "reserved" })
-    .select("id")
-    .single();
-  if (insErr) return { ok: false, reason: insErr.message };
-
-  const { error: tErr } = await supabase
-    .from("tickets")
-    .insert({ reservation_id: newRes.id, status: "reserved" });
-  if (tErr) return { ok: false, reason: tErr.message };
-
-  await logEnrollment(eventId, studentId, newRes.id, ctx, false);
-  await notifyStudent(eventId, studentId, ctx, false);
-  return { ok: true, reactivated: false, reservationId: newRes.id };
+  return {
+    ok: true,
+    reactivated: result.reactivated,
+    reservationId: result.reservation_id,
+  };
 }
 
 async function notifyStudent(
@@ -124,7 +75,7 @@ async function notifyStudent(
       .maybeSingle();
 
     const title = reactivated ? "Rezervare reactivată" : "Ai un bilet nou";
-    const roleLabel = ctx.enrolledByRole === "admin" ? "administrator" : "diriginte";
+    const roleLabel = ctx.enrolledByRole === "admin" ? "administrator" : ctx.enrolledByRole === "coordinator" ? "coordonator" : "organizator";
 
     let body: string;
     if (event) {
