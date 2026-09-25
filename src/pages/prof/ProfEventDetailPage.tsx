@@ -943,11 +943,11 @@ export default function ProfEventDetailPage() {
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">Lista participanților înscriși.</p>
             <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setEnrollStudentDialogOpen(true); setEnrollStudentSearch(""); }}>
+                <UserPlus className="mr-2 h-4 w-4" /> Adaugă elev
+              </Button>
               {ownClass && (
                 <>
-                  <Button variant="outline" size="sm" onClick={() => { setEnrollStudentDialogOpen(true); setEnrollStudentSearch(""); }}>
-                    <UserPlus className="mr-2 h-4 w-4" /> Adaugă elev
-                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
