@@ -87,13 +87,15 @@ export default function SmartLabPage() {
     queryKey: ["vr-teacher-names", teacherIds],
     enabled: teacherIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .in("id", teacherIds);
+      const { data, error } = await supabase.rpc(
+        "get_vr_reservation_teacher_names" as never,
+        { _ids: teacherIds } as never,
+      );
       if (error) throw error;
       const map: Record<string, string> = {};
-      (data ?? []).forEach((p) => (map[p.id] = `${p.last_name} ${p.first_name}`));
+      ((data ?? []) as { id: string; first_name: string; last_name: string }[]).forEach(
+        (p) => (map[p.id] = `${p.last_name} ${p.first_name}`),
+      );
       return map;
     },
   });
