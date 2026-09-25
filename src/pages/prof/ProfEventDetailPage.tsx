@@ -1569,8 +1569,8 @@ export default function ProfEventDetailPage() {
                 <Select value={editForm.session_id} onValueChange={(v) => setEditForm({ ...editForm, session_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Alege sesiunea" /></SelectTrigger>
                   <SelectContent>
-                    {sessions.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic_year})</SelectItem>
+                    {sessions.filter((s) => s.status === "active" || s.id === editForm.session_id).map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic_year}){s.status !== "active" ? " — inactivă" : ""}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

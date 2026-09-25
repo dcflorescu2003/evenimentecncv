@@ -205,7 +205,7 @@ export default function ProfEventsPage() {
 
   function openCreate() {
     setEditingId(null);
-    setForm({ ...emptyForm, session_id: sessions.find((s) => s.status === "active")?.id || sessions[0]?.id || "" });
+    setForm({ ...emptyForm, session_id: sessions.find((s) => s.status === "active")?.id || "" });
     setDialogOpen(true);
   }
 
@@ -318,7 +318,7 @@ export default function ProfEventsPage() {
           <h1 className="font-display text-2xl font-bold">Evenimentele mele</h1>
           <p className="mt-1 text-sm text-muted-foreground">Creează și gestionează evenimente.</p>
         </div>
-        <Button onClick={openCreate} disabled={sessions.length === 0} className="w-full sm:w-auto">
+        <Button onClick={openCreate} disabled={!sessions.some((s) => s.status === "active")} title={!sessions.some((s) => s.status === "active") ? "Nu există nicio sesiune activă" : undefined} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Eveniment nou
         </Button>
       </div>
@@ -436,8 +436,8 @@ export default function ProfEventsPage() {
                 <Select value={form.session_id} onValueChange={(v) => setForm({ ...form, session_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Alege sesiunea" /></SelectTrigger>
                   <SelectContent>
-                    {sessions.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic_year})</SelectItem>
+                    {sessions.filter((s) => s.status === "active" || s.id === form.session_id).map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name} ({s.academic_year}){s.status !== "active" ? " — inactivă" : ""}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
