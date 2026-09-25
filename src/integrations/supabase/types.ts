@@ -3098,6 +3098,10 @@ export type Database = {
         Args: { _profile_id: string; _viewer: string }
         Returns: boolean
       }
+      can_view_internal_event: {
+        Args: { _event_id: string; _user_id: string }
+        Returns: boolean
+      }
       check_booking_eligibility: {
         Args: { _event_id: string; _student_id: string }
         Returns: Json
@@ -3294,6 +3298,10 @@ export type Database = {
       is_vr_volunteer: { Args: { _user_id: string }; Returns: boolean }
       issue_student_qr: { Args: never; Returns: Json }
       lookup_public_reservation: { Args: { p_code: string }; Returns: Json }
+      manually_enroll_event_student: {
+        Args: { _event_id: string; _student_id: string }
+        Returns: Json
+      }
       mark_club_attendance_by_qr: {
         Args: { _meeting_id: string; _student_qr: string }
         Returns: Json
@@ -3339,6 +3347,15 @@ export type Database = {
           last_name: string
           roles: string[]
           username: string
+        }[]
+      }
+      search_students_for_event: {
+        Args: { _event_id: string; _limit?: number; _term: string }
+        Returns: {
+          class_name: string
+          first_name: string
+          id: string
+          last_name: string
         }[]
       }
       self_checkin_club: { Args: { _qr_code_data: string }; Returns: Json }
