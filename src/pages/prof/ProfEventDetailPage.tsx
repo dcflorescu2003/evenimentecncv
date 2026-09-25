@@ -494,29 +494,18 @@ export default function ProfEventDetailPage() {
     enabled: !!user?.id,
   });
 
-  // Students of own class (for "Adaugă elev" combobox)
-  const { data: ownClassStudents = [] } = useQuery({
-    queryKey: ["prof_own_class_students", ownClass?.id],
+  const { data: enrollableStudents = [] } = useQuery({
+    queryKey: ["prof_enrollable_students", id, enrollStudentSearch],
     queryFn: async () => {
-      const { data: assignments, error } = await supabase
-        .from("student_class_assignments")
-        .select("student_id")
-        .eq("class_id", ownClass!.id);
-      if (error) throw error;
-      const ids = (assignments || []).map((a) => a.student_id);
-      if (ids.length === 0) return [];
-      const { data: profiles, error: pErr } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .in("id", ids)
-        .eq("is_active", true);
-      if (pErr) throw pErr;
-      return (profiles || []).sort((a: any, b: any) => {
-        const cmp = (a.last_name || "").localeCompare(b.last_name || "", "ro");
-        return cmp !== 0 ? cmp : (a.first_name || "").localeCompare(b.first_name || "", "ro");
+      const { data, error } = await supabase.rpc("search_students_for_event", {
+        _event_id: id!,
+        _term: enrollStudentSearch.trim(),
+        _limit: 30,
       });
+      if (error) throw error;
+      return data || [];
     },
-    enabled: !!ownClass?.id,
+    enabled: !!id && enrollStudentDialogOpen && enrollStudentSearch.trim().length >= 2,
   });
 
   function invalidateProfParticipantsQueries() {
@@ -531,7 +520,7 @@ export default function ProfEventDetailPage() {
       const { enrollStudent } = await import("@/lib/manual-enrollment");
       const res = await enrollStudent(id, studentId, {
         enrolledByUserId: user.id,
-        enrolledByRole: "homeroom_teacher",
+        enrolledByRole: "organizer",
       });
       if (!res.ok) {
         toast.error(`${studentName}: ${res.reason}`);
@@ -553,7 +542,7 @@ export default function ProfEventDetailPage() {
       const { enrollClass } = await import("@/lib/manual-enrollment");
       const summary = await enrollClass(id, ownClass.id, {
         enrolledByUserId: user.id,
-        enrolledByRole: "homeroom_teacher",
+        enrolledByRole: "organizer",
       });
       invalidateProfParticipantsQueries();
       const reactivatedNote = summary.reactivated > 0 ? ` (${summary.reactivated} reactivați)` : "";
@@ -1422,35 +1411,29 @@ export default function ProfEventDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Enroll Single Student Dialog (homeroom: own class only) */}
+      {/* Enroll Single Student Dialog */}
       <Dialog open={enrollStudentDialogOpen} onOpenChange={(o) => { if (!o) { setEnrollStudentDialogOpen(false); setEnrollStudentSearch(""); } }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Înscrie un elev din clasa {ownClass?.display_name}</DialogTitle>
-            <DialogDescription>Selectează un elev din clasa ta pentru a-l înscrie la acest eveniment. Va primi automat un bilet cu QR.</DialogDescription>
+            <DialogTitle>Înscrie un elev</DialogTitle>
+            <DialogDescription>Caută un elev după nume sau clasă. Va primi automat un bilet cu QR.</DialogDescription>
           </DialogHeader>
           <Command className="border rounded-md">
-            <CommandInput placeholder="Caută elev..." value={enrollStudentSearch} onValueChange={setEnrollStudentSearch} />
+            <CommandInput placeholder="Scrie cel puțin 2 caractere..." value={enrollStudentSearch} onValueChange={setEnrollStudentSearch} />
             <CommandList>
               <CommandEmpty>Niciun elev găsit.</CommandEmpty>
               <CommandGroup>
-                {ownClassStudents
-                  .filter((s: any) => {
-                    if (!enrollStudentSearch) return true;
-                    const q = enrollStudentSearch.toLowerCase();
-                    return `${s.last_name} ${s.first_name}`.toLowerCase().includes(q);
-                  })
-                  .slice(0, 30)
-                  .map((s: any) => (
+                {enrollableStudents.map((s: any) => (
                     <CommandItem
                       key={s.id}
-                      value={`${s.last_name} ${s.first_name}`}
+                      value={`${s.last_name} ${s.first_name} ${s.class_name || ""}`}
                       disabled={enrollingStudentId !== null}
                       onSelect={() => handleProfEnrollSingleStudent(s.id, `${s.last_name} ${s.first_name}`)}
                       className="cursor-pointer"
                     >
                       <UserPlus className="mr-2 h-4 w-4" />
                       <span>{s.last_name} {s.first_name}</span>
+                      {s.class_name && <Badge variant="outline" className="ml-2 text-xs">{s.class_name}</Badge>}
                     </CommandItem>
                   ))}
               </CommandGroup>
@@ -1553,14 +1536,14 @@ export default function ProfEventDetailPage() {
 
       {/* Edit event dialog */}
       <Dialog open={editDialogOpen} onOpenChange={(o) => !o && setEditDialogOpen(false)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editare eveniment</DialogTitle>
             <DialogDescription>Modificați detaliile evenimentului.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2 space-y-2">
                 <Label>Titlu *</Label>
                 <Input value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} placeholder="ex: Vizită la Muzeu" />
               </div>
@@ -1599,7 +1582,7 @@ export default function ProfEventDetailPage() {
             {editDur.hours > 0 && (
               <p className="text-sm text-muted-foreground">Durată: {editDur.display} → <strong>{editDur.hours}h</strong></p>
             )}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Locație</Label>
                 <Input value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} />
@@ -1682,14 +1665,14 @@ export default function ProfEventDetailPage() {
                 )}
                 {editForm.eligible_classes.length === 0 && editForm.eligible_grades.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {isCse ? "Nicio selecție = toți elevii de liceu sunt eligibili" : "Nicio selecție = toate clasele sunt eligibile"}
+                    Nicio selecție = eveniment ascuns elevilor; participanții se adaugă manual
                   </p>
                 )}
               </div>
             )}
             <div className="space-y-2">
               <Label>Perioada de înscriere</Label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">De la - Data</Label>
                   <DateInput value={editForm.booking_open_date} onChange={(v) => setEditForm({ ...editForm, booking_open_date: v })} />

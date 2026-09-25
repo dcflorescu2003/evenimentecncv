@@ -420,14 +420,14 @@ export default function ProfEventsPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(o) => !o && closeDialog()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "Editare eveniment" : "Eveniment nou"}</DialogTitle>
             <DialogDescription>{editingId ? "Modificați detaliile." : "Completați detaliile noului eveniment."}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="col-span-2 space-y-2">
+              <div className="sm:col-span-2 space-y-2">
                 <Label>Titlu *</Label>
                 <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="ex: Vizită la Muzeu" />
               </div>
@@ -563,14 +563,14 @@ export default function ProfEventsPage() {
                 )}
                 {form.eligible_classes.length === 0 && form.eligible_grades.length === 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {isCse ? "Nicio selecție = toți elevii de liceu sunt eligibili" : "Nicio selecție = toate clasele sunt eligibile"}
+                    Nicio selecție = eveniment ascuns elevilor; participanții se adaugă manual
                   </p>
                 )}
               </div>
             )}
             <div className="space-y-2">
               <Label>Perioada de înscriere</Label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">De la - Data</Label>
                   <DateInput value={form.booking_open_date} onChange={(v) => setForm({ ...form, booking_open_date: v })} />
