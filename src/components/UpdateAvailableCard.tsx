@@ -17,7 +17,7 @@ export function UpdateAvailableCard() {
     let cancelled = false;
     checkForUpdate().then((result) => {
       if (cancelled || !result) return;
-      if (isUpdateCardDismissed(result.latestVersion)) return;
+      if (!result.forced && isUpdateCardDismissed(result.latestVersion)) return;
       setInfo(result);
     });
     return () => {
@@ -45,10 +45,13 @@ export function UpdateAvailableCard() {
           <Download className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Actualizare disponibilă</p>
+          <p className="text-sm font-semibold">
+            {info.forced ? "Actualizare necesară" : "Actualizare disponibilă"}
+          </p>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            O versiune nouă a aplicației este disponibilă. Actualizează pentru
-            cele mai recente îmbunătățiri.
+            {info.forced
+              ? "Această versiune nu mai este acceptată. Actualizează pentru a continua."
+              : "O versiune nouă a aplicației este disponibilă. Actualizează pentru cele mai recente îmbunătățiri."}
           </p>
           {info.storeUrl && (
             <Button size="sm" className="mt-3" onClick={handleUpdate}>
@@ -56,15 +59,17 @@ export function UpdateAvailableCard() {
             </Button>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0"
-          onClick={handleDismiss}
-          aria-label="Închide"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {!info.forced && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            onClick={handleDismiss}
+            aria-label="Închide"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

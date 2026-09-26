@@ -9,6 +9,8 @@ export interface AppVersionInfo {
   minVersion: string;
   latestVersion: string;
   storeUrl: string | null;
+  /** True when the installed version is below the minimum supported one. */
+  forced: boolean;
 }
 
 /** Compares two semver-ish versions: returns -1 if a < b, 0 if equal, 1 if a > b. */
@@ -108,6 +110,7 @@ export async function checkForUpdate(): Promise<AppVersionInfo | null> {
     minVersion: data.min_version,
     latestVersion: data.latest_version,
     storeUrl: data.store_url,
+    forced: compareVersions(currentVersion, data.min_version) < 0,
   };
   writeCache(info);
 
@@ -115,7 +118,11 @@ export async function checkForUpdate(): Promise<AppVersionInfo | null> {
 }
 
 function needsUpdate(info: AppVersionInfo): boolean {
-  return compareVersions(info.currentVersion, info.minVersion) < 0;
+  // Forced: below the minimum supported version. Otherwise: a newer version
+  // exists in the store.
+  return (
+    info.forced || compareVersions(info.currentVersion, info.latestVersion) < 0
+  );
 }
 
 const DISMISS_KEY = "cncv-update-card-dismissed";
