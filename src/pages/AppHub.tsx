@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, GraduationCap } from "lucide-react";
 import { getEnabledModules } from "@/modules/registry";
 import { useCanAccessSmartLab } from "@/hooks/useIsVrVolunteer";
+import { UpdateAvailableCard } from "@/components/UpdateAvailableCard";
 
 export default function AppHub() {
   const { profile, roles, moduleAccess, signOut } = useAuth();
@@ -33,6 +34,7 @@ export default function AppHub() {
 
       <main className="flex-1 px-4 py-8 sm:py-12">
         <div className="mx-auto max-w-4xl">
+          <UpdateAvailableCard />
           <div className="mb-8 text-center sm:text-left">
             <h1 className="font-display text-2xl font-semibold sm:text-3xl">
               Bun venit{profile?.first_name ? `, ${profile.first_name}` : ""}!
