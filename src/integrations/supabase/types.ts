@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_versions: {
+        Row: {
+          created_at: string
+          id: string
+          latest_version: string
+          min_version: string
+          platform: string
+          store_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          latest_version: string
+          min_version: string
+          platform: string
+          store_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          latest_version?: string
+          min_version?: string
+          platform?: string
+          store_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendance_log: {
         Row: {
           changed_at: string
