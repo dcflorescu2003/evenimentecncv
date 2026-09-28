@@ -140,9 +140,9 @@ export default function CredentialsPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("classes")
-        .select("id, display_name")
+        .select("id, display_name, grade_number, section")
         .eq("is_active", true)
-        .order("display_name");
+        .order("grade_number").order("section", { nullsFirst: true });
       return data || [];
     },
   });
