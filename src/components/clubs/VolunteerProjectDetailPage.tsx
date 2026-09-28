@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { TimeInput } from "@/components/ui/time-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import VolunteerFormTab from "./VolunteerFormTab";
+import VolunteerEnrollDialog from "./VolunteerEnrollDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -237,7 +239,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
             </div>
             {(project as any).is_private && !myEnrollment ? null : myEnrollment
               ? <Button size="sm" variant="outline" onClick={withdraw}>Retrage-mă</Button>
-              : <Button size="sm" onClick={enroll}>Înscrie-mă</Button>}
+              : <VolunteerEnrollDialog clubId={projectId!} />}
           </CardContent>
         </Card>
       )}
@@ -247,6 +249,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
           <TabsTrigger value="general">General</TabsTrigger>
           {showMembersTab && <TabsTrigger value="members">Înscriși ({enrollments.length})</TabsTrigger>}
           {showDaysTab && <TabsTrigger value="days">Zile & prezență</TabsTrigger>}
+          {canManage && <TabsTrigger value="form">Formular</TabsTrigger>}
           {canManage && <TabsTrigger value="coordinators">Coordonatori</TabsTrigger>}
           {canManage && <TabsTrigger value="assistants">Asistenți</TabsTrigger>}
         </TabsList>
@@ -274,6 +277,11 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
               readOnlyAttendance={viewMode === "homeroom_filtered"}
               userId={user!.id}
               onChange={() => qc.invalidateQueries({ queryKey: ["volunteer-days", projectId] })} />
+          </TabsContent>
+        )}
+        {canManage && (
+          <TabsContent value="form" className="pt-3">
+            <VolunteerFormTab clubId={projectId!} canEdit={canManage} />
           </TabsContent>
         )}
         {canManage && (
@@ -713,8 +721,11 @@ function MembersTab({
         </div>
         {enrollments.length === 0 && <p className="text-sm text-muted-foreground">Niciun înscris.</p>}
         {enrollments.map((e: any) => (
-          <div key={e.id} className="flex items-center justify-between rounded border p-2 text-sm">
-            <span>{e.profile ? `${e.profile.last_name} ${e.profile.first_name}` : e.student_id}</span>
+          <div key={e.id} className="flex items-start justify-between gap-2 rounded border p-2 text-sm">
+            <div className="min-w-0 space-y-1">
+              <span className="font-medium">{e.profile ? `${e.profile.last_name} ${e.profile.first_name}` : e.student_id}</span>
+              <MemberAnswers enrollmentId={e.id} projectId={projectId} />
+            </div>
             {!readOnly && (
               <Button variant="ghost" size="sm" onClick={() => removeStudent(e.id)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -884,6 +895,43 @@ function DayAttendancePanel({ dayId, enrollments, userId }: any) {
             </div>
           </div>
         );
+      })}
+    </div>
+  );
+}
+
+function answerToText(v: any): string {
+  if (v == null) return "—";
+  if (Array.isArray(v)) return v.join(", ");
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+function MemberAnswers({ enrollmentId, projectId }: { enrollmentId: string; projectId: string }) {
+  const { data: questions = [] } = useQuery({
+    queryKey: ["volunteer-form-questions", projectId],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("volunteer_form_questions")
+        .select("*").eq("project_id", projectId).order("position");
+      return data ?? [];
+    },
+  });
+  const { data: answers = [] } = useQuery({
+    queryKey: ["volunteer-answers", enrollmentId],
+    enabled: questions.length > 0,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("volunteer_enrollment_answers")
+        .select("question_id, value").eq("enrollment_id", enrollmentId);
+      return data ?? [];
+    },
+  });
+  if (!answers.length) return null;
+  return (
+    <div className="space-y-0.5 text-xs text-muted-foreground">
+      {questions.map((q: any) => {
+        const a = answers.find((x: any) => x.question_id === q.id);
+        if (!a) return null;
+        return <p key={q.id}><span className="font-medium text-foreground">{q.text}:</span> {answerToText(a.value)}</p>;
       })}
     </div>
   );
