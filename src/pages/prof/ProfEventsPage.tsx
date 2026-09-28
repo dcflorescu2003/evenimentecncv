@@ -1,4 +1,5 @@
 import { useState } from "react";
+import NormProgressCard from "@/components/prof/NormProgressCard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,13 +123,21 @@ export default function ProfEventsPage() {
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["prof_events", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("events")
-        .select("*")
-        .eq("created_by", user!.id)
-        .order("date", { ascending: false });
-      if (error) throw error;
-      return data;
+      const [own, coord] = await Promise.all([
+        supabase.from("events").select("*").eq("created_by", user!.id),
+        supabase.from("coordinator_assignments").select("events(*)").eq("teacher_id", user!.id),
+      ]);
+      if (own.error) throw own.error;
+      if (coord.error) throw coord.error;
+      const map = new Map<string, any>();
+      for (const e of own.data ?? []) map.set(e.id, e);
+      for (const row of (coord.data ?? []) as any[]) {
+        const e = row.events;
+        if (e && !map.has(e.id)) map.set(e.id, { ...e, _coord: true });
+      }
+      return Array.from(map.values()).sort((a, b) =>
+        `${b.date} ${b.start_time ?? ""}`.localeCompare(`${a.date} ${a.start_time ?? ""}`)
+      );
     },
     enabled: !!user,
   });
@@ -323,6 +332,8 @@ export default function ProfEventsPage() {
         </Button>
       </div>
 
+      <NormProgressCard />
+
       <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input placeholder="Caută…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
@@ -345,11 +356,14 @@ export default function ProfEventsPage() {
               <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Se încarcă…</TableCell></TableRow>
             ) : filtered.length === 0 ? (
               <TableRow><TableCell colSpan={6} className="py-8 text-center text-muted-foreground">Niciun eveniment</TableCell></TableRow>
-            ) : filtered.map((ev) => (
-              <TableRow key={ev.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/prof/events/${ev.id}`)}>
+            ) : filtered.map((ev) => {
+              const coord = (ev as any)._coord;
+              return (
+              <TableRow key={ev.id} className={`cursor-pointer hover:bg-muted/50 ${coord ? "bg-primary/5 border-l-4 border-l-primary" : ""}`} onClick={() => navigate(coord ? `/prof/event/${ev.id}` : `/prof/events/${ev.id}`)}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     <span>{ev.title}</span>
+                    {coord && <Badge variant="outline" className="border-primary text-primary">Coordonator</Badge>}
                     {(ev as any).is_cse && <CseBadge short />}
                   </div>
                 </TableCell>
@@ -362,6 +376,7 @@ export default function ProfEventsPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>
+                  {!coord && (
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(ev)} title="Editează">
                       <Pencil className="h-4 w-4" />
@@ -370,9 +385,11 @@ export default function ProfEventsPage() {
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
+                  )}
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -384,16 +401,21 @@ export default function ProfEventsPage() {
         ) : filtered.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">Niciun eveniment</p>
         ) : (
-          filtered.map((ev) => (
+          filtered.map((ev) => {
+            const coord = (ev as any)._coord;
+            return (
             <div
               key={ev.id}
-              className="rounded-lg border bg-card p-3 space-y-2 cursor-pointer hover:bg-muted/50"
-              onClick={() => navigate(`/prof/events/${ev.id}`)}
+              className={`rounded-lg border p-3 space-y-2 cursor-pointer hover:bg-muted/50 ${coord ? "border-l-4 border-l-primary bg-primary/5" : "bg-card"}`}
+              onClick={() => navigate(coord ? `/prof/event/${ev.id}` : `/prof/events/${ev.id}`)}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="font-medium truncate">{ev.title}</p>
-                  {(ev as any).is_cse && <CseBadge short />}
+                  <div className="flex flex-wrap gap-1">
+                    {coord && <Badge variant="outline" className="border-primary text-primary">Coordonator</Badge>}
+                    {(ev as any).is_cse && <CseBadge short />}
+                  </div>
                 </div>
                 <Badge variant="secondary" className={`${statusColors[ev.status as EventStatus]} shrink-0`}>
                   {statusLabels[ev.status as EventStatus]}
@@ -402,6 +424,7 @@ export default function ProfEventsPage() {
               <p className="text-xs text-muted-foreground">
                 {formatDate(ev.date)} · {ev.start_time?.slice(0, 5)}–{ev.end_time?.slice(0, 5)} · {ev.counted_duration_hours}h
               </p>
+              {!coord && (
               <div className="flex gap-1 border-t pt-2" onClick={(e) => e.stopPropagation()}>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/prof/events/${ev.id}`)} title="Detalii">
                   <Eye className="h-4 w-4" />
@@ -413,8 +436,10 @@ export default function ProfEventsPage() {
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
+              )}
             </div>
-          ))
+            );
+          })
         )}
       </div>
 

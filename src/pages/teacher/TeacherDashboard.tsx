@@ -25,6 +25,7 @@ import { exportToCSV } from "@/lib/csv-export";
 import { toast } from "sonner";
 import AllEventsCalendarSection from "@/components/prof/AllEventsCalendarSection";
 import { invokeFunction } from "@/lib/invokeFunction";
+import NormProgressCard from "@/components/prof/NormProgressCard";
 
 interface StudentReport {
   id: string;
@@ -246,6 +247,7 @@ export default function TeacherDashboard() {
 
   return (
     <div className="space-y-6 print:space-y-4">
+      <div className="print:hidden"><NormProgressCard /></div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="font-display text-2xl font-bold">Clasa mea</h1>

@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { CalendarDays, Clock, MapPin, ScanLine, Users, Plus } from "lucide-react";
 import AllEventsCalendarSection from "@/components/prof/AllEventsCalendarSection";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
+import NormProgressCard from "@/components/prof/NormProgressCard";
 
 export default function ProfDashboard() {
   const { user, profile } = useAuth();
@@ -44,42 +45,6 @@ export default function ProfDashboard() {
     enabled: !!user,
   });
 
-  // Norm data
-  const { data: normData } = useQuery({
-    queryKey: ["prof_norm", user?.id],
-    enabled: !!user && !!profile,
-    queryFn: async () => {
-      const teachingNorm = (profile as any)?.teaching_norm;
-      if (!teachingNorm || teachingNorm <= 0) return null;
-
-      const { data: sessions } = await supabase
-        .from("program_sessions").select("id, name").eq("status", "active");
-      if (!sessions?.length) return null;
-
-      const sessionIds = sessions.map((s) => s.id);
-      const { data: rules } = await supabase
-        .from("class_participation_rules").select("session_id").in("session_id", sessionIds).limit(1);
-      if (!rules?.length) return null;
-
-      const results = [];
-      for (const session of sessions) {
-        const hasRule = rules.some((r) => r.session_id === session.id);
-        if (!hasRule) continue;
-        const { data: coords } = await supabase
-          .from("coordinator_assignments").select("event_id").eq("teacher_id", user!.id);
-        const eventIds = (coords || []).map((c) => c.event_id);
-        if (!eventIds.length) { results.push({ sessionName: session.name, organized: 0, norm: teachingNorm }); continue; }
-        const { data: events } = await supabase
-          .from("events").select("counted_duration_hours, status, date").in("id", eventIds).eq("session_id", session.id);
-        const today = new Date().toISOString().slice(0, 10);
-        const organized = (events || [])
-          .filter((e: any) => e.status === "closed" || (e.status === "published" && e.date <= today))
-          .reduce((s, e) => s + (e.counted_duration_hours || 0), 0);
-        results.push({ sessionName: session.name, organized, norm: teachingNorm });
-      }
-      return results.length ? results : null;
-    },
-  });
 
   // Coordinator events split by status
   const today = new Date().toISOString().slice(0, 10);
@@ -150,25 +115,7 @@ export default function ProfDashboard() {
         </Card>
       </div>
 
-      {/* Norm progress */}
-      {normData && normData.map((nd, idx) => (
-        <Card key={idx}>
-          <CardContent className="p-4 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium truncate">Norma — {nd.sessionName}</p>
-              <Badge variant={nd.organized >= nd.norm ? "default" : "secondary"} className="shrink-0">
-                {nd.organized}h / {nd.norm}h
-              </Badge>
-            </div>
-            <Progress value={Math.min(100, (nd.organized / nd.norm) * 100)} className="h-2" />
-            <p className="text-xs text-muted-foreground">
-              {nd.organized >= nd.norm
-                ? "✅ Norma îndeplinită"
-                : `Mai ai nevoie de ${nd.norm - nd.organized}h organizate`}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
+      <NormProgressCard />
 
       {isLoading ? (
         <div className="py-8 text-center text-muted-foreground">Se încarcă…</div>
