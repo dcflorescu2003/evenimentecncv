@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import HomeroomEnrollDialog, { type EnrollStudent } from "@/components/teacher/HomeroomEnrollDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/lib/time";
@@ -98,7 +99,11 @@ export default function TeacherReportsPage() {
 }
 
 /* ─── Tab 1: Sumar (existing report) ─── */
+const fmtReq = (h: number, r: number) => `${h} / ${r > 0 ? r : "—"}`;
+
 function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; classIds: string[]; myClasses: any[] }) {
+  const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<EnrollStudent | null>(null);
   const { data: reportData, isLoading } = useQuery({
     queryKey: ["teacher-report-sumar", sessionId, classIds],
     queryFn: async () => {
@@ -112,7 +117,12 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
       const eventIds = (events ?? []).map(e => e.id);
       const eventMap = Object.fromEntries((events ?? []).map(e => [e.id, e]));
       const { data: reservations } = await supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", studentIds);
-      const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
+      const resIds = (reservations ?? []).map(r => r.id);
+      const tickets: { id: string; reservation_id: string; status: string }[] = [];
+      for (let i = 0; i < resIds.length; i += 200) {
+        const { data: t } = await supabase.from("tickets").select("id, reservation_id, status").in("reservation_id", resIds.slice(i, i + 200));
+        tickets.push(...((t ?? []) as any));
+      }
       const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
       const classMap = Object.fromEntries((assignments ?? []).map(a => [a.student_id, a.class_id]));
       const classNameMap = Object.fromEntries((myClasses ?? []).map(c => [c.id, c.display_name]));
@@ -216,11 +226,11 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
       <div className="flex justify-end print:hidden">
         <Button variant="outline" size="sm" onClick={() => {
           if (!reportData) return;
-          exportReportPdf({ title: "Raport clasă", headers: ["Elev", "Clasă", "Rezervări", "Ore rezervate", "Ore validate"],
+          exportReportPdf({ title: "Raport clasă", headers: ["Elev", "Clasă", "Rezervări", "Ore rezervate / minim", "Ore validate / minim"],
             rows: reportData.map(s => [
               s.name, s.className, String(s.reservations),
-              formatHoursVsRequired(s.reservedHours, s.requiredHours),
-              formatHoursVsRequired(s.validatedHours, s.requiredHours),
+              fmtReq(s.reservedHours, s.requiredHours),
+              fmtReq(s.validatedHours, s.requiredHours),
             ]),
             filename: "raport-clasa" });
         }}>
@@ -264,17 +274,25 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
                 <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Nu există date.</TableCell></TableRow>
               ) : reportData?.map(s => (
                 <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <button type="button" className="text-left text-primary underline-offset-2 hover:underline" onClick={() => setSelected(s)}>{s.name}</button>
+                  </TableCell>
                   <TableCell>{s.className}</TableCell>
                   <TableCell className="text-right">{s.reservations}</TableCell>
-                  <TableCell className="text-right">{formatHoursVsRequired(s.reservedHours, s.requiredHours)}</TableCell>
-                  <TableCell className="text-right">{formatHoursVsRequired(s.validatedHours, s.requiredHours)}</TableCell>
+                  <TableCell className={`text-right ${s.requiredHours > 0 && s.reservedHours < s.requiredHours ? "text-destructive font-semibold" : ""}`}>{fmtReq(s.reservedHours, s.requiredHours)}</TableCell>
+                  <TableCell className="text-right">{fmtReq(s.validatedHours, s.requiredHours)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+      <HomeroomEnrollDialog
+        student={selected}
+        sessionId={sessionId}
+        onClose={() => setSelected(null)}
+        onEnrolled={() => queryClient.invalidateQueries({ queryKey: ["teacher-report-sumar"] })}
+      />
     </div>
   );
 }
