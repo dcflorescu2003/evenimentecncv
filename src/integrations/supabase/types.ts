@@ -929,6 +929,7 @@ export type Database = {
           notes_for_teachers: string | null
           published: boolean
           room_details: string | null
+          room_id: string | null
           session_id: string
           start_time: string
           status: Database["public"]["Enums"]["event_status"]
@@ -956,6 +957,7 @@ export type Database = {
           notes_for_teachers?: string | null
           published?: boolean
           room_details?: string | null
+          room_id?: string | null
           session_id: string
           start_time: string
           status?: Database["public"]["Enums"]["event_status"]
@@ -983,6 +985,7 @@ export type Database = {
           notes_for_teachers?: string | null
           published?: boolean
           room_details?: string | null
+          room_id?: string | null
           session_id?: string
           start_time?: string
           status?: Database["public"]["Enums"]["event_status"]
@@ -990,6 +993,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "events_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "vr_rooms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_session_id_fkey"
             columns: ["session_id"]
@@ -3263,6 +3273,18 @@ export type Database = {
       get_assistant_event_student_ids: {
         Args: { _assistant_id: string }
         Returns: string[]
+      }
+      get_available_rooms: {
+        Args: {
+          _date: string
+          _end: string
+          _exclude_event_id?: string
+          _start: string
+        }
+        Returns: {
+          id: string
+          name: string
+        }[]
       }
       get_club_id_for_enrollment: {
         Args: { _enrollment_id: string }

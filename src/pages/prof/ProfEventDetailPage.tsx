@@ -1,3 +1,4 @@
+import LocationField from "@/components/events/LocationField";
 import { formatDate, formatDateTime, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
 import { useState, useRef } from "react";
 import { sessionDateError, sessionRangeLabel } from "@/lib/session-range";
@@ -67,6 +68,8 @@ interface EventForm {
   start_time: string;
   end_time: string;
   location: string;
+  room_id: string | null;
+  in_school: boolean;
   room_details: string;
   max_capacity: number;
   status: EventStatus;
@@ -82,7 +85,7 @@ interface EventForm {
 
 const emptyForm: EventForm = {
   session_id: "", title: "", description: "", date: "",
-  start_time: "08:00", end_time: "10:00", location: "", room_details: "",
+  start_time: "08:00", end_time: "10:00", location: "", room_id: null, in_school: true, room_details: "",
   max_capacity: 30, status: "draft", eligible_grades: [], eligible_classes: [],
   booking_open_date: "", booking_open_time: "",
   booking_close_date: "", booking_close_time: "",
@@ -658,6 +661,7 @@ export default function ProfEventDetailPage() {
         computed_duration_display: dur.display,
         counted_duration_hours: dur.hours,
         location: values.location || null,
+        room_id: values.in_school ? values.room_id : null,
         room_details: values.room_details || null,
         max_capacity: values.max_capacity,
         status: values.status,
@@ -711,6 +715,8 @@ export default function ProfEventDetailPage() {
       start_time: event.start_time?.slice(0, 5),
       end_time: event.end_time?.slice(0, 5),
       location: event.location || "",
+      room_id: (event as any).room_id ?? null,
+      in_school: !!(event as any).room_id,
       room_details: event.room_details || "",
       max_capacity: event.max_capacity,
       status: event.status as EventStatus,
@@ -748,6 +754,7 @@ export default function ProfEventDetailPage() {
       toast.error("Ora de sfârșit trebuie să fie după ora de început");
       return;
     }
+    if (editForm.in_school && !editForm.room_id) { toast.error("Alege o sală din liceu"); return; }
     const rangeErr = editForm.session_id ? sessionDateError(sessions as any, editForm.session_id, editForm.date) : null;
     if (rangeErr) { toast.error(rangeErr); return; }
     editSaveMutation.mutate(editForm);
@@ -1589,10 +1596,7 @@ export default function ProfEventDetailPage() {
               <p className="text-sm text-muted-foreground">Durată: {editDur.display} → <strong>{editDur.hours}h</strong></p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Locație</Label>
-                <Input value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} />
-              </div>
+              <LocationField value={{ room_id: editForm.room_id, location: editForm.location, inSchool: editForm.in_school }} onChange={(v) => setEditForm((prev: any) => ({ ...prev, room_id: v.room_id, location: v.location, in_school: v.inSchool }))} date={editForm.date} start={editForm.start_time} end={editForm.end_time} excludeEventId={id} />
               <div className="space-y-2">
                 <Label>Capacitate maximă *</Label>
                 <Input type="number" min={1} value={editForm.max_capacity} onChange={(e) => setEditForm({ ...editForm, max_capacity: parseInt(e.target.value) || 1 })} />
