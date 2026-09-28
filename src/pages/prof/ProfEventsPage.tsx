@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sessionDateError, sessionRangeLabel } from "@/lib/session-range";
 import NormProgressCard from "@/components/prof/NormProgressCard";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
