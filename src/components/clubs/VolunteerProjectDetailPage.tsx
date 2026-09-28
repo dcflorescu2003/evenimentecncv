@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { TimeInput } from "@/components/ui/time-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import VolunteerFormTab from "./VolunteerFormTab";
+import VolunteerEnrollDialog from "./VolunteerEnrollDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -237,7 +239,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
             </div>
             {(project as any).is_private && !myEnrollment ? null : myEnrollment
               ? <Button size="sm" variant="outline" onClick={withdraw}>Retrage-mă</Button>
-              : <Button size="sm" onClick={enroll}>Înscrie-mă</Button>}
+              : <VolunteerEnrollDialog clubId={projectId!} />}
           </CardContent>
         </Card>
       )}
@@ -247,6 +249,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
           <TabsTrigger value="general">General</TabsTrigger>
           {showMembersTab && <TabsTrigger value="members">Înscriși ({enrollments.length})</TabsTrigger>}
           {showDaysTab && <TabsTrigger value="days">Zile & prezență</TabsTrigger>}
+          {canManage && <TabsTrigger value="form">Formular</TabsTrigger>}
           {canManage && <TabsTrigger value="coordinators">Coordonatori</TabsTrigger>}
           {canManage && <TabsTrigger value="assistants">Asistenți</TabsTrigger>}
         </TabsList>
@@ -274,6 +277,11 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
               readOnlyAttendance={viewMode === "homeroom_filtered"}
               userId={user!.id}
               onChange={() => qc.invalidateQueries({ queryKey: ["volunteer-days", projectId] })} />
+          </TabsContent>
+        )}
+        {canManage && (
+          <TabsContent value="form" className="pt-3">
+            <VolunteerFormTab clubId={projectId!} canEdit={canManage} />
           </TabsContent>
         )}
         {canManage && (
