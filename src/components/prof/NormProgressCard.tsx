@@ -7,10 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function NormProgressCard() {
+export default function NormProgressCard({ sessionId: controlled, hideSelector }: { sessionId?: string; hideSelector?: boolean } = {}) {
   const { user, profile } = useAuth();
   const norm = Number((profile as any)?.teaching_norm) || 0;
-  const [sessionId, setSessionId] = useState<string>("");
+  const [internal, setSessionId] = useState<string>("");
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["program_sessions_norm"],
@@ -23,10 +23,13 @@ export default function NormProgressCard() {
   });
 
   useEffect(() => {
-    if (!sessionId && sessions.length) {
+    if (!internal && sessions.length) {
       setSessionId((sessions.find((s) => s.status === "active") ?? sessions[0]).id);
     }
-  }, [sessions, sessionId]);
+  }, [sessions, internal]);
+
+  useEffect(() => { if (controlled) setSessionId(controlled); }, [controlled]);
+  const sessionId = controlled || internal;
 
   const { data: stats } = useQuery({
     queryKey: ["norm_progress", user?.id, sessionId],

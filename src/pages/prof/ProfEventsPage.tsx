@@ -96,6 +96,7 @@ export default function ProfEventsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<EventForm>(emptyForm);
   const [search, setSearch] = useState("");
+  const [sessionFilter, setSessionFilter] = useState<string | null>(null);
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["program_sessions"],
@@ -142,8 +143,11 @@ export default function ProfEventsPage() {
     enabled: !!user,
   });
 
+  const effectiveSession =
+    sessionFilter ?? (sessions.find((s) => s.status === "active")?.id || "all");
   const filtered = events.filter((e) =>
-    !search || e.title.toLowerCase().includes(search.toLowerCase())
+    (effectiveSession === "all" || e.session_id === effectiveSession) &&
+    (!search || e.title.toLowerCase().includes(search.toLowerCase()))
   );
 
   const saveMutation = useMutation({
@@ -334,7 +338,20 @@ export default function ProfEventsPage() {
         </Button>
       </div>
 
-      <NormProgressCard />
+      <div className="w-full sm:max-w-sm space-y-1">
+        <Label>Sesiune</Label>
+        <Select value={effectiveSession} onValueChange={setSessionFilter}>
+          <SelectTrigger><SelectValue placeholder="Alege sesiunea" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toate sesiunile</SelectItem>
+            {sessions.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.name}{s.status !== "active" ? " (inactivă)" : ""}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <NormProgressCard sessionId={effectiveSession === "all" ? undefined : effectiveSession} hideSelector={effectiveSession !== "all"} />
 
       <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
