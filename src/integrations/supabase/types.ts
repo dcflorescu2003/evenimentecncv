@@ -3343,6 +3343,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      homeroom_can_enroll: {
+        Args: { _actor: string; _event_id: string; _student: string }
+        Returns: boolean
+      }
       is_assistant_for_event: {
         Args: { _event_id: string; _student_id: string }
         Returns: boolean
@@ -3433,6 +3437,19 @@ export type Database = {
       }
       is_vr_volunteer: { Args: { _user_id: string }; Returns: boolean }
       issue_student_qr: { Args: never; Returns: Json }
+      list_enrollable_events_for_student: {
+        Args: { _session_id: string; _student_id: string }
+        Returns: {
+          counted_duration_hours: number
+          date: string
+          end_time: string
+          free_seats: number
+          id: string
+          location: string
+          start_time: string
+          title: string
+        }[]
+      }
       lookup_public_reservation: { Args: { p_code: string }; Returns: Json }
       manually_enroll_event_student: {
         Args: { _event_id: string; _student_id: string }
