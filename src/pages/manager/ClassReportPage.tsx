@@ -20,7 +20,7 @@ export default function ClassReportPage() {
   const { data: classes } = useQuery({
     queryKey: ["mgr-classes"],
     queryFn: async () => {
-      const { data } = await supabase.from("classes").select("id, display_name").eq("is_active", true).order("display_name");
+      const { data } = await supabase.from("classes").select("id, display_name, grade_number, section").eq("is_active", true).order("grade_number").order("section", { nullsFirst: true });
       return data || [];
     },
   });
@@ -32,7 +32,7 @@ export default function ClassReportPage() {
     queryKey: ["mgr-all-classes-summary", sessionId],
     enabled: !!sessionId,
     queryFn: async () => {
-      const { data: allClasses } = await supabase.from("classes").select("id, display_name").eq("is_active", true).order("display_name");
+      const { data: allClasses } = await supabase.from("classes").select("id, display_name, grade_number, section").eq("is_active", true).order("grade_number").order("section", { nullsFirst: true });
       if (!allClasses?.length) return [];
 
       const classIds = allClasses.map(c => c.id);
