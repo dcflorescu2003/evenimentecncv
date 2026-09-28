@@ -2773,6 +2773,45 @@ export type Database = {
           },
         ]
       }
+      volunteer_enrollment_answers: {
+        Row: {
+          created_at: string
+          enrollment_id: string
+          id: string
+          question_id: string
+          value: Json | null
+        }
+        Insert: {
+          created_at?: string
+          enrollment_id: string
+          id?: string
+          question_id: string
+          value?: Json | null
+        }
+        Update: {
+          created_at?: string
+          enrollment_id?: string
+          id?: string
+          question_id?: string
+          value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_enrollment_answers_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "volunteer_enrollment_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_form_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       volunteer_enrollments: {
         Row: {
           created_at: string
@@ -2807,6 +2846,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "volunteer_enrollments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "volunteer_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      volunteer_form_questions: {
+        Row: {
+          created_at: string
+          id: string
+          is_phone: boolean
+          options: Json | null
+          position: number
+          project_id: string
+          question_type: Database["public"]["Enums"]["feedback_question_type"]
+          required: boolean
+          scale_max: number | null
+          scale_max_label: string | null
+          scale_min: number | null
+          scale_min_label: string | null
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_phone?: boolean
+          options?: Json | null
+          position?: number
+          project_id: string
+          question_type: Database["public"]["Enums"]["feedback_question_type"]
+          required?: boolean
+          scale_max?: number | null
+          scale_max_label?: string | null
+          scale_min?: number | null
+          scale_min_label?: string | null
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_phone?: boolean
+          options?: Json | null
+          position?: number
+          project_id?: string
+          question_type?: Database["public"]["Enums"]["feedback_question_type"]
+          required?: boolean
+          scale_max?: number | null
+          scale_max_label?: string | null
+          scale_min?: number | null
+          scale_min_label?: string | null
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "volunteer_form_questions_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "volunteer_projects"
@@ -3120,6 +3218,10 @@ export type Database = {
         Args: { _club_id: string; _user_id: string }
         Returns: boolean
       }
+      can_manage_volunteer: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_modify_ticket_attendance: {
         Args: { _ticket_id: string; _user_id: string }
         Returns: boolean
@@ -3198,6 +3300,10 @@ export type Database = {
         }[]
       }
       get_project_id_for_day: { Args: { _day_id: string }; Returns: string }
+      get_project_id_for_volunteer_enrollment: {
+        Args: { _enrollment_id: string }
+        Returns: string
+      }
       get_response_meta: {
         Args: { _response_id: string }
         Returns: {
@@ -3402,6 +3508,10 @@ export type Database = {
           _response_id?: string
           _teacher_id: string
         }
+        Returns: string
+      }
+      submit_volunteer_enrollment: {
+        Args: { _answers?: Json; _project_id: string }
         Returns: string
       }
       vr_mark_prepared: {
