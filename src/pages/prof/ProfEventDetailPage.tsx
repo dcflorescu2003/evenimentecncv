@@ -1563,6 +1563,9 @@ export default function ProfEventDetailPage() {
               <div className="space-y-2">
                 <Label>Data *</Label>
                 <DateInput value={editForm.date} onChange={(v) => setEditForm({ ...editForm, date: v })} />
+                {sessionRangeLabel(sessions as any, editForm.session_id) && (
+                  <p className="text-xs text-muted-foreground">{sessionRangeLabel(sessions as any, editForm.session_id)}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Ora început *</Label>
