@@ -60,6 +60,7 @@ export default function NormProgressCard({ sessionId: controlled, hideSelector }
       <CardContent className="p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <p className="text-sm font-medium">Norma de ore (coordonare)</p>
+          {!hideSelector && (
           <Select value={sessionId} onValueChange={setSessionId}>
             <SelectTrigger className="w-full sm:w-64 h-8"><SelectValue placeholder="Sesiune" /></SelectTrigger>
             <SelectContent>
@@ -68,6 +69,7 @@ export default function NormProgressCard({ sessionId: controlled, hideSelector }
               ))}
             </SelectContent>
           </Select>
+          )}
         </div>
         {norm > 0 ? (
           <>
