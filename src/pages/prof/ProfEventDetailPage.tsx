@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
 import { useState, useRef } from "react";
+import { sessionDateError, sessionRangeLabel } from "@/lib/session-range";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -747,6 +748,8 @@ export default function ProfEventDetailPage() {
       toast.error("Ora de sfârșit trebuie să fie după ora de început");
       return;
     }
+    const rangeErr = editForm.session_id ? sessionDateError(sessions as any, editForm.session_id, editForm.date) : null;
+    if (rangeErr) { toast.error(rangeErr); return; }
     editSaveMutation.mutate(editForm);
   }
 
@@ -1561,6 +1564,9 @@ export default function ProfEventDetailPage() {
               <div className="space-y-2">
                 <Label>Data *</Label>
                 <DateInput value={editForm.date} onChange={(v) => setEditForm({ ...editForm, date: v })} />
+                {sessionRangeLabel(sessions as any, editForm.session_id) && (
+                  <p className="text-xs text-muted-foreground">{sessionRangeLabel(sessions as any, editForm.session_id)}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Ora început *</Label>

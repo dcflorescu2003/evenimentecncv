@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sessionDateError } from "@/lib/session-range";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -297,6 +298,8 @@ export default function EventsPage() {
       toast.error("Ora de sfârșit trebuie să fie după ora de început");
       return;
     }
+    const rangeErr = form.session_id ? sessionDateError(sessions as any, form.session_id, form.date) : null;
+    if (rangeErr) { toast.error(rangeErr); return; }
     saveMutation.mutate(form);
   }
 
