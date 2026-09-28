@@ -33,6 +33,7 @@ import {
   BookOpen,
   HeartHandshake,
   MessageSquare,
+  DoorOpen,
 } from "lucide-react";
 
 const menuItems = [
@@ -41,6 +42,7 @@ const menuItems = [
   { title: "Clase", icon: GraduationCap, path: "/admin/classes" },
   { title: "Orare clase", icon: CalendarRange, path: "/admin/schedules" },
   { title: "Materii", icon: BookOpen, path: "/admin/subjects" },
+  { title: "Săli", icon: DoorOpen, path: "/admin/rooms" },
   { title: "Import CSV", icon: FileUp, path: "/admin/import" },
   { title: "Evenimente", icon: CalendarDays, path: "/admin/events" },
   { title: "Cluburi & Voluntariat", icon: HeartHandshake, path: "/admin/clubs" },
