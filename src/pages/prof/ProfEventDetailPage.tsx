@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
 import { useState, useRef } from "react";
+import { sessionDateError, sessionRangeLabel } from "@/lib/session-range";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
