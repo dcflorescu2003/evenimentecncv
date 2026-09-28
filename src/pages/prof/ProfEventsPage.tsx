@@ -1,3 +1,4 @@
+import LocationField from "@/components/events/LocationField";
 import { useState } from "react";
 import { sessionDateError, sessionRangeLabel } from "@/lib/session-range";
 import NormProgressCard from "@/components/prof/NormProgressCard";
@@ -63,6 +64,8 @@ interface EventForm {
   start_time: string;
   end_time: string;
   location: string;
+  room_id: string | null;
+  in_school: boolean;
   room_details: string;
   max_capacity: number;
   max_per_class: number | null;
@@ -79,7 +82,7 @@ interface EventForm {
 
 const emptyForm: EventForm = {
   session_id: "", title: "", description: "", date: "",
-  start_time: "08:00", end_time: "10:00", location: "", room_details: "",
+  start_time: "08:00", end_time: "10:00", location: "", room_id: null, in_school: true, room_details: "",
   max_capacity: 30, max_per_class: null, status: "draft", eligible_grades: [], eligible_classes: [],
   booking_open_date: "", booking_open_time: "",
   booking_close_date: "", booking_close_time: "",
@@ -164,6 +167,7 @@ export default function ProfEventsPage() {
         computed_duration_display: dur.display,
         counted_duration_hours: dur.hours,
         location: values.location || null,
+        room_id: values.in_school ? values.room_id : null,
         room_details: values.room_details || null,
         max_capacity: values.max_capacity,
         max_per_class: values.max_per_class,
@@ -235,6 +239,8 @@ export default function ProfEventsPage() {
       start_time: ev.start_time?.slice(0, 5),
       end_time: ev.end_time?.slice(0, 5),
       location: ev.location || "",
+      room_id: (ev as any).room_id ?? null,
+      in_school: !!(ev as any).room_id,
       room_details: ev.room_details || "",
       max_capacity: ev.max_capacity,
       max_per_class: (ev as any).max_per_class ?? null,
@@ -279,6 +285,7 @@ export default function ProfEventsPage() {
       toast.error("Ora de sfârșit trebuie să fie după ora de început");
       return;
     }
+    if (form.in_school && !form.room_id) { toast.error("Alege o sală din liceu"); return; }
     const rangeErr = form.session_id ? sessionDateError(sessions as any, form.session_id, form.date) : null;
     if (rangeErr) { toast.error(rangeErr); return; }
     saveMutation.mutate(form);
@@ -515,10 +522,7 @@ export default function ProfEventsPage() {
               <p className="text-sm text-muted-foreground">Durată: {dur.display} → <strong>{dur.hours}h</strong></p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Locație</Label>
-                <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-              </div>
+              <LocationField value={{ room_id: form.room_id, location: form.location, inSchool: form.in_school }} onChange={(v) => setForm((prev: any) => ({ ...prev, room_id: v.room_id, location: v.location, in_school: v.inSchool }))} date={form.date} start={form.start_time} end={form.end_time} excludeEventId={editingId} />
               <div className="space-y-2">
                 <Label>Capacitate maximă *</Label>
                 <Input type="number" min={1} value={form.max_capacity} onChange={(e) => setForm({ ...form, max_capacity: parseInt(e.target.value) || 1 })} />
