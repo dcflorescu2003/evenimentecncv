@@ -274,6 +274,8 @@ export default function ProfEventsPage() {
       toast.error("Ora de sfârșit trebuie să fie după ora de început");
       return;
     }
+    const rangeErr = form.session_id ? sessionDateError(sessions as any, form.session_id, form.date) : null;
+    if (rangeErr) { toast.error(rangeErr); return; }
     saveMutation.mutate(form);
   }
 
@@ -470,6 +472,9 @@ export default function ProfEventsPage() {
               <div className="space-y-2">
                 <Label>Data *</Label>
                 <DateInput value={form.date} onChange={(v) => setForm({ ...form, date: v })} />
+                {sessionRangeLabel(sessions as any, form.session_id) && (
+                  <p className="text-xs text-muted-foreground">{sessionRangeLabel(sessions as any, form.session_id)}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Ora început *</Label>

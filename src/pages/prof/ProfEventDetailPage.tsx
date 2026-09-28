@@ -747,6 +747,8 @@ export default function ProfEventDetailPage() {
       toast.error("Ora de sfârșit trebuie să fie după ora de început");
       return;
     }
+    const rangeErr = editForm.session_id ? sessionDateError(sessions as any, editForm.session_id, editForm.date) : null;
+    if (rangeErr) { toast.error(rangeErr); return; }
     editSaveMutation.mutate(editForm);
   }
 
