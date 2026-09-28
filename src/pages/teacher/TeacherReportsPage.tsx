@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import HomeroomEnrollDialog, { type EnrollStudent } from "@/components/teacher/HomeroomEnrollDialog";
+import HomeroomAutoDistributeDialog from "@/components/teacher/HomeroomAutoDistributeDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/lib/time";
@@ -104,6 +105,7 @@ const fmtReq = (h: number, r: number) => `${h} / ${r > 0 ? r : "—"}`;
 function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; classIds: string[]; myClasses: any[] }) {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<EnrollStudent | null>(null);
+  const [autoOpen, setAutoOpen] = useState(false);
   const { data: reportData, isLoading } = useQuery({
     queryKey: ["teacher-report-sumar", sessionId, classIds],
     queryFn: async () => {
@@ -221,9 +223,17 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
     validatedHours: { label: "Ore validate", color: "hsl(160, 60%, 40%)" },
   };
 
+  const underMin = useMemo(
+    () => (reportData ?? []).filter((s) => s.requiredHours > 0 && s.reservedHours < s.requiredHours),
+    [reportData],
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-end print:hidden">
+      <div className="flex flex-wrap justify-end gap-2 print:hidden">
+        <Button size="sm" disabled={underMin.length === 0} onClick={() => setAutoOpen(true)}>
+          Distribuie automat elevii sub minim ({underMin.length})
+        </Button>
         <Button variant="outline" size="sm" onClick={() => {
           if (!reportData) return;
           exportReportPdf({ title: "Raport clasă", headers: ["Elev", "Clasă", "Rezervări", "Ore rezervate / minim", "Ore validate / minim"],
@@ -292,6 +302,13 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
         sessionId={sessionId}
         onClose={() => setSelected(null)}
         onEnrolled={() => queryClient.invalidateQueries({ queryKey: ["teacher-report-sumar"] })}
+      />
+      <HomeroomAutoDistributeDialog
+        open={autoOpen}
+        students={underMin}
+        sessionId={sessionId}
+        onClose={() => setAutoOpen(false)}
+        onDone={() => queryClient.invalidateQueries({ queryKey: ["teacher-report-sumar"] })}
       />
     </div>
   );
