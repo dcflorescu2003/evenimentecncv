@@ -29,7 +29,7 @@ export function ClassEligibilityPicker({ eligibleGrades, eligibleClasses, onChan
         .select("id, display_name, grade_number")
         .eq("is_active", true)
         .order("grade_number")
-        .order("display_name");
+        .order("section", { nullsFirst: true });
       if (error) throw error;
       return (data ?? []) as ClassRow[];
     },

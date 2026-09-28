@@ -1622,7 +1622,7 @@ export default function ProfEventDetailPage() {
                 <Label>{isCse ? "Ani eligibili" : "Clase eligibile"}</Label>
                 {isCse ? (
                   <div className="flex flex-wrap gap-3 rounded-md border p-3">
-                    {[9, 10, 11, 12].map((g) => (
+                    {[5, 6, 7, 8, 9, 10, 11, 12].map((g) => (
                       <label key={g} className="flex items-center gap-2 text-sm cursor-pointer">
                         <Checkbox
                           checked={editForm.eligible_grades.includes(g)}
@@ -1636,7 +1636,7 @@ export default function ProfEventDetailPage() {
                             }));
                           }}
                         />
-                        Clasa a {["IX", "X", "XI", "XII"][g - 9]}-a
+                        Clasa a {["V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"][g - 5]}-a
                       </label>
                     ))}
                   </div>
