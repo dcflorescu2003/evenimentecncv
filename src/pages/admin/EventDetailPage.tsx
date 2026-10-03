@@ -335,11 +335,18 @@ export default function EventDetailPage() {
     enabled: assistantDialogOpen || enrollStudentDialogOpen,
   });
 
-  // Exclude already-assistants (allow all students, even if already participants)
+  // Assistants may only be chosen from students enrolled at the event
   const assistantStudentIdsSet = new Set(assistants.map((a: any) => a.student_id));
-  const availableStudents = allStudents.filter(
-    (s) => !assistantStudentIdsSet.has(s.id)
-  );
+  const classByStudent = new Map(allStudents.map((s: any) => [s.id, s.class_name]));
+  const availableStudents = participants
+    .filter((p: any) => p.profiles && !assistantStudentIdsSet.has(p.student_id))
+    .map((p: any) => ({
+      id: p.student_id,
+      first_name: p.profiles.first_name,
+      last_name: p.profiles.last_name,
+      class_name: classByStudent.get(p.student_id) || null,
+    }))
+    .sort((a: any, b: any) => (a.last_name || "").localeCompare(b.last_name || "", "ro") || (a.first_name || "").localeCompare(b.first_name || "", "ro"));
 
   const assignAssistantMutation = useMutation({
     mutationFn: async (studentId: string) => {
