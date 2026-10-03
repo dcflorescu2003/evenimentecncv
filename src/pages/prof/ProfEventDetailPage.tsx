@@ -1347,12 +1347,12 @@ export default function ProfEventDetailPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Adaugă elev asistent</DialogTitle>
-            <DialogDescription>Caută și selectează un elev care va fi asistent la acest eveniment.</DialogDescription>
+            <DialogDescription>Alege un elev dintre cei înscriși la acest eveniment.</DialogDescription>
           </DialogHeader>
           <Command className="border rounded-md">
             <CommandInput placeholder="Caută elev după nume..." value={assistantSearch} onValueChange={setAssistantSearch} />
             <CommandList>
-              <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+              <CommandEmpty>{availableStudents.length === 0 ? "Niciun elev înscris la acest eveniment." : "Niciun elev găsit."}</CommandEmpty>
               <CommandGroup>
                 {availableStudents
                   .filter((s: any) => {
