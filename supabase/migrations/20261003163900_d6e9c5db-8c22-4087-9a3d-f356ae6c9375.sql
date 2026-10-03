@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.validate_event_assistant_enrolled() FROM PUBLIC, anon, authenticated;
