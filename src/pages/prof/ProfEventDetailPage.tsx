@@ -326,24 +326,10 @@ export default function ProfEventDetailPage() {
 
   // Searchable students for assistant assignment
   const { data: allStudents = [] } = useQuery({
-    queryKey: ["all_students_for_prof_assistant"],
+    queryKey: ["prof_assistant_candidates", id, participants.map((p: any) => p.student_id).join(",")],
     queryFn: async () => {
-      let allRoleIds: string[] = [];
-      let from = 0;
-      const batchSize = 1000;
-      while (true) {
-        const { data: roleData, error: roleError } = await supabase
-          .from("user_roles")
-          .select("user_id")
-          .eq("role", "student")
-          .range(from, from + batchSize - 1);
-        if (roleError) throw roleError;
-        if (!roleData || roleData.length === 0) break;
-        allRoleIds.push(...roleData.map((r) => r.user_id));
-        if (roleData.length < batchSize) break;
-        from += batchSize;
-      }
-      const ids = [...new Set(allRoleIds)];
+      // Only students enrolled at this event can become assistants
+      const ids = [...new Set(participants.map((p: any) => p.student_id as string))];
       if (ids.length === 0) return [];
       const chunkSize = 200;
       let allProfiles: any[] = [];
@@ -1361,12 +1347,12 @@ export default function ProfEventDetailPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Adaugă elev asistent</DialogTitle>
-            <DialogDescription>Caută și selectează un elev care va fi asistent la acest eveniment.</DialogDescription>
+            <DialogDescription>Alege un elev dintre cei înscriși la acest eveniment.</DialogDescription>
           </DialogHeader>
           <Command className="border rounded-md">
             <CommandInput placeholder="Caută elev după nume..." value={assistantSearch} onValueChange={setAssistantSearch} />
             <CommandList>
-              <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+              <CommandEmpty>{availableStudents.length === 0 ? "Niciun elev înscris la acest eveniment." : "Niciun elev găsit."}</CommandEmpty>
               <CommandGroup>
                 {availableStudents
                   .filter((s: any) => {

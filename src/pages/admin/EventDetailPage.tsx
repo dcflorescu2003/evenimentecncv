@@ -335,11 +335,18 @@ export default function EventDetailPage() {
     enabled: assistantDialogOpen || enrollStudentDialogOpen,
   });
 
-  // Exclude already-assistants (allow all students, even if already participants)
+  // Assistants may only be chosen from students enrolled at the event
   const assistantStudentIdsSet = new Set(assistants.map((a: any) => a.student_id));
-  const availableStudents = allStudents.filter(
-    (s) => !assistantStudentIdsSet.has(s.id)
-  );
+  const classByStudent = new Map(allStudents.map((s: any) => [s.id, s.class_name]));
+  const availableStudents = participants
+    .filter((p: any) => p.profiles && !assistantStudentIdsSet.has(p.student_id))
+    .map((p: any) => ({
+      id: p.student_id,
+      first_name: p.profiles.first_name,
+      last_name: p.profiles.last_name,
+      class_name: classByStudent.get(p.student_id) || null,
+    }))
+    .sort((a: any, b: any) => (a.last_name || "").localeCompare(b.last_name || "", "ro") || (a.first_name || "").localeCompare(b.first_name || "", "ro"));
 
   const assignAssistantMutation = useMutation({
     mutationFn: async (studentId: string) => {
@@ -1320,12 +1327,12 @@ export default function EventDetailPage() {
         <DialogContent className="max-w-[calc(100vw-1.5rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adaugă elev asistent</DialogTitle>
-            <DialogDescription>Caută și selectează un elev care va fi asistent la acest eveniment.</DialogDescription>
+            <DialogDescription>Alege un elev dintre cei înscriși la acest eveniment.</DialogDescription>
           </DialogHeader>
           <Command className="border rounded-md">
             <CommandInput placeholder="Caută elev după nume..." value={assistantSearch} onValueChange={setAssistantSearch} />
             <CommandList>
-              <CommandEmpty>Niciun elev găsit.</CommandEmpty>
+              <CommandEmpty>{availableStudents.length === 0 ? "Niciun elev înscris la acest eveniment." : "Niciun elev găsit."}</CommandEmpty>
               <CommandGroup>
                 {availableStudents
                   .filter((s: any) => {
