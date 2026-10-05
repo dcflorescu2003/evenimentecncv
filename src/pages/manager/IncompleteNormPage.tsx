@@ -33,7 +33,7 @@ export default function IncompleteNormPage() {
 
       // Get all session events
       const { data: sessionEvents } = await supabase
-        .from("events").select("id, counted_duration_hours, date").eq("session_id", sessionId);
+        .from("events").select("id, counted_duration_hours, date, status").eq("session_id", sessionId);
       const sessionEventIds = (sessionEvents || []).map((e) => e.id);
       const eventHoursMap = Object.fromEntries((sessionEvents || []).map((e) => [e.id, e.counted_duration_hours]));
 
@@ -90,8 +90,14 @@ export default function IncompleteNormPage() {
       // Get coordinator assignments for session events
       const { data: coords } = await supabase.from("coordinator_assignments").select("teacher_id, event_id").in("teacher_id", teachersWithNorm.map((t) => t.id));
       
+      const sessionEventMap = Object.fromEntries((sessionEvents || []).map((e) => [e.id, e]));
       const coordsByTeacher: Record<string, string[]> = {};
+      const plannedByTeacher: Record<string, string[]> = {};
       (coords || []).forEach((c) => {
+        const ev = sessionEventMap[c.event_id];
+        if (!ev || ev.status === "draft" || ev.status === "cancelled") return;
+        if (!plannedByTeacher[c.teacher_id]) plannedByTeacher[c.teacher_id] = [];
+        plannedByTeacher[c.teacher_id].push(c.event_id);
         if (heldIds.has(c.event_id)) {
           if (!coordsByTeacher[c.teacher_id]) coordsByTeacher[c.teacher_id] = [];
           coordsByTeacher[c.teacher_id].push(c.event_id);
@@ -102,13 +108,14 @@ export default function IncompleteNormPage() {
         .map((p) => {
           const evts = coordsByTeacher[p.id] || [];
           const hours = evts.reduce((s, eid) => s + (eventHoursMap[eid] || 0), 0);
+          const plannedHours = (plannedByTeacher[p.id] || []).reduce((s, eid) => s + (eventHoursMap[eid] || 0), 0);
           const norm = p.teaching_norm;
           if (hours >= norm) return null;
-          return { id: p.id, name: `${p.last_name} ${p.first_name}`, events: evts.length, organizedHours: hours, norm, remaining: norm - hours };
+          return { id: p.id, name: `${p.last_name} ${p.first_name}`, events: evts.length, plannedHours, organizedHours: hours, norm, remaining: norm - hours };
         })
         .filter(Boolean)
         .sort((a, b) => a!.name.localeCompare(b!.name)) as Array<{
-          id: string; name: string; events: number; organizedHours: number; norm: number; remaining: number;
+          id: string; name: string; events: number; plannedHours: number; organizedHours: number; norm: number; remaining: number;
         }>;
     },
   });
@@ -218,9 +225,9 @@ export default function IncompleteNormPage() {
     if (!teacherData?.length) return;
     exportReportPdf({
       title: `Normă incompletă — Profesori — ${sessionName}`,
-      headers: ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate", "Norma", "Ore rămase"],
+      headers: ["Nr.", "Profesor", "Nr. evenimente", "Ore planificate", "Ore organizate", "Norma", "Ore rămase"],
       rows: teacherData.map((t, i) => [
-        String(i + 1), t.name, String(t.events), `${t.organizedHours}h`, `${t.norm}h`, `${t.remaining}h`,
+        String(i + 1), t.name, String(t.events), `${t.plannedHours}h`, `${t.organizedHours}h`, `${t.norm}h`, `${t.remaining}h`,
       ]),
       filename: "norma-incompleta-profesori",
     });
@@ -277,6 +284,7 @@ export default function IncompleteNormPage() {
                       <TableHead className="w-12">Nr.</TableHead>
                       <TableHead>Profesor</TableHead>
                       <TableHead>Nr. evenimente</TableHead>
+                      <TableHead>Ore planificate</TableHead>
                       <TableHead>Ore organizate</TableHead>
                       <TableHead>Norma</TableHead>
                       <TableHead>Ore rămase</TableHead>
@@ -289,6 +297,7 @@ export default function IncompleteNormPage() {
                         <TableCell>{i + 1}</TableCell>
                         <TableCell>{t.name}</TableCell>
                         <TableCell>{t.events}</TableCell>
+                        <TableCell>{t.plannedHours}h</TableCell>
                         <TableCell>{t.organizedHours}h</TableCell>
                         <TableCell>{t.norm}h</TableCell>
                         <TableCell className="font-semibold text-destructive">{t.remaining}h</TableCell>
@@ -303,7 +312,7 @@ export default function IncompleteNormPage() {
                 {teacherData.map((t, i) => (
                   <div key={t.id} className="rounded-lg border bg-card p-3 space-y-1 cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/manager/teachers?id=${t.id}&from=incomplete`)}>
                     <p className="font-medium">{i + 1}. {t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.events} evenimente · {t.organizedHours}h / {t.norm}h</p>
+                    <p className="text-xs text-muted-foreground">{t.events} evenimente · Planificate: {t.plannedHours}h · Organizate: {t.organizedHours}h / {t.norm}h</p>
                     <p className="text-xs font-semibold text-destructive">Rămase: {t.remaining}h</p>
                   </div>
                 ))}
