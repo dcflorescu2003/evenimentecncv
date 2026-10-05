@@ -344,29 +344,36 @@ export default function TeacherReportPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {detail.events.map((e, i) => (
-                      <TableRow key={e.id} className={!e.isHeld ? "opacity-50" : ""}>
+                    {detail.events.map((e, i) => {
+                      const empty = e.participants === 0 && !e.isHeld && e.status !== "cancelled" && e.status !== "draft";
+                      return (
+                      <TableRow key={e.id} className={empty ? "bg-warning/15 hover:bg-warning/20" : !e.isHeld ? "opacity-50" : ""}>
                         <TableCell>{i + 1}</TableCell>
                         <TableCell>{e.date}</TableCell>
-                        <TableCell>{e.title}</TableCell>
+                        <TableCell>{e.title}{empty && <Badge className="ml-2 bg-warning text-warning-foreground hover:bg-warning">Fără participanți</Badge>}</TableCell>
                         <TableCell>{e.start_time?.slice(0, 5)} - {e.end_time?.slice(0, 5)}</TableCell>
                         <TableCell>{e.counted_duration_hours}h</TableCell>
                         <TableCell>{e.participants}</TableCell>
                         <TableCell>{e.status}</TableCell>
                         <TableCell>{e.isHeld ? "✓" : "—"}</TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
 
               {/* Mobile */}
               <div className="md:hidden space-y-2">
-                {detail.events.map((e, i) => (
-                  <div key={e.id} className={`rounded-lg border bg-card p-3 space-y-1 ${!e.isHeld ? "opacity-60" : ""}`}>
+                {detail.events.map((e, i) => {
+                  const empty = e.participants === 0 && !e.isHeld && e.status !== "cancelled" && e.status !== "draft";
+                  return (
+                  <div key={e.id} className={`rounded-lg border p-3 space-y-1 ${empty ? "bg-warning/15 border-warning" : "bg-card"} ${!e.isHeld && !empty ? "opacity-60" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-medium min-w-0 flex-1 break-words">{i + 1}. {e.title}</p>
-                      <Badge variant={e.isHeld ? "default" : "secondary"} className="shrink-0">{e.isHeld ? "✓ Desf." : e.status}</Badge>
+                      {empty
+                        ? <Badge className="shrink-0 bg-warning text-warning-foreground hover:bg-warning">Fără participanți</Badge>
+                        : <Badge variant={e.isHeld ? "default" : "secondary"} className="shrink-0">{e.isHeld ? "✓ Desf." : e.status}</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {e.date} · {e.start_time?.slice(0, 5)}–{e.end_time?.slice(0, 5)} · {e.counted_duration_hours}h · {e.participants} part.
