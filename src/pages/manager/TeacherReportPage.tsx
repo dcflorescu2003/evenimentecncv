@@ -51,7 +51,7 @@ export default function TeacherReportPage() {
       const { data: coords } = await supabase.from("coordinator_assignments").select("teacher_id, event_id").in("teacher_id", teacherIds);
       const allEventIds = [...new Set((coords || []).map((c) => c.event_id))];
       const { data: events } = allEventIds.length
-        ? await supabase.from("events").select("id, counted_duration_hours, session_id, date").in("id", allEventIds)
+        ? await supabase.from("events").select("id, counted_duration_hours, session_id, date, status").in("id", allEventIds)
         : { data: [] };
       
       const sessionEvents = (events || []).filter((e) => e.session_id === sessionId);
@@ -102,18 +102,29 @@ export default function TeacherReportPage() {
       const heldIds = getHeldEventIds(sessionEvents, ticketsByEvent, minParticipants);
       const eventHoursMap = Object.fromEntries(sessionEvents.map((e) => [e.id, e.counted_duration_hours]));
 
+      const participantCount: Record<string, number> = {};
+      reservations.forEach((r) => { participantCount[r.event_id] = (participantCount[r.event_id] || 0) + 1; });
+      pubRes.forEach((r) => { participantCount[r.event_id] = (participantCount[r.event_id] || 0) + 1; });
+      const emptyIds = new Set(
+        sessionEvents
+          .filter((e: any) => e.status !== "draft" && e.status !== "cancelled" && !heldIds.has(e.id) && !participantCount[e.id])
+          .map((e) => e.id),
+      );
+
       const coordsByTeacher: Record<string, string[]> = {};
+      const emptyByTeacher: Record<string, number> = {};
       (coords || []).forEach((c) => {
+        if (emptyIds.has(c.event_id)) emptyByTeacher[c.teacher_id] = (emptyByTeacher[c.teacher_id] || 0) + 1;
         if (heldIds.has(c.event_id)) {
           if (!coordsByTeacher[c.teacher_id]) coordsByTeacher[c.teacher_id] = [];
           coordsByTeacher[c.teacher_id].push(c.event_id);
         }
       });
 
-      return teacherIds.reduce<Record<string, { events: number; hours: number }>>((acc, id) => {
+      return teacherIds.reduce<Record<string, { events: number; hours: number; plannedEmpty: number }>>((acc, id) => {
         const evts = coordsByTeacher[id] || [];
         const hours = evts.reduce((s, eid) => s + (eventHoursMap[eid] || 0), 0);
-        acc[id] = { events: evts.length, hours };
+        acc[id] = { events: evts.length, hours, plannedEmpty: emptyByTeacher[id] || 0 };
         return acc;
       }, {});
     },
@@ -379,7 +390,8 @@ export default function TeacherReportPage() {
                       {e.date} · {e.start_time?.slice(0, 5)}–{e.end_time?.slice(0, 5)} · {e.counted_duration_hours}h · {e.participants} part.
                     </p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
