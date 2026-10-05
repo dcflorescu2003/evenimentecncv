@@ -112,8 +112,14 @@ export default function TeacherReportPage() {
       );
 
       const coordsByTeacher: Record<string, string[]> = {};
+      const plannedByTeacher: Record<string, string[]> = {};
       const emptyByTeacher: Record<string, number> = {};
+      const sessionEventMap = Object.fromEntries(sessionEvents.map((e) => [e.id, e]));
       (coords || []).forEach((c) => {
+        const ev = sessionEventMap[c.event_id];
+        if (!ev || ev.status === "draft" || ev.status === "cancelled") return;
+        if (!plannedByTeacher[c.teacher_id]) plannedByTeacher[c.teacher_id] = [];
+        plannedByTeacher[c.teacher_id].push(c.event_id);
         if (emptyIds.has(c.event_id)) emptyByTeacher[c.teacher_id] = (emptyByTeacher[c.teacher_id] || 0) + 1;
         if (heldIds.has(c.event_id)) {
           if (!coordsByTeacher[c.teacher_id]) coordsByTeacher[c.teacher_id] = [];
@@ -121,10 +127,11 @@ export default function TeacherReportPage() {
         }
       });
 
-      return teacherIds.reduce<Record<string, { events: number; hours: number; plannedEmpty: number }>>((acc, id) => {
+      return teacherIds.reduce<Record<string, { events: number; hours: number; plannedHours: number; plannedEmpty: number }>>((acc, id) => {
         const evts = coordsByTeacher[id] || [];
         const hours = evts.reduce((s, eid) => s + (eventHoursMap[eid] || 0), 0);
-        acc[id] = { events: evts.length, hours, plannedEmpty: emptyByTeacher[id] || 0 };
+        const plannedHours = (plannedByTeacher[id] || []).reduce((s, eid) => s + (eventHoursMap[eid] || 0), 0);
+        acc[id] = { events: evts.length, hours, plannedHours, plannedEmpty: emptyByTeacher[id] || 0 };
         return acc;
       }, {});
     },
@@ -216,7 +223,7 @@ export default function TeacherReportPage() {
   const handleExportSummary = () => {
     if (!filteredTeachers.length || !summary) return;
     const headers = ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate", "Planificate fără participanți"];
-    if (sessionHasRules) headers.push("Norma");
+    if (sessionHasRules) headers.push("Planificate/Realizate/Normă");
     exportReportPdf({
       title: `Raport profesori — ${sessionName}`,
       headers,
@@ -226,7 +233,7 @@ export default function TeacherReportPage() {
           String(summary[t.id]?.events || 0), String(summary[t.id]?.hours || 0) + "h",
           String(summary[t.id]?.plannedEmpty || 0),
         ];
-        if (sessionHasRules) row.push(t.teaching_norm ? `${t.teaching_norm}h` : "—");
+        if (sessionHasRules) row.push(`${summary[t.id]?.plannedHours || 0}h / ${summary[t.id]?.hours || 0}h / ${t.teaching_norm ? `${t.teaching_norm}h` : "—"}`);
         return row;
       }),
       filename: "raport-profesori",
@@ -286,7 +293,7 @@ export default function TeacherReportPage() {
                   <TableHead>Nr. evenimente</TableHead>
                   <TableHead>Ore organizate</TableHead>
                   <TableHead>Planificate fără participanți</TableHead>
-                  {sessionHasRules && <TableHead>Norma</TableHead>}
+                  {sessionHasRules && <TableHead>Planificate/Realizate/Normă</TableHead>}
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -300,11 +307,9 @@ export default function TeacherReportPage() {
                     <TableCell>{summary?.[t.id]?.plannedEmpty ? <Badge className="bg-warning text-warning-foreground hover:bg-warning">{summary[t.id].plannedEmpty}</Badge> : 0}</TableCell>
                     {sessionHasRules && (
                       <TableCell>
-                        {t.teaching_norm ? (
-                          <span className={summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : "text-destructive font-semibold"}>
-                            {summary?.[t.id]?.hours || 0}h / {t.teaching_norm}h
-                          </span>
-                        ) : "—"}
+                        <span className={t.teaching_norm && summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : !t.teaching_norm ? "" : "text-destructive font-semibold"}>
+                          {summary?.[t.id]?.plannedHours || 0}h / {summary?.[t.id]?.hours || 0}h / {t.teaching_norm ? `${t.teaching_norm}h` : "—"}
+                        </span>
                       </TableCell>
                     )}
                     <TableCell><Button variant="link" size="sm" onClick={() => setSelectedId(t.id)}>Detalii</Button></TableCell>
@@ -325,9 +330,9 @@ export default function TeacherReportPage() {
                 {!!summary?.[t.id]?.plannedEmpty && (
                   <p className="text-xs font-semibold text-warning">{summary[t.id].plannedEmpty} planificate fără participanți</p>
                 )}
-                {sessionHasRules && t.teaching_norm && (
-                  <p className={`text-xs ${summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : "text-destructive font-semibold"}`}>
-                    Normă: {summary?.[t.id]?.hours || 0}h / {t.teaching_norm}h
+                {sessionHasRules && (
+                  <p className={`text-xs ${t.teaching_norm && summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : !t.teaching_norm ? "" : "text-destructive font-semibold"}`}>
+                    Planif./Realiz./Normă: {summary?.[t.id]?.plannedHours || 0}h / {summary?.[t.id]?.hours || 0}h / {t.teaching_norm ? `${t.teaching_norm}h` : "—"}
                   </p>
                 )}
               </div>
