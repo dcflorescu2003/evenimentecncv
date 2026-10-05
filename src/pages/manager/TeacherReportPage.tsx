@@ -215,7 +215,7 @@ export default function TeacherReportPage() {
 
   const handleExportSummary = () => {
     if (!filteredTeachers.length || !summary) return;
-    const headers = ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate"];
+    const headers = ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate", "Planificate fără participanți"];
     if (sessionHasRules) headers.push("Norma");
     exportReportPdf({
       title: `Raport profesori — ${sessionName}`,
@@ -224,6 +224,7 @@ export default function TeacherReportPage() {
         const row = [
           String(i + 1), `${t.last_name} ${t.first_name}`,
           String(summary[t.id]?.events || 0), String(summary[t.id]?.hours || 0) + "h",
+          String(summary[t.id]?.plannedEmpty || 0),
         ];
         if (sessionHasRules) row.push(t.teaching_norm ? `${t.teaching_norm}h` : "—");
         return row;
@@ -241,7 +242,7 @@ export default function TeacherReportPage() {
       headers: ["Nr.", "Data", "Eveniment", "Interval", "Ore", "Participanți", "Status", "Desfășurat"],
       rows: detail.events.map((e, i) => [
         String(i + 1), e.date, e.title, `${e.start_time?.slice(0, 5)} - ${e.end_time?.slice(0, 5)}`,
-        String(e.counted_duration_hours), String(e.participants), e.status, e.isHeld ? "Da" : "Nu",
+        String(e.counted_duration_hours), String(e.participants), e.status, e.isHeld ? "Da" : (e.participants === 0 && e.status !== "cancelled" && e.status !== "draft" ? "Nu — fără participanți" : "Nu"),
       ]),
       filename: `raport-profesor-${name}`,
       orientation: "landscape",
@@ -284,6 +285,7 @@ export default function TeacherReportPage() {
                   <TableHead>Profesor</TableHead>
                   <TableHead>Nr. evenimente</TableHead>
                   <TableHead>Ore organizate</TableHead>
+                  <TableHead>Planificate fără participanți</TableHead>
                   {sessionHasRules && <TableHead>Norma</TableHead>}
                   <TableHead></TableHead>
                 </TableRow>
@@ -295,6 +297,7 @@ export default function TeacherReportPage() {
                     <TableCell>{`${t.last_name} ${t.first_name}`}</TableCell>
                     <TableCell>{summary?.[t.id]?.events || 0}</TableCell>
                     <TableCell>{summary?.[t.id]?.hours || 0}h</TableCell>
+                    <TableCell>{summary?.[t.id]?.plannedEmpty ? <Badge className="bg-warning text-warning-foreground hover:bg-warning">{summary[t.id].plannedEmpty}</Badge> : 0}</TableCell>
                     {sessionHasRules && (
                       <TableCell>
                         {t.teaching_norm ? (
@@ -319,6 +322,9 @@ export default function TeacherReportPage() {
                 <p className="text-xs text-muted-foreground">
                   {summary?.[t.id]?.events || 0} evenimente · {summary?.[t.id]?.hours || 0}h organizate
                 </p>
+                {!!summary?.[t.id]?.plannedEmpty && (
+                  <p className="text-xs font-semibold text-warning">{summary[t.id].plannedEmpty} planificate fără participanți</p>
+                )}
                 {sessionHasRules && t.teaching_norm && (
                   <p className={`text-xs ${summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : "text-destructive font-semibold"}`}>
                     Normă: {summary?.[t.id]?.hours || 0}h / {t.teaching_norm}h
