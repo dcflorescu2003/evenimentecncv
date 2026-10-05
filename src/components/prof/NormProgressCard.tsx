@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function NormProgressCard({ sessionId: controlled, hideSelector }: { sessionId?: string; hideSelector?: boolean } = {}) {
   const { user, profile } = useAuth();
-  const norm = Number((profile as any)?.teaching_norm) || 0;
+  const norm = Number(profile?.teaching_norm) || 0;
   const [internal, setSessionId] = useState<string>("");
 
   const { data: sessions = [] } = useQuery({
