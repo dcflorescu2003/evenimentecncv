@@ -49,7 +49,7 @@ export default function ClassReportPage() {
       if (!allStudentIdSet.size) return allClasses.map(c => ({ classId: c.id, className: c.display_name, studentCount: 0, events: [] }));
 
       // Get all session events first, then reservations per event
-      const { data: events } = await supabase.from("events").select("id, title, date, start_time, end_time, counted_duration_hours").eq("session_id", sessionId).order("date").order("start_time");
+      const { data: events } = await supabase.from("events").select("id, title, date, start_time, end_time, counted_duration_hours, eligible_classes, eligible_grades, is_public, status").eq("session_id", sessionId).not("status", "in", "(draft,cancelled)").order("date").order("start_time");
       if (!events?.length) return allClasses.map(c => ({ classId: c.id, className: c.display_name, studentCount: studentsByClass.get(c.id)?.size || 0, events: [] }));
 
       const sessionEventIds = new Set(events.map(e => e.id));
@@ -80,7 +80,15 @@ export default function ClassReportPage() {
           .map(e => ({
             ...e,
             studentCount: eventClassStudents.get(e.id)?.get(c.id) || 0,
+            noParticipants: false,
           }));
+        const emptyEvents = (events || [])
+          .filter((e: any) => !e.is_public && !eventClassStudents.get(e.id)?.has(c.id) && (
+            (e.eligible_classes || []).includes(c.id) ||
+            (c.grade_number != null && (e.eligible_grades || []).map(String).includes(String(c.grade_number)))
+          ))
+          .map(e => ({ ...e, studentCount: 0, noParticipants: true }));
+        classEvents.push(...emptyEvents);
         return { classId: c.id, className: c.display_name, studentCount, events: classEvents };
       });
     },
@@ -100,7 +108,7 @@ export default function ClassReportPage() {
         rows.push(["", "", "0 evenimente", "", `0/${c.studentCount}`]);
       } else {
         c.events.forEach(e => {
-          rows.push(["", e.date, e.title, `${e.start_time?.slice(0, 5)} - ${e.end_time?.slice(0, 5)}`, String(e.studentCount) + " elevi"]);
+          rows.push(["", e.date, e.noParticipants ? `${e.title} (fără participanți)` : e.title, `${e.start_time?.slice(0, 5)} - ${e.end_time?.slice(0, 5)}`, String(e.studentCount) + " elevi"]);
         });
         const totalInscrisi = c.events.reduce((sum, e) => sum + e.studentCount, 0);
         rows.push(["", "", "", "TOTAL", `${totalInscrisi}/${c.studentCount}`]);
@@ -165,9 +173,9 @@ export default function ClassReportPage() {
                   </TableHeader>
                   <TableBody>
                     {c.events.length > 0 ? c.events.map(e => (
-                      <TableRow key={e.id}>
+                      <TableRow key={e.id} className={e.noParticipants ? "bg-warning/15 hover:bg-warning/20" : ""}>
                         <TableCell>{e.date}</TableCell>
-                        <TableCell>{e.title}</TableCell>
+                        <TableCell>{e.title}{e.noParticipants && <Badge className="ml-2 bg-warning text-warning-foreground hover:bg-warning">0 înscriși</Badge>}</TableCell>
                         <TableCell>{e.start_time?.slice(0, 5)} - {e.end_time?.slice(0, 5)}</TableCell>
                         <TableCell>{e.counted_duration_hours}h</TableCell>
                         <TableCell>{e.studentCount}</TableCell>
@@ -183,10 +191,10 @@ export default function ClassReportPage() {
               {/* Mobile */}
               <div className="md:hidden space-y-2">
                 {c.events.length > 0 ? c.events.map(e => (
-                  <div key={e.id} className="rounded-lg border bg-card p-3 space-y-1">
+                  <div key={e.id} className={`rounded-lg border p-3 space-y-1 ${e.noParticipants ? "bg-warning/15 border-warning" : "bg-card"}`}>
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-medium min-w-0 flex-1 break-words">{e.title}</p>
-                      <Badge variant="secondary" className="shrink-0">{e.studentCount}</Badge>
+                      {e.noParticipants ? <Badge className="shrink-0 bg-warning text-warning-foreground hover:bg-warning">0 înscriși</Badge> : <Badge variant="secondary" className="shrink-0">{e.studentCount}</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {e.date} · {e.start_time?.slice(0, 5)}–{e.end_time?.slice(0, 5)} · {e.counted_duration_hours}h

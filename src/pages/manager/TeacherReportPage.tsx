@@ -51,7 +51,7 @@ export default function TeacherReportPage() {
       const { data: coords } = await supabase.from("coordinator_assignments").select("teacher_id, event_id").in("teacher_id", teacherIds);
       const allEventIds = [...new Set((coords || []).map((c) => c.event_id))];
       const { data: events } = allEventIds.length
-        ? await supabase.from("events").select("id, counted_duration_hours, session_id, date").in("id", allEventIds)
+        ? await supabase.from("events").select("id, counted_duration_hours, session_id, date, status").in("id", allEventIds)
         : { data: [] };
       
       const sessionEvents = (events || []).filter((e) => e.session_id === sessionId);
@@ -102,18 +102,29 @@ export default function TeacherReportPage() {
       const heldIds = getHeldEventIds(sessionEvents, ticketsByEvent, minParticipants);
       const eventHoursMap = Object.fromEntries(sessionEvents.map((e) => [e.id, e.counted_duration_hours]));
 
+      const participantCount: Record<string, number> = {};
+      reservations.forEach((r) => { participantCount[r.event_id] = (participantCount[r.event_id] || 0) + 1; });
+      pubRes.forEach((r) => { participantCount[r.event_id] = (participantCount[r.event_id] || 0) + 1; });
+      const emptyIds = new Set(
+        sessionEvents
+          .filter((e: any) => e.status !== "draft" && e.status !== "cancelled" && !heldIds.has(e.id) && !participantCount[e.id])
+          .map((e) => e.id),
+      );
+
       const coordsByTeacher: Record<string, string[]> = {};
+      const emptyByTeacher: Record<string, number> = {};
       (coords || []).forEach((c) => {
+        if (emptyIds.has(c.event_id)) emptyByTeacher[c.teacher_id] = (emptyByTeacher[c.teacher_id] || 0) + 1;
         if (heldIds.has(c.event_id)) {
           if (!coordsByTeacher[c.teacher_id]) coordsByTeacher[c.teacher_id] = [];
           coordsByTeacher[c.teacher_id].push(c.event_id);
         }
       });
 
-      return teacherIds.reduce<Record<string, { events: number; hours: number }>>((acc, id) => {
+      return teacherIds.reduce<Record<string, { events: number; hours: number; plannedEmpty: number }>>((acc, id) => {
         const evts = coordsByTeacher[id] || [];
         const hours = evts.reduce((s, eid) => s + (eventHoursMap[eid] || 0), 0);
-        acc[id] = { events: evts.length, hours };
+        acc[id] = { events: evts.length, hours, plannedEmpty: emptyByTeacher[id] || 0 };
         return acc;
       }, {});
     },
@@ -204,7 +215,7 @@ export default function TeacherReportPage() {
 
   const handleExportSummary = () => {
     if (!filteredTeachers.length || !summary) return;
-    const headers = ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate"];
+    const headers = ["Nr.", "Profesor", "Nr. evenimente", "Ore organizate", "Planificate fără participanți"];
     if (sessionHasRules) headers.push("Norma");
     exportReportPdf({
       title: `Raport profesori — ${sessionName}`,
@@ -213,6 +224,7 @@ export default function TeacherReportPage() {
         const row = [
           String(i + 1), `${t.last_name} ${t.first_name}`,
           String(summary[t.id]?.events || 0), String(summary[t.id]?.hours || 0) + "h",
+          String(summary[t.id]?.plannedEmpty || 0),
         ];
         if (sessionHasRules) row.push(t.teaching_norm ? `${t.teaching_norm}h` : "—");
         return row;
@@ -230,7 +242,7 @@ export default function TeacherReportPage() {
       headers: ["Nr.", "Data", "Eveniment", "Interval", "Ore", "Participanți", "Status", "Desfășurat"],
       rows: detail.events.map((e, i) => [
         String(i + 1), e.date, e.title, `${e.start_time?.slice(0, 5)} - ${e.end_time?.slice(0, 5)}`,
-        String(e.counted_duration_hours), String(e.participants), e.status, e.isHeld ? "Da" : "Nu",
+        String(e.counted_duration_hours), String(e.participants), e.status, e.isHeld ? "Da" : (e.participants === 0 && e.status !== "cancelled" && e.status !== "draft" ? "Nu — fără participanți" : "Nu"),
       ]),
       filename: `raport-profesor-${name}`,
       orientation: "landscape",
@@ -273,6 +285,7 @@ export default function TeacherReportPage() {
                   <TableHead>Profesor</TableHead>
                   <TableHead>Nr. evenimente</TableHead>
                   <TableHead>Ore organizate</TableHead>
+                  <TableHead>Planificate fără participanți</TableHead>
                   {sessionHasRules && <TableHead>Norma</TableHead>}
                   <TableHead></TableHead>
                 </TableRow>
@@ -284,6 +297,7 @@ export default function TeacherReportPage() {
                     <TableCell>{`${t.last_name} ${t.first_name}`}</TableCell>
                     <TableCell>{summary?.[t.id]?.events || 0}</TableCell>
                     <TableCell>{summary?.[t.id]?.hours || 0}h</TableCell>
+                    <TableCell>{summary?.[t.id]?.plannedEmpty ? <Badge className="bg-warning text-warning-foreground hover:bg-warning">{summary[t.id].plannedEmpty}</Badge> : 0}</TableCell>
                     {sessionHasRules && (
                       <TableCell>
                         {t.teaching_norm ? (
@@ -308,6 +322,9 @@ export default function TeacherReportPage() {
                 <p className="text-xs text-muted-foreground">
                   {summary?.[t.id]?.events || 0} evenimente · {summary?.[t.id]?.hours || 0}h organizate
                 </p>
+                {!!summary?.[t.id]?.plannedEmpty && (
+                  <p className="text-xs font-semibold text-warning">{summary[t.id].plannedEmpty} planificate fără participanți</p>
+                )}
                 {sessionHasRules && t.teaching_norm && (
                   <p className={`text-xs ${summary?.[t.id]?.hours >= t.teaching_norm ? "text-green-600" : "text-destructive font-semibold"}`}>
                     Normă: {summary?.[t.id]?.hours || 0}h / {t.teaching_norm}h
@@ -344,35 +361,43 @@ export default function TeacherReportPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {detail.events.map((e, i) => (
-                      <TableRow key={e.id} className={!e.isHeld ? "opacity-50" : ""}>
+                    {detail.events.map((e, i) => {
+                      const empty = e.participants === 0 && !e.isHeld && e.status !== "cancelled" && e.status !== "draft";
+                      return (
+                      <TableRow key={e.id} className={empty ? "bg-warning/15 hover:bg-warning/20" : !e.isHeld ? "opacity-50" : ""}>
                         <TableCell>{i + 1}</TableCell>
                         <TableCell>{e.date}</TableCell>
-                        <TableCell>{e.title}</TableCell>
+                        <TableCell>{e.title}{empty && <Badge className="ml-2 bg-warning text-warning-foreground hover:bg-warning">Fără participanți</Badge>}</TableCell>
                         <TableCell>{e.start_time?.slice(0, 5)} - {e.end_time?.slice(0, 5)}</TableCell>
                         <TableCell>{e.counted_duration_hours}h</TableCell>
                         <TableCell>{e.participants}</TableCell>
                         <TableCell>{e.status}</TableCell>
                         <TableCell>{e.isHeld ? "✓" : "—"}</TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
 
               {/* Mobile */}
               <div className="md:hidden space-y-2">
-                {detail.events.map((e, i) => (
-                  <div key={e.id} className={`rounded-lg border bg-card p-3 space-y-1 ${!e.isHeld ? "opacity-60" : ""}`}>
+                {detail.events.map((e, i) => {
+                  const empty = e.participants === 0 && !e.isHeld && e.status !== "cancelled" && e.status !== "draft";
+                  return (
+                  <div key={e.id} className={`rounded-lg border p-3 space-y-1 ${empty ? "bg-warning/15 border-warning" : "bg-card"} ${!e.isHeld && !empty ? "opacity-60" : ""}`}>
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-medium min-w-0 flex-1 break-words">{i + 1}. {e.title}</p>
-                      <Badge variant={e.isHeld ? "default" : "secondary"} className="shrink-0">{e.isHeld ? "✓ Desf." : e.status}</Badge>
+                      {empty
+                        ? <Badge className="shrink-0 bg-warning text-warning-foreground hover:bg-warning">Fără participanți</Badge>
+                        : <Badge variant={e.isHeld ? "default" : "secondary"} className="shrink-0">{e.isHeld ? "✓ Desf." : e.status}</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {e.date} · {e.start_time?.slice(0, 5)}–{e.end_time?.slice(0, 5)} · {e.counted_duration_hours}h · {e.participants} part.
                     </p>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
