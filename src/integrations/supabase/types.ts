@@ -3294,6 +3294,15 @@ export type Database = {
         Args: { _meeting_id: string }
         Returns: string
       }
+      get_event_coordinator_names: {
+        Args: { _event_id: string }
+        Returns: {
+          first_name: string
+          id: string
+          is_creator: boolean
+          last_name: string
+        }[]
+      }
       get_events_reserved_counts: {
         Args: { _event_ids: string[] }
         Returns: Json
