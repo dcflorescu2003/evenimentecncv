@@ -71,7 +71,7 @@ interface EventForm {
   room_id: string | null;
   in_school: boolean;
   room_details: string;
-  max_capacity: number;
+  max_capacity: number | "";
   status: EventStatus;
   eligible_grades: number[];
   eligible_classes: string[];
@@ -86,7 +86,7 @@ interface EventForm {
 const emptyForm: EventForm = {
   session_id: "", title: "", description: "", date: "",
   start_time: "08:00", end_time: "10:00", location: "", room_id: null, in_school: true, room_details: "",
-  max_capacity: 30, status: "draft", eligible_grades: [], eligible_classes: [],
+  max_capacity: "", status: "draft", eligible_grades: [], eligible_classes: [],
   booking_open_date: "", booking_open_time: "",
   booking_close_date: "", booking_close_time: "",
   notes_for_teachers: "", is_public: false,
@@ -111,6 +111,7 @@ export default function ProfEventDetailPage() {
   const queryClient = useQueryClient();
   const { user, roles, profile } = useAuth();
   const isCse = roles.includes("cse");
+  const canSetPublic = isCse || roles.includes("admin");
 
   const [coordDialogOpen, setCoordDialogOpen] = useState(false);
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
@@ -649,7 +650,7 @@ export default function ProfEventDetailPage() {
         location: values.location || null,
         room_id: values.in_school ? values.room_id : null,
         room_details: values.room_details || null,
-        max_capacity: values.max_capacity,
+        max_capacity: Number(values.max_capacity),
         status: values.status,
         eligible_grades: values.eligible_grades.length > 0 ? values.eligible_grades : null,
         eligible_classes: isCse
@@ -722,6 +723,10 @@ export default function ProfEventDetailPage() {
     e.preventDefault();
     if (!editForm.title || !editForm.date || !editForm.start_time || !editForm.end_time) {
       toast.error("Completați toate câmpurile obligatorii");
+      return;
+    }
+    if (editForm.max_capacity === "" || !Number.isInteger(Number(editForm.max_capacity)) || Number(editForm.max_capacity) < 1) {
+      toast.error("Completează numărul de locuri");
       return;
     }
     if (!editForm.is_public && !editForm.session_id) {
@@ -1585,7 +1590,7 @@ export default function ProfEventDetailPage() {
               <LocationField value={{ room_id: editForm.room_id, location: editForm.location, inSchool: editForm.in_school }} onChange={(v) => setEditForm((prev: any) => ({ ...prev, room_id: v.room_id, location: v.location, in_school: v.inSchool }))} date={editForm.date} start={editForm.start_time} end={editForm.end_time} excludeEventId={id} />
               <div className="space-y-2">
                 <Label>Capacitate maximă *</Label>
-                <Input type="number" min={1} value={editForm.max_capacity} onChange={(e) => setEditForm({ ...editForm, max_capacity: parseInt(e.target.value) || 1 })} />
+                <Input type="text" value={editForm.max_capacity} inputMode="numeric" placeholder="ex. 30" onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); setEditForm({ ...editForm, max_capacity: v === "" ? "" : parseInt(v) }); }} />
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
@@ -1693,10 +1698,14 @@ export default function ProfEventDetailPage() {
                 </div>
               </div>
             </div>
+
+            <p className="text-xs text-muted-foreground">Dacă lași gol perioada de înscriere, înscrierea e deschisă de acum până la sfârșitul evenimentului.</p>
+            {canSetPublic && (
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={editForm.is_public} onCheckedChange={(c) => setEditForm({ ...editForm, is_public: !!c })} />
               Eveniment public (permite rezervări fără cont)
             </label>
+            )}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>Anulează</Button>
               <Button type="submit" disabled={editSaveMutation.isPending}>
