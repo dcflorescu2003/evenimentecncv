@@ -143,7 +143,8 @@ export default function StudentDashboard() {
       const eligibleGrades = (e.eligible_grades as number[] | null) || [];
       const noRestriction = eligibleClasses.length === 0 && eligibleGrades.length === 0;
       if (noRestriction) return true;
-      if (classId && eligibleClasses.includes(classId)) return true;
+      // Classes take precedence over grades (same rule as can_view_internal_event)
+      if (eligibleClasses.length > 0) return !!classId && eligibleClasses.includes(classId);
       if (grade !== undefined && grade !== null && eligibleGrades.includes(grade)) return true;
       return false;
     });
