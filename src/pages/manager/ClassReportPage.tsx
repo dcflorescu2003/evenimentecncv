@@ -83,10 +83,13 @@ export default function ClassReportPage() {
             noParticipants: false,
           }));
         const emptyEvents = (events || [])
-          .filter((e: any) => !e.is_public && !eventClassStudents.get(e.id)?.has(c.id) && (
-            (e.eligible_classes || []).includes(c.id) ||
-            (c.grade_number != null && (e.eligible_grades || []).map(String).includes(String(c.grade_number)))
-          ))
+          .filter((e: any) => {
+            if (e.is_public || eventClassStudents.get(e.id)?.has(c.id)) return false;
+            const ec: string[] = e.eligible_classes || [];
+            // Same rule as can_view_internal_event: classes take precedence over grades
+            if (ec.length > 0) return ec.includes(c.id);
+            return c.grade_number != null && (e.eligible_grades || []).map(String).includes(String(c.grade_number));
+          })
           .map(e => ({ ...e, studentCount: 0, noParticipants: true }));
         classEvents.push(...emptyEvents);
         return { classId: c.id, className: c.display_name, studentCount, events: classEvents };
