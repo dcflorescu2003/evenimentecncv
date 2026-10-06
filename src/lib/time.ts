@@ -56,22 +56,31 @@ export function formatDateTime(dateStr: string | null | undefined): string {
  * Returns the Europe/Bucharest offset in hours for a given date string (yyyy-mm-dd).
  * EET = +2, EEST = +3
  */
-export function getBucharestOffsetHours(dateStr: string): number {
-  const utcProbe = new Date(`${dateStr}T12:00:00Z`);
-  const bucharestStr = utcProbe.toLocaleString("sv-SE", { timeZone: "Europe/Bucharest" });
-  const bucharestProbe = new Date(bucharestStr.replace(" ", "T"));
-  const diffMs = bucharestProbe.getTime() - utcProbe.getTime();
-  return Math.round(diffMs / 3600000);
+function bucharestOffsetMinutesAt(utcMs: number): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Bucharest",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+  }).formatToParts(new Date(utcMs));
+  const g = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  const asUtc = Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute"), g("second"));
+  return Math.round((asUtc - utcMs) / 60000);
 }
 
-/**
- * Combines a date (yyyy-mm-dd) and time (HH:MM) into an ISO datetime
- * explicitly anchored to Europe/Bucharest timezone.
- */
+export function getBucharestOffsetHours(dateStr: string, time = "12:00"): number {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const [hh, mm] = time.split(":").map(Number);
+  const wallAsUtc = Date.UTC(y, m - 1, d, hh || 0, mm || 0);
+  // Two passes resolve the offset for the exact wall-clock moment (handles DST days).
+  let off = bucharestOffsetMinutesAt(wallAsUtc);
+  off = bucharestOffsetMinutesAt(wallAsUtc - off * 60000);
+  return Math.round(off / 60);
+}
+
 export function joinDatetime(date: string, time: string): string | null {
   if (!date) return null;
   const t = time || "00:00";
-  const offsetHours = getBucharestOffsetHours(date);
+  const offsetHours = getBucharestOffsetHours(date, t);
   const sign = offsetHours >= 0 ? "+" : "-";
   const absHours = Math.abs(offsetHours);
   const offsetStr = `${sign}${String(absHours).padStart(2, "0")}:00`;

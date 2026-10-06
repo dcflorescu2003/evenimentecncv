@@ -24,3 +24,11 @@ describe("formatul de 24 de ore", () => {
     expect(formatTime("00:00")).toBe("00:00");
   });
 });
+import { joinDatetime as _join, splitDatetime as _split } from "@/lib/time";
+describe("booking datetime round-trip", () => {
+  for (const [d, t] of [["2026-10-06", "08:00"], ["2026-01-15", "23:30"], ["2026-03-29", "05:00"], ["2026-10-25", "00:15"]]) {
+    it(`${d} ${t}`, () => {
+      expect(_split(_join(d, t))).toEqual({ date: d, time: t });
+    });
+  }
+});
