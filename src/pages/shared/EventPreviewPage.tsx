@@ -111,6 +111,17 @@ export default function EventPreviewPage() {
         </Badge>
       </div>
 
+      {coordinators.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm font-medium mb-1">Coordonatori</p>
+            <p className="text-sm text-muted-foreground">
+              {coordinators.map((c) => `${c.last_name} ${c.first_name}${c.is_creator ? " (organizator)" : ""}`).join(", ")}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {(event.booking_open_at || event.booking_close_at) && (
         <Card>
           <CardContent className="p-4">
