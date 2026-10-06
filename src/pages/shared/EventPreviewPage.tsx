@@ -39,6 +39,16 @@ export default function EventPreviewPage() {
     enabled: !!event?.session_id,
   });
 
+  const { data: coordinators = [] } = useQuery({
+    queryKey: ["event_coordinator_names", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_event_coordinator_names", { _event_id: id! });
+      if (error) throw error;
+      return (data as { id: string; first_name: string; last_name: string; is_creator: boolean }[]) || [];
+    },
+    enabled: !!id,
+  });
+
   const { data: counts = {} } = useQuery({
     queryKey: ["event_preview_count", id],
     queryFn: async () => {
