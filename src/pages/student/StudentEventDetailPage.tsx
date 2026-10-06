@@ -136,6 +136,16 @@ export default function StudentEventDetailPage() {
     enabled: !!id && !!user,
   });
 
+  const { data: coordinators = [] } = useQuery({
+    queryKey: ["event_coordinator_names", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_event_coordinator_names", { _event_id: id! });
+      if (error) throw error;
+      return (data as { id: string; first_name: string; last_name: string; is_creator: boolean }[]) || [];
+    },
+    enabled: !!id,
+  });
+
   const { data: reservationCount = 0 } = useQuery({
     queryKey: ["reservation_count_student", id],
     queryFn: async () => {
@@ -353,6 +363,18 @@ export default function StudentEventDetailPage() {
           </Badge>
         )}
       </div>
+
+      {/* Coordinators */}
+      {coordinators.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm font-medium mb-1">Coordonatori</p>
+            <p className="text-sm text-muted-foreground">
+              {coordinators.map((c) => `${c.last_name} ${c.first_name}${c.is_creator ? " (organizator)" : ""}`).join(", ")}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Booking period */}
       {(event.booking_open_at || event.booking_close_at) && (

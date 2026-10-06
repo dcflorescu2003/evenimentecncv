@@ -39,6 +39,16 @@ export default function EventPreviewPage() {
     enabled: !!event?.session_id,
   });
 
+  const { data: coordinators = [] } = useQuery({
+    queryKey: ["event_coordinator_names", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_event_coordinator_names", { _event_id: id! });
+      if (error) throw error;
+      return (data as { id: string; first_name: string; last_name: string; is_creator: boolean }[]) || [];
+    },
+    enabled: !!id,
+  });
+
   const { data: counts = {} } = useQuery({
     queryKey: ["event_preview_count", id],
     queryFn: async () => {
@@ -100,6 +110,17 @@ export default function EventPreviewPage() {
           <Users className="h-3 w-3" /> {reserved} / {event.max_capacity} locuri rezervate ({spotsLeft} libere)
         </Badge>
       </div>
+
+      {coordinators.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm font-medium mb-1">Coordonatori</p>
+            <p className="text-sm text-muted-foreground">
+              {coordinators.map((c) => `${c.last_name} ${c.first_name}${c.is_creator ? " (organizator)" : ""}`).join(", ")}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {(event.booking_open_at || event.booking_close_at) && (
         <Card>
