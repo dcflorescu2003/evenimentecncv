@@ -72,7 +72,7 @@ interface EventForm {
   room_id: string | null;
   in_school: boolean;
   room_details: string;
-  max_capacity: number;
+  max_capacity: number | "";
   max_per_class: number | null;
   status: EventStatus;
   eligible_grades: number[];
@@ -96,7 +96,7 @@ const emptyForm: EventForm = {
   room_id: null,
   in_school: true,
   room_details: "",
-  max_capacity: 30,
+  max_capacity: "",
   max_per_class: null,
   status: "draft",
   eligible_grades: [],
@@ -175,7 +175,7 @@ export default function EventsPage() {
         location: values.location || null,
         room_id: values.in_school ? values.room_id : null,
         room_details: values.room_details || null,
-        max_capacity: values.max_capacity,
+        max_capacity: Number(values.max_capacity),
         max_per_class: values.max_per_class,
         status: values.status,
         eligible_grades: values.eligible_grades.length > 0 ? values.eligible_grades : null,
@@ -290,6 +290,10 @@ export default function EventsPage() {
     e.preventDefault();
     if (!form.title || !form.date || !form.start_time || !form.end_time) {
       toast.error("Completați toate câmpurile obligatorii");
+      return;
+    }
+    if (form.max_capacity === "" || !Number.isInteger(Number(form.max_capacity)) || Number(form.max_capacity) < 1) {
+      toast.error("Completează numărul de locuri");
       return;
     }
     if (!form.is_public && !form.session_id) {
@@ -580,7 +584,7 @@ export default function EventsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ev-cap">Capacitate maximă *</Label>
-                <Input id="ev-cap" type="number" min={1} value={form.max_capacity} onChange={(e) => setForm({ ...form, max_capacity: parseInt(e.target.value) || 1 })} />
+                <Input id="ev-cap" type="text" value={form.max_capacity} inputMode="numeric" placeholder="ex. 30" onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); setForm({ ...form, max_capacity: v === "" ? "" : parseInt(v) }); }} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ev-mpc">Maxim elevi per clasă (opțional)</Label>

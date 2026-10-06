@@ -67,7 +67,7 @@ interface EventForm {
   room_id: string | null;
   in_school: boolean;
   room_details: string;
-  max_capacity: number;
+  max_capacity: number | "";
   max_per_class: number | null;
   status: EventStatus;
   eligible_grades: number[];
@@ -83,7 +83,7 @@ interface EventForm {
 const emptyForm: EventForm = {
   session_id: "", title: "", description: "", date: "",
   start_time: "08:00", end_time: "10:00", location: "", room_id: null, in_school: true, room_details: "",
-  max_capacity: 30, max_per_class: null, status: "draft", eligible_grades: [], eligible_classes: [],
+  max_capacity: "", max_per_class: null, status: "draft", eligible_grades: [], eligible_classes: [],
   booking_open_date: "", booking_open_time: "",
   booking_close_date: "", booking_close_time: "",
   notes_for_teachers: "", is_public: false,
@@ -93,6 +93,7 @@ const emptyForm: EventForm = {
 export default function ProfEventsPage() {
   const { user, roles } = useAuth();
   const isCse = roles.includes("cse");
+  const canSetPublic = isCse || roles.includes("admin");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -169,7 +170,7 @@ export default function ProfEventsPage() {
         location: values.location || null,
         room_id: values.in_school ? values.room_id : null,
         room_details: values.room_details || null,
-        max_capacity: values.max_capacity,
+        max_capacity: Number(values.max_capacity),
         max_per_class: values.max_per_class,
         status: values.status,
         eligible_grades: values.eligible_grades.length > 0 ? values.eligible_grades : null,
@@ -267,6 +268,10 @@ export default function ProfEventsPage() {
     e.preventDefault();
     if (!form.title || !form.date || !form.start_time || !form.end_time) {
       toast.error("Completați toate câmpurile obligatorii");
+      return;
+    }
+    if (form.max_capacity === "" || !Number.isInteger(Number(form.max_capacity)) || Number(form.max_capacity) < 1) {
+      toast.error("Completează numărul de locuri");
       return;
     }
     if (!form.is_public && !form.session_id) {
@@ -525,7 +530,7 @@ export default function ProfEventsPage() {
               <LocationField value={{ room_id: form.room_id, location: form.location, inSchool: form.in_school }} onChange={(v) => setForm((prev: any) => ({ ...prev, room_id: v.room_id, location: v.location, in_school: v.inSchool }))} date={form.date} start={form.start_time} end={form.end_time} excludeEventId={editingId} />
               <div className="space-y-2">
                 <Label>Capacitate maximă *</Label>
-                <Input type="number" min={1} value={form.max_capacity} onChange={(e) => setForm({ ...form, max_capacity: parseInt(e.target.value) || 1 })} />
+                <Input type="text" value={form.max_capacity} inputMode="numeric" placeholder="ex. 30" onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); setForm({ ...form, max_capacity: v === "" ? "" : parseInt(v) }); }} />
               </div>
               <div className="space-y-2">
                 <Label>Maxim elevi per clasă (opțional)</Label>
@@ -647,10 +652,14 @@ export default function ProfEventsPage() {
                 </div>
               </div>
             </div>
+
+            <p className="text-xs text-muted-foreground">Dacă lași gol perioada de înscriere, înscrierea e deschisă de acum până la sfârșitul evenimentului.</p>
+            {canSetPublic && (
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={form.is_public} onCheckedChange={(c) => setForm({ ...form, is_public: !!c })} />
               Eveniment public (permite rezervări fără cont)
             </label>
+            )}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={closeDialog}>Anulează</Button>
               <Button type="submit" disabled={saveMutation.isPending}>
