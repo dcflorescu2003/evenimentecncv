@@ -1,3 +1,4 @@
+import { LeaveCoordinationButton } from "@/components/prof/LeaveCoordinationButton";
 import { formatDate, formatDateTime } from "@/lib/time";
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
