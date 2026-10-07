@@ -1,3 +1,4 @@
+import { cappedHours } from "@/lib/student-hours";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,8 +108,8 @@ export default function StudentReportPage() {
         })),
       ].sort((a, b) => a.date.localeCompare(b.date));
 
-      const validatedHours = eventList.filter((e) => e.status === "present" || e.status === "late").reduce((s, e) => s + e.hours, 0);
-      const totalReservedHours = eventList.reduce((s, e) => s + e.hours, 0);
+      const validatedHours = cappedHours(eventList.filter((e) => e.status === "present" || e.status === "late"));
+      const totalReservedHours = cappedHours(eventList);
 
       return {
         profile: profileRes.data,
