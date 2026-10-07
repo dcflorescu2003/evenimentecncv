@@ -408,6 +408,7 @@ export default function ProfEventsPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>
+                  {coord && <LeaveCoordinationButton eventId={ev.id} eventTitle={ev.title} compact />}
                   {!coord && (
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" onClick={() => openEdit(ev)} title="Editează">
@@ -456,6 +457,9 @@ export default function ProfEventsPage() {
               <p className="text-xs text-muted-foreground">
                 {formatDate(ev.date)} · {ev.start_time?.slice(0, 5)}–{ev.end_time?.slice(0, 5)} · {ev.counted_duration_hours}h
               </p>
+              {coord && (
+                <div className="border-t pt-2"><LeaveCoordinationButton eventId={ev.id} eventTitle={ev.title} compact /></div>
+              )}
               {!coord && (
               <div className="flex gap-1 border-t pt-2" onClick={(e) => e.stopPropagation()}>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/prof/events/${ev.id}`)} title="Detalii">
