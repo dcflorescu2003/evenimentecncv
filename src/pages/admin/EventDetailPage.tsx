@@ -604,13 +604,20 @@ export default function EventDetailPage() {
   // Coordinator assignment
   const assignCoordMutation = useMutation({
     mutationFn: async (teacherId: string) => {
+      const t: any = (teachers as any[]).find((x: any) => x.id === teacherId);
+      const name = t ? `${t.last_name ?? ""} ${t.first_name ?? ""}`.trim() : "Persoana selectată";
+      const ok = await confirmIfCoordinatorConflicts(teacherId, name, (event as any)?.date, (event as any)?.start_time, (event as any)?.end_time, id);
+      if (!ok) return false;
       const { error } = await supabase.from("coordinator_assignments").insert({
         event_id: id!,
         teacher_id: teacherId,
       });
       if (error) throw error;
+      await notifyCoordinatorAdded(teacherId, id!, (event as any)?.title ?? "");
+      return true;
     },
-    onSuccess: () => {
+    onSuccess: (added) => {
+      if (!added) return;
       queryClient.invalidateQueries({ queryKey: ["coordinator_assignments", id] });
       toast.success("Coordonator atribuit");
       setCoordDialogOpen(false);
