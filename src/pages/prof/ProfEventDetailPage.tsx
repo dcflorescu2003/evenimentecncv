@@ -1,3 +1,4 @@
+import { confirmIfCoordinatorConflicts, notifyCoordinatorAdded } from "@/lib/coordinators";
 import LocationField from "@/components/events/LocationField";
 import { formatDate, formatDateTime, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
 import { useState, useRef } from "react";
@@ -412,12 +413,19 @@ export default function ProfEventDetailPage() {
 
   const assignMutation = useMutation({
     mutationFn: async (teacherId: string) => {
+      const t: any = availableTeachers.find((x: any) => x.id === teacherId);
+      const name = t ? `${t.last_name ?? ""} ${t.first_name ?? ""}`.trim() : "Persoana selectată";
+      const ok = await confirmIfCoordinatorConflicts(teacherId, name, (event as any)?.date, (event as any)?.start_time, (event as any)?.end_time, id);
+      if (!ok) return false;
       const { error } = await supabase.from("coordinator_assignments").insert({
         event_id: id!, teacher_id: teacherId,
       });
       if (error) throw error;
+      await notifyCoordinatorAdded(teacherId, id!, (event as any)?.title ?? "");
+      return true;
     },
-    onSuccess: () => {
+    onSuccess: (added) => {
+      if (!added) return;
       queryClient.invalidateQueries({ queryKey: ["prof_coordinators", id] });
       toast.success("Coordonator adăugat");
       setCoordDialogOpen(false);
