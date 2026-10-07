@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -109,8 +109,25 @@ export default function EventsCalendar({
 }: Props) {
   const navigate = useNavigate();
   const today = useMemo(() => startOfDay(new Date()), []);
-  const [view, setView] = useState<View>("week");
-  const [currentDate, setCurrentDate] = useState<Date>(today);
+  const storageKey = `cncv_calendar_state:${typeof window !== "undefined" ? window.location.pathname : ""}`;
+  const saved = useMemo(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (!raw) return null;
+      const s = JSON.parse(raw) as { view: View; date: string };
+      const [y, m, d] = s.date.split("-").map(Number);
+      if (!y || !m || !d) return null;
+      return { view: s.view, date: new Date(y, m - 1, d) };
+    } catch { return null; }
+  }, [storageKey]);
+  const [view, setView] = useState<View>(saved?.view ?? "week");
+  const [currentDate, setCurrentDate] = useState<Date>(saved?.date ?? today);
+  useEffect(() => {
+    try {
+      const ds = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
+      sessionStorage.setItem(storageKey, JSON.stringify({ view, date: ds }));
+    } catch { /* ignore */ }
+  }, [view, currentDate, storageKey]);
   const [dayDialogDate, setDayDialogDate] = useState<Date | null>(null);
 
   const isClosed = (ev: Event) => (ev as any).status === "closed";
