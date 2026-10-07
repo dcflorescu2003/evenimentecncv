@@ -1,3 +1,4 @@
+import { cappedHours } from "@/lib/student-hours";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -200,7 +201,7 @@ export default function IncompleteNormPage() {
           });
           const studentAssistantEvents = assistantByStudent.get(sid) || new Set();
           studentAssistantEvents.forEach(eid => validatedEventIds.add(eid));
-          const validated = [...validatedEventIds].reduce((s, eid) => s + (allSessionEventHoursMap[eid] || eventHoursMap[eid] || 0), 0);
+          const validated = cappedHours([...validatedEventIds].map(eid => ({ date: allSessionEventDateMap[eid], hours: allSessionEventHoursMap[eid] || eventHoursMap[eid] || 0 })));
           const remaining = Math.max(0, required - validated);
 
           if (remaining <= 0) return null; // norm complete
