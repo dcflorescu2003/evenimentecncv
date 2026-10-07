@@ -1,3 +1,4 @@
+import { DAILY_HOURS_CAP } from "@/lib/student-hours";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,12 +33,14 @@ function distribute(students: EnrollStudent[], cands: Record<string, Ev[]>): Pla
     progress = false;
     for (const p of plans) {
       if (p.after >= p.student.requiredHours) continue;
+      const dayH = (d: string) => p.events.filter((x) => x.date === d).reduce((s, x) => s + (x.counted_duration_hours ?? 0), 0);
       const ev = shuffle(cands[p.student.id] ?? []).find((e) =>
-        (seats[e.id] ?? 0) > 0 && !p.events.some((x) => x.id === e.id || overlaps(x, e)));
+        (seats[e.id] ?? 0) > 0 && dayH(e.date) < DAILY_HOURS_CAP && !p.events.some((x) => x.id === e.id || overlaps(x, e)));
       if (!ev) continue;
       seats[ev.id]--;
+      const gain = Math.min(ev.counted_duration_hours ?? 0, DAILY_HOURS_CAP - dayH(ev.date));
       p.events.push(ev);
-      p.after += ev.counted_duration_hours ?? 0;
+      p.after += gain;
       progress = true;
     }
   }

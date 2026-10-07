@@ -1,3 +1,4 @@
+import { cappedHours } from "@/lib/student-hours";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -156,8 +157,9 @@ export default function IncompleteNormPage() {
 
       // Get all session events for assistant hours
       const { data: allSessionEvents } = await supabase
-        .from("events").select("id, counted_duration_hours").eq("session_id", sessionId);
+        .from("events").select("id, date, counted_duration_hours").eq("session_id", sessionId);
       const allSessionEventHoursMap = Object.fromEntries((allSessionEvents || []).map(e => [e.id, e.counted_duration_hours]));
+      const allSessionEventDateMap = Object.fromEntries((allSessionEvents || []).map(e => [e.id, e.date]));
 
       // Get tickets for validated hours
       const resIds = (reservationsData || []).filter((r) => eventHoursMap[r.event_id] !== undefined).map((r) => r.id);
@@ -189,7 +191,7 @@ export default function IncompleteNormPage() {
           if (!required) return null;
 
           const sRes = (reservationsData || []).filter((r) => r.student_id === sid && eventHoursMap[r.event_id] !== undefined);
-          const reserved = sRes.reduce((s, r) => s + (eventHoursMap[r.event_id] || 0), 0);
+          const reserved = cappedHours(sRes.map(r => ({ date: allSessionEventDateMap[r.event_id], hours: eventHoursMap[r.event_id] })));
           
           // Validated = ticket present/late + assistant events in session
           const validatedEventIds = new Set<string>();
@@ -199,7 +201,7 @@ export default function IncompleteNormPage() {
           });
           const studentAssistantEvents = assistantByStudent.get(sid) || new Set();
           studentAssistantEvents.forEach(eid => validatedEventIds.add(eid));
-          const validated = [...validatedEventIds].reduce((s, eid) => s + (allSessionEventHoursMap[eid] || eventHoursMap[eid] || 0), 0);
+          const validated = cappedHours([...validatedEventIds].map(eid => ({ date: allSessionEventDateMap[eid], hours: allSessionEventHoursMap[eid] || eventHoursMap[eid] || 0 })));
           const remaining = Math.max(0, required - validated);
 
           if (remaining <= 0) return null; // norm complete

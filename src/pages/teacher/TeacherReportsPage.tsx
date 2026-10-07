@@ -1,3 +1,4 @@
+import { cappedHours } from "@/lib/student-hours";
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import HomeroomEnrollDialog, { type EnrollStudent } from "@/components/teacher/HomeroomEnrollDialog";
@@ -115,7 +116,7 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
       if (studentIds.length === 0) return [];
 
       const { data: profiles } = await supabase.from("profiles").select("id, display_name, first_name, last_name").in("id", studentIds);
-      const { data: events } = await supabase.from("events").select("id, counted_duration_hours").eq("session_id", sessionId);
+      const { data: events } = await supabase.from("events").select("id, date, counted_duration_hours").eq("session_id", sessionId);
       const eventIds = (events ?? []).map(e => e.id);
       const eventMap = Object.fromEntries((events ?? []).map(e => [e.id, e]));
       const { data: reservations } = await supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", studentIds);
@@ -183,7 +184,7 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
 
       return (profiles ?? []).map(p => {
         const sRes = (reservations ?? []).filter(r => r.student_id === p.id && r.status === "reserved" && eventIds.includes(r.event_id));
-        const reservedHoursEv = sRes.reduce((s, r) => s + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
+        const reservedHoursEv = cappedHours(sRes.map(r => ({ date: eventMap[r.event_id]?.date, hours: eventMap[r.event_id]?.counted_duration_hours })));
         const studentAssistantEvents = assistantByStudent.get(p.id) || new Set();
         const validatedEventIds = new Set<string>();
         sRes.forEach(r => {
@@ -191,7 +192,7 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
           if (t && (t.status === "present" || t.status === "late")) validatedEventIds.add(r.event_id);
         });
         studentAssistantEvents.forEach(eid => validatedEventIds.add(eid));
-        const validatedHoursEv = [...validatedEventIds].reduce((s, eid) => s + (eventMap[eid]?.counted_duration_hours ?? 0), 0);
+        const validatedHoursEv = cappedHours([...validatedEventIds].map(eid => ({ date: eventMap[eid]?.date, hours: eventMap[eid]?.counted_duration_hours })));
 
         // Volunteer contributions
         const enrolledProjects = enrolledByStudent.get(p.id) || new Set<string>();
@@ -383,7 +384,7 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
 
       const students = (profiles ?? []).map(p => {
         const eventStatuses: Record<string, string> = {};
-        let validatedHours = 0;
+        const validatedItems: { date?: string; hours?: number | null }[] = [];
         const studentAssistantEvents = assistantByStudent.get(p.id) || new Set();
         for (const eid of eventIds) {
           const ev = (events ?? []).find(e => e.id === eid);
@@ -395,13 +396,14 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
             else if (status === "reserved" && ev?.date && ev.date < today) status = "absent";
             eventStatuses[eid] = status;
             if (status === "present" || status === "late") {
-              validatedHours += ev?.counted_duration_hours ?? 0;
+              validatedItems.push({ date: ev?.date, hours: ev?.counted_duration_hours });
             }
           } else if (studentAssistantEvents.has(eid)) {
             eventStatuses[eid] = "present";
-            validatedHours += ev?.counted_duration_hours ?? 0;
+            validatedItems.push({ date: ev?.date, hours: ev?.counted_duration_hours });
           }
         }
+        let validatedHours = cappedHours(validatedItems);
         const volunteerStatuses: Record<string, string> = {};
         const enrolledProjects = enrolledByStudent.get(p.id) || new Set();
         for (const day of (vDays ?? []) as any[]) {
