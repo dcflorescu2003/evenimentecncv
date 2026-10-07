@@ -3294,6 +3294,22 @@ export type Database = {
         Args: { _meeting_id: string }
         Returns: string
       }
+      get_coordinator_conflicts: {
+        Args: {
+          _date: string
+          _end: string
+          _exclude_event_id?: string
+          _start: string
+          _teacher_id: string
+        }
+        Returns: {
+          date: string
+          end_time: string
+          event_id: string
+          start_time: string
+          title: string
+        }[]
+      }
       get_event_coordinator_names: {
         Args: { _event_id: string }
         Returns: {
@@ -3468,6 +3484,10 @@ export type Database = {
       }
       is_vr_volunteer: { Args: { _user_id: string }; Returns: boolean }
       issue_student_qr: { Args: never; Returns: Json }
+      leave_event_coordination: {
+        Args: { _event_id: string; _reason?: string }
+        Returns: string
+      }
       list_enrollable_events_for_student: {
         Args: { _session_id: string; _student_id: string }
         Returns: {
