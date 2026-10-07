@@ -1,3 +1,4 @@
+import { LeaveCoordinationButton } from "@/components/prof/LeaveCoordinationButton";
 import LocationField from "@/components/events/LocationField";
 import { useState } from "react";
 import { sessionDateError, sessionRangeLabel } from "@/lib/session-range";

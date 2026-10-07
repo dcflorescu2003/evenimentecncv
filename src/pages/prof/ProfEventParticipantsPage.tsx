@@ -342,6 +342,9 @@ export default function ProfEventParticipantsPage() {
           {event && <p className="text-xs text-muted-foreground">{formatDate(event.date)} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
+          {event && (event as any).created_by !== user?.id && (
+            <LeaveCoordinationButton eventId={eventId!} eventTitle={event.title} compact onLeft={() => navigate("/prof/events")} />
+          )}
           <Button size="sm" variant="outline" onClick={() => { setAssistantDialogOpen(true); setAssistantSearch(""); }}>
             <UserPlus className="mr-2 h-4 w-4" /> Elev asistent
           </Button>
