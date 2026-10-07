@@ -1,3 +1,4 @@
+import { cappedHours } from "@/lib/student-hours";
 import { formatDate } from "@/lib/time";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -123,7 +124,7 @@ function ClassReport({ sessionId }: { sessionId: string }) {
 
       const assignments = await batchFetch(() => supabase.from("student_class_assignments").select("student_id, class_id") as any);
       const reservations = await batchFetch(() => supabase.from("reservations").select("id, student_id, status, event_id") as any);
-      const { data: events } = await supabase.from("events").select("id, session_id, counted_duration_hours").eq("session_id", sessionId);
+      const { data: events } = await supabase.from("events").select("id, session_id, date, counted_duration_hours").eq("session_id", sessionId);
       const tickets = await batchFetch(() => supabase.from("tickets").select("id, reservation_id, status") as any);
 
       const eventIds = new Set((events ?? []).map(e => e.id));
@@ -135,11 +136,14 @@ function ClassReport({ sessionId }: { sessionId: string }) {
       return (classes ?? []).map(cls => {
         const studentIds = assignments.filter((a: any) => a.class_id === cls.id).map((a: any) => a.student_id);
         const clsReservations = sessionReservations.filter((r: any) => studentIds.includes(r.student_id) && r.status === "reserved");
-        const reservedHours = clsReservations.reduce((sum: number, r: any) => sum + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
-        const validatedHours = clsReservations.reduce((sum: number, r: any) => {
-          const t = ticketByRes[r.id];
-          return sum + (t && (t.status === "present" || t.status === "late") ? (eventMap[r.event_id]?.counted_duration_hours ?? 0) : 0);
-        }, 0);
+        const item = (r: any) => ({ date: eventMap[r.event_id]?.date, hours: eventMap[r.event_id]?.counted_duration_hours });
+        const isVal = (r: any) => { const t = ticketByRes[r.id]; return t && (t.status === "present" || t.status === "late"); };
+        let reservedHours = 0, validatedHours = 0;
+        for (const sid of studentIds) {
+          const mine = clsReservations.filter((r: any) => r.student_id === sid);
+          reservedHours += cappedHours(mine.map(item));
+          validatedHours += cappedHours(mine.filter(isVal).map(item));
+        }
         return { ...cls, students: studentIds.length, reservedHours, validatedHours };
       });
     },
@@ -355,7 +359,7 @@ function StudentReport({ sessionId }: { sessionId: string }) {
       if (studentIds.length === 0) return [];
 
       const { data: profiles } = await supabase.from("profiles").select("id, display_name, first_name, last_name").in("id", studentIds);
-      const { data: events } = await supabase.from("events").select("id, counted_duration_hours, session_id").eq("session_id", sessionId);
+      const { data: events } = await supabase.from("events").select("id, date, counted_duration_hours, session_id").eq("session_id", sessionId);
       const eventIds = (events ?? []).map(e => e.id);
       const eventMap = Object.fromEntries((events ?? []).map(e => [e.id, e]));
       
@@ -378,11 +382,9 @@ function StudentReport({ sessionId }: { sessionId: string }) {
 
       return (profiles ?? []).map(p => {
         const sRes = (reservations ?? []).filter(r => r.student_id === p.id && r.status === "reserved" && eventIds.includes(r.event_id));
-        const reservedHours = sRes.reduce((s, r) => s + (eventMap[r.event_id]?.counted_duration_hours ?? 0), 0);
-        const validatedHours = sRes.reduce((s, r) => {
-          const t = ticketByRes[r.id];
-          return s + (t && (t.status === "present" || t.status === "late") ? (eventMap[r.event_id]?.counted_duration_hours ?? 0) : 0);
-        }, 0);
+        const item = (r: any) => ({ date: eventMap[r.event_id]?.date, hours: eventMap[r.event_id]?.counted_duration_hours });
+        const reservedHours = cappedHours(sRes.map(item));
+        const validatedHours = cappedHours(sRes.filter(r => { const t = ticketByRes[r.id]; return t && (t.status === "present" || t.status === "late"); }).map(item));
         return {
           id: p.id,
           name: `${p.last_name} ${p.first_name}`,
