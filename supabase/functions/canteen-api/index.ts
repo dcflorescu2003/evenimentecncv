@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
 
       await supabase.from("canteen_api_log").insert({ action, ok: true });
 
-      return json({ students, users: students, limit, offset, count: students.length });
+      return json({ students, users: students, limit, offset, count: students.length, total });
     }
 
     if (action === "resolve-badge") {
