@@ -14,7 +14,7 @@ Toate răspunsurile sunt JSON. CORS este activ.
 `GET|POST /students?limit=500&offset=0`
 
 - `limit`: 1–1000 (implicit 500), `offset`: de la 0.
-- Se apelează repetat, crescând `offset`, până când `students` e gol.
+- Se apelează repetat, crescând `offset`, până când `students` e gol (sau până când ai primit `total` utilizatori).
 
 Răspuns:
 
@@ -33,7 +33,8 @@ Răspuns:
   ],
   "limit": 500,
   "offset": 0,
-  "count": 1
+  "count": 1,
+  "total": 1040
 }
 ```
 

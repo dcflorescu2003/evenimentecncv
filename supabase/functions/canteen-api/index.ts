@@ -51,43 +51,69 @@ Deno.serve(async (req) => {
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 500), 1), 1000);
       const offset = Math.max(Number(url.searchParams.get("offset") ?? 0), 0);
 
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role")
-        .in("role", wanted)
-        .order("user_id")
-        .range(0, 9999);
-      if (rolesError) throw rolesError;
+      const roles: { user_id: string; role: string }[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .in("role", wanted)
+          .order("user_id")
+          .order("role")
+          .range(from, from + 999);
+        if (error) throw error;
+        roles.push(...((data ?? []) as any));
+        if (!data || data.length < 1000) break;
+      }
 
       const rolesByUser = new Map<string, Set<string>>();
-      for (const r of roles ?? []) {
+      for (const r of roles) {
         if (!rolesByUser.has(r.user_id)) rolesByUser.set(r.user_id, new Set());
         rolesByUser.get(r.user_id)!.add(r.role as string);
       }
-      const ids = [...rolesByUser.keys()].sort().slice(offset, offset + limit);
+      const allIds = [...rolesByUser.keys()].sort();
+      const total = allIds.length;
+      const ids = allIds.slice(offset, offset + limit);
       if (ids.length === 0) {
-        return json({ students: [], limit, offset, count: 0 });
+        return json({ students: [], users: [], limit, offset, count: 0, total });
       }
 
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, display_name, student_identifier, is_active")
-        .in("id", ids);
-      if (profilesError) throw profilesError;
+      const chunks: string[][] = [];
+      for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
 
-      const { data: assignments, error: assignError } = await supabase
-        .from("student_class_assignments")
-        .select("student_id, academic_year, classes(display_name)")
-        .in("student_id", ids)
-        .order("academic_year", { ascending: false });
-      if (assignError) throw assignError;
+      const profiles: any[] = [];
+      const assignments: any[] = [];
+      const homerooms: any[] = [];
+      for (const chunk of chunks) {
+        const { data: p, error: pe } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, display_name, student_identifier, is_active")
+          .in("id", chunk);
+        if (pe) throw pe;
+        profiles.push(...(p ?? []));
 
-      const { data: homerooms } = await supabase
-        .from("classes")
-        .select("homeroom_teacher_id, display_name, academic_year")
-        .in("homeroom_teacher_id", ids)
-        .eq("is_active", true)
-        .order("academic_year", { ascending: false });
+        for (let from = 0; ; from += 1000) {
+          const { data: a, error: ae } = await supabase
+            .from("student_class_assignments")
+            .select("student_id, academic_year, classes(display_name)")
+            .in("student_id", chunk)
+            .order("academic_year", { ascending: false })
+            .order("student_id")
+            .range(from, from + 999);
+          if (ae) throw ae;
+          assignments.push(...(a ?? []));
+          if (!a || a.length < 1000) break;
+        }
+
+        const { data: h } = await supabase
+          .from("classes")
+          .select("homeroom_teacher_id, display_name, academic_year")
+          .in("homeroom_teacher_id", chunk)
+          .eq("is_active", true)
+          .order("academic_year", { ascending: false });
+        homerooms.push(...(h ?? []));
+      }
+      assignments.sort((x, y) => String(y.academic_year).localeCompare(String(x.academic_year)));
+      homerooms.sort((x, y) => String(y.academic_year).localeCompare(String(x.academic_year)));
       const classByStudent = new Map<string, string>();
       for (const h of homerooms ?? []) {
         const tid = (h as any).homeroom_teacher_id as string;
