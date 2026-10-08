@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchInChunks } from "@/lib/supabase-chunk";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,8 +37,8 @@ export default function SessionReportPage() {
       const eventIds = data.map((e) => e.id);
       const [coordsRes, resRes, pubRes, profilesPre] = await Promise.all([
         supabase.from("coordinator_assignments").select("event_id, teacher_id").in("event_id", eventIds),
-        supabase.from("reservations").select("event_id").in("event_id", eventIds).eq("status", "reserved"),
-        supabase.from("public_reservations").select("event_id").in("event_id", eventIds).eq("status", "reserved"),
+        fetchInChunks<any>(eventIds, 150, (chunk, from, to) => supabase.from("reservations").select("event_id").eq("status", "reserved").in("event_id", chunk).range(from, to)).then((data) => ({ data })),
+        fetchInChunks<any>(eventIds, 150, (chunk, from, to) => supabase.from("public_reservations").select("event_id").eq("status", "reserved").in("event_id", chunk).range(from, to)).then((data) => ({ data })),
         Promise.resolve(null),
       ]);
       const coords = coordsRes.data || [];

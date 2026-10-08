@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useManagerSession } from "@/components/layouts/ManagerLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchInChunks } from "@/lib/supabase-chunk";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,29 +77,17 @@ export default function ISMBReportPage() {
       // Student count (reservations)
       let studentCount = 0;
       if (eventIds.length > 0) {
-        const { data: reservations } = await supabase
-          .from("reservations")
-          .select("student_id")
-          .in("event_id", eventIds)
-          .eq("status", "reserved");
+        const reservations = await fetchInChunks<any>(eventIds, 150, (chunk, from, to) => supabase.from("reservations").select("student_id").eq("status", "reserved").in("event_id", chunk).range(from, to));
         const uniqueStudents = new Set((reservations || []).map((r) => r.student_id));
         studentCount = uniqueStudents.size;
       }
 
       // Public tickets count
       if (eventIds.length > 0) {
-        const { data: pubRes } = await supabase
-          .from("public_reservations")
-          .select("id")
-          .in("event_id", eventIds)
-          .eq("status", "reserved");
+        const pubRes = await fetchInChunks<any>(eventIds, 150, (chunk, from, to) => supabase.from("public_reservations").select("id").eq("status", "reserved").in("event_id", chunk).range(from, to));
         const pubResIds = (pubRes || []).map((r) => r.id);
         if (pubResIds.length > 0) {
-          const { data: pubTickets } = await supabase
-            .from("public_tickets")
-            .select("id")
-            .in("public_reservation_id", pubResIds)
-            .neq("status", "cancelled");
+          const pubTickets = await fetchInChunks<any>(pubResIds, 150, (chunk, from, to) => supabase.from("public_tickets").select("id").neq("status", "cancelled").in("public_reservation_id", chunk).range(from, to));
           studentCount += pubTickets?.length || 0;
         }
       }

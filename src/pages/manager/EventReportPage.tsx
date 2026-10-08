@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchInChunks } from "@/lib/supabase-chunk";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -206,12 +207,12 @@ export default function EventReportPage() {
       const allStudentIds = [...new Set([...studentIds, ...assistantIds])];
       let studentHoursMap: Record<string, { reserved: number; validated: number; required: number }> = {};
       if (allStudentIds.length) {
-        const { data: allRes } = await supabase.from("reservations").select("student_id, event_id, id").eq("status", "reserved").in("student_id", allStudentIds);
+        const allRes = await fetchInChunks<any>(allStudentIds, 150, (chunk, from, to) => supabase.from("reservations").select("student_id, event_id, id").eq("status", "reserved").in("student_id", chunk).range(from, to));
         const allResEventIds = [...new Set((allRes || []).map((r) => r.event_id))];
-        const { data: allEvents } = allResEventIds.length ? await supabase.from("events").select("id, counted_duration_hours, session_id").in("id", allResEventIds).eq("session_id", sessionId) : { data: [] };
+        const allEvents = await fetchInChunks<any>(allResEventIds, 150, (chunk, from, to) => supabase.from("events").select("id, counted_duration_hours, session_id").eq("session_id", sessionId).in("id", chunk).range(from, to));
         const eventHoursMap = Object.fromEntries((allEvents || []).map((e) => [e.id, e.counted_duration_hours]));
         const sessionResIds = (allRes || []).filter((r) => eventHoursMap[r.event_id] !== undefined).map((r) => r.id);
-        const { data: allTickets } = sessionResIds.length ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", sessionResIds) : { data: [] };
+        const allTickets = await fetchInChunks<any>(sessionResIds, 150, (chunk, from, to) => supabase.from("tickets").select("reservation_id, status").in("reservation_id", chunk).range(from, to));
         const allTicketMap = Object.fromEntries((allTickets || []).map((t) => [t.reservation_id, t.status]));
 
         // Get class rules for required hours

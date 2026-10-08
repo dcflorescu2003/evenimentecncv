@@ -23,3 +23,18 @@ export async function fetchInChunks<T>(
   }
   return out;
 }
+
+// Fetch every row of a query by paginating with .range() past the 1000-row cap.
+export async function fetchAllPages<T>(
+  fetcher: (from: number, to: number) => PromiseLike<{ data: T[] | null }>,
+): Promise<T[]> {
+  const out: T[] = [];
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data } = await fetcher(from, from + PAGE - 1);
+    const rows = data || [];
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}

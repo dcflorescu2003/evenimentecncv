@@ -2,6 +2,7 @@ import { formatDate } from "@/lib/time";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPages } from "@/lib/supabase-chunk";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -133,8 +134,8 @@ export default function AdminDashboard() {
         await Promise.all([
           supabase.from("program_sessions").select("id, name, status"),
           supabase.from("events").select("id, title, status, date, max_capacity, session_id"),
-          supabase.from("reservations").select("id, status, event_id"),
-          supabase.from("tickets").select("id, status"),
+          fetchAllPages<any>((f, to) => supabase.from("reservations").select("id, status, event_id").range(f, to)).then((data) => ({ data })),
+          fetchAllPages<any>((f, to) => supabase.from("tickets").select("id, status").range(f, to)).then((data) => ({ data })),
           supabase.from("classes").select("id, is_active"),
           countActiveByRole(["student"]),
           countActiveByRole(["teacher", "homeroom_teacher", "coordinator_teacher"]),

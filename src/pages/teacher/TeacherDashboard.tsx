@@ -2,6 +2,7 @@ import { formatDate, formatDateTime } from "@/lib/time";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchInChunks } from "@/lib/supabase-chunk";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -115,9 +116,10 @@ export default function TeacherDashboard() {
         .eq("status", "reserved");
 
       // Get tickets
-      const { data: tickets } = await supabase
-        .from("tickets")
-        .select("id, reservation_id, status");
+      const tickets = await fetchInChunks<{ id: string; reservation_id: string; status: string }>(
+        (reservations ?? []).map((r) => r.id), 200,
+        (chunk, from, to) => supabase.from("tickets").select("id, reservation_id, status").in("reservation_id", chunk).range(from, to),
+      );
       const ticketByRes = Object.fromEntries((tickets ?? []).map((t) => [t.reservation_id, t]));
 
       // Fetch assistant assignments for session events
