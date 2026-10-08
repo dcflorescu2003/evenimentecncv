@@ -123,6 +123,15 @@ export default function EventDetailPage() {
     enabled: !!id,
   });
 
+  const { data: eligibleClassNames = {} } = useQuery({
+    queryKey: ["event-eligible-class-names", (event as any)?.eligible_classes],
+    enabled: !!((event as any)?.eligible_classes?.length),
+    queryFn: async () => {
+      const { data } = await supabase.from("classes").select("id, display_name").in("id", (event as any).eligible_classes);
+      return Object.fromEntries((data || []).map((c) => [c.id, c.display_name])) as Record<string, string>;
+    },
+  });
+
   const { data: session } = useQuery({
     queryKey: ["session", event?.session_id],
     queryFn: async () => {
@@ -754,8 +763,10 @@ export default function EventDetailPage() {
                 {event.room_details && <p><span className="text-muted-foreground">Sală:</span> {event.room_details}</p>}
                 <p>
                   <span className="text-muted-foreground">Clase eligibile:</span>{" "}
-                  {event.eligible_grades && (event.eligible_grades as number[]).length > 0
-                    ? (event.eligible_grades as number[]).map((g) => `${g}`).join(", ")
+                  {event.eligible_classes && (event.eligible_classes as string[]).length > 0
+                    ? (event.eligible_classes as string[]).map((id) => eligibleClassNames[id] || "…").join(", ")
+                    : event.eligible_grades && (event.eligible_grades as number[]).length > 0
+                    ? `Anii ${(event.eligible_grades as number[]).join(", ")}`
                     : "Toate"}
                 </p>
                 {event.booking_open_at && (
