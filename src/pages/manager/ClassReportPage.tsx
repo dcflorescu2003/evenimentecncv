@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchInChunks } from "@/lib/supabase-chunk";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,7 +39,10 @@ export default function ClassReportPage() {
       const classIds = allClasses.map(c => c.id);
 
       // Get all student assignments
-      const { data: assignments } = await supabase.from("student_class_assignments").select("student_id, class_id").in("class_id", classIds);
+      const assignments = await fetchInChunks<{ student_id: string; class_id: string }>(
+        classIds, 100,
+        (chunk, from, to) => supabase.from("student_class_assignments").select("student_id, class_id").in("class_id", chunk).range(from, to),
+      );
       const studentsByClass = new Map<string, Set<string>>();
       (assignments || []).forEach(a => {
         if (!studentsByClass.has(a.class_id)) studentsByClass.set(a.class_id, new Set());
@@ -56,7 +60,10 @@ export default function ClassReportPage() {
 
       // Fetch reservations by event_id (much smaller set than student IDs)
       const eventIdList = events.map(e => e.id);
-      const { data: reservations } = await supabase.from("reservations").select("student_id, event_id").eq("status", "reserved").in("event_id", eventIdList);
+      const reservations = await fetchInChunks<{ student_id: string; event_id: string }>(
+        eventIdList, 150,
+        (chunk, from, to) => supabase.from("reservations").select("student_id, event_id").eq("status", "reserved").in("event_id", chunk).range(from, to),
+      );
 
       // Build: for each class, which events have students from that class, and how many
       const classStudentMap = new Map<string, string>(); // student_id -> class_id

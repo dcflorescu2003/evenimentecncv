@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import HomeroomEnrollDialog, { type EnrollStudent } from "@/components/teacher/HomeroomEnrollDialog";
 import HomeroomAutoDistributeDialog from "@/components/teacher/HomeroomAutoDistributeDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchInChunks } from "@/lib/supabase-chunk";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDate } from "@/lib/time";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -119,7 +120,10 @@ function SumarTab({ sessionId, classIds, myClasses }: { sessionId: string; class
       const { data: events } = await supabase.from("events").select("id, date, counted_duration_hours").eq("session_id", sessionId);
       const eventIds = (events ?? []).map(e => e.id);
       const eventMap = Object.fromEntries((events ?? []).map(e => [e.id, e]));
-      const { data: reservations } = await supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", studentIds);
+      const reservations = await fetchInChunks<{ id: string; student_id: string; event_id: string; status: string }>(
+        studentIds, 200,
+        (chunk, from, to) => supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", chunk).range(from, to),
+      );
       const resIds = (reservations ?? []).map(r => r.id);
       const tickets: { id: string; reservation_id: string; status: string }[] = [];
       for (let i = 0; i < resIds.length; i += 200) {
@@ -330,8 +334,14 @@ function SituatieEleviTab({ sessionId, classIds, myClasses }: { sessionId: strin
       const { data: events } = await supabase.from("events").select("id, title, date, counted_duration_hours").eq("session_id", sessionId).order("date");
       const eventIds = (events ?? []).map(e => e.id);
 
-      const { data: reservations } = await supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", studentIds);
-      const { data: tickets } = await supabase.from("tickets").select("id, reservation_id, status");
+      const reservations = await fetchInChunks<{ id: string; student_id: string; event_id: string; status: string }>(
+        studentIds, 200,
+        (chunk, from, to) => supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", chunk).range(from, to),
+      );
+      const tickets = await fetchInChunks<{ id: string; reservation_id: string; status: string }>(
+        (reservations ?? []).map(r => r.id), 200,
+        (chunk, from, to) => supabase.from("tickets").select("id, reservation_id, status").in("reservation_id", chunk).range(from, to),
+      );
       const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
 
       const { data: rules } = await supabase
@@ -668,8 +678,10 @@ function VerificarePrezentaTab({ sessionId, classIds, myClasses }: { sessionId: 
         const { data: reservations } = await supabase.from("reservations")
           .select("id, student_id, event_id, status")
           .in("student_id", studentIds).in("event_id", eventIds);
-        const { data: tickets } = await supabase.from("tickets")
-          .select("id, reservation_id, status");
+        const tickets = await fetchInChunks<{ id: string; reservation_id: string; status: string }>(
+          (reservations ?? []).map(r => r.id), 200,
+          (chunk, from, to) => supabase.from("tickets").select("id, reservation_id, status").in("reservation_id", chunk).range(from, to),
+        );
         const ticketByRes = Object.fromEntries((tickets ?? []).map(t => [t.reservation_id, t]));
         const { data: assistantAssignments } = await supabase
           .from("event_student_assistants").select("student_id, event_id")
