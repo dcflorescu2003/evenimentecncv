@@ -316,7 +316,7 @@ export default function IncompleteNormPage() {
                         <TableCell>{t.name}</TableCell>
                         <TableCell>{t.events}</TableCell>
                         <TableCell>{t.plannedHours}h</TableCell>
-                        <TableCell>{t.organizedHours}h</TableCell>
+                        <TableCell className={t.organizedHours >= t.norm ? "font-semibold text-success" : "font-semibold text-destructive"}>{t.organizedHours}h</TableCell>
                         <TableCell>{t.norm}h</TableCell>
                         <TableCell className="font-semibold text-destructive">{t.remaining}h</TableCell>
                         <TableCell><Button variant="link" size="sm" onClick={() => navigate(`/manager/teachers?id=${t.id}&from=incomplete`)}>Detalii</Button></TableCell>
@@ -330,7 +330,7 @@ export default function IncompleteNormPage() {
                 {teacherData.map((t, i) => (
                   <div key={t.id} className="rounded-lg border bg-card p-3 space-y-1 cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/manager/teachers?id=${t.id}&from=incomplete`)}>
                     <p className="font-medium">{i + 1}. {t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.events} evenimente · Planificate: {t.plannedHours}h · Organizate: {t.organizedHours}h / {t.norm}h</p>
+                    <p className="text-xs text-muted-foreground">{t.events} evenimente · Planificate: {t.plannedHours}h · <span className={t.organizedHours >= t.norm ? "font-semibold text-success" : "font-semibold text-destructive"}>Organizate: {t.organizedHours}h</span> / {t.norm}h</p>
                     <p className="text-xs font-semibold text-destructive">Rămase: {t.remaining}h</p>
                   </div>
                 ))}
@@ -372,8 +372,8 @@ export default function IncompleteNormPage() {
                         <TableCell>{i + 1}</TableCell>
                         <TableCell>{s.className}</TableCell>
                         <TableCell>{s.name}</TableCell>
-                        <TableCell>{formatHoursVsRequired(s.reserved, s.required)}h</TableCell>
-                        <TableCell>{formatHoursVsRequired(s.validated, s.required)}h</TableCell>
+                        <TableCell className={s.reserved >= s.required ? "font-semibold text-success" : "font-semibold text-destructive"}>{formatHoursVsRequired(s.reserved, s.required)}h</TableCell>
+                        <TableCell className={s.validated >= s.required ? "font-semibold text-success" : "font-semibold text-destructive"}>{formatHoursVsRequired(s.validated, s.required)}h</TableCell>
                         <TableCell>{s.required}h</TableCell>
                         <TableCell className="font-semibold text-destructive">{s.remaining}h</TableCell>
                         <TableCell><Button variant="link" size="sm" onClick={() => navigate(`/manager/students?id=${s.id}&from=incomplete`)}>Detalii</Button></TableCell>
@@ -387,7 +387,7 @@ export default function IncompleteNormPage() {
                 {studentData.map((s, i) => (
                   <div key={s.id} className="rounded-lg border bg-card p-3 space-y-1 cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/manager/students?id=${s.id}&from=incomplete`)}>
                     <p className="font-medium">{i + 1}. {s.name}</p>
-                    <p className="text-xs text-muted-foreground">{s.className} · Validate: {formatHoursVsRequired(s.validated, s.required)}h / {s.required}h</p>
+                    <p className="text-xs text-muted-foreground">{s.className} · <span className={s.reserved >= s.required ? "font-semibold text-success" : "font-semibold text-destructive"}>Rezervate: {formatHoursVsRequired(s.reserved, s.required)}h</span> · <span className={s.validated >= s.required ? "font-semibold text-success" : "font-semibold text-destructive"}>Validate: {formatHoursVsRequired(s.validated, s.required)}h</span> / {s.required}h</p>
                     <p className="text-xs font-semibold text-destructive">Rămase: {s.remaining}h</p>
                   </div>
                 ))}
