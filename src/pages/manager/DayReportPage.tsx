@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchInChunks } from "@/lib/supabase-chunk";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -34,14 +35,12 @@ export default function DayReportPage() {
       const eventIds = data.map((e) => e.id);
       const [coordsRes, reservationsRes] = await Promise.all([
         supabase.from("coordinator_assignments").select("event_id, teacher_id").in("event_id", eventIds),
-        supabase.from("reservations").select("id, event_id, status").in("event_id", eventIds),
+        fetchInChunks<any>(eventIds, 150, (chunk, from, to) => supabase.from("reservations").select("id, event_id, status").in("event_id", chunk).range(from, to)).then((data) => ({ data })),
       ]);
 
       // Get scanned ticket counts for held-event calculation
       const allResIds = (reservationsRes.data || []).filter(r => r.status === "reserved").map(r => r.id);
-      const { data: allTickets } = allResIds.length
-        ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", allResIds)
-        : { data: [] };
+      const allTickets = await fetchInChunks<any>(allResIds, 150, (chunk, from, to) => supabase.from("tickets").select("reservation_id, status").in("reservation_id", chunk).range(from, to));
       const resEventMap = Object.fromEntries((reservationsRes.data || []).filter(r => r.status === "reserved").map(r => [r.id, r.event_id]));
       const ticketsByEvent: Record<string, number> = {};
       (allTickets || []).forEach(t => {
@@ -64,13 +63,9 @@ export default function DayReportPage() {
       
       // Get tickets for all session events to determine held status
       const allSessionEventIds = (allEvents || []).map(e => e.id);
-      const { data: allSessionRes } = allSessionEventIds.length
-        ? await supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", allSessionEventIds)
-        : { data: [] };
+      const allSessionRes = await fetchInChunks<any>(allSessionEventIds, 150, (chunk, from, to) => supabase.from("reservations").select("id, event_id").eq("status", "reserved").in("event_id", chunk).range(from, to));
       const allSessionResIds = (allSessionRes || []).map(r => r.id);
-      const { data: allSessionTickets } = allSessionResIds.length
-        ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", allSessionResIds)
-        : { data: [] };
+      const allSessionTickets = await fetchInChunks<any>(allSessionResIds, 150, (chunk, from, to) => supabase.from("tickets").select("reservation_id, status").in("reservation_id", chunk).range(from, to));
       const sessionResEventMap = Object.fromEntries((allSessionRes || []).map(r => [r.id, r.event_id]));
       const sessionTicketsByEvent: Record<string, number> = {};
       (allSessionTickets || []).forEach(t => {
