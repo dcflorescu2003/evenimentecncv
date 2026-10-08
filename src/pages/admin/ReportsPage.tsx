@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchInChunks } from "@/lib/supabase-chunk";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -363,7 +364,7 @@ function StudentReport({ sessionId }: { sessionId: string }) {
       const eventIds = (events ?? []).map(e => e.id);
       const eventMap = Object.fromEntries((events ?? []).map(e => [e.id, e]));
       
-      const { data: reservations } = await supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", studentIds);
+      const reservations = await fetchInChunks<any>(studentIds, 200, (chunk, f, to) => supabase.from("reservations").select("id, student_id, event_id, status").in("student_id", chunk).range(f, to));
       // Batch fetch tickets (can exceed 1000)
       const batchSize = 1000;
       let allTickets: any[] = [];
