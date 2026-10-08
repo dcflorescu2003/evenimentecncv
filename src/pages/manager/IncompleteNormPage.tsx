@@ -121,67 +121,81 @@ export default function IncompleteNormPage() {
     },
   });
 
-  // ── Students with incomplete hours ──
-  const { data: studentData, isLoading: studentsLoading } = useQuery({
-    queryKey: ["mgr-incomplete-students", sessionId],
+  // ── Classes with rules in this session (for the required class filter) ──
+  const { data: ruleClasses } = useQuery({
+    queryKey: ["mgr-incomplete-rule-classes", sessionId],
     enabled: !!sessionId,
     queryFn: async () => {
-      // Get class rules for this session
       const { data: rules } = await supabase
-        .from("class_participation_rules").select("class_id, required_value").eq("session_id", sessionId);
+        .from("class_participation_rules").select("class_id").eq("session_id", sessionId);
+      const ids = [...new Set((rules || []).map((r) => r.class_id))];
+      if (!ids.length) return [];
+      const { data: classes } = await supabase
+        .from("classes").select("id, display_name, grade_number, section").in("id", ids)
+        .order("grade_number").order("section", { nullsFirst: true });
+      return classes || [];
+    },
+  });
+
+  // ── Students with incomplete hours (one class at a time) ──
+  const { data: studentData, isLoading: studentsLoading } = useQuery({
+    queryKey: ["mgr-incomplete-students", sessionId, classFilter],
+    enabled: !!sessionId && !!classFilter,
+    queryFn: async () => {
+      const { data: rules } = await supabase
+        .from("class_participation_rules").select("class_id, required_value")
+        .eq("session_id", sessionId).eq("class_id", classFilter);
       if (!rules?.length) return [];
-
       const ruleMap = Object.fromEntries(rules.map((r) => [r.class_id, r.required_value]));
-      const classIds = rules.map((r) => r.class_id);
+      const classNameMap = Object.fromEntries((ruleClasses || []).map((c) => [c.id, c.display_name]));
 
-      // Get classes
-      const { data: classes } = await supabase.from("classes").select("id, display_name").in("id", classIds);
-      const classNameMap = Object.fromEntries((classes || []).map((c) => [c.id, c.display_name]));
-
-      // Get students in these classes
-      const { data: assignments } = await supabase.from("student_class_assignments").select("student_id, class_id").in("class_id", classIds);
+      const { data: assignments } = await supabase
+        .from("student_class_assignments").select("student_id, class_id").eq("class_id", classFilter).range(0, 999);
       if (!assignments?.length) return [];
-
       const studentClassMap = Object.fromEntries(assignments.map((a) => [a.student_id, a.class_id]));
-      const studentIds = assignments.map((a) => a.student_id);
+      const studentIds = [...new Set(assignments.map((a) => a.student_id))];
 
-      // Get reservations for these students in this session
-      const { data: reservationsData } = await supabase
-        .from("reservations").select("id, student_id, event_id").eq("status", "reserved").in("student_id", studentIds);
-      
-      const resEventIds = [...new Set((reservationsData || []).map((r) => r.event_id))];
-      const { data: events } = resEventIds.length
-        ? await supabase.from("events").select("id, counted_duration_hours").eq("session_id", sessionId).in("id", resEventIds)
-        : { data: [] };
-      const eventHoursMap = Object.fromEntries((events || []).map((e) => [e.id, e.counted_duration_hours]));
+      // All session events (paginated)
+      const allSessionEvents: { id: string; date: string; counted_duration_hours: number }[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data } = await supabase.from("events").select("id, date, counted_duration_hours")
+          .eq("session_id", sessionId).range(from, from + 999);
+        allSessionEvents.push(...((data as any[]) || []));
+        if (!data || data.length < 1000) break;
+      }
+      const eventHoursMap: Record<string, number> = Object.fromEntries(allSessionEvents.map((e) => [e.id, e.counted_duration_hours]));
+      const allSessionEventHoursMap = eventHoursMap;
+      const allSessionEventDateMap = Object.fromEntries(allSessionEvents.map((e) => [e.id, e.date]));
 
-      // Get all session events for assistant hours
-      const { data: allSessionEvents } = await supabase
-        .from("events").select("id, date, counted_duration_hours").eq("session_id", sessionId);
-      const allSessionEventHoursMap = Object.fromEntries((allSessionEvents || []).map(e => [e.id, e.counted_duration_hours]));
-      const allSessionEventDateMap = Object.fromEntries((allSessionEvents || []).map(e => [e.id, e.date]));
+      const reservationsData = (await fetchInChunks<{ id: string; student_id: string; event_id: string }>(
+        studentIds, 100,
+        (chunk, from, to) => supabase.from("reservations").select("id, student_id, event_id").eq("status", "reserved").in("student_id", chunk).range(from, to),
+      )).filter((r) => eventHoursMap[r.event_id] !== undefined);
 
-      // Get tickets for validated hours
-      const resIds = (reservationsData || []).filter((r) => eventHoursMap[r.event_id] !== undefined).map((r) => r.id);
-      const { data: ticketsData } = resIds.length
-        ? await supabase.from("tickets").select("reservation_id, status").in("reservation_id", resIds)
-        : { data: [] };
-      const ticketMap = Object.fromEntries((ticketsData || []).map((t) => [t.reservation_id, t.status]));
+      const resIds = reservationsData.map((r) => r.id);
+      const ticketsData = await fetchInChunks<{ reservation_id: string; status: string }>(
+        resIds, 200,
+        (chunk, from, to) => supabase.from("tickets").select("reservation_id, status").in("reservation_id", chunk).range(from, to),
+      );
+      const ticketMap = Object.fromEntries(ticketsData.map((t) => [t.reservation_id, t.status]));
 
-      // Fetch assistant assignments
-      const { data: assistantAssignments } = await supabase
-        .from("event_student_assistants").select("student_id, event_id").in("student_id", studentIds);
+      const assistantAssignments = await fetchInChunks<{ student_id: string; event_id: string }>(
+        studentIds, 100,
+        (chunk, from, to) => supabase.from("event_student_assistants").select("student_id, event_id").in("student_id", chunk).range(from, to),
+      );
       const assistantByStudent = new Map<string, Set<string>>();
-      (assistantAssignments || []).forEach(a => {
+      assistantAssignments.forEach(a => {
         if (allSessionEventHoursMap[a.event_id] !== undefined) {
           if (!assistantByStudent.has(a.student_id)) assistantByStudent.set(a.student_id, new Set());
           assistantByStudent.get(a.student_id)!.add(a.event_id);
         }
       });
 
-      // Get profiles
-      const { data: profiles } = await supabase.from("profiles").select("id, first_name, last_name, display_name").in("id", studentIds);
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.id, `${p.last_name} ${p.first_name}`]));
+      const profiles = await fetchInChunks<{ id: string; first_name: string; last_name: string }>(
+        studentIds, 100,
+        (chunk, from, to) => supabase.from("profiles").select("id, first_name, last_name").in("id", chunk).range(from, to),
+      );
+      const profileMap = Object.fromEntries(profiles.map((p) => [p.id, `${p.last_name} ${p.first_name}`]));
 
       // Calculate per student
       return studentIds
