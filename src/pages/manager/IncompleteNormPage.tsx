@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileDown } from "lucide-react";
 import { exportReportPdf } from "@/lib/report-pdf";
@@ -17,6 +18,7 @@ export default function IncompleteNormPage() {
   const { sessionId, sessionName } = useManagerSession();
   const navigate = useNavigate();
   const [tab, setTab] = useState("teachers");
+  const [classFilter, setClassFilter] = useState("");
 
   // ── Teachers with incomplete hours (based on teaching_norm) ──
   const { data: teacherData, isLoading: teachersLoading } = useQuery({
@@ -252,7 +254,7 @@ export default function IncompleteNormPage() {
   const handleExportStudents = () => {
     if (!studentData?.length) return;
     exportReportPdf({
-      title: `Normă incompletă — Elevi — ${sessionName}`,
+      title: `Normă incompletă — Elevi — ${studentData[0]?.className ?? ""} — ${sessionName}`,
       headers: ["Nr.", "Clasă", "Elev", "Ore rezervate", "Ore validate", "Ore necesare", "Ore rămase"],
       rows: studentData.map((s, i) => [
         String(i + 1), s.className, s.name,
@@ -260,7 +262,7 @@ export default function IncompleteNormPage() {
         `${formatHoursVsRequired(s.validated, s.required)}h`,
         `${s.required}h`, `${s.remaining}h`,
       ]),
-      filename: "norma-incompleta-elevi",
+      filename: `norma-incompleta-elevi-${studentData[0]?.className ?? ""}`,
       orientation: "landscape",
     });
   };
@@ -284,7 +286,7 @@ export default function IncompleteNormPage() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="teachers">Profesori ({teacherData?.length || 0})</TabsTrigger>
-          <TabsTrigger value="students">Elevi ({studentData?.length || 0})</TabsTrigger>
+          <TabsTrigger value="students">Elevi{classFilter ? ` (${studentData?.length || 0})` : ""}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="teachers" className="mt-4">
@@ -338,8 +340,15 @@ export default function IncompleteNormPage() {
         </TabsContent>
 
         <TabsContent value="students" className="mt-4">
-          {studentsLoading && <p className="text-muted-foreground">Se încarcă...</p>}
-          {!studentsLoading && !studentData?.length && <p className="text-muted-foreground">Toți elevii au norma completă.</p>}
+          <Select value={classFilter} onValueChange={setClassFilter}>
+            <SelectTrigger className="w-full sm:w-56 mb-4"><SelectValue placeholder="Alege o clasă" /></SelectTrigger>
+            <SelectContent>
+              {(ruleClasses || []).map((c) => <SelectItem key={c.id} value={c.id}>{c.display_name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {!classFilter && <p className="text-muted-foreground">Alege o clasă pentru a vedea elevii cu norma incompletă.</p>}
+          {classFilter && studentsLoading && <p className="text-muted-foreground">Se încarcă...</p>}
+          {classFilter && !studentsLoading && !studentData?.length && <p className="text-muted-foreground">Toți elevii din această clasă au norma completă.</p>}
           {studentData && studentData.length > 0 && (
             <>
               {/* Desktop */}
