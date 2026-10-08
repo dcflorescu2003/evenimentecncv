@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchInChunks } from "@/lib/supabase-chunk";
+import { fetchInChunks, fetchAllPages } from "@/lib/supabase-chunk";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -354,12 +354,12 @@ function StudentReport({ sessionId }: { sessionId: string }) {
     queryFn: async () => {
       let assignmentQuery = supabase.from("student_class_assignments").select("student_id, class_id");
       if (classFilter !== "all") assignmentQuery = assignmentQuery.eq("class_id", classFilter);
-      const { data: assignments } = await assignmentQuery;
+      const assignments = await fetchAllPages<any>((f, to) => (assignmentQuery as any).range(f, to));
 
       const studentIds = [...new Set((assignments ?? []).map(a => a.student_id))];
       if (studentIds.length === 0) return [];
 
-      const { data: profiles } = await supabase.from("profiles").select("id, display_name, first_name, last_name").in("id", studentIds);
+      const profiles = await fetchInChunks<any>(studentIds, 200, (chunk, f, to) => supabase.from("profiles").select("id, display_name, first_name, last_name").in("id", chunk).range(f, to));
       const { data: events } = await supabase.from("events").select("id, date, counted_duration_hours, session_id").eq("session_id", sessionId);
       const eventIds = (events ?? []).map(e => e.id);
       const eventMap = Object.fromEntries((events ?? []).map(e => [e.id, e]));
