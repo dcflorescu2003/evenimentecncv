@@ -315,7 +315,7 @@ export default function IncompleteNormPage() {
                         <TableCell>{i + 1}</TableCell>
                         <TableCell>{t.name}</TableCell>
                         <TableCell>{t.events}</TableCell>
-                        <TableCell>{t.plannedHours}h</TableCell>
+                        <TableCell className={t.plannedHours >= t.norm ? "font-semibold text-success" : "font-semibold text-destructive"}>{t.plannedHours}h</TableCell>
                         <TableCell className={t.organizedHours >= t.norm ? "font-semibold text-success" : "font-semibold text-destructive"}>{t.organizedHours}h</TableCell>
                         <TableCell>{t.norm}h</TableCell>
                         <TableCell className="font-semibold text-destructive">{t.remaining}h</TableCell>
@@ -330,7 +330,7 @@ export default function IncompleteNormPage() {
                 {teacherData.map((t, i) => (
                   <div key={t.id} className="rounded-lg border bg-card p-3 space-y-1 cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/manager/teachers?id=${t.id}&from=incomplete`)}>
                     <p className="font-medium">{i + 1}. {t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.events} evenimente · Planificate: {t.plannedHours}h · <span className={t.organizedHours >= t.norm ? "font-semibold text-success" : "font-semibold text-destructive"}>Organizate: {t.organizedHours}h</span> / {t.norm}h</p>
+                    <p className="text-xs text-muted-foreground">{t.events} evenimente · <span className={t.plannedHours >= t.norm ? "font-semibold text-success" : "font-semibold text-destructive"}>Planificate: {t.plannedHours}h</span> · <span className={t.organizedHours >= t.norm ? "font-semibold text-success" : "font-semibold text-destructive"}>Organizate: {t.organizedHours}h</span> / {t.norm}h</p>
                     <p className="text-xs font-semibold text-destructive">Rămase: {t.remaining}h</p>
                   </div>
                 ))}
