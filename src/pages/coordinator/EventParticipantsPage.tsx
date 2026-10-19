@@ -230,10 +230,8 @@ export default function EventParticipantsPage() {
   };
 
   async function ensureTicket(reservationId: string): Promise<string | null> {
-    const { data, error } = await supabase.from("tickets").insert({
-      reservation_id: reservationId,
-    }).select("id").single();
-    if (error) { toast.error("Nu s-a putut crea ticketul: " + error.message); return null; }
+    const { data, error } = await supabase.from("tickets").select("id").eq("reservation_id", reservationId).maybeSingle();
+    if (error || !data) { toast.error("Biletul nu a fost găsit. Reîncarcă pagina."); return null; }
     return data.id;
   }
 

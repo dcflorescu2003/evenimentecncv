@@ -8,6 +8,13 @@
       "when": 1792391410653,
       "tag": "0000_fast_ticket_status_rpcs",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792393730038,
+      "tag": "0001_auto_ticket_on_reservation",
+      "breakpoints": true
     }
   ]
 }
