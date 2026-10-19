@@ -58,17 +58,22 @@ export default function StudentTicketsPage() {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  type MyRes = Reservation & { events: Event | null; tickets: TicketRow | null };
+  const cacheKey = user ? `cncv_my_tickets:${user.id}` : "";
   const { data: reservations = [], isLoading } = useQuery({
     queryKey: ["all_my_reservations", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reservations")
-        .select("*, events(*), tickets(*)")
-        .eq("student_id", user!.id)
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.rpc("get_my_tickets" as any);
       if (error) throw error;
-      return data as unknown as (Reservation & { events: Event | null; tickets: TicketRow | null })[];
+      const list = ((data ?? []) as unknown) as MyRes[];
+      try { localStorage.setItem(cacheKey, JSON.stringify(list)); } catch { /* plin */ }
+      return list;
     },
+    initialData: () => {
+      if (!cacheKey) return undefined;
+      try { const raw = localStorage.getItem(cacheKey); return raw ? (JSON.parse(raw) as MyRes[]) : undefined; } catch { return undefined; }
+    },
+    initialDataUpdatedAt: 0,
     enabled: !!user,
   });
 
