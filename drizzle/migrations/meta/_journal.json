@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792391410653,
+      "tag": "0000_fast_ticket_status_rpcs",
+      "breakpoints": true
+    }
+  ]
+}
