@@ -135,6 +135,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    try {
+      Object.keys(localStorage).filter((k) => k.startsWith("cncv_my_tickets:")).forEach((k) => localStorage.removeItem(k));
+    } catch { /* indisponibil */ }
     await supabase.auth.signOut();
     setSession(null);
     setUser(null);
