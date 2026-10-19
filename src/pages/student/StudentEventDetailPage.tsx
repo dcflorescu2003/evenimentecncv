@@ -197,31 +197,20 @@ export default function StudentEventDetailPage() {
             .from("tickets")
             .update({ status: "reserved", qr_code_data: crypto.randomUUID() })
             .eq("id", existingTicket.id);
-        } else {
-          const { error: ticketError } = await supabase
-            .from("tickets")
-            .insert({ reservation_id: existing.id });
-          if (ticketError) throw new Error(ticketError.message);
         }
         return;
       }
 
-      const { data: reservation, error: resError } = await supabase
+      // Biletul este creat automat de server odată cu rezervarea.
+      const { error: resError } = await supabase
         .from("reservations")
-        .insert({ student_id: user!.id, event_id: id! })
-        .select()
-        .single();
+        .insert({ student_id: user!.id, event_id: id! });
       if (resError) {
         if (resError.message.includes("duplicate key")) {
           throw new Error("Ai deja o rezervare pentru acest eveniment.");
         }
         throw new Error(resError.message);
       }
-
-      const { error: ticketError } = await supabase
-        .from("tickets")
-        .insert({ reservation_id: reservation.id });
-      if (ticketError) throw new Error(ticketError.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my_reservation", id] });
