@@ -3343,6 +3343,7 @@ export type Database = {
         Args: { _response_id: string }
         Returns: string
       }
+      get_my_tickets: { Args: never; Returns: Json }
       get_profile_emails: {
         Args: { _user_ids: string[] }
         Returns: {

@@ -27,39 +27,60 @@ export default function StudentBadgePage() {
   const [, setTick] = useState(0);
   const issuing = useRef(false);
 
-  const issue = useCallback(async () => {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const expiresRef = useRef(0);
+
+  const schedule = useCallback((ms: number, fn: () => void) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(fn, Math.max(0, ms));
+  }, []);
+
+  const issue = useCallback(async (attempt = 0): Promise<void> => {
     if (issuing.current) return;
     issuing.current = true;
+    let ok = false;
     try {
       const { data, error } = await supabase.rpc("issue_student_qr" as any);
       const res = (data ?? {}) as any;
-      if (error || !res?.success) {
-        setOffline(navigator.onLine === false);
-        setGenError(navigator.onLine === false ? null : "Codul nu a putut fi generat. Reîncearcă.");
-        return;
+      if (!error && res?.success) {
+        const exp = new Date(res.expires_at as string).getTime();
+        setToken(res.token as string);
+        setExpiresAt(exp);
+        expiresRef.current = exp;
+        setIssuedAt(Date.now());
+        setOffline(false);
+        setGenError(null);
+        ok = true;
+        // cere codul următor cu ~7s înainte de expirare
+        schedule(Math.min(REFRESH_MS, exp - Date.now() - 7000), () => { void issue(); });
       }
-      setToken(res.token as string);
-      setExpiresAt(new Date(res.expires_at as string).getTime());
-      setIssuedAt(Date.now());
-      setOffline(false);
-      setGenError(null);
-    } catch {
-      setOffline(navigator.onLine === false);
-      setGenError(navigator.onLine === false ? null : "Codul nu a putut fi generat. Reîncearcă.");
-    } finally {
+    } catch { /* tratat mai jos */ } finally {
       issuing.current = false;
     }
-  }, []);
+    if (!ok) {
+      const isOffline = navigator.onLine === false;
+      // păstrăm codul curent cât încă e valabil
+      if (expiresRef.current <= Date.now()) {
+        setOffline(isOffline);
+        setGenError(isOffline ? null : "Codul nu a putut fi generat. Reîncearcă.");
+      }
+      const delay = [1000, 2000, 4000][Math.min(attempt, 2)];
+      schedule(delay, () => { void issue(attempt + 1); });
+    }
+  }, [schedule]);
 
   useEffect(() => {
     if (!user) return;
     void issue();
-    const interval = setInterval(() => { void issue(); }, REFRESH_MS);
-    const onVisible = () => { if (document.visibilityState === "visible") void issue(); };
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && expiresRef.current - Date.now() < 10000) void issue();
+    };
     document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onVisible);
     return () => {
-      clearInterval(interval);
+      if (timerRef.current) clearTimeout(timerRef.current);
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onVisible);
     };
   }, [user, issue]);
 
