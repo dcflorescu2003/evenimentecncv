@@ -3244,6 +3244,10 @@ export type Database = {
         Args: { _event_id: string; _user_id: string }
         Returns: boolean
       }
+      cancel_event_reservation: {
+        Args: { _reservation_id: string }
+        Returns: undefined
+      }
       check_booking_eligibility: {
         Args: { _event_id: string; _student_id: string }
         Returns: Json
@@ -3564,6 +3568,14 @@ export type Database = {
       }
       self_checkin_club: { Args: { _qr_code_data: string }; Returns: Json }
       self_checkin_volunteer: { Args: { _qr_code_data: string }; Returns: Json }
+      set_ticket_attendance: {
+        Args: {
+          _notes?: string
+          _status: Database["public"]["Enums"]["ticket_status"]
+          _ticket_id: string
+        }
+        Returns: undefined
+      }
       submit_club_enrollment: {
         Args: { _answers?: Json; _club_id: string }
         Returns: string

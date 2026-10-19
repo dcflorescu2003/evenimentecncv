@@ -511,22 +511,10 @@ export default function EventDetailPage() {
 
   // Admin attendance override
   async function adminOverrideStatus(ticketId: string, currentStatus: string, newStatus: string) {
-    const { error } = await supabase
-      .from("tickets")
-      .update({
-        status: newStatus as any,
-        checkin_timestamp: ["present", "late"].includes(newStatus) ? new Date().toISOString() : null,
-      })
-      .eq("id", ticketId);
-    if (error) { toast.error(error.message); return; }
-
-    await supabase.from("attendance_log").insert({
-      ticket_id: ticketId,
-      previous_status: currentStatus as any,
-      new_status: newStatus as any,
-      changed_by: user!.id,
-      notes: "Override admin",
+    const { error } = await supabase.rpc("set_ticket_attendance" as any, {
+      _ticket_id: ticketId, _status: newStatus, _notes: "Override admin",
     });
+    if (error) { toast.error(error.message); return; }
 
     // Also log to audit_logs
     await supabase.from("audit_logs").insert({
@@ -1314,9 +1302,8 @@ export default function EventDetailPage() {
                     toast.success("Rezervare anulată");
                   } else {
                     // Cancel student reservation + ticket
-                    const { error: resErr } = await supabase.from("reservations").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", cancelReservation.id);
+                    const { error: resErr } = await supabase.rpc("cancel_event_reservation" as any, { _reservation_id: cancelReservation.id });
                     if (resErr) throw resErr;
-                    await supabase.from("tickets").update({ status: "cancelled" as any }).eq("reservation_id", cancelReservation.id);
                     await supabase.from("audit_logs").insert({
                       user_id: user!.id,
                       action: "reservation_cancelled_by_admin",

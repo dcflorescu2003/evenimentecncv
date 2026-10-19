@@ -307,16 +307,16 @@ export default function ProfEventParticipantsPage() {
     }
     if (!resolvedTicketId) { toast.error("Ticketul nu a fost găsit"); return; }
 
-    const table = isPublic ? "public_tickets" : "tickets";
-    const { error } = await supabase.from(table).update({
-      status: newStatus, checkin_timestamp: ["present", "late"].includes(newStatus) ? new Date().toISOString() : null,
-    } as any).eq("id", resolvedTicketId);
-    if (error) { toast.error(error.message); return; }
-    if (!isPublic) {
-      await supabase.from("attendance_log").insert({
-        ticket_id: resolvedTicketId, previous_status: currentStatus as any,
-        new_status: newStatus, changed_by: user!.id, notes: "Actualizat de profesor",
+    if (isPublic) {
+      const { error } = await supabase.from("public_tickets").update({
+        status: newStatus, checkin_timestamp: ["present", "late"].includes(newStatus) ? new Date().toISOString() : null,
+      } as any).eq("id", resolvedTicketId);
+      if (error) { toast.error(error.message); return; }
+    } else {
+      const { error } = await supabase.rpc("set_ticket_attendance" as any, {
+        _ticket_id: resolvedTicketId, _status: newStatus, _notes: "Actualizat de profesor",
       });
+      if (error) { toast.error(error.message); return; }
     }
     queryClient.invalidateQueries({ queryKey: ["prof_participants", eventId] });
     queryClient.invalidateQueries({ queryKey: ["prof_public_participants", eventId] });
@@ -538,9 +538,8 @@ export default function ProfEventParticipantsPage() {
                     const { error } = await supabase.from("public_tickets").update({ status: "cancelled" }).eq("id", cancelReservation.id);
                     if (error) throw error;
                   } else {
-                    const { error: resErr } = await supabase.from("reservations").update({ status: "cancelled", cancelled_at: new Date().toISOString() }).eq("id", cancelReservation.id);
+                    const { error: resErr } = await supabase.rpc("cancel_event_reservation" as any, { _reservation_id: cancelReservation.id });
                     if (resErr) throw resErr;
-                    await supabase.from("tickets").update({ status: "cancelled" as any }).eq("reservation_id", cancelReservation.id);
                   }
                   queryClient.invalidateQueries({ queryKey: ["prof_participants", eventId] });
                   queryClient.invalidateQueries({ queryKey: ["prof_public_participants", eventId] });
