@@ -1,3 +1,4 @@
+import { scanEventTicket, setAttendance } from "@/lib/ticket-scan";
 import {
   buildQrScannerConfig, cameraDisplayLabel, createQrScanner, initializeQrCameras,
   isFrontCamera, rememberQrCamera, resolveQrCamera,
@@ -200,96 +201,26 @@ export default function StudentScanPage() {
   }
 
   async function processTicket(qrCodeData: string) {
-    const { data: ticket } = await supabase
-      .from("tickets")
-      .select("*, reservations(*, profiles:student_id(first_name, last_name, display_name))")
-      .eq("qr_code_data", qrCodeData)
-      .maybeSingle();
-
-    if (ticket) {
-      const reservation = (ticket as any).reservations;
-      if (!reservation || reservation.event_id !== eventId) {
-        setScanResult({ success: false, message: "Biletul nu aparține acestui eveniment." });
-        return;
-      }
-      if (ticket.status !== "reserved") {
-        setScanResult({ success: false, message: `Deja procesat (${statusLabels[ticket.status]}).`, studentName: `${reservation.profiles?.last_name || ""} ${reservation.profiles?.first_name || ""}`, ticketId: ticket.id });
-        return;
-      }
-      const name = `${reservation.profiles?.last_name || ""} ${reservation.profiles?.first_name || ""}`;
-      if (event) {
-        const autoStatus = determineAutoStatus(event.date, event.start_time);
-        await autoMarkTicket(ticket.id, autoStatus, "reserved", false);
-        toast.success(`✓ ${name} — ${statusLabels[autoStatus]}`);
-        if (activeTab === "scan") resumeScanner();
-      }
-      return;
-    }
-
-    const { data: publicTicket } = await supabase
-      .from("public_tickets")
-      .select("*, public_reservations(event_id, guest_name)")
-      .eq("qr_code_data", qrCodeData)
-      .maybeSingle();
-
-    if (publicTicket) {
-      const pr = (publicTicket as any).public_reservations;
-      if (!pr || pr.event_id !== eventId) {
-        setScanResult({ success: false, message: "Biletul nu aparține acestui eveniment." });
-        return;
-      }
-      if (publicTicket.status !== "reserved") {
-        setScanResult({ success: false, message: `Deja procesat (${statusLabels[publicTicket.status]}).`, studentName: `${publicTicket.attendee_name} (Vizitator)`, ticketId: publicTicket.id, isPublicTicket: true });
-        return;
-      }
-      if (event) {
-        const autoStatus = determineAutoStatus(event.date, event.start_time);
-        await autoMarkTicket(publicTicket.id, autoStatus, "reserved", true);
-        toast.success(`✓ ${publicTicket.attendee_name} (Vizitator) — ${statusLabels[autoStatus]}`);
-        if (activeTab === "scan") resumeScanner();
-      }
-      return;
-    }
-
-    setScanResult({ success: false, message: "Bilet negăsit." });
-  }
-
-  async function autoMarkTicket(ticketId: string, status: TicketStatus, previousStatus: string, isPublic: boolean) {
-    const table = isPublic ? "public_tickets" : "tickets";
-    const { error: updateError } = await supabase
-      .from(table)
-      .update({
-        status,
-        checkin_timestamp: new Date().toISOString(),
-      } as any)
-      .eq("id", ticketId);
-    if (updateError) { toast.error(updateError.message); return; }
-
-    if (!isPublic) {
-      await supabase.from("attendance_log").insert({
-        ticket_id: ticketId,
-        previous_status: previousStatus as any,
-        new_status: status as any,
-        changed_by: user!.id,
-        notes: "Scanare automată de elev asistent",
-      });
-    }
+    if (!eventId) { setScanResult({ success: false, message: "Selectează un eveniment înainte de scanare." }); return; }
+    if (!qrCodeData) return;
+    const res = await scanEventTicket(eventId, qrCodeData);
+    if (res.success) {
+      toast.success(`✓ ${res.name} — ${statusLabels[res.status ?? ""] ?? res.status}`);
     queryClient.invalidateQueries({ queryKey: ["student_search_participants"] });
     queryClient.invalidateQueries({ queryKey: ["student_search_public"] });
+      if (activeTab === "scan") resumeScanner();
+      return;
+    }
+    if (res.already) {
+      setScanResult({ success: false, message: `Deja procesat (${statusLabels[res.status ?? ""] ?? res.status}).`, studentName: res.name, ticketId: res.ticket_id, isPublicTicket: res.is_public } as any);
+      return;
+    }
+    setScanResult({ success: false, message: res.message ?? "Bilet negăsit." } as any);
   }
 
-  async function markFromSearch(ticketId: string, status: TicketStatus, currentStatus: string, isPublic?: boolean) {
-    const table = isPublic ? "public_tickets" : "tickets";
-    const { error } = await supabase.from(table).update({
-      status, checkin_timestamp: ["present", "late"].includes(status) ? new Date().toISOString() : null,
-    } as any).eq("id", ticketId);
-    if (error) { toast.error(error.message); return; }
-    if (!isPublic) {
-      await supabase.from("attendance_log").insert({
-        ticket_id: ticketId, previous_status: currentStatus as any,
-        new_status: status as any, changed_by: user!.id, notes: "Marcat manual de elev asistent",
-      });
-    }
+  async function markFromSearch(ticketId: string, status: TicketStatus, _currentStatus: string, isPublic?: boolean) {
+    const err = await setAttendance(ticketId, status, isPublic, "Marcat manual de elev asistent");
+    if (err) { toast.error(err); return; }
     toast.success("Prezență actualizată");
     queryClient.invalidateQueries({ queryKey: ["student_search_participants"] });
     queryClient.invalidateQueries({ queryKey: ["student_search_public"] });
