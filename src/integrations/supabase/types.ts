@@ -3543,6 +3543,10 @@ export type Database = {
       }
       resolve_student_badge_public: { Args: { _qr: string }; Returns: Json }
       resolve_student_qr: { Args: { _qr: string }; Returns: Json }
+      scan_event_ticket: {
+        Args: { _event_id: string; _qr: string }
+        Returns: Json
+      }
       search_profiles: {
         Args: {
           _limit?: number
@@ -3569,6 +3573,13 @@ export type Database = {
       }
       self_checkin_club: { Args: { _qr_code_data: string }; Returns: Json }
       self_checkin_volunteer: { Args: { _qr_code_data: string }; Returns: Json }
+      set_public_ticket_attendance: {
+        Args: {
+          _status: Database["public"]["Enums"]["ticket_status"]
+          _ticket_id: string
+        }
+        Returns: undefined
+      }
       set_ticket_attendance: {
         Args: {
           _notes?: string
