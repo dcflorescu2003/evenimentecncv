@@ -26,3 +26,12 @@ export async function setAttendance(ticketId: string, status: string, isPublic?:
     : await supabase.rpc("set_ticket_attendance" as any, { _ticket_id: ticketId, _status: status, _notes: notes ?? null } as any);
   return error ? error.message : null;
 }
+
+export type ParticipantHit = { ticket_id: string; name: string; status: string; is_public: boolean };
+
+/** Caută participanții unui eveniment (elevi + vizitatori) printr-o funcție rapidă pe server. */
+export async function searchEventParticipants(eventId: string, q: string): Promise<ParticipantHit[]> {
+  const { data, error } = await supabase.rpc("search_event_participants" as any, { _event_id: eventId, _q: q } as any);
+  if (error) throw new Error(CONN_ERR);
+  return (data ?? []) as ParticipantHit[];
+}
