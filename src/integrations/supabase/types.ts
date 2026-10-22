@@ -3547,6 +3547,15 @@ export type Database = {
         Args: { _event_id: string; _qr: string }
         Returns: Json
       }
+      search_event_participants: {
+        Args: { _event_id: string; _q: string }
+        Returns: {
+          is_public: boolean
+          name: string
+          status: Database["public"]["Enums"]["ticket_status"]
+          ticket_id: string
+        }[]
+      }
       search_profiles: {
         Args: {
           _limit?: number
