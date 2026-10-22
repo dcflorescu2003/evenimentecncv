@@ -188,7 +188,7 @@ export default function EventScanScreen({ eventId, backPath, markNote, readerId 
         </TabsList>
 
         <TabsContent value="scan" className="space-y-4">
-          <div id=readerId ref={videoRef} className="mx-auto w-full max-w-sm overflow-hidden rounded-lg border bg-muted" style={{ minHeight: 300 }} />
+          <div id={readerId} ref={videoRef} className="mx-auto w-full max-w-sm overflow-hidden rounded-lg border bg-muted" style={{ minHeight: 300 }} />
           {cameras.length > 0 && (
             <Select value={selectedCameraId} onValueChange={(val) => {
               setSelectedCameraId(val);
