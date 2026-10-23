@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { CseBadge } from "@/components/CseBadge";
+import ParticipantsExportBar from "./ParticipantsExportBar";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -258,7 +259,8 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
             onSaved={() => qc.invalidateQueries({ queryKey: ["volunteer", projectId] })} />
         </TabsContent>
         {showMembersTab && (
-          <TabsContent value="members" className="pt-3">
+          <TabsContent value="members" className="pt-3 space-y-3">
+            <ParticipantsExportBar kind="volunteer" title={project.name} enrollments={enrollments} />
             <MembersTab
               projectId={projectId!}
               enrollments={enrollments}
@@ -269,7 +271,9 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
           </TabsContent>
         )}
         {showDaysTab && (
-          <TabsContent value="days" className="pt-3">
+          <TabsContent value="days" className="pt-3 space-y-3">
+            <ParticipantsExportBar kind="volunteer" title={project.name}
+              enrollments={assistantMode ? enrollments : visibleEnrollments} sessions={days as any} />
             <DaysTab projectId={projectId!} days={days}
               enrollments={assistantMode ? enrollments : visibleEnrollments}
               canManage={canManage}

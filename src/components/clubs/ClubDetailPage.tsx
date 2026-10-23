@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { CseBadge } from "@/components/CseBadge";
+import ParticipantsExportBar from "./ParticipantsExportBar";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -299,6 +300,7 @@ export default function ClubDetailPage({ mode }: Props) {
 
         {showMembersTab && (
           <TabsContent value="members" className="space-y-3 pt-3">
+            <ParticipantsExportBar kind="club" title={club.name} enrollments={enrollments} />
             <ClubMembersTab
               clubId={clubId!}
               enrollments={enrollments}
@@ -315,6 +317,10 @@ export default function ClubDetailPage({ mode }: Props) {
 
         {showMeetingsTab && (
           <TabsContent value="meetings" className="space-y-3 pt-3">
+            {!(mode === "student" && !assistantMode) && (
+              <ParticipantsExportBar kind="club" title={club.name}
+                enrollments={assistantMode ? enrollments : visibleEnrollments} sessions={meetings as any} />
+            )}
             <MeetingsTab
               clubId={clubId!}
               meetings={meetings}
