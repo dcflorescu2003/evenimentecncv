@@ -41,6 +41,8 @@ interface ExportReportSectionsOptions {
   sections: ReportSection[];
   filename: string;
   orientation?: "portrait" | "landscape";
+  /** Start every section (e.g. each class) on a fresh page. */
+  newPagePerSection?: boolean;
 }
 
 export async function exportReportPdfSections({
@@ -49,6 +51,7 @@ export async function exportReportPdfSections({
   sections,
   filename,
   orientation = "portrait",
+  newPagePerSection = false,
 }: ExportReportSectionsOptions) {
   const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
   await ensureUnicodeFont(doc);
