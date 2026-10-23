@@ -70,7 +70,8 @@ export default function SessionAbsenceReportPage() {
   });
 
   const days = useMemo(() => (session ? weekdaysBetween(session.start_date, session.end_date) : []), [session]);
-  const today = todayStr();
+  // Closed session: every day counts as finished (use a cutoff after the end date).
+  const today = session?.status === "closed" ? "9999-12-31" : todayStr();
 
   const groups = useMemo(() => {
     if (!data) return [];
