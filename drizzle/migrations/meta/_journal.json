@@ -43,6 +43,13 @@
       "when": 1792662509057,
       "tag": "0005_search_event_participants_fix_cast",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792780963801,
+      "tag": "0006_rls_initplan_events_reservations_tickets",
+      "breakpoints": true
     }
   ]
 }
