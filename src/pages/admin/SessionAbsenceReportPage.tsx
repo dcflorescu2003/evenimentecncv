@@ -88,8 +88,9 @@ export default function SessionAbsenceReportPage() {
       .filter((g) => g.rows.length);
   }, [data, classes, classId, days, today]);
 
-  const headers = ["Nr.", "Nume Prenume", ...days.map((d) => `${wd(d)} ${fmt(d).slice(0, 5)}`), "Absențe"];
-  const toRows = (g: (typeof groups)[number]) => g.rows.map((r, i) => [String(i + 1), r.name, ...days.map((d) => (d < today ? String(r.perDay[d]) : "—")), String(r.absences)]);
+  const absentFor = (r: (typeof groups)[number]["rows"][number], d: string) => DAILY_HOURS_CAP - r.perDay[d];
+  const headers = ["Nr.", "Nume Prenume", ...days.map((d) => `${wd(d)} ${fmt(d).slice(0, 5)}`), "Total"];
+  const toRows = (g: (typeof groups)[number]) => g.rows.map((r, i) => [String(i + 1), r.name, ...days.map((d) => (d < today ? String(absentFor(r, d)) : "—")), String(r.absences)]);
 
   const title = `Raport sesiune — ${session?.name ?? ""}`;
   const pdf = () => exportReportPdfSections({ title, orientation: "landscape", filename: "raport-sesiune-absente", sections: groups.map((g) => ({ title: g.name, headers, rows: toRows(g) })) });
@@ -100,7 +101,7 @@ export default function SessionAbsenceReportPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Raport sesiune</h1>
-          <p className="text-sm text-muted-foreground">Ore realizate pe zi (maxim {DAILY_HOURS_CAP}); „Absențe” = ore nerealizate până la {DAILY_HOURS_CAP}h/zi, doar pentru zilele încheiate.</p>
+          <p className="text-sm text-muted-foreground">Ore absentate pe zi (din maxim {DAILY_HOURS_CAP}h/zi); „Total” = suma orelor nerealizate, doar pentru zilele încheiate.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" disabled={!groups.length} onClick={pdf}><FileText className="mr-2 h-4 w-4" />PDF</Button>
@@ -135,11 +136,14 @@ export default function SessionAbsenceReportPage() {
                   <TableRow key={i}>
                     <TableCell>{i + 1}</TableCell>
                     <TableCell className="whitespace-nowrap">{r.name}</TableCell>
-                    {days.map((d) => (
-                      <TableCell key={d} className={d >= today ? "text-muted-foreground" : r.perDay[d] >= DAILY_HOURS_CAP ? "text-success font-semibold" : "text-destructive font-semibold"}>
-                        {d < today ? r.perDay[d] : "—"}
-                      </TableCell>
-                    ))}
+                    {days.map((d) => {
+                      const a = absentFor(r, d);
+                      return (
+                        <TableCell key={d} className={d >= today ? "text-muted-foreground" : a > 0 ? "text-destructive font-semibold" : "text-success font-semibold"}>
+                          {d < today ? a : "—"}
+                        </TableCell>
+                      );
+                    })}
                     <TableCell className={r.absences > 0 ? "text-destructive font-bold" : "text-success font-bold"}>{r.absences}</TableCell>
                   </TableRow>
                 ))}
