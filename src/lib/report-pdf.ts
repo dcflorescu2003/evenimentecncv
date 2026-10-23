@@ -41,6 +41,8 @@ interface ExportReportSectionsOptions {
   sections: ReportSection[];
   filename: string;
   orientation?: "portrait" | "landscape";
+  /** Start every section (e.g. each class) on a fresh page. */
+  newPagePerSection?: boolean;
 }
 
 export async function exportReportPdfSections({
@@ -49,6 +51,7 @@ export async function exportReportPdfSections({
   sections,
   filename,
   orientation = "portrait",
+  newPagePerSection = false,
 }: ExportReportSectionsOptions) {
   const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
   await ensureUnicodeFont(doc);
@@ -71,8 +74,17 @@ export async function exportReportPdfSections({
   doc.text(`Generat: ${new Date().toLocaleDateString("ro-RO")}`, center, startY, { align: "center" });
   startY += 6;
 
+  let drawn = false;
   for (const section of sections) {
     if (!section.rows.length) continue;
+    if (newPagePerSection && drawn) {
+      doc.addPage();
+      doc.setFont(PDF_FONT, "normal");
+      doc.setFontSize(12);
+      doc.text(title, center, 14, { align: "center" });
+      startY = 20;
+    }
+    drawn = true;
     if (section.title) {
       doc.setFontSize(11);
       doc.setFont(PDF_FONT, "bold");

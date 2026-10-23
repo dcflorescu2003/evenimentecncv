@@ -93,7 +93,7 @@ export default function SessionAbsenceReportPage() {
   const toRows = (g: (typeof groups)[number]) => g.rows.map((r, i) => [String(i + 1), r.name, ...days.map((d) => (d < today ? String(absentFor(r, d)) : "—")), String(r.absences)]);
 
   const title = `Raport sesiune — ${session?.name ?? ""}`;
-  const pdf = () => exportReportPdfSections({ title, orientation: "landscape", filename: "raport-sesiune-absente", sections: groups.map((g) => ({ title: g.name, headers, rows: toRows(g) })) });
+  const pdf = () => exportReportPdfSections({ title, orientation: "landscape", filename: "raport-sesiune-absente", newPagePerSection: true, sections: groups.map((g) => ({ title: g.name, headers, rows: toRows(g) })) });
   const csv = () => exportToCSV("raport-sesiune-absente", ["Clasă", ...headers], groups.flatMap((g) => toRows(g).map((r) => [g.name, ...r])));
 
   return (
