@@ -20,4 +20,10 @@ describe("computeDailyAbsences", () => {
   it("weekend ignorat", () => {
     expect(weekdaysBetween("2026-10-23", "2026-10-26")).toEqual(["2026-10-23", "2026-10-26"]);
   });
+  it("absentele pe zi (4h - realizate) insumate egaleaza Total", () => {
+    const r = computeDailyAbsences(days, new Map([[days[0], 2], [days[1], 4], [days[2], 0]]), today);
+    const perDayAbsences = days.map((d) => 4 - r.perDay[d]);
+    expect(perDayAbsences).toEqual([2, 0, 4, 4]);
+    expect(perDayAbsences.reduce((a, b) => a + b, 0)).toBe(r.absences);
+  });
 });
