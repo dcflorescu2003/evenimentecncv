@@ -50,6 +50,7 @@ const menuItems = [
   { title: "Scanare bilete", icon: QrCode, path: "/admin/scan" },
   { title: "Utilizatori", icon: Users, path: "/admin/users" },
   { title: "Rapoarte", icon: BarChart3, path: "/admin/reports" },
+  { title: "Raport sesiune", icon: BarChart3, path: "/admin/session-report" },
   { title: "Jurnal audit", icon: Shield, path: "/admin/audit" },
   { title: "Credențiale PDF", icon: KeyRound, path: "/admin/credentials" },
 ];

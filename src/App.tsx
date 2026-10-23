@@ -22,6 +22,7 @@ import EventsPage from "./pages/admin/EventsPage";
 import EventDetailPage from "./pages/admin/EventDetailPage";
 import UsersPage from "./pages/admin/UsersPage";
 import ReportsPage from "./pages/admin/ReportsPage";
+import SessionAbsenceReportPage from "./pages/admin/SessionAbsenceReportPage";
 import AuditPage from "./pages/admin/AuditPage";
 import CredentialsPage from "./pages/admin/CredentialsPage";
 import AdminScanPage from "./pages/admin/AdminScanPage";
@@ -148,6 +149,7 @@ const App = () => (
               <Route path="/admin/events/:id" element={<EventDetailPage />} />
               <Route path="/admin/users" element={<UsersPage />} />
               <Route path="/admin/reports" element={<ReportsPage />} />
+              <Route path="/admin/session-report" element={<SessionAbsenceReportPage />} />
               <Route path="/admin/audit" element={<AuditPage />} />
               <Route path="/admin/credentials" element={<CredentialsPage />} />
               <Route path="/admin/scan" element={<AdminScanPage />} />
