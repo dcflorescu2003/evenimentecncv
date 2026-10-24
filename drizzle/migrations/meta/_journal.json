@@ -50,6 +50,13 @@
       "when": 1792780963801,
       "tag": "0006_rls_initplan_events_reservations_tickets",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792820599094,
+      "tag": "0007_student_event_rpcs",
+      "breakpoints": true
     }
   ]
 }

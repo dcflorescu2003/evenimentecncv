@@ -3506,6 +3506,43 @@ export type Database = {
           title: string
         }[]
       }
+      list_student_events: {
+        Args: never
+        Returns: {
+          booking_close_at: string | null
+          booking_open_at: string | null
+          computed_duration_display: string | null
+          counted_duration_hours: number
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string | null
+          eligible_classes: string[] | null
+          eligible_grades: number[] | null
+          end_time: string
+          id: string
+          is_cse: boolean
+          is_public: boolean
+          location: string | null
+          max_capacity: number
+          max_per_class: number | null
+          notes_for_teachers: string | null
+          published: boolean
+          room_details: string | null
+          room_id: string | null
+          session_id: string
+          start_time: string
+          status: Database["public"]["Enums"]["event_status"]
+          title: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       lookup_public_reservation: { Args: { p_code: string }; Returns: Json }
       manually_enroll_event_student: {
         Args: { _event_id: string; _student_id: string }
@@ -3595,6 +3632,11 @@ export type Database = {
           _status: Database["public"]["Enums"]["ticket_status"]
           _ticket_id: string
         }
+        Returns: undefined
+      }
+      student_book_event: { Args: { _event_id: string }; Returns: Json }
+      student_cancel_reservation: {
+        Args: { _reservation_id: string }
         Returns: undefined
       }
       submit_club_enrollment: {
