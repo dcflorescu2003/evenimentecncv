@@ -162,55 +162,11 @@ export default function StudentEventDetailPage() {
   // Book mutation
   const bookMutation = useMutation({
     mutationFn: async () => {
-      const { data: eligibility, error: eligError } = await supabase.rpc("check_booking_eligibility", {
-        _student_id: user!.id,
-        _event_id: id!,
-      });
-      if (eligError) throw new Error(eligError.message);
-      const result = eligibility as any;
-      if (!result.allowed) throw new Error(result.reason);
-
-      // Check for existing cancelled reservation to reactivate
-      const { data: existing } = await supabase
-        .from("reservations")
-        .select("id")
-        .eq("student_id", user!.id)
-        .eq("event_id", id!)
-        .eq("status", "cancelled")
-        .maybeSingle();
-
-      if (existing) {
-        const { error: reactivateError } = await supabase
-          .from("reservations")
-          .update({ status: "reserved", cancelled_at: null })
-          .eq("id", existing.id);
-        if (reactivateError) throw new Error(reactivateError.message);
-
-        const { data: existingTicket } = await supabase
-          .from("tickets")
-          .select("id")
-          .eq("reservation_id", existing.id)
-          .maybeSingle();
-
-        if (existingTicket) {
-          await supabase
-            .from("tickets")
-            .update({ status: "reserved", qr_code_data: crypto.randomUUID() })
-            .eq("id", existingTicket.id);
-        }
-        return;
-      }
-
-      // Biletul este creat automat de server odată cu rezervarea.
-      const { error: resError } = await supabase
-        .from("reservations")
-        .insert({ student_id: user!.id, event_id: id! });
-      if (resError) {
-        if (resError.message.includes("duplicate key")) {
-          throw new Error("Ai deja o rezervare pentru acest eveniment.");
-        }
-        throw new Error(resError.message);
-      }
+      const { data: bookRes, error: bookErr } = await supabase.rpc("student_book_event" as any, { _event_id: id! });
+      if (bookErr) throw new Error(bookErr.message);
+      const br = bookRes as any;
+      if (!br?.ok) throw new Error(br?.reason || "Înscrierea a eșuat");
+      return br;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my_reservation", id] });

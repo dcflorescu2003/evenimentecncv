@@ -93,17 +93,8 @@ export default function StudentTicketsPage() {
 
   const cancelMutation = useMutation({
     mutationFn: async (reservationId: string) => {
-      const { error: resError } = await supabase
-        .from("reservations")
-        .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-        .eq("id", reservationId);
-      if (resError) throw new Error(resError.message);
-
-      const { error: ticketError } = await supabase
-        .from("tickets")
-        .update({ status: "cancelled" })
-        .eq("reservation_id", reservationId);
-      if (ticketError) throw new Error(ticketError.message);
+      const { error } = await supabase.rpc("student_cancel_reservation" as any, { _reservation_id: reservationId });
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all_my_reservations"] });

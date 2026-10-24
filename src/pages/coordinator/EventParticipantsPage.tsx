@@ -265,25 +265,11 @@ export default function EventParticipantsPage() {
     }
     if (!resolvedTicketId) { toast.error("Ticketul nu a fost găsit"); return; }
 
-    const table = isPublic ? "public_tickets" : "tickets";
-    const { error } = await supabase
-      .from(table)
-      .update({
-        status: newStatus,
-        checkin_timestamp: ["present", "late"].includes(newStatus) ? new Date().toISOString() : null,
-      } as any)
-      .eq("id", resolvedTicketId);
+    const { error } = isPublic
+      ? await supabase.rpc("set_public_ticket_attendance", { _ticket_id: resolvedTicketId, _status: newStatus })
+      : await supabase.rpc("set_ticket_attendance", { _ticket_id: resolvedTicketId, _status: newStatus, _notes: "Actualizat din lista participanți" });
     if (error) { toast.error(error.message); return; }
-
-    if (!isPublic) {
-      await supabase.from("attendance_log").insert({
-        ticket_id: resolvedTicketId,
-        previous_status: currentStatus as any,
-        new_status: newStatus,
-        changed_by: user!.id,
-        notes: "Actualizat din lista participanți",
-      });
-    }
+    void currentStatus;
 
     queryClient.invalidateQueries({ queryKey: ["event_participants", eventId] });
     queryClient.invalidateQueries({ queryKey: ["event_public_participants", eventId] });
