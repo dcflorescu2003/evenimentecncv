@@ -82,15 +82,9 @@ export default function StudentEventsPage() {
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["published_events"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("events")
-        .select("*")
-        .eq("status", "published")
-        .eq("published", true)
-        .eq("is_public", false)
-        .order("date", { ascending: false });
+      const { data, error } = await supabase.rpc("list_student_events" as any);
       if (error) throw error;
-      return data as Event[];
+      return (data || []) as Event[];
     },
   });
 
@@ -167,75 +161,11 @@ export default function StudentEventsPage() {
 
   const bookMutation = useMutation({
     mutationFn: async (eventId: string) => {
-      // Check eligibility first
-      const { data: eligibility, error: eligError } = await supabase.rpc("check_booking_eligibility", {
-        _student_id: user!.id,
-        _event_id: eventId,
-      });
-      if (eligError) throw new Error(eligError.message);
-      const result = eligibility as any;
-      if (!result.allowed) {
-        throw new Error(result.reason);
-      }
-
-      // Check if there's an existing cancelled reservation to reactivate
-      const { data: existing } = await supabase
-        .from("reservations")
-        .select("id")
-        .eq("student_id", user!.id)
-        .eq("event_id", eventId)
-        .eq("status", "cancelled")
-        .maybeSingle();
-
-      if (existing) {
-        // Reactivate cancelled reservation
-        const { error: reactivateError } = await supabase
-          .from("reservations")
-          .update({ status: "reserved", cancelled_at: null })
-          .eq("id", existing.id);
-        if (reactivateError) throw new Error(reactivateError.message);
-
-        // Reactivate or create ticket
-        const { data: existingTicket } = await supabase
-          .from("tickets")
-          .select("id")
-          .eq("reservation_id", existing.id)
-          .maybeSingle();
-
-        if (existingTicket) {
-          await supabase
-            .from("tickets")
-            .update({ status: "reserved", qr_code_data: crypto.randomUUID() })
-            .eq("id", existingTicket.id);
-        } else {
-          const { error: ticketError } = await supabase
-            .from("tickets")
-            .insert({ reservation_id: existing.id });
-          if (ticketError) throw new Error(ticketError.message);
-        }
-        return existing;
-      }
-
-      // Create new reservation
-      const { data: reservation, error: resError } = await supabase
-        .from("reservations")
-        .insert({ student_id: user!.id, event_id: eventId })
-        .select()
-        .single();
-      if (resError) {
-        if (resError.message.includes("duplicate key")) {
-          throw new Error("Ai deja o rezervare pentru acest eveniment.");
-        }
-        throw new Error(resError.message);
-      }
-
-      // Create ticket
-      const { error: ticketError } = await supabase
-        .from("tickets")
-        .insert({ reservation_id: reservation.id });
-      if (ticketError) throw new Error(ticketError.message);
-
-      return reservation;
+      const { data: bookRes, error: bookErr } = await supabase.rpc("student_book_event" as any, { _event_id: eventId });
+      if (bookErr) throw new Error(bookErr.message);
+      const br = bookRes as any;
+      if (!br?.ok) throw new Error(br?.reason || "Înscrierea a eșuat");
+      return br;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my_reservations"] });
