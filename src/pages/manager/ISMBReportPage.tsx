@@ -83,6 +83,7 @@ export default function ISMBReportPage() {
   const [nrElevi, setNrElevi] = useState("");
   const [nrCadre, setNrCadre] = useState("");
   const [anScolar, setAnScolar] = useState("2026–2027");
+  const [titlu, setTitlu] = useState("RAPORTARE „SĂPTĂMÂNA VERDE”");
   const [reusite, setReusite] = useState("");
   const [dificultati, setDificultati] = useState("");
   const [solutii, setSolutii] = useState("");
@@ -194,7 +195,7 @@ export default function ISMBReportPage() {
       y += 9;
       doc.setFont(PDF_FONT, "bold");
       doc.setFontSize(14);
-      doc.text("MODEL DE RAPORTARE „SĂPTĂMÂNA VERDE”", pageW / 2, y, { align: "center" });
+      doc.text(titlu || "", pageW / 2, y, { align: "center" });
       y += 6;
 
       const common = { styles: { font: PDF_FONT, fontSize: 9, cellPadding: 2, valign: "top" as const }, theme: "grid" as const };
@@ -296,6 +297,9 @@ export default function ISMBReportPage() {
           {field("4. Nr. total elevi / preșcolari", nrElevi, setNrElevi)}
           {field("5. Nr. total cadre didactice", nrCadre, setNrCadre)}
           {field("An școlar", anScolar, setAnScolar)}
+          <div className="md:col-span-2">
+            {field("Titlu raport", titlu, setTitlu)}
+          </div>
           <div className="md:col-span-2 space-y-3">
             {area("6. Reușite / puncte tari ale activităților", reusite, setReusite)}
             {area("7. Dificultăți / puncte slabe", dificultati, setDificultati)}
