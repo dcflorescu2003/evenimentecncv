@@ -54,9 +54,9 @@ export function computeDailyAbsences(
     absentByDay[day] = day < today ? DAILY_HOURS_CAP - h : 0;
     absences += absentByDay[day];
   }
-  // Reduced norm (e.g. 18h): present every day + norm reached → no absences.
+  // Reduced norm (e.g. 18h): present every day → no absences.
   const allFinished = days.every((d) => d < today);
-  if (requiredTotal != null && requiredTotal < days.length * DAILY_HOURS_CAP && allFinished && everyDay && total >= requiredTotal) {
+  if (requiredTotal != null && requiredTotal < days.length * DAILY_HOURS_CAP && allFinished && everyDay) {
     for (const d of days) absentByDay[d] = 0;
     absences = 0;
   }
