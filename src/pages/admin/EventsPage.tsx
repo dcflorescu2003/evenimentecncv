@@ -664,6 +664,9 @@ export default function EventsPage() {
             )}
             <div className="space-y-2">
               <Label>Perioada de înscriere</Label>
+              {(() => { const s: any = sessions.find((x) => x.id === form.session_id); return (s?.booking_open_at || s?.booking_close_at) ? (
+                <p className="text-xs font-medium text-primary">Perioada de înscriere este stabilită de sesiune și va suprascrie valorile de mai jos.</p>
+              ) : null; })()}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">De la - Data</Label>

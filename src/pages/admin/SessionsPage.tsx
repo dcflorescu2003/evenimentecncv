@@ -49,6 +49,11 @@ const emptyForm = {
   end_date: "",
   status: "draft" as SessionStatus,
   min_participants: "" as string,
+  booking_open_date: "",
+  booking_open_time: "",
+  booking_close_date: "",
+  booking_close_time: "",
+  force_teacher_classes: false,
 };
 
 export default function SessionsPage() {
