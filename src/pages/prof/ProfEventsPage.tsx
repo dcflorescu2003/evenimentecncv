@@ -31,7 +31,7 @@ import {
 import { Plus, Pencil, Trash2, Eye, Search } from "lucide-react";
 import { CseBadge } from "@/components/CseBadge";
 import { toast } from "sonner";
-import { formatDate, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
+import { formatDate, formatDateTime, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
 
 type EventStatus = "draft" | "published" | "closed" | "cancelled";
 
