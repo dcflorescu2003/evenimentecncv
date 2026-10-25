@@ -42,6 +42,8 @@ export default function SessionAbsenceReportPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["sar-data", sessionId, classId, classes.length],
+    staleTime: 0,
+    refetchOnMount: "always",
     enabled: !!session && classes.length > 0,
     queryFn: async () => {
       const classIds = classId === ALL ? classes.map((c) => c.id) : [classId];

@@ -33,5 +33,10 @@ describe("normă redusă (18h)", () => {
   const calc = (hs: number[]) => computeDailyAbsences(wk, new Map(wk.map((d, i) => [d, hs[i]])), "2026-10-30", 18).absences;
   it("4,4,4,3,3 (18h, zilnic) → 0", () => expect(calc([4, 4, 4, 3, 3])).toBe(0));
   it("4,4,4,4,0 → 4", () => expect(calc([4, 4, 4, 4, 0])).toBe(4));
-  it("4,4,3,3,3 (17h) → 3", () => expect(calc([4, 4, 3, 3, 3])).toBe(3));
+  it("4,4,3,3,3 (17h, zilnic) → 0", () => expect(calc([4, 4, 3, 3, 3])).toBe(0));
+  it("5,2,4,3,7 (zilnic) → 0", () => expect(calc([5, 2, 4, 3, 7])).toBe(0));
+  it("normă 20h: 5,2,4,3,7 → 3", () => {
+    const r = computeDailyAbsences(wk, new Map(wk.map((d, i) => [d, [5, 2, 4, 3, 7][i]])), "2026-10-30", 20);
+    expect(r.absences).toBe(3);
+  });
 });
