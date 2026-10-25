@@ -28,8 +28,8 @@ export function dayHours(start?: string | null, end?: string | null) {
 }
 
 /** Generează un PDF A4 landscape cu câte o diplomă pe pagină.
- * regDate — data „Nr. reg.” în format zz/ll/aaaa; dacă este completată, înlocuiește liniuțele de pe diplomă. */
-export async function exportVolunteerDiplomas(projectName: string, entries: DiplomaEntry[], regDate?: string) {
+ * regNo — „Nr. reg.” în format numar/zz/ll/aaaa; dacă este completat, înlocuiește liniuțele de pe diplomă. */
+export async function exportVolunteerDiplomas(projectName: string, entries: DiplomaEntry[], regNo?: string) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   await ensureUnicodeFont(doc);
   const img = await loadBg();
@@ -37,14 +37,16 @@ export async function exportVolunteerDiplomas(projectName: string, entries: Dipl
     if (i > 0) doc.addPage();
     doc.addImage(img, "JPEG", 0, 0, 297, 210);
 
-    // Nr. reg. — acoperim liniuțele din sablon și scriem data, dacă a fost completată
-    if (regDate) {
+    // Nr. reg. — acoperim liniuțele din sablon și scriem „numar/zz/ll/aaaa”, dacă a fost completat
+    if (regNo) {
       doc.setFillColor(255, 255, 255);
       doc.rect(186.9, 29.5, 55, 8.2, "F");
       doc.setFont(PDF_FONT, "normal");
-      doc.setFontSize(13);
+      let size = 14;
+      doc.setFontSize(size);
+      while (doc.getTextWidth(regNo) > 52 && size > 8) { size -= 1; doc.setFontSize(size); }
       doc.setTextColor(0, 0, 0);
-      doc.text(regDate, 188.6, 35.1, { baseline: "alphabetic" });
+      doc.text(regNo, 188.6, 34.15, { baseline: "alphabetic" });
     }
 
     // Nume (majuscule, vișiniu), centrat pe linie

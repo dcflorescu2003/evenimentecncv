@@ -73,14 +73,14 @@ export default function VolunteerDiplomasDialog({ projectName, enrollments, days
 
   const selected = useMemo(() => rows.filter((r) => r.checked), [rows]);
 
-  const regDateTrimmed = regNumber.trim();
-  const regDateInvalid = regDateTrimmed.length > 0 && !/^\d{2}\/\d{2}\/\d{4}$/.test(regDateTrimmed);
+  const regValue = regNumber.trim();
+  const regInvalid = regValue.length > 0 && !/^\d{1,6}\/\d{2}\/\d{2}\/\d{4}$/.test(regValue);
 
   async function generate() {
     if (!selected.length) { toast.error("Selectează cel puțin un participant"); return; }
-    if (regDateInvalid) { toast.error("Nr. reg. trebuie să fie de forma zz/ll/aaaa"); return; }
+    if (regInvalid) { toast.error("Nr. reg. trebuie să fie de forma numar/zz/ll/aaaa"); return; }
     setBusy(true);
-    try { await exportVolunteerDiplomas(projectName, selected.map((r) => ({ name: r.name, hours: r.hours })), regDateTrimmed || undefined); }
+    try { await exportVolunteerDiplomas(projectName, selected.map((r) => ({ name: r.name, hours: r.hours })), regValue || undefined); }
     catch { toast.error("Nu s-au putut genera diplomele"); }
     finally { setBusy(false); }
   }
@@ -97,15 +97,15 @@ export default function VolunteerDiplomasDialog({ projectName, enrollments, days
             <DialogDescription>Bifează participanții și verifică orele înainte de printare.</DialogDescription>
           </DialogHeader>
           <div className="space-y-1">
-            <label className="text-sm font-medium" htmlFor="reg-number">Nr. reg. (opțional, zz/ll/aaaa)</label>
+            <label className="text-sm font-medium" htmlFor="reg-number">Nr. reg. (opțional, numar/zz/ll/aaaa)</label>
             <Input
               id="reg-number"
-              className={regDateInvalid ? "h-9 border-destructive" : "h-9"}
-              placeholder="ex. 25/10/2026"
+              className={regInvalid ? "h-9 border-destructive" : "h-9"}
+              placeholder="ex. 12/25/10/2026"
               value={regNumber}
               onChange={(e) => setRegNumber(e.target.value)}
             />
-            {regDateInvalid && <p className="text-xs text-destructive">Format: zz/ll/aaaa (ex. 25/10/2026)</p>}
+            {regInvalid && <p className="text-xs text-destructive">Format: numar/zz/ll/aaaa (ex. 12/25/10/2026)</p>}
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setRows((r) => r.map((x) => ({ ...x, checked: true })))}>Selectează toți</Button>
