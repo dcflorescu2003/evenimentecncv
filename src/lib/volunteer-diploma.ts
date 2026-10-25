@@ -49,8 +49,7 @@ export async function exportVolunteerDiplomas(projectName: string, entries: Dipl
     doc.setFont(PDF_FONT, "normal");
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
-    const p = `În semn de apreciere pentru activitatea și implicarea de care a dat dovadă în organizarea și desfășurarea evenimentului „${projectName}”, cumulând un număr de ${hoursText(e.hours)} de voluntariat.`
-      .replace("de ore de voluntariat", "ore de voluntariat").replace("o oră de voluntariat", "o oră de voluntariat");
+    const p = `În semn de apreciere pentru activitatea și implicarea de care a dat dovadă în organizarea și desfășurarea evenimentului „${projectName}”, cumulând un număr de ${hoursText(e.hours)} de voluntariat.`;
     const lines = doc.splitTextToSize(p, 193);
     doc.text(lines, 11, 103, { lineHeightFactor: 1.35 });
   });
