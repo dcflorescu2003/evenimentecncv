@@ -83,7 +83,9 @@ export default function ISMBReportPage() {
   const [nrElevi, setNrElevi] = useState("");
   const [nrCadre, setNrCadre] = useState("");
   const [anScolar, setAnScolar] = useState("2026–2027");
+  const [antet, setAntet] = useState("INSPECTORATUL ȘCOLAR AL MUNICIPIULUI BUCUREȘTI • DIALOGUL PROIECTELOR EDUCATIVE 2026–2027");
   const [titlu, setTitlu] = useState("RAPORTARE „SĂPTĂMÂNA VERDE”");
+
   const [reusite, setReusite] = useState("");
   const [dificultati, setDificultati] = useState("");
   const [solutii, setSolutii] = useState("");
@@ -158,7 +160,11 @@ export default function ISMBReportPage() {
       setRows(built);
 
       setPerioada(session ? `${fmtDate(session.start_date)} – ${fmtDate(session.end_date)}` : "");
-      if (session?.academic_year) setAnScolar(session.academic_year);
+      if (session?.academic_year) {
+        setAnScolar(session.academic_year);
+        setAntet((a) => a.replace(/\d{4}\s*[–-]\s*\d{4}/, session.academic_year));
+      }
+
       setNrElevi(String(allStudents.size + pubTickets.length));
       setNrCadre(String(allTeachers.size));
       setReusite(`- Afirmarea spiritului civic al elevilor alături de cadrele didactice
@@ -190,9 +196,13 @@ export default function ISMBReportPage() {
       await ensureUnicodeFont(doc);
       const pageW = 210;
       let y = 14;
+      doc.setFont(PDF_FONT, "bold");
       doc.setFontSize(8);
-      doc.text("INSPECTORATUL ȘCOLAR AL MUNICIPIULUI BUCUREȘTI • DIALOGUL PROIECTELOR EDUCATIVE " + anScolar, pageW / 2, y, { align: "center" });
+      doc.setTextColor(11, 78, 162);
+      doc.text(antet, pageW / 2, y, { align: "center" });
+      doc.setTextColor(0, 0, 0);
       y += 9;
+
       doc.setFont(PDF_FONT, "bold");
       doc.setFontSize(14);
       doc.text(titlu || "", pageW / 2, y, { align: "center" });
@@ -288,18 +298,27 @@ export default function ISMBReportPage() {
         </Button>
       </div>
 
+      <div className="rounded-lg border bg-card px-4 py-5 text-center">
+        <div className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{antet}</div>
+        <div className="mt-2 text-lg font-bold uppercase text-foreground">{titlu}</div>
+      </div>
+
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Date generale</CardTitle></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
+          <div className="md:col-span-2">
+            {field("Antet (linia din partea de sus)", antet, setAntet)}
+          </div>
+          <div className="md:col-span-2">
+            {field("Titlu raport", titlu, setTitlu)}
+          </div>
           {field("1. Unitatea de învățământ și localitatea", unitate, setUnitate)}
           {field("2. Județul", judet, setJudet)}
           {field("3. Perioada de desfășurare", perioada, setPerioada)}
           {field("4. Nr. total elevi / preșcolari", nrElevi, setNrElevi)}
           {field("5. Nr. total cadre didactice", nrCadre, setNrCadre)}
           {field("An școlar", anScolar, setAnScolar)}
-          <div className="md:col-span-2">
-            {field("Titlu raport", titlu, setTitlu)}
-          </div>
+
           <div className="md:col-span-2 space-y-3">
             {area("6. Reușite / puncte tari ale activităților", reusite, setReusite)}
             {area("7. Dificultăți / puncte slabe", dificultati, setDificultati)}
