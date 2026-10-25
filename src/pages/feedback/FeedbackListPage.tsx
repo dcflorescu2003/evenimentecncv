@@ -14,6 +14,7 @@ import {
 import { Plus, BarChart3, Pencil, Trash2, Power, PowerOff, Search, MessageSquare, CheckCircle2, FileEdit, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/time";
+import { ShareEventButton } from "@/components/ShareEventButton";
 
 interface Props {
   mode: "admin" | "cse" | "teacher";
@@ -247,6 +248,7 @@ export default function FeedbackListPage({ mode }: Props) {
                   )}
 
                   <div className="flex flex-wrap gap-2 justify-end">
+                    <ShareEventButton eventId={f.id} kind="feedback" />
                     <Button size="sm" variant="outline" onClick={() => navigate(`${base}/${f.id}/report`)}>
                       <BarChart3 className="h-3 w-3 mr-1" /> Raport
                     </Button>

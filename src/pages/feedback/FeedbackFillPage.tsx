@@ -28,14 +28,17 @@ export default function FeedbackFillPage() {
   const [submitting, setSubmitting] = useState(false);
   const [existingResponseId, setExistingResponseId] = useState<string | null>(null);
 
-  const { data: form } = useQuery({
-    enabled: !!id,
-    queryKey: ["feedback-form-fill", id],
+  const { data: form, isLoading: formLoading, isError: formError, refetch } = useQuery({
+    enabled: !!id && !!user,
+    queryKey: ["feedback-form-fill", id, user?.id],
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
+      if (!id || !user) return null;
       const { data, error } = await supabase
         .from("feedback_forms")
         .select("*")
-        .eq("id", id!)
+        .eq("id", id)
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -43,13 +46,14 @@ export default function FeedbackFillPage() {
   });
 
   const { data: questions = [] } = useQuery<RenderQuestion[]>({
-    enabled: !!id,
-    queryKey: ["feedback-form-questions", id],
+    enabled: !!form,
+    queryKey: ["feedback-form-questions", id, user?.id],
     queryFn: async () => {
+      if (!id || !form) return [];
       const { data, error } = await supabase
         .from("feedback_questions")
         .select("*")
-        .eq("form_id", id!)
+        .eq("form_id", id)
         .order("position");
       if (error) throw error;
       return (data ?? []).map((q: any) => ({
@@ -111,8 +115,13 @@ export default function FeedbackFillPage() {
   const willBeIdentified =
     form?.anonymity === "identified" || (form?.anonymity === "anonymous_optional" && identify);
 
+  const now = Date.now();
+  const acceptsResponses = !!form && form.status === "active" &&
+    (!form.opens_at || new Date(form.opens_at).getTime() <= now) &&
+    (!form.closes_at || new Date(form.closes_at).getTime() >= now);
+
   const handleSubmit = async () => {
-    if (!form || !user) return;
+    if (!form || !user || !acceptsResponses) return;
     if (form.type === "teacher_feedback" && !teacherId) {
       toast.error("Selectează un profesor"); return;
     }
@@ -151,11 +160,24 @@ export default function FeedbackFillPage() {
     }
   };
 
-  if (!form) return <p className="text-sm text-muted-foreground">Se încarcă…</p>;
+  if (formLoading) return <p className="text-sm text-muted-foreground">Se încarcă…</p>;
+  if (formError) return (
+    <div className="space-y-3">
+      <p role="alert">Chestionarul nu a putut fi încărcat. Încearcă din nou.</p>
+      <Button variant="outline" onClick={() => refetch()}>Reîncearcă</Button>
+    </div>
+  );
+  // A missing row includes RLS denial: never reveal its title or fetch its questions.
+  if (!form) return (
+    <div className="space-y-3">
+      <p role="alert">Nu ai acces la acest chestionar sau acesta nu mai este disponibil.</p>
+      <Button variant="outline" onClick={() => navigate("/app")}>Înapoi la module</Button>
+    </div>
+  );
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <Button variant="ghost" onClick={() => navigate(-1)}>
+      <Button variant="ghost" onClick={() => navigate("/app")}>
         <ArrowLeft className="h-4 w-4 mr-2" /> Înapoi
       </Button>
 
@@ -236,7 +258,8 @@ export default function FeedbackFillPage() {
       </div>
 
       <div className="flex justify-end">
-        <Button onClick={handleSubmit} disabled={submitting}>
+        {!acceptsResponses && <p className="mr-3 text-sm text-muted-foreground">Chestionarul nu acceptă răspunsuri în acest moment.</p>}
+        <Button onClick={handleSubmit} disabled={submitting || !acceptsResponses}>
           <Send className="h-4 w-4 mr-2" /> {existingResponseId ? "Actualizează" : "Trimite"}
         </Button>
       </div>

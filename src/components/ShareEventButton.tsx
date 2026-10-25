@@ -1,14 +1,15 @@
 import { Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { eventShareUrl, clubShareUrl, volunteerShareUrl } from "@/lib/redirect";
+import { eventShareUrl, clubShareUrl, volunteerShareUrl, feedbackShareUrl } from "@/lib/redirect";
 
-type ShareKind = "event" | "club" | "volunteer";
+type ShareKind = "event" | "club" | "volunteer" | "feedback";
 
 const LABELS: Record<ShareKind, string> = {
   event: "linkul evenimentului",
   club: "linkul clubului",
   volunteer: "linkul proiectului",
+  feedback: "linkul chestionarului",
 };
 
 export function ShareEventButton({
@@ -24,7 +25,9 @@ export function ShareEventButton({
         ? clubShareUrl(eventId)
         : kind === "volunteer"
           ? volunteerShareUrl(eventId)
-          : eventShareUrl(eventId);
+          : kind === "feedback"
+            ? feedbackShareUrl(eventId)
+            : eventShareUrl(eventId);
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copiat");
