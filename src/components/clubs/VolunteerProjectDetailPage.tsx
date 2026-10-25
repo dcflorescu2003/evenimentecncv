@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ShareEventButton } from "@/components/ShareEventButton";
 import { ArrowLeft, Plus, Trash2, Save, Lock, UserPlus, Check, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, isValidTime24h } from "@/lib/time";
@@ -190,6 +191,7 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
         <Badge variant={project.status === "active" ? "default" : "outline"}>
           {project.status === "active" ? "Activ" : project.status === "draft" ? "Ciornă" : "Finalizat"}
         </Badge>
+        <ShareEventButton eventId={project.id} kind="volunteer" />
         {canManage && project.status !== "closed" && (
           <Button
             size="sm"

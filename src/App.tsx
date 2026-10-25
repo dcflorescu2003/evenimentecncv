@@ -108,6 +108,7 @@ import SmartLabPage from "./pages/smartlab/SmartLabPage";
 import VrVolunteersPage from "./pages/smartlab/VrVolunteersPage";
 
 import EventLinkRedirect from "./pages/shared/EventLinkRedirect";
+import HubLinkRedirect from "./pages/shared/HubLinkRedirect";
 
 const queryClient = new QueryClient();
 
@@ -125,6 +126,8 @@ const App = () => (
             <Route path="/delete-account" element={<DeleteAccountPage />} />
             <Route path="/" element={<Navigate to="/app" replace />} />
             <Route path="/e/:id" element={<ProtectedRoute><EventLinkRedirect /></ProtectedRoute>} />
+            <Route path="/c/:id" element={<ProtectedRoute><HubLinkRedirect kind="club" /></ProtectedRoute>} />
+            <Route path="/v/:id" element={<ProtectedRoute><HubLinkRedirect kind="volunteer" /></ProtectedRoute>} />
 
             {/* App hub — post-login landing for all roles */}
             <Route
