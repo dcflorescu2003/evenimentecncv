@@ -39,11 +39,15 @@ const KEYWORDS: [number, string[]][] = [
 ];
 
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-function guessDomain(text: string): string {
+function guessDomain(text: string): string | null {
   const t = norm(text);
   for (const [idx, kws] of KEYWORDS) if (kws.some((k) => t.includes(k))) return DOMAINS[idx];
-  return DOMAINS[9];
+  return null;
 }
+
+// Fallback cycle for unclear activities: blocks of 3, 2, 3, 2…
+const FALLBACK_ORDER = [8, 4, 7, 0, 1, 2, 3, 5, 6];
+const FALLBACK_CYCLE: string[] = FALLBACK_ORDER.flatMap((idx, i) => Array(i % 2 === 0 ? 3 : 2).fill(DOMAINS[idx]));
 
 const fmtDate = (d: string) => d.split("-").reverse().join(".");
 
