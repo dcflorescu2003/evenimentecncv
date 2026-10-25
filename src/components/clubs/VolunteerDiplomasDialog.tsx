@@ -73,10 +73,14 @@ export default function VolunteerDiplomasDialog({ projectName, enrollments, days
 
   const selected = useMemo(() => rows.filter((r) => r.checked), [rows]);
 
+  const regDateTrimmed = regNumber.trim();
+  const regDateInvalid = regDateTrimmed.length > 0 && !/^\d{2}\/\d{2}\/\d{4}$/.test(regDateTrimmed);
+
   async function generate() {
     if (!selected.length) { toast.error("Selectează cel puțin un participant"); return; }
+    if (regDateInvalid) { toast.error("Nr. reg. trebuie să fie de forma zz/ll/aaaa"); return; }
     setBusy(true);
-    try { await exportVolunteerDiplomas(projectName, selected.map((r) => ({ name: r.name, hours: r.hours }))); }
+    try { await exportVolunteerDiplomas(projectName, selected.map((r) => ({ name: r.name, hours: r.hours })), regDateTrimmed || undefined); }
     catch { toast.error("Nu s-au putut genera diplomele"); }
     finally { setBusy(false); }
   }
