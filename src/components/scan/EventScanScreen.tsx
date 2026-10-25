@@ -1,4 +1,10 @@
-import { scanEventTicket, setAttendance, searchEventParticipants } from "@/lib/ticket-scan";
+import {
+  scanEventTicket, setAttendance, searchEventParticipants, fetchEventRoster, cachedRoster,
+  readQueue, writeQueue, localAutoStatus, type RosterEntry, type ParticipantHit,
+} from "@/lib/ticket-scan";
+import { matchesSearch } from "@/lib/search";
+import { useMemo } from "react";
+import { RefreshCw, CloudOff } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import {
   buildQrScannerConfig, cameraDisplayLabel, createQrScanner, initializeQrCameras,
@@ -77,12 +83,60 @@ export default function EventScanScreen({ eventId, backPath, markNote, readerId 
     enabled: !!eventId,
   });
 
+  // Lista biletelor evenimentului, descărcată o dată și reîmprospătată periodic.
+  const { data: roster, isFetching: rosterLoading, refetch: refetchRoster, dataUpdatedAt } = useQuery({
+    queryKey: ["scan_roster", eventId],
+    queryFn: () => fetchEventRoster(eventId!),
+    enabled: !!eventId,
+    initialData: () => (eventId ? cachedRoster(eventId) : undefined),
+    initialDataUpdatedAt: 0,
+    refetchInterval: 3 * 60_000,
+    staleTime: 60_000,
+  });
+  const rosterMap = useMemo(() => new Map((roster ?? []).map((r) => [r.qr, r])), [roster]);
+
+  // Coada de marcări netrimise (fără internet).
+  const [queue, setQueue] = useState<string[]>(() => (eventId ? readQueue(eventId) : []));
+  const updateQueue = useCallback((fn: (q: string[]) => string[]) => {
+    setQueue((prev) => { const next = fn(prev); if (eventId) writeQueue(eventId, next); return next; });
+  }, [eventId]);
+
+  const patchRoster = useCallback((qr: string, status: string) => {
+    queryClient.setQueryData<RosterEntry[]>(["scan_roster", eventId], (old) =>
+      old?.map((r) => (r.qr === qr ? { ...r, status } : r)));
+  }, [queryClient, eventId]);
+
+  const flushQueue = useCallback(async () => {
+    if (!eventId) return;
+    const items = readQueue(eventId);
+    for (const qr of items) {
+      const res = await scanEventTicket(eventId, qr);
+      if (!res.success && !res.already && res.message?.startsWith("Eroare de conexiune")) return; // tot offline
+      updateQueue((q) => q.filter((x) => x !== qr));
+      if (res.success && res.status) patchRoster(qr, res.status);
+    }
+  }, [eventId, updateQueue, patchRoster]);
+
+  useEffect(() => {
+    if (queue.length === 0) return;
+    const t = setInterval(() => { void flushQueue(); }, 15_000);
+    const on = () => { void flushQueue(); };
+    window.addEventListener("online", on);
+    return () => { clearInterval(t); window.removeEventListener("online", on); };
+  }, [queue.length, flushQueue]);
+
   const debouncedQuery = useDebouncedValue(searchQuery, 300);
-  const { data: hits = [], isError: searchError, isFetching: searching } = useQuery({
+  const useLocalSearch = !!roster;
+  const { data: serverHits = [], isError: searchError, isFetching: searching } = useQuery({
     queryKey: ["scan_search_participants", eventId, debouncedQuery],
     queryFn: () => searchEventParticipants(eventId!, debouncedQuery),
-    enabled: !!eventId && debouncedQuery.trim().length >= 2,
+    enabled: !useLocalSearch && !!eventId && debouncedQuery.trim().length >= 2,
   });
+  const hits: ParticipantHit[] = useLocalSearch
+    ? (debouncedQuery.trim().length >= 2
+        ? (roster ?? []).filter((r) => matchesSearch(debouncedQuery, r.name)).slice(0, 50)
+        : [])
+    : serverHits;
 
   const startScanner = useCallback(async (cameraIdOverride?: string) => {
     if (scannerRef.current || !videoRef.current) return;
