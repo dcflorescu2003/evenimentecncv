@@ -20,7 +20,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, KeyRound, UserCheck, UserX, Plus, Copy, Trash2, Pencil, ChevronLeft, ChevronRight, School } from "lucide-react";
+import { TeacherClassesDialog } from "@/components/admin/TeacherClassesDialog";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import type { Tables } from "@/integrations/supabase/types";
@@ -52,6 +53,7 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 100;
   const [resetUserId, setResetUserId] = useState<string | null>(null);
+  const [classesUser, setClassesUser] = useState<{ id: string; name: string } | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState<string | null>(null);
   const [createDialog, setCreateDialog] = useState(false);
@@ -479,6 +481,11 @@ export default function UsersPage() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
+                        {userRoles.some((r) => r === "teacher" || r === "homeroom_teacher") && (
+                          <Button variant="ghost" size="icon" title="Clase la care predă" onClick={() => setClassesUser({ id: p.id, name: `${p.last_name} ${p.first_name}` })}>
+                            <School className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -551,6 +558,11 @@ export default function UsersPage() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(p)} title="Editează">
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    {userRoles.some((r) => r === "teacher" || r === "homeroom_teacher") && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setClassesUser({ id: p.id, name: `${p.last_name} ${p.first_name}` })} title="Clase la care predă">
+                        <School className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setResetUserId(p.id)} title="Resetează parola">
                       <KeyRound className="h-4 w-4" />
                     </Button>
