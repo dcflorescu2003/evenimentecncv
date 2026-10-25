@@ -125,6 +125,9 @@ export default function EventScanScreen({ eventId, backPath, markNote, readerId 
     return () => { clearInterval(t); window.removeEventListener("online", on); };
   }, [queue.length, flushQueue]);
 
+  const liveRef = useRef({ rosterMap, queue });
+  liveRef.current = { rosterMap, queue };
+
   const debouncedQuery = useDebouncedValue(searchQuery, 300);
   const useLocalSearch = !!roster;
   const { data: serverHits = [], isError: searchError, isFetching: searching } = useQuery({
@@ -202,10 +205,10 @@ export default function EventScanScreen({ eventId, backPath, markNote, readerId 
     if (!eventId) { setScanResult({ success: false, message: "Selectează un eveniment înainte de scanare." }); return; }
     if (!qrCodeData) return;
 
-    // 1) Validare instantă din lista descărcată.
-    const local = rosterMap.get(qrCodeData);
+    // 1) Validare instantă din lista descărcată (prin ref, scannerul păstrează callback-ul inițial).
+    const local = liveRef.current.rosterMap.get(qrCodeData);
     if (local) {
-      if (local.status !== "reserved" || queue.includes(qrCodeData)) {
+      if (local.status !== "reserved" || liveRef.current.queue.includes(qrCodeData)) {
         setScanResult({ success: false, message: `Deja procesat (${statusLabels[local.status] ?? local.status}).`, studentName: local.name } as any);
         return;
       }
