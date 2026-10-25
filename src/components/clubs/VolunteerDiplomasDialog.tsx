@@ -34,6 +34,7 @@ export default function VolunteerDiplomasDialog({ projectName, enrollments, days
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [regNumber, setRegNumber] = useState("");
 
   useEffect(() => {
     if (!open) return;
