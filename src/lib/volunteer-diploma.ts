@@ -4,6 +4,12 @@ import bg from "@/assets/diploma-voluntariat-bg.jpg.asset.json";
 
 export interface DiplomaEntry { name: string; hours: number }
 
+export function diplomaRegistrationNumber(regNo: string | undefined, index: number): string | undefined {
+  if (!regNo?.trim()) return undefined;
+  const [number, ...date] = regNo.trim().split("/");
+  return [number, index + 1, ...date].join("/");
+}
+
 async function loadBg(): Promise<string> {
   const res = await fetch(bg.url);
   const blob = await res.blob();
@@ -28,7 +34,7 @@ export function dayHours(start?: string | null, end?: string | null) {
 }
 
 /** Generează un PDF A4 landscape cu câte o diplomă pe pagină.
- * regNo — „Nr. reg.” în format numar/zz/ll/aaaa; dacă este completat, înlocuiește liniuțele de pe diplomă. */
+ * regNo — numar/zz/ll/aaaa; fiecare pagină primește numar/index/zz/ll/aaaa. */
 export async function exportVolunteerDiplomas(projectName: string, entries: DiplomaEntry[], regNo?: string) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   await ensureUnicodeFont(doc);
@@ -37,16 +43,17 @@ export async function exportVolunteerDiplomas(projectName: string, entries: Dipl
     if (i > 0) doc.addPage();
     doc.addImage(img, "JPEG", 0, 0, 297, 210);
 
-    // Nr. reg. — acoperim liniuțele din sablon și scriem „numar/zz/ll/aaaa”, dacă a fost completat
-    if (regNo) {
+    // Numerotare consecutivă doar pentru diplomele incluse în export.
+    const registrationNumber = diplomaRegistrationNumber(regNo, i);
+    if (registrationNumber) {
       doc.setFillColor(255, 255, 255);
       doc.rect(186.9, 29.5, 55, 8.2, "F");
       doc.setFont(PDF_FONT, "normal");
       let size = 14;
       doc.setFontSize(size);
-      while (doc.getTextWidth(regNo) > 52 && size > 8) { size -= 1; doc.setFontSize(size); }
+      while (doc.getTextWidth(registrationNumber) > 52 && size > 8) { size -= 1; doc.setFontSize(size); }
       doc.setTextColor(0, 0, 0);
-      doc.text(regNo, 188.6, 34.15, { baseline: "alphabetic" });
+      doc.text(registrationNumber, 188.6, 34.15, { baseline: "alphabetic" });
     }
 
     // Nume (majuscule, vișiniu), centrat pe linie
