@@ -136,12 +136,12 @@ export default function ISMBReportPage() {
         let grades: number[] = (e.eligible_classes || []).map((c: string) => gradeById[c]).filter(Boolean);
         if (!grades.length) grades = e.eligible_grades || [];
         if (!grades.length) return "Gimnaziu și liceu";
-      let fb = 0;
-      const built: Row[] = evs.map((e: any) => {
+        const g = grades.some((x) => x <= 8), l = grades.some((x) => x >= 9);
         return g && l ? "Gimnaziu și liceu" : g ? "Gimnaziu" : "Liceu";
       };
 
-      const built: Row[] = evs.map((e) => {
+      let fb = 0;
+      const built: Row[] = evs.map((e: any) => {
         const desc = (e.description || "").replace(/\s+/g, " ").trim();
         return {
           ...emptyRow(),
