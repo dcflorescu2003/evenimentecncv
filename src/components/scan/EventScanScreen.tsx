@@ -201,10 +201,37 @@ export default function EventScanScreen({ eventId, backPath, markNote, readerId 
   async function processTicket(qrCodeData: string) {
     if (!eventId) { setScanResult({ success: false, message: "Selectează un eveniment înainte de scanare." }); return; }
     if (!qrCodeData) return;
+
+    // 1) Validare instantă din lista descărcată.
+    const local = rosterMap.get(qrCodeData);
+    if (local) {
+      if (local.status !== "reserved" || queue.includes(qrCodeData)) {
+        setScanResult({ success: false, message: `Deja procesat (${statusLabels[local.status] ?? local.status}).`, studentName: local.name } as any);
+        return;
+      }
+      const est = localAutoStatus(event?.date, event?.start_time);
+      patchRoster(qrCodeData, est);
+      toast.success(`✓ ${local.name} — ${statusLabels[est]}`);
+      if (activeTab === "scan") resumeScanner();
+      // 2) Trimite pe server în fundal; fără internet → coadă.
+      void scanEventTicket(eventId, qrCodeData).then((res) => {
+        if (res.success && res.status) { patchRoster(qrCodeData, res.status); return; }
+        if (res.already) return;
+        if (res.message?.startsWith("Eroare de conexiune")) {
+          updateQueue((q) => (q.includes(qrCodeData) ? q : [...q, qrCodeData]));
+        } else {
+          patchRoster(qrCodeData, "reserved");
+          toast.error(`${local.name}: ${res.message}`);
+        }
+      });
+      return;
+    }
+
+    // Cod necunoscut local (înscriere recentă sau alt eveniment) → verificare pe server.
     const res = await scanEventTicket(eventId, qrCodeData);
     if (res.success) {
       toast.success(`✓ ${res.name} — ${statusLabels[res.status ?? ""] ?? res.status}`);
-    queryClient.invalidateQueries({ queryKey: ["scan_search_participants"] });
+      void refetchRoster();
       if (activeTab === "scan") resumeScanner();
       return;
     }
@@ -219,8 +246,12 @@ export default function EventScanScreen({ eventId, backPath, markNote, readerId 
     const err = await setAttendance(ticketId, status, isPublic, markNote);
     if (err) { toast.error(err); return; }
     toast.success("Prezență actualizată");
+    queryClient.setQueryData<RosterEntry[]>(["scan_roster", eventId], (old) =>
+      old?.map((r) => (r.ticket_id === ticketId ? { ...r, status } : r)));
     queryClient.invalidateQueries({ queryKey: ["scan_search_participants"] });
   }
+
+  const scannedCount = (roster ?? []).filter((r) => r.status === "present" || r.status === "late").length;
 
   return (
     <div className="space-y-4">
@@ -228,10 +259,22 @@ export default function EventScanScreen({ eventId, backPath, markNote, readerId 
         <Button variant="ghost" size="icon" onClick={() => navigate(backPath)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="font-display text-lg font-bold">{event?.title || "Scanare QR"}</h1>
           {event && <p className="text-xs text-muted-foreground">{formatDate(event.date)} • {event.start_time?.slice(0, 5)} – {event.end_time?.slice(0, 5)}</p>}
         </div>
+        <Button variant="outline" size="sm" onClick={() => { void refetchRoster(); void flushQueue(); }} disabled={rosterLoading} title="Actualizează lista">
+          <RefreshCw className={`h-4 w-4 sm:mr-2 ${rosterLoading ? "animate-spin" : ""}`} />
+          <span className="hidden sm:inline">Actualizează</span>
+        </Button>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        {roster ? (
+          <span>Listă descărcată: {roster.length} bilete · {scannedCount} prezenți{dataUpdatedAt ? ` · actualizată ${new Date(dataUpdatedAt).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit", hour12: false })}` : ""}</span>
+        ) : rosterLoading ? <span>Se descarcă lista biletelor…</span> : <span>Lista biletelor nu a putut fi descărcată; se verifică pe server.</span>}
+        {queue.length > 0 && (
+          <Badge variant="destructive" className="gap-1"><CloudOff className="h-3 w-3" /> {queue.length} marcări în așteptare</Badge>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
