@@ -18,3 +18,11 @@ export function consumeRedirect(fallback = "/app"): string {
 export function eventShareUrl(eventId: string) {
   return `${window.location.origin}/e/${eventId}`;
 }
+
+export function clubShareUrl(clubId: string) {
+  return `${window.location.origin}/c/${clubId}`;
+}
+
+export function volunteerShareUrl(projectId: string) {
+  return `${window.location.origin}/v/${projectId}`;
+}

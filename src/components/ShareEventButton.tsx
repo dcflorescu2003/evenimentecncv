@@ -1,16 +1,35 @@
 import { Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { eventShareUrl } from "@/lib/redirect";
+import { eventShareUrl, clubShareUrl, volunteerShareUrl } from "@/lib/redirect";
 
-export function ShareEventButton({ eventId }: { eventId: string }) {
+type ShareKind = "event" | "club" | "volunteer";
+
+const LABELS: Record<ShareKind, string> = {
+  event: "linkul evenimentului",
+  club: "linkul clubului",
+  volunteer: "linkul proiectului",
+};
+
+export function ShareEventButton({
+  eventId,
+  kind = "event",
+}: {
+  eventId: string;
+  kind?: ShareKind;
+}) {
   async function copy() {
-    const url = eventShareUrl(eventId);
+    const url =
+      kind === "club"
+        ? clubShareUrl(eventId)
+        : kind === "volunteer"
+          ? volunteerShareUrl(eventId)
+          : eventShareUrl(eventId);
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copiat");
     } catch {
-      window.prompt("Copiază linkul evenimentului:", url);
+      window.prompt(`Copiază ${LABELS[kind]}:`, url);
     }
   }
   return (
