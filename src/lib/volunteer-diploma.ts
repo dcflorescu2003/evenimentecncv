@@ -27,14 +27,25 @@ export function dayHours(start?: string | null, end?: string | null) {
   return Math.max(0, Math.round((m(end) - m(start)) / 60));
 }
 
-/** Generează un PDF A4 landscape cu câte o diplomă pe pagină. */
-export async function exportVolunteerDiplomas(projectName: string, entries: DiplomaEntry[]) {
+/** Generează un PDF A4 landscape cu câte o diplomă pe pagină.
+ * regDate — data „Nr. reg.” în format zz/ll/aaaa; dacă este completată, înlocuiește liniuțele de pe diplomă. */
+export async function exportVolunteerDiplomas(projectName: string, entries: DiplomaEntry[], regDate?: string) {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   await ensureUnicodeFont(doc);
   const img = await loadBg();
   entries.forEach((e, i) => {
     if (i > 0) doc.addPage();
     doc.addImage(img, "JPEG", 0, 0, 297, 210);
+
+    // Nr. reg. — acoperim liniuțele din sablon și scriem data, dacă a fost completată
+    if (regDate) {
+      doc.setFillColor(255, 255, 255);
+      doc.rect(186.9, 29.5, 55, 8.2, "F");
+      doc.setFont(PDF_FONT, "normal");
+      doc.setFontSize(13);
+      doc.setTextColor(0, 0, 0);
+      doc.text(regDate, 188.6, 35.1, { baseline: "alphabetic" });
+    }
 
     // Nume (majuscule, vișiniu), centrat pe linie
     const name = e.name.toLocaleUpperCase("ro-RO");
