@@ -45,21 +45,30 @@ export default function SessionAbsenceReportPage() {
     enabled: !!session && classes.length > 0,
     queryFn: async () => {
       const classIds = classId === ALL ? classes.map((c) => c.id) : [classId];
-      const assignments = await fetchInChunks<{ student_id: string; class_id: string }>(classIds, 100, (ch, f, t) =>
-        supabase.from("student_class_assignments").select("student_id, class_id").in("class_id", ch).range(f, t));
+      const rawAssignments = await fetchInChunks<{ id: string; student_id: string; class_id: string }>(classIds, 100, (ch, f, t) =>
+        supabase.from("student_class_assignments").select("id, student_id, class_id").in("class_id", ch).order("id").range(f, t));
+      const seenA = new Set<string>();
+      const assignments = rawAssignments.filter((a) => { const k = `${a.student_id}|${a.class_id}`; if (seenA.has(k)) return false; seenA.add(k); return true; });
       const studentIds = [...new Set(assignments.map((a) => a.student_id))];
       const profiles = await fetchInChunks<{ id: string; first_name: string; last_name: string }>(studentIds, 200, (ch, f, t) =>
-        supabase.from("profiles").select("id, first_name, last_name").in("id", ch).range(f, t));
+        supabase.from("profiles").select("id, first_name, last_name").in("id", ch).order("id").range(f, t));
       const { data: events } = await supabase.from("events").select("id, date, counted_duration_hours").eq("session_id", sessionId).not("status", "in", "(draft,cancelled)");
       const evMap = new Map((events || []).map((e) => [e.id, e]));
       const reservations = await fetchInChunks<{ id: string; student_id: string; event_id: string }>([...evMap.keys()], 150, (ch, f, t) =>
-        supabase.from("reservations").select("id, student_id, event_id").eq("status", "reserved").in("event_id", ch).range(f, t));
+        supabase.from("reservations").select("id, student_id, event_id").eq("status", "reserved").in("event_id", ch).order("id").range(f, t));
       const resMap = new Map(reservations.map((r) => [r.id, r]));
-      const tickets = await fetchInChunks<{ reservation_id: string }>([...resMap.keys()], 150, (ch, f, t) =>
-        supabase.from("tickets").select("reservation_id").in("status", ["present", "late"]).in("reservation_id", ch).range(f, t));
+      const tickets = await fetchInChunks<{ id: string; reservation_id: string }>([...resMap.keys()], 150, (ch, f, t) =>
+        supabase.from("tickets").select("id, reservation_id").in("status", ["present", "late"]).in("reservation_id", ch).order("id").range(f, t));
+      const assistants = await fetchInChunks<{ id: string; student_id: string; event_id: string }>([...evMap.keys()], 150, (ch, f, t) =>
+        supabase.from("event_student_assistants").select("id, student_id, event_id").in("event_id", ch).order("id").range(f, t));
+      const done = new Set<string>();
+      const pairs: { student_id: string; event_id: string }[] = [
+        ...tickets.map((t) => resMap.get(t.reservation_id)).filter(Boolean) as any[],
+        ...assistants,
+      ];
       const hours = new Map<string, Map<string, number>>();
-      for (const t of tickets) {
-        const r = resMap.get(t.reservation_id); if (!r) continue;
+      for (const r of pairs) {
+        const k = `${r.event_id}|${r.student_id}`; if (done.has(k)) continue; done.add(k);
         const e = evMap.get(r.event_id); if (!e) continue;
         if (!hours.has(r.student_id)) hours.set(r.student_id, new Map());
         const m = hours.get(r.student_id)!;
