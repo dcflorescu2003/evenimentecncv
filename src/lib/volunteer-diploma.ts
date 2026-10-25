@@ -43,7 +43,7 @@ export async function exportVolunteerDiplomas(projectName: string, entries: Dipl
     doc.setFontSize(size);
     while (doc.getTextWidth(name) > 118 && size > 12) { size -= 1; doc.setFontSize(size); }
     doc.setTextColor(106, 23, 17);
-    doc.text(name, 11 + 121 / 2, 91.5, { align: "center" });
+    doc.text(name, 11 + 121 / 2, 90.5, { align: "center" });
 
     // Paragraf
     doc.setFont(PDF_FONT, "normal");
