@@ -331,6 +331,43 @@ export default function SessionsPage() {
                 Dacă este setat, un eveniment este considerat desfășurat doar dacă are cel puțin acest număr de participanți scanați.
               </p>
             </div>
+            <div className="space-y-2 rounded-md border p-3">
+              <Label>Perioada de înscriere a elevilor (opțional)</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">De la - Data</Label>
+                  <DateInput value={form.booking_open_date} onChange={(v) => setForm({ ...form, booking_open_date: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">De la - Ora</Label>
+                  <TimeInput value={form.booking_open_time} onChange={(v) => setForm({ ...form, booking_open_time: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Până la - Data</Label>
+                  <DateInput value={form.booking_close_date} onChange={(v) => setForm({ ...form, booking_close_date: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Până la - Ora</Label>
+                  <TimeInput value={form.booking_close_time} onChange={(v) => setForm({ ...form, booking_close_time: v })} />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Dacă o completezi, se aplică tuturor evenimentelor sesiunii, iar profesorii nu o mai pot modifica.
+              </p>
+            </div>
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={form.force_teacher_classes}
+                onCheckedChange={(c) => setForm({ ...form, force_teacher_classes: !!c })}
+                className="mt-0.5"
+              />
+              <span>
+                Pentru clasele la care predă
+                <span className="block text-xs text-muted-foreground">
+                  Evenimentele profesorilor se afișează obligatoriu claselor la care predau; aceștia pot adăuga și alte clase.
+                </span>
+              </span>
+            </label>
             <div className="space-y-2">
               <Label>Status</Label>
               <Select
