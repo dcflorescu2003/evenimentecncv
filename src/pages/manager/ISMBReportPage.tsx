@@ -136,7 +136,8 @@ export default function ISMBReportPage() {
         let grades: number[] = (e.eligible_classes || []).map((c: string) => gradeById[c]).filter(Boolean);
         if (!grades.length) grades = e.eligible_grades || [];
         if (!grades.length) return "Gimnaziu și liceu";
-        const g = grades.some((x) => x <= 8), l = grades.some((x) => x >= 9);
+      let fb = 0;
+      const built: Row[] = evs.map((e: any) => {
         return g && l ? "Gimnaziu și liceu" : g ? "Gimnaziu" : "Liceu";
       };
 
@@ -144,12 +145,12 @@ export default function ISMBReportPage() {
         const desc = (e.description || "").replace(/\s+/g, " ").trim();
         return {
           ...emptyRow(),
-          domeniu: guessDomain(`${e.title} ${desc}`),
+          domeniu: guessDomain(`${e.title} ${desc}`) ?? FALLBACK_CYCLE[fb++ % FALLBACK_CYCLE.length],
           nivel: nivel(e),
           denumire: desc ? `${e.title} – ${desc.length > 200 ? desc.slice(0, 200) + "…" : desc}` : e.title,
           elevi: String((students[e.id]?.size || 0) + (visitors[e.id] || 0)),
           cadre: String(teachers[e.id]?.size || 0),
-          resurse: e.location || "",
+          resurse: e.room_id ? "C.N. Cantemir Vodă" : (e.location || ""),
         };
       });
       built.sort((a, b) => DOMAINS.indexOf(a.domeniu) - DOMAINS.indexOf(b.domeniu));
