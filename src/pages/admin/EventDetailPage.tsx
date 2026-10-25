@@ -1,3 +1,4 @@
+import { ShareEventButton } from "@/components/ShareEventButton";
 import { confirmIfCoordinatorConflicts, notifyCoordinatorAdded } from "@/lib/coordinators";
 import { formatDate, formatDateTime } from "@/lib/time";
 import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
@@ -667,6 +668,7 @@ export default function EventDetailPage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <h1 className="font-display text-xl sm:text-2xl font-bold break-words">{event.title}</h1>
+              <ShareEventButton eventId={event.id} />
               <Badge variant="secondary" className={statusColors[event.status]}>
                 {statusLabels[event.status]}
               </Badge>

@@ -57,6 +57,20 @@
       "when": 1792820599094,
       "tag": "0007_student_event_rpcs",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792945000376,
+      "tag": "0008_session_booking_and_teacher_classes",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792945056391,
+      "tag": "0009_exclude_cse_from_forced_classes",
+      "breakpoints": true
     }
   ]
 }

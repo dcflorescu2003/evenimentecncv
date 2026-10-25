@@ -80,7 +80,7 @@ export function ModuleSwitcher({ variant = "icon", className }: Props) {
           return (
             <DropdownMenuItem
               key={module.key}
-              onClick={() => navigate(path)}
+              onClick={() => module.externalUrl ? window.open(module.externalUrl, "_blank", "noopener,noreferrer") : navigate(path)}
               className="cursor-pointer"
             >
               <Icon className="mr-2 h-4 w-4" />

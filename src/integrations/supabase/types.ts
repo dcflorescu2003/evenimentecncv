@@ -2227,8 +2227,11 @@ export type Database = {
       program_sessions: {
         Row: {
           academic_year: string
+          booking_close_at: string | null
+          booking_open_at: string | null
           created_at: string
           end_date: string
+          force_teacher_classes: boolean
           id: string
           min_participants: number | null
           name: string
@@ -2238,8 +2241,11 @@ export type Database = {
         }
         Insert: {
           academic_year: string
+          booking_close_at?: string | null
+          booking_open_at?: string | null
           created_at?: string
           end_date: string
+          force_teacher_classes?: boolean
           id?: string
           min_participants?: number | null
           name: string
@@ -2249,8 +2255,11 @@ export type Database = {
         }
         Update: {
           academic_year?: string
+          booking_close_at?: string | null
+          booking_open_at?: string | null
           created_at?: string
           end_date?: string
+          force_teacher_classes?: boolean
           id?: string
           min_participants?: number | null
           name?: string
@@ -3323,6 +3332,7 @@ export type Database = {
           last_name: string
         }[]
       }
+      get_event_scan_roster: { Args: { _event_id: string }; Returns: Json }
       get_events_reserved_counts: {
         Args: { _event_ids: string[] }
         Returns: Json

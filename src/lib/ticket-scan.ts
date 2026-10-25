@@ -35,3 +35,35 @@ export async function searchEventParticipants(eventId: string, q: string): Promi
   if (error) throw new Error(CONN_ERR);
   return (data ?? []) as ParticipantHit[];
 }
+
+export type RosterEntry = ParticipantHit & { qr: string };
+
+const rosterKey = (eventId: string) => `scan_roster_${eventId}`;
+const queueKey = (eventId: string) => `scan_queue_${eventId}`;
+
+/** Descarcă o singură dată lista biletelor evenimentului (pentru validare locală instantă). */
+export async function fetchEventRoster(eventId: string): Promise<RosterEntry[]> {
+  const { data, error } = await supabase.rpc("get_event_scan_roster" as any, { _event_id: eventId } as any);
+  if (error) throw new Error(CONN_ERR);
+  const list = (data ?? []) as RosterEntry[];
+  try { localStorage.setItem(rosterKey(eventId), JSON.stringify(list)); } catch { /* plin */ }
+  return list;
+}
+
+export function cachedRoster(eventId: string): RosterEntry[] | undefined {
+  try { const s = localStorage.getItem(rosterKey(eventId)); return s ? JSON.parse(s) : undefined; } catch { return undefined; }
+}
+
+export function readQueue(eventId: string): string[] {
+  try { return JSON.parse(localStorage.getItem(queueKey(eventId)) || "[]"); } catch { return []; }
+}
+export function writeQueue(eventId: string, q: string[]) {
+  try { localStorage.setItem(queueKey(eventId), JSON.stringify(q)); } catch { /* ignore */ }
+}
+
+/** Statusul estimat local (serverul decide final): prezent până la +15 min de la început. */
+export function localAutoStatus(date?: string | null, start?: string | null): "present" | "late" {
+  if (!date || !start) return "present";
+  const t = new Date(`${date}T${start.slice(0, 5)}:00`).getTime() + 15 * 60_000;
+  return Date.now() <= t ? "present" : "late";
+}

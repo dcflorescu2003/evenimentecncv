@@ -1,4 +1,4 @@
-import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, Headset, QrCode, type LucideIcon } from "lucide-react";
+import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, Headset, QrCode, NotebookPen, GraduationCap, type LucideIcon } from "lucide-react";
 
 export type AppRole =
   | "admin"
@@ -18,7 +18,13 @@ export interface AppModule {
   pathByRole: Partial<Record<AppRole, string>>;
   /** Dacă e setat, modulul e gated de o intrare în module_access cu această cheie (sau rol admin). */
   requiresModuleAccess?: string;
+  /** Link extern: se deschide în browser, nu în aplicație. */
+  externalUrl?: string;
 }
+
+const ALL_ROLES = (p: string): Partial<Record<AppRole, string>> => ({
+  admin: p, student: p, homeroom_teacher: p, coordinator_teacher: p, teacher: p, manager: p, cse: p,
+});
 
 export const MODULES: AppModule[] = [
   {
@@ -112,6 +118,22 @@ export const MODULES: AppModule[] = [
       teacher: "/prof/badge",
       homeroom_teacher: "/prof/badge",
     },
+  },
+  {
+    key: "catalog",
+    label: "Catalog",
+    description: "Catalogul electronic Școala Nouă.",
+    icon: NotebookPen,
+    pathByRole: ALL_ROLES("https://scoalanoua.ro/"),
+    externalUrl: "https://scoalanoua.ro/",
+  },
+  {
+    key: "classroom",
+    label: "Classroom",
+    description: "Google Classroom — teme și materiale.",
+    icon: GraduationCap,
+    pathByRole: ALL_ROLES("https://classroom.google.com/"),
+    externalUrl: "https://classroom.google.com/",
   },
 ];
 

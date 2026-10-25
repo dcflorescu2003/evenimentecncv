@@ -1,3 +1,4 @@
+import { ShareEventButton } from "@/components/ShareEventButton";
 import { confirmIfCoordinatorConflicts, notifyCoordinatorAdded } from "@/lib/coordinators";
 import LocationField from "@/components/events/LocationField";
 import { formatDate, formatDateTime, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
@@ -864,6 +865,7 @@ export default function ProfEventDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <ShareEventButton eventId={event.id} />
           {(participants.length > 0 || assistants.length > 0) && (
             <Button size="sm" variant="outline" onClick={handleDownloadAttendancePdf}>
               <FileDown className="mr-2 h-4 w-4" /> Listă de prezență

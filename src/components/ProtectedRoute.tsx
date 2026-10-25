@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { rememberRedirect } from "@/lib/redirect";
 
 type AppRole = "admin" | "student" | "homeroom_teacher" | "coordinator_teacher" | "teacher" | "manager" | "cse";
 
@@ -20,6 +21,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (!session) {
+    rememberRedirect(window.location.pathname + window.location.search);
     return <Navigate to="/login" replace />;
   }
 

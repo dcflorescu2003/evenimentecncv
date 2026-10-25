@@ -1,4 +1,6 @@
-import { formatDate } from "@/lib/time";
+import { formatDate, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
+import { TimeInput } from "@/components/ui/time-input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +51,11 @@ const emptyForm = {
   end_date: "",
   status: "draft" as SessionStatus,
   min_participants: "" as string,
+  booking_open_date: "",
+  booking_open_time: "",
+  booking_close_date: "",
+  booking_close_time: "",
+  force_teacher_classes: false,
 };
 
 export default function SessionsPage() {
@@ -121,6 +128,11 @@ export default function SessionsPage() {
       end_date: s.end_date,
       status: s.status as SessionStatus,
       min_participants: (s as any).min_participants != null ? String((s as any).min_participants) : "",
+      booking_open_date: splitDatetime((s as any).booking_open_at).date,
+      booking_open_time: splitDatetime((s as any).booking_open_at).time,
+      booking_close_date: splitDatetime((s as any).booking_close_at).date,
+      booking_close_time: splitDatetime((s as any).booking_close_at).time,
+      force_teacher_classes: !!(s as any).force_teacher_classes,
     });
     setDialogOpen(true);
   }
@@ -141,9 +153,21 @@ export default function SessionsPage() {
       toast.error("Data de sfârșit trebuie să fie după data de început");
       return;
     }
-    const { min_participants, ...rest } = form;
+    const { min_participants, booking_open_date, booking_open_time, booking_close_date, booking_close_time, ...rest } = form;
+    if ((booking_open_time && !isValidTime24h(booking_open_time)) || (booking_close_time && !isValidTime24h(booking_close_time))) {
+      toast.error("Orele de înscriere trebuie în format 24h HH:MM");
+      return;
+    }
+    const openAt = booking_open_date ? joinDatetime(booking_open_date, booking_open_time || "00:00") : null;
+    const closeAt = booking_close_date ? joinDatetime(booking_close_date, booking_close_time || "23:59") : null;
+    if (openAt && closeAt && closeAt <= openAt) {
+      toast.error("Sfârșitul înscrierilor trebuie să fie după început");
+      return;
+    }
     const payload = {
       ...rest,
+      booking_open_at: openAt,
+      booking_close_at: closeAt,
       min_participants: min_participants && min_participants.trim() !== "" ? parseInt(min_participants, 10) : null,
     };
     saveMutation.mutate(payload as any);
@@ -307,6 +331,43 @@ export default function SessionsPage() {
                 Dacă este setat, un eveniment este considerat desfășurat doar dacă are cel puțin acest număr de participanți scanați.
               </p>
             </div>
+            <div className="space-y-2 rounded-md border p-3">
+              <Label>Perioada de înscriere a elevilor (opțional)</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">De la - Data</Label>
+                  <DateInput value={form.booking_open_date} onChange={(v) => setForm({ ...form, booking_open_date: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">De la - Ora</Label>
+                  <TimeInput value={form.booking_open_time} onChange={(v) => setForm({ ...form, booking_open_time: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Până la - Data</Label>
+                  <DateInput value={form.booking_close_date} onChange={(v) => setForm({ ...form, booking_close_date: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Până la - Ora</Label>
+                  <TimeInput value={form.booking_close_time} onChange={(v) => setForm({ ...form, booking_close_time: v })} />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Dacă o completezi, se aplică tuturor evenimentelor sesiunii, iar profesorii nu o mai pot modifica.
+              </p>
+            </div>
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={form.force_teacher_classes}
+                onCheckedChange={(c) => setForm({ ...form, force_teacher_classes: !!c })}
+                className="mt-0.5"
+              />
+              <span>
+                Pentru clasele la care predă
+                <span className="block text-xs text-muted-foreground">
+                  Evenimentele profesorilor se afișează obligatoriu claselor la care predau; aceștia pot adăuga și alte clase.
+                </span>
+              </span>
+            </label>
             <div className="space-y-2">
               <Label>Status</Label>
               <Select
