@@ -57,7 +57,7 @@ export default function AppHub() {
                 return (
                   <button
                     key={module.key}
-                    onClick={() => navigate(path)}
+                    onClick={() => module.externalUrl ? window.open(module.externalUrl, "_blank", "noopener,noreferrer") : navigate(path)}
                     className="group text-left"
                   >
                     <Card className="h-full transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
