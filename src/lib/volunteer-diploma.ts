@@ -42,11 +42,11 @@ export async function exportVolunteerDiplomas(projectName: string, entries: Dipl
       doc.setFillColor(255, 255, 255);
       doc.rect(186.9, 29.5, 55, 8.2, "F");
       doc.setFont(PDF_FONT, "normal");
-      let size = 13;
+      let size = 14;
       doc.setFontSize(size);
       while (doc.getTextWidth(regNo) > 52 && size > 8) { size -= 1; doc.setFontSize(size); }
       doc.setTextColor(0, 0, 0);
-      doc.text(regNo, 188.6, 35.1, { baseline: "alphabetic" });
+      doc.text(regNo, 188.6, 34.15, { baseline: "alphabetic" });
     }
 
     // Nume (majuscule, vișiniu), centrat pe linie
