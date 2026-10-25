@@ -39,13 +39,26 @@ export function computeDailyAbsences(
   days: string[],
   hoursByDay: Map<string, number>,
   today: string,
+  requiredTotal?: number,
 ) {
   const perDay: Record<string, number> = {};
+  const absentByDay: Record<string, number> = {};
   let absences = 0;
+  let total = 0;
+  let everyDay = true;
   for (const day of days) {
     const h = Math.min(DAILY_HOURS_CAP, hoursByDay.get(day) ?? 0);
     perDay[day] = h;
-    if (day < today) absences += DAILY_HOURS_CAP - h;
+    total += h;
+    if (h <= 0) everyDay = false;
+    absentByDay[day] = day < today ? DAILY_HOURS_CAP - h : 0;
+    absences += absentByDay[day];
   }
-  return { perDay, absences };
+  // Reduced norm (e.g. 18h): present every day + norm reached → no absences.
+  const allFinished = days.every((d) => d < today);
+  if (requiredTotal != null && requiredTotal < days.length * DAILY_HOURS_CAP && allFinished && everyDay && total >= requiredTotal) {
+    for (const d of days) absentByDay[d] = 0;
+    absences = 0;
+  }
+  return { perDay, absentByDay, absences };
 }
