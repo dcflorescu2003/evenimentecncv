@@ -864,6 +864,7 @@ export default function ProfEventDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <ShareEventButton eventId={event.id} />
           {(participants.length > 0 || assistants.length > 0) && (
             <Button size="sm" variant="outline" onClick={handleDownloadAttendancePdf}>
               <FileDown className="mr-2 h-4 w-4" /> Listă de prezență
