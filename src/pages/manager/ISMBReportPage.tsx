@@ -39,11 +39,15 @@ const KEYWORDS: [number, string[]][] = [
 ];
 
 const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-function guessDomain(text: string): string {
+function guessDomain(text: string): string | null {
   const t = norm(text);
   for (const [idx, kws] of KEYWORDS) if (kws.some((k) => t.includes(k))) return DOMAINS[idx];
-  return DOMAINS[9];
+  return null;
 }
+
+// Fallback cycle for unclear activities: blocks of 3, 2, 3, 2…
+const FALLBACK_ORDER = [8, 4, 7, 0, 1, 2, 3, 5, 6];
+const FALLBACK_CYCLE: string[] = FALLBACK_ORDER.flatMap((idx, i) => Array(i % 2 === 0 ? 3 : 2).fill(DOMAINS[idx]));
 
 const fmtDate = (d: string) => d.split("-").reverse().join(".");
 
@@ -136,16 +140,17 @@ export default function ISMBReportPage() {
         return g && l ? "Gimnaziu și liceu" : g ? "Gimnaziu" : "Liceu";
       };
 
-      const built: Row[] = evs.map((e) => {
+      let fb = 0;
+      const built: Row[] = evs.map((e: any) => {
         const desc = (e.description || "").replace(/\s+/g, " ").trim();
         return {
           ...emptyRow(),
-          domeniu: guessDomain(`${e.title} ${desc}`),
+          domeniu: guessDomain(`${e.title} ${desc}`) ?? FALLBACK_CYCLE[fb++ % FALLBACK_CYCLE.length],
           nivel: nivel(e),
           denumire: desc ? `${e.title} – ${desc.length > 200 ? desc.slice(0, 200) + "…" : desc}` : e.title,
           elevi: String((students[e.id]?.size || 0) + (visitors[e.id] || 0)),
           cadre: String(teachers[e.id]?.size || 0),
-          resurse: e.location || "",
+          resurse: e.room_id ? "C.N. Cantemir Vodă" : (e.location || ""),
         };
       });
       built.sort((a, b) => DOMAINS.indexOf(a.domeniu) - DOMAINS.indexOf(b.domeniu));
