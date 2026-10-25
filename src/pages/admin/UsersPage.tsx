@@ -850,6 +850,7 @@ export default function UsersPage() {
           </form>
         </DialogContent>
       </Dialog>
+      <TeacherClassesDialog teacherId={classesUser?.id ?? null} teacherName={classesUser?.name} onClose={() => setClassesUser(null)} />
     </div>
   );
 }
@@ -885,7 +886,6 @@ function SubjectsMultiSelect({
           </label>
         ))
       )}
-      <TeacherClassesDialog teacherId={classesUser?.id ?? null} teacherName={classesUser?.name} onClose={() => setClassesUser(null)} />
     </div>
   );
 }

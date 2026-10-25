@@ -1,3 +1,4 @@
+import { ShareEventButton } from "@/components/ShareEventButton";
 import { confirmIfCoordinatorConflicts, notifyCoordinatorAdded } from "@/lib/coordinators";
 import LocationField from "@/components/events/LocationField";
 import { formatDate, formatDateTime, isValidTime24h, joinDatetime, splitDatetime } from "@/lib/time";
