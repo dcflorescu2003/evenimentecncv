@@ -912,6 +912,7 @@ export type Database = {
           booking_close_at: string | null
           booking_open_at: string | null
           computed_duration_display: string | null
+          coordinator_added_classes: string[]
           counted_duration_hours: number
           created_at: string
           created_by: string | null
@@ -940,6 +941,7 @@ export type Database = {
           booking_close_at?: string | null
           booking_open_at?: string | null
           computed_duration_display?: string | null
+          coordinator_added_classes?: string[]
           counted_duration_hours: number
           created_at?: string
           created_by?: string | null
@@ -968,6 +970,7 @@ export type Database = {
           booking_close_at?: string | null
           booking_open_at?: string | null
           computed_duration_display?: string | null
+          coordinator_added_classes?: string[]
           counted_duration_hours?: number
           created_at?: string
           created_by?: string | null
@@ -3522,6 +3525,7 @@ export type Database = {
           booking_close_at: string | null
           booking_open_at: string | null
           computed_duration_display: string | null
+          coordinator_added_classes: string[]
           counted_duration_hours: number
           created_at: string
           created_by: string | null
@@ -3666,6 +3670,10 @@ export type Database = {
       submit_volunteer_enrollment: {
         Args: { _answers?: Json; _project_id: string }
         Returns: string
+      }
+      sync_event_coordinator_classes: {
+        Args: { _event_id: string }
+        Returns: undefined
       }
       vr_mark_prepared: {
         Args: { _prepared: boolean; _reservation_id: string }

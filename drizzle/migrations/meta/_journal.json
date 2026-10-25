@@ -71,6 +71,13 @@
       "when": 1792945056391,
       "tag": "0009_exclude_cse_from_forced_classes",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792955318675,
+      "tag": "0010_coordinator_class_visibility",
+      "breakpoints": true
     }
   ]
 }
