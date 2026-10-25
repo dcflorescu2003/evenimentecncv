@@ -128,6 +128,7 @@ const App = () => (
             <Route path="/e/:id" element={<ProtectedRoute><EventLinkRedirect /></ProtectedRoute>} />
             <Route path="/c/:id" element={<ProtectedRoute><HubLinkRedirect kind="club" /></ProtectedRoute>} />
             <Route path="/v/:id" element={<ProtectedRoute><HubLinkRedirect kind="volunteer" /></ProtectedRoute>} />
+            <Route path="/f/:id" element={<ProtectedRoute><main className="min-h-screen bg-background px-4 py-8"><FeedbackFillPage /></main></ProtectedRoute>} />
 
             {/* App hub — post-login landing for all roles */}
             <Route

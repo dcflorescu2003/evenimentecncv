@@ -26,3 +26,7 @@ export function clubShareUrl(clubId: string) {
 export function volunteerShareUrl(projectId: string) {
   return `${window.location.origin}/v/${projectId}`;
 }
+
+export function feedbackShareUrl(formId: string) {
+  return `${window.location.origin}/f/${formId}`;
+}
