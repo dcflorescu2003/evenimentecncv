@@ -27,3 +27,11 @@ describe("computeDailyAbsences", () => {
     expect(perDayAbsences.reduce((a, b) => a + b, 0)).toBe(r.absences);
   });
 });
+
+describe("normă redusă (18h)", () => {
+  const wk = ["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"];
+  const calc = (hs: number[]) => computeDailyAbsences(wk, new Map(wk.map((d, i) => [d, hs[i]])), "2026-10-30", 18).absences;
+  it("4,4,4,3,3 (18h, zilnic) → 0", () => expect(calc([4, 4, 4, 3, 3])).toBe(0));
+  it("4,4,4,4,0 → 4", () => expect(calc([4, 4, 4, 4, 0])).toBe(4));
+  it("4,4,3,3,3 (17h) → 3", () => expect(calc([4, 4, 3, 3, 3])).toBe(3));
+});

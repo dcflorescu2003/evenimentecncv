@@ -74,7 +74,9 @@ export default function SessionAbsenceReportPage() {
         const m = hours.get(r.student_id)!;
         m.set(e.date, (m.get(e.date) ?? 0) + Number(e.counted_duration_hours ?? 0));
       }
-      return { assignments, profiles, hours };
+      const { data: rules } = await supabase.from("class_participation_rules").select("class_id, required_value").eq("session_id", sessionId).eq("requirement_type", "hours");
+      const norms = new Map((rules || []).map((r: any) => [r.class_id, Number(r.required_value)]));
+      return { assignments, profiles, hours, norms };
     },
   });
 
@@ -92,13 +94,13 @@ export default function SessionAbsenceReportPage() {
         students.sort((a, b) => (a.last_name ?? "").localeCompare(b.last_name ?? "", "ro") || (a.first_name ?? "").localeCompare(b.first_name ?? "", "ro"));
         return {
           name: c.display_name,
-          rows: students.map((s) => ({ name: `${s.last_name} ${s.first_name}`, ...computeDailyAbsences(days, data.hours.get(s.id) ?? new Map(), today) })),
+          rows: students.map((s) => ({ name: `${s.last_name} ${s.first_name}`, ...computeDailyAbsences(days, data.hours.get(s.id) ?? new Map(), today, data.norms.get(c.id)) })),
         };
       })
       .filter((g) => g.rows.length);
   }, [data, classes, classId, days, today]);
 
-  const absentFor = (r: (typeof groups)[number]["rows"][number], d: string) => DAILY_HOURS_CAP - r.perDay[d];
+  const absentFor = (r: (typeof groups)[number]["rows"][number], d: string) => r.absentByDay[d];
   const headers = ["Nr.", "Nume Prenume", ...days.map((d) => `${wd(d)} ${fmt(d).slice(0, 5)}`), "Total"];
   const toRows = (g: (typeof groups)[number]) => g.rows.map((r, i) => [String(i + 1), r.name, ...days.map((d) => (d < today ? String(absentFor(r, d)) : "—")), String(r.absences)]);
 
