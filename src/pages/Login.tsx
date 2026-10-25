@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { consumeRedirect } from "@/lib/redirect";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/lib/time";
@@ -64,7 +65,7 @@ export default function Login() {
     if (profile?.must_change_password) {
       return <Navigate to="/change-password" replace />;
     }
-    return <Navigate to="/app" replace />;
+    return <Navigate to={consumeRedirect("/app")} replace />;
   }
 
   async function handleSubmit(e: React.FormEvent) {
