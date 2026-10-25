@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { CseBadge } from "@/components/CseBadge";
 import ParticipantsExportBar from "./ParticipantsExportBar";
+import VolunteerDiplomasDialog from "./VolunteerDiplomasDialog";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -260,7 +261,10 @@ export default function VolunteerProjectDetailPage({ mode }: { mode: Mode }) {
         </TabsContent>
         {showMembersTab && (
           <TabsContent value="members" className="pt-3 space-y-3">
-            <ParticipantsExportBar kind="volunteer" title={project.name} enrollments={enrollments} />
+            <div className="flex flex-wrap items-center gap-2">
+              <ParticipantsExportBar kind="volunteer" title={project.name} enrollments={enrollments} />
+              {canManage && <VolunteerDiplomasDialog projectName={project.name} enrollments={enrollments} days={days as any} />}
+            </div>
             <MembersTab
               projectId={projectId!}
               enrollments={enrollments}
