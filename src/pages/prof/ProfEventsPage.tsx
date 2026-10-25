@@ -149,6 +149,22 @@ export default function ProfEventsPage() {
     enabled: !!user,
   });
 
+  const { data: myClassIds = [] } = useQuery({
+    queryKey: ["my_teacher_classes", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("portfolio_teacher_classes").select("class_id").eq("teacher_id", user!.id);
+      if (error) throw error;
+      return [...new Set((data ?? []).map((r: any) => r.class_id as string))];
+    },
+    enabled: !!user,
+  });
+  const selectedSession: any = sessions.find((s) => s.id === form.session_id);
+  const sessionBookingLocked = !!(selectedSession?.booking_open_at || selectedSession?.booking_close_at);
+  const forceTeacherClasses = !!selectedSession?.force_teacher_classes;
+  const lockedClassIds: string[] = forceTeacherClasses && !isCse && !form.is_public
+    ? myClassIds.filter((id) => classes.some((c) => c.id === id))
+    : [];
+
   const effectiveSession =
     sessionFilter ?? (sessions.find((s) => s.status === "active")?.id || "all");
   const filtered = events.filter((e) =>
@@ -175,11 +191,11 @@ export default function ProfEventsPage() {
         max_per_class: values.max_per_class,
         status: values.status,
         eligible_grades: values.eligible_grades.length > 0 ? values.eligible_grades : null,
-        eligible_classes: isCse
-          ? null
-          : values.eligible_classes.length > 0
-          ? values.eligible_classes
-          : null,
+        eligible_classes: (() => {
+          if (isCse) return null;
+          const all = [...new Set([...values.eligible_classes, ...lockedClassIds])];
+          return all.length > 0 ? all : null;
+        })(),
         booking_open_at: joinDatetime(values.booking_open_date, values.booking_open_time),
         booking_close_at: joinDatetime(values.booking_close_date, values.booking_close_time),
         notes_for_teachers: values.notes_for_teachers || null,
@@ -608,28 +624,48 @@ export default function ProfEventsPage() {
                             Clasa {grade}
                           </label>
                           <div className="ml-6 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                            {gradeClasses.map((c) => (
-                              <label key={c.id} className="flex items-center gap-1 text-sm cursor-pointer">
+                            {gradeClasses.map((c) => {
+                              const locked = lockedClassIds.includes(c.id);
+                              return (
+                              <label key={c.id} className={`flex items-center gap-1 text-sm ${locked ? "cursor-not-allowed font-medium" : "cursor-pointer"}`} title={locked ? "Clasă la care predai (obligatorie)" : undefined}>
                                 <Checkbox
-                                  checked={form.eligible_classes.includes(c.id)}
+                                  checked={locked || form.eligible_classes.includes(c.id)}
+                                  disabled={locked}
                                   onCheckedChange={() => toggleClass(c.id, gradeNum)}
                                 />
                                 {c.display_name}
                               </label>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       );
                     })}
                   </div>
                 )}
-                {form.eligible_classes.length === 0 && form.eligible_grades.length === 0 && (
+                {forceTeacherClasses && !isCse && (
+                  <p className="text-xs text-muted-foreground">
+                    {lockedClassIds.length > 0
+                      ? "Clasele la care predai sunt selectate automat și nu pot fi scoase. Poți adăuga și alte clase."
+                      : "Sesiunea cere clasele la care predai, dar nu ai clase asociate. Cere administratorului să le adauge."}
+                  </p>
+                )}
+                {form.eligible_classes.length === 0 && form.eligible_grades.length === 0 && lockedClassIds.length === 0 && (
                   <p className="text-xs text-muted-foreground">
                     Nicio selecție = eveniment ascuns elevilor; participanții se adaugă manual
                   </p>
                 )}
               </div>
             )}
+            {sessionBookingLocked ? (
+              <div className="space-y-1 rounded-md border bg-muted/40 p-3">
+                <Label>Perioada de înscriere</Label>
+                <p className="text-sm">
+                  {selectedSession?.booking_open_at ? formatDateTime(selectedSession.booking_open_at) : "—"} – {selectedSession?.booking_close_at ? formatDateTime(selectedSession.booking_close_at) : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">Perioada de înscriere este stabilită de sesiune.</p>
+              </div>
+            ) : (<>
             <div className="space-y-2">
               <Label>Perioada de înscriere</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -659,6 +695,7 @@ export default function ProfEventsPage() {
             </div>
 
             <p className="text-xs text-muted-foreground">Dacă lași gol perioada de înscriere, înscrierea e deschisă de acum până la sfârșitul evenimentului.</p>
+            </>)}
             {canSetPublic && (
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={form.is_public} onCheckedChange={(c) => setForm({ ...form, is_public: !!c })} />
