@@ -10,3 +10,4 @@
 - Teacher↔class links live in `portfolio_teacher_classes` (by class id), so class promotion carries them automatically.
 - Event scan screens (prof + student assistant) share `EventScanScreen`; participant search goes through `search_event_participants` RPC.
 - Student event list, booking and cancellation go only through `list_student_events`, `student_book_event`, `student_cancel_reservation`; direct reads/writes under RLS were slow and left half-made bookings.
+- Dialogs ignore outside clicks by default (close via X/Cancel) to avoid losing form input; React Query defaults: staleTime 60s, no refetch on focus — pages needing fresh data set their own options.

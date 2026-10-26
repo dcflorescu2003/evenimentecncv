@@ -110,7 +110,7 @@ import VrVolunteersPage from "./pages/smartlab/VrVolunteersPage";
 import EventLinkRedirect from "./pages/shared/EventLinkRedirect";
 import HubLinkRedirect from "./pages/shared/HubLinkRedirect";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 60_000, refetchOnWindowFocus: false } } });
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
