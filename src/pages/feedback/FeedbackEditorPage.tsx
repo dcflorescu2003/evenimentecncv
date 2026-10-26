@@ -129,9 +129,19 @@ export default function FeedbackEditorPage({ mode }: Props) {
 
       let formId = id;
       if (isEdit && id) {
+        const keepIds = questions.map((q) => q.id).filter(Boolean) as string[];
+        const { data: existing } = await supabase.from("feedback_questions").select("id").eq("form_id", id);
+        const removed = (existing ?? []).map((r) => r.id).filter((x) => !keepIds.includes(x));
+        if (removed.length) {
+          const { count } = await supabase.from("feedback_answers").select("id", { count: "exact", head: true }).in("question_id", removed);
+          if ((count ?? 0) > 0) throw new Error("Întrebarea are deja răspunsuri și nu poate fi ștearsă.");
+        }
         const { error } = await supabase.from("feedback_forms").update(payload).eq("id", id);
         if (error) throw error;
-        await supabase.from("feedback_questions").delete().eq("form_id", id);
+        if (removed.length) {
+          const { error: dErr } = await supabase.from("feedback_questions").delete().in("id", removed);
+          if (dErr) throw dErr;
+        }
       } else {
         const { data, error } = await supabase
           .from("feedback_forms")
@@ -142,7 +152,7 @@ export default function FeedbackEditorPage({ mode }: Props) {
         formId = data.id;
       }
 
-      const qRows = questions.map((q, idx) => ({
+      const toRow = (q: typeof questions[number], idx: number) => ({
         form_id: formId!,
         position: idx,
         question_type: q.question_type,
@@ -153,9 +163,19 @@ export default function FeedbackEditorPage({ mode }: Props) {
         scale_max: q.question_type === "scale" ? q.scale_max : null,
         scale_min_label: q.question_type === "scale" ? q.scale_min_label || null : null,
         scale_max_label: q.question_type === "scale" ? q.scale_max_label || null : null,
-      }));
-      const { error: qErr } = await supabase.from("feedback_questions").insert(qRows);
-      if (qErr) throw qErr;
+      });
+      // Existing questions are updated in place so their answers stay linked.
+      const newRows: ReturnType<typeof toRow>[] = [];
+      for (const [idx, q] of questions.entries()) {
+        if (isEdit && q.id) {
+          const { error: uErr } = await supabase.from("feedback_questions").update(toRow(q, idx)).eq("id", q.id);
+          if (uErr) throw uErr;
+        } else newRows.push(toRow(q, idx));
+      }
+      if (newRows.length) {
+        const { error: qErr } = await supabase.from("feedback_questions").insert(newRows);
+        if (qErr) throw qErr;
+      }
 
       toast.success(publish ? "Chestionar publicat" : "Salvat ca draft");
       navigate(backBase(mode));

@@ -90,7 +90,7 @@ export default function FeedbackReportPage({ mode }: Props) {
         });
       }
 
-      return (resp ?? []).map((r: any) => ({
+      return (resp ?? []).filter((r: any) => (byResp.get(r.id)?.length ?? 0) > 0).map((r: any) => ({
         id: r.id,
         submitted_at: r.submitted_at,
         is_identified: r.is_identified,
