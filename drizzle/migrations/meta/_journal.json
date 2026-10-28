@@ -92,6 +92,13 @@
       "when": 1793206689799,
       "tag": "0012_competitions_module",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793207043677,
+      "tag": "0013_competitions_categories",
+      "breakpoints": true
     }
   ]
 }

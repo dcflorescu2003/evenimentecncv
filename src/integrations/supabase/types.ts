@@ -742,6 +742,7 @@ export type Database = {
       }
       competitions: {
         Row: {
+          category: Database["public"]["Enums"]["competition_category"] | null
           created_at: string
           department: Database["public"]["Enums"]["competition_department"]
           id: string
@@ -749,6 +750,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          category?: Database["public"]["Enums"]["competition_category"] | null
           created_at?: string
           department: Database["public"]["Enums"]["competition_department"]
           id?: string
@@ -756,6 +758,7 @@ export type Database = {
           name: string
         }
         Update: {
+          category?: Database["public"]["Enums"]["competition_category"] | null
           created_at?: string
           department?: Database["public"]["Enums"]["competition_department"]
           id?: string
@@ -3765,6 +3768,11 @@ export type Database = {
       club_attendance_status: "present" | "late" | "absent"
       club_enrollment_status: "enrolled" | "withdrawn" | "pending" | "rejected"
       club_status: "draft" | "active" | "archived"
+      competition_category:
+        | "international"
+        | "olimpiada_nationala"
+        | "concurs_finantat"
+        | "concurs_nefinantat"
       competition_department:
         | "matematica"
         | "limba_romana"
@@ -3778,6 +3786,13 @@ export type Database = {
         | "religie"
         | "arte"
         | "stiinte_umaniste"
+        | "biologie"
+        | "sport"
+        | "tehnologii"
+        | "alte_limbi"
+        | "socio_umane"
+        | "interdisciplinar"
+        | "proiecte_educative"
       competition_prize:
         | "locul_1"
         | "locul_2"
@@ -3972,6 +3987,12 @@ export const Constants = {
       club_attendance_status: ["present", "late", "absent"],
       club_enrollment_status: ["enrolled", "withdrawn", "pending", "rejected"],
       club_status: ["draft", "active", "archived"],
+      competition_category: [
+        "international",
+        "olimpiada_nationala",
+        "concurs_finantat",
+        "concurs_nefinantat",
+      ],
       competition_department: [
         "matematica",
         "limba_romana",
@@ -3985,6 +4006,13 @@ export const Constants = {
         "religie",
         "arte",
         "stiinte_umaniste",
+        "biologie",
+        "sport",
+        "tehnologii",
+        "alte_limbi",
+        "socio_umane",
+        "interdisciplinar",
+        "proiecte_educative",
       ],
       competition_prize: [
         "locul_1",
