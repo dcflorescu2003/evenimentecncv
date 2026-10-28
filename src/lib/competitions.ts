@@ -11,7 +11,22 @@ export const DEPARTMENTS = {
   religie: "Religie",
   arte: "Arte",
   stiinte_umaniste: "Științe umaniste",
+  biologie: "Biologie",
+  sport: "Educație fizică și sport",
+  tehnologii: "Tehnologii",
+  alte_limbi: "Limbi materne și alte limbi moderne",
+  socio_umane: "Științe socio-umane / Filosofie",
+  interdisciplinar: "Interdisciplinar",
+  proiecte_educative: "Proiecte educative",
 } as const;
+
+export const CATEGORIES = {
+  international: "Internațional",
+  olimpiada_nationala: "Olimpiadă națională",
+  concurs_finantat: "Concurs național finanțat MEC",
+  concurs_nefinantat: "Concurs fără finanțare MEC",
+} as const;
+export type Category = keyof typeof CATEGORIES;
 
 export const STAGES = {
   locala: "Locală",
