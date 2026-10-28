@@ -18,20 +18,20 @@ import { Trophy, Plus, Trash2, Pencil, LogOut, X, Loader2, FileDown } from "luci
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 import { searchProfiles, matchesSearch, type ProfileSearchResult } from "@/lib/search";
 import {
-  DEPARTMENTS, STAGES, PRIZES, buildAwardRows, countBy, currentAcademicYear,
-  type Department, type Stage, type Prize,
+  DEPARTMENTS, CATEGORIES, STAGES, PRIZES, buildAwardRows, countBy, currentAcademicYear,
+  type Department, type Category, type Stage, type Prize,
 } from "@/lib/competitions";
 import { exportReportPdfSections } from "@/lib/report-pdf";
 import { exportToCSV } from "@/lib/csv-export";
 
-interface Competition { id: string; name: string; department: Department; is_active: boolean }
+interface Competition { id: string; name: string; department: Department; category: Category | null; is_active: boolean }
 interface Award {
   id: string; competition_id: string; student_id: string; teacher_id: string;
   stage: Stage; prize: Prize; academic_year: string; created_at: string;
 }
 interface Person { id: string; first_name: string; last_name: string }
 
-const TEACHER_ROLES = ["teacher", "homeroom_teacher", "cse", "admin"];
+const TEACHER_ROLES = ["teacher", "homeroom_teacher"];
 const REPORT_ROLES = ["admin", "manager", "cse"];
 const fullName = (p?: Person) => (p ? `${p.last_name} ${p.first_name}` : "—");
 
@@ -82,7 +82,7 @@ export default function CompetitionsPage() {
   const canAdd = roles.some((r) => TEACHER_ROLES.includes(r));
   const canReport = roles.some((r) => REPORT_ROLES.includes(r));
   const isAdmin = roles.includes("admin");
-  const defaultTab = canAdd ? "mine" : "report";
+  const defaultTab = canAdd ? "mine" : canReport ? "report" : "admin";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -194,7 +194,9 @@ function AwardDialog({ open, onOpenChange, editing, competitions, onSaved }: {
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [dept, setDept] = useState<Department | "">("");
+  const [dept, setDept] = useState<Department | "all">("all");
+  const [cat, setCat] = useState<Category | "all">("all");
+  const [compTerm, setCompTerm] = useState("");
   const [compId, setCompId] = useState("");
   const [stage, setStage] = useState<Stage | "">("");
   const [prize, setPrize] = useState<Prize | "">("");
@@ -207,8 +209,8 @@ function AwardDialog({ open, onOpenChange, editing, competitions, onSaved }: {
     if (!open) return;
     if (editing) {
       const c = competitions.find((x) => x.id === editing.competition_id);
-      setDept(c?.department ?? ""); setCompId(editing.competition_id); setStage(editing.stage); setPrize(editing.prize);
-    } else { setDept(""); setCompId(""); setStage(""); setPrize(""); setStudents([]); }
+      setDept(c?.department ?? "all"); setCat("all"); setCompTerm(""); setCompId(editing.competition_id); setStage(editing.stage); setPrize(editing.prize);
+    } else { setDept("all"); setCat("all"); setCompTerm(""); setCompId(""); setStage(""); setPrize(""); setStudents([]); }
     setTerm(""); setResults([]);
   }, [open, editing, competitions]);
 
@@ -219,7 +221,10 @@ function AwardDialog({ open, onOpenChange, editing, competitions, onSaved }: {
     return () => clearTimeout(t);
   }, [term]);
 
-  const comps = competitions.filter((c) => c.department === dept && (c.is_active || c.id === compId));
+  const selected = competitions.find((c) => c.id === compId);
+  const comps = competitions
+    .filter((c) => c.is_active && (dept === "all" || c.department === dept) && (cat === "all" || c.category === cat) && matchesSearch(compTerm, c.name))
+    .slice(0, 100);
 
   const save = async () => {
     if (!user || !compId || !stage || !prize) return toast({ title: "Completează toate câmpurile", variant: "destructive" });
@@ -244,16 +249,38 @@ function AwardDialog({ open, onOpenChange, editing, competitions, onSaved }: {
         <DialogHeader><DialogTitle>{editing ? "Editează premiul" : "Adaugă premiu"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1"><Label>Catedra</Label>
-            <Select value={dept} onValueChange={(v) => { setDept(v as Department); setCompId(""); }}>
-              <SelectTrigger><SelectValue placeholder="Alege catedra" /></SelectTrigger>
-              <SelectContent>{Object.entries(DEPARTMENTS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+            <Select value={dept} onValueChange={(v) => setDept(v as Department | "all")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Toate catedrele</SelectItem>{Object.entries(DEPARTMENTS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1"><Label>Concursul</Label>
-            <Select value={compId} onValueChange={setCompId} disabled={!dept}>
-              <SelectTrigger><SelectValue placeholder={dept && !comps.length ? "Niciun concurs pentru această catedră" : "Alege concursul"} /></SelectTrigger>
-              <SelectContent>{comps.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-            </Select>
+            {selected ? (
+              <div className="flex items-start justify-between gap-2 rounded-md border p-2 text-sm">
+                <div>
+                  <div className="font-medium">{selected.name}</div>
+                  <div className="text-xs text-muted-foreground">{DEPARTMENTS[selected.department]}{selected.category ? ` • ${CATEGORIES[selected.category]}` : ""}</div>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => setCompId("")}>Schimbă</Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Select value={cat} onValueChange={(v) => setCat(v as Category | "all")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="all">Toate tipurile</SelectItem>{Object.entries(CATEGORIES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                </Select>
+                <Input placeholder="Caută concursul" value={compTerm} onChange={(e) => setCompTerm(e.target.value)} />
+                <div className="border rounded-md max-h-56 overflow-y-auto">
+                  {comps.map((c) => (
+                    <button key={c.id} type="button" className="block w-full text-left px-3 py-2 text-sm hover:bg-muted border-b last:border-b-0" onClick={() => { setCompId(c.id); setDept(c.department); }}>
+                      {c.name}
+                      <span className="block text-xs text-muted-foreground">{DEPARTMENTS[c.department]}{c.category ? ` • ${CATEGORIES[c.category]}` : ""}</span>
+                    </button>
+                  ))}
+                  {!comps.length && <p className="p-3 text-sm text-muted-foreground">Niciun concurs găsit.</p>}
+                </div>
+              </div>
+            )}
           </div>
           <div className="space-y-1"><Label>Etapa</Label>
             <Select value={stage} onValueChange={(v) => setStage(v as Stage)}>
@@ -307,6 +334,7 @@ function AwardsReport() {
   const [year, setYear] = useState(currentAcademicYear());
   const [dept, setDept] = useState("all");
   const [comp, setComp] = useState("all");
+  const [cat, setCat] = useState("all");
   const [stage, setStage] = useState("all");
   const [prize, setPrize] = useState("all");
   const [cls, setCls] = useState("all");
@@ -333,13 +361,14 @@ function AwardsReport() {
     })).filter((r) => r.c
       && (dept === "all" || r.c.department === dept)
       && (comp === "all" || r.c.id === comp)
+      && (cat === "all" || r.c.category === cat)
       && (stage === "all" || r.a.stage === stage)
       && (prize === "all" || r.a.prize === prize)
       && (cls === "all" || r.cls === cls)
       && matchesSearch(teacher, r.teacher))
       .sort((x, y) => DEPARTMENTS[x.c.department].localeCompare(DEPARTMENTS[y.c.department], "ro")
         || x.c.name.localeCompare(y.c.name, "ro") || x.student.localeCompare(y.student, "ro"));
-  }, [data, compMap, dept, comp, stage, prize, cls, teacher]);
+  }, [data, compMap, dept, comp, cat, stage, prize, cls, teacher]);
 
   const classes = useMemo(() => Array.from(new Set(Object.values(data?.classOf ?? {}).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ro", { numeric: true })), [data]);
   const byDept = countBy(rows, (r) => DEPARTMENTS[r.c.department]);
@@ -349,8 +378,8 @@ function AwardsReport() {
   const years = [0, 1, 2, 3].map((i) => `${y0 + 1 - i}-${y0 + 2 - i}`).filter((y) => Number(y.slice(0, 4)) <= Number(currentAcademicYear().slice(0, 4)));
   if (!years.includes(year)) years.unshift(year);
 
-  const headers = ["Elev", "Clasa", "Catedra", "Concurs", "Etapa", "Premiu", "Profesor coordonator"];
-  const table = rows.map((r) => [r.student, r.cls, DEPARTMENTS[r.c.department], r.c.name, STAGES[r.a.stage], PRIZES[r.a.prize], r.teacher]);
+  const headers = ["Elev", "Clasa", "Catedra", "Tip", "Concurs", "Etapa", "Premiu", "Profesor coordonator"];
+  const table = rows.map((r) => [r.student, r.cls, DEPARTMENTS[r.c.department], r.c.category ? CATEGORIES[r.c.category] : "", r.c.name, STAGES[r.a.stage], PRIZES[r.a.prize], r.teacher]);
   const totals = (o: Record<string, number>) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, String(v)]);
 
   const pdf = () => exportReportPdfSections({
@@ -380,6 +409,7 @@ function AwardsReport() {
             <SelectContent>{years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
           </Select>
           {sel(dept, (v) => { setDept(v); setComp("all"); }, "Catedra", Object.entries(DEPARTMENTS))}
+          {sel(cat, setCat, "Tip", Object.entries(CATEGORIES))}
           {sel(comp, setComp, "Concurs", comps.filter((c) => dept === "all" || c.department === dept).map((c) => [c.id, c.name]))}
           {sel(stage, setStage, "Etapa", Object.entries(STAGES))}
           {sel(prize, setPrize, "Premiu", Object.entries(PRIZES))}
@@ -424,14 +454,17 @@ function ManageCompetitions() {
   const [editing, setEditing] = useState<Competition | null>(null);
   const [name, setName] = useState("");
   const [dept, setDept] = useState<Department | "">("");
+  const [category, setCategory] = useState<Category | "none">("none");
   const [filter, setFilter] = useState("all");
+  const [catFilter, setCatFilter] = useState("all");
+  const [term, setTerm] = useState("");
 
-  const openDlg = (c: Competition | null) => { setEditing(c); setName(c?.name ?? ""); setDept(c?.department ?? ""); setOpen(true); };
+  const openDlg = (c: Competition | null) => { setEditing(c); setName(c?.name ?? ""); setDept(c?.department ?? ""); setCategory(c?.category ?? "none"); setOpen(true); };
   const refresh = () => qc.invalidateQueries({ queryKey: ["competitions"] });
 
   const save = async () => {
     if (!name.trim() || !dept) return toast({ title: "Completează numele și catedra", variant: "destructive" });
-    const payload = { name: name.trim(), department: dept };
+    const payload = { name: name.trim(), department: dept, category: category === "none" ? null : category };
     const { error } = editing
       ? await supabase.from("competitions").update(payload).eq("id", editing.id)
       : await supabase.from("competitions").insert(payload);
@@ -444,14 +477,19 @@ function ManageCompetitions() {
     refresh();
   };
 
-  const list = comps.filter((c) => filter === "all" || c.department === filter)
+  const list = comps.filter((c) => (filter === "all" || c.department === filter) && (catFilter === "all" || c.category === catFilter) && matchesSearch(term, c.name))
     .sort((a, b) => DEPARTMENTS[a.department].localeCompare(DEPARTMENTS[b.department], "ro") || a.name.localeCompare(b.name, "ro"));
 
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <CardTitle>Concursuri</CardTitle>
-        <div className="flex gap-2">
+        <CardTitle>Concursuri ({list.length})</CardTitle>
+        <div className="flex flex-wrap gap-2">
+          <Input className="w-56" placeholder="Caută concursul" value={term} onChange={(e) => setTerm(e.target.value)} />
+          <Select value={catFilter} onValueChange={setCatFilter}>
+            <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="all">Toate tipurile</SelectItem>{Object.entries(CATEGORIES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+          </Select>
           <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
             <SelectContent><SelectItem value="all">Toate catedrele</SelectItem>{Object.entries(DEPARTMENTS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
@@ -461,17 +499,18 @@ function ManageCompetitions() {
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <Table>
-          <TableHeader><TableRow><TableHead>Catedra</TableHead><TableHead>Concurs</TableHead><TableHead>Activ</TableHead><TableHead /></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Catedra</TableHead><TableHead>Tip</TableHead><TableHead>Concurs</TableHead><TableHead>Activ</TableHead><TableHead /></TableRow></TableHeader>
           <TableBody>
             {list.map((c) => (
               <TableRow key={c.id}>
                 <TableCell>{DEPARTMENTS[c.department]}</TableCell>
+                <TableCell>{c.category ? CATEGORIES[c.category] : "—"}</TableCell>
                 <TableCell>{c.name}</TableCell>
                 <TableCell><Switch checked={c.is_active} onCheckedChange={() => toggle(c)} /></TableCell>
                 <TableCell><Button size="icon" variant="ghost" onClick={() => openDlg(c)}><Pencil className="h-4 w-4" /></Button></TableCell>
               </TableRow>
             ))}
-            {!list.length && <TableRow><TableCell colSpan={4} className="text-muted-foreground">Niciun concurs.</TableCell></TableRow>}
+            {!list.length && <TableRow><TableCell colSpan={5} className="text-muted-foreground">Niciun concurs.</TableCell></TableRow>}
           </TableBody>
         </Table>
       </CardContent>
@@ -483,6 +522,12 @@ function ManageCompetitions() {
               <Select value={dept} onValueChange={(v) => setDept(v as Department)}>
                 <SelectTrigger><SelectValue placeholder="Alege catedra" /></SelectTrigger>
                 <SelectContent>{Object.entries(DEPARTMENTS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1"><Label>Tip</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as Category | "none")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="none">Nespecificat</SelectItem>{Object.entries(CATEGORIES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1"><Label>Numele concursului</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
