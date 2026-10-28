@@ -3276,6 +3276,7 @@ export type Database = {
         Args: { _project_id: string; _student_id: string }
         Returns: Json
       }
+      cse_can_read_feedback: { Args: { _form_id: string }; Returns: boolean }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
