@@ -44,6 +44,7 @@ export default function FeedbackEditorPage({ mode }: Props) {
   const [eligibleClasses, setEligibleClasses] = useState<string[]>([]);
   const [questions, setQuestions] = useState<DraftQuestion[]>([newQuestion(0)]);
   const [saving, setSaving] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const { data: activeSession } = useQuery({
     queryKey: ["active-session-feedback"],
@@ -60,14 +61,16 @@ export default function FeedbackEditorPage({ mode }: Props) {
   });
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !user) return;
+    setAccessDenied(false);
     (async () => {
-      const { data: form } = await supabase
+      let query = supabase
         .from("feedback_forms")
         .select("*")
-        .eq("id", id)
-        .maybeSingle();
-      if (!form) return;
+        .eq("id", id);
+      if (mode !== "admin") query = query.eq("created_by", user.id);
+      const { data: form } = await query.maybeSingle();
+      if (!form) { setAccessDenied(true); return; }
       setTitle(form.title);
       setDescription(form.description ?? "");
       setType(form.type as FormType);
@@ -98,10 +101,10 @@ export default function FeedbackEditorPage({ mode }: Props) {
         })));
       }
     })();
-  }, [id]);
+  }, [id, user?.id, mode]);
 
   const handleSave = async (publish: boolean) => {
-    if (!user) return;
+    if (!user || accessDenied) return;
     if (!title.trim()) { toast.error("Adaugă un titlu"); return; }
     if (questions.length === 0 || questions.some((q) => !q.text.trim())) {
       toast.error("Toate întrebările trebuie să aibă text"); return;
@@ -152,8 +155,9 @@ export default function FeedbackEditorPage({ mode }: Props) {
         formId = data.id;
       }
 
+      if (!formId) throw new Error("Chestionarul nu este disponibil.");
       const toRow = (q: typeof questions[number], idx: number) => ({
-        form_id: formId!,
+        form_id: formId,
         position: idx,
         question_type: q.question_type,
         text: q.text.trim(),
@@ -187,6 +191,13 @@ export default function FeedbackEditorPage({ mode }: Props) {
   };
 
   const isStudentAudience = type !== "teacher_survey";
+
+  if (accessDenied) return (
+    <div role="alert" className="space-y-3">
+      <p>Nu ai acces la editarea acestui chestionar.</p>
+      <Button variant="outline" onClick={() => navigate(backBase(mode))}><ArrowLeft className="mr-2 h-4 w-4" /> Înapoi</Button>
+    </div>
+  );
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
