@@ -1,6 +1,7 @@
 # Architecture rules
 
 - Shared feedback links open the respondent form under authentication and existing feedback RLS, never the results report; unreadable forms must not trigger question fetches or expose cached data from another user.
+- Feedback management queries are scoped to the creator outside admin pages; report queries are user-scoped and load details only after form access succeeds, with database restrictive policies as the security boundary.
 
 - Event visibility is enforced by database access rules; student-facing filters are presentation-only and must never be the security boundary.
 - Manual event enrollment must use `manually_enroll_event_student`; direct reservation/ticket writes cannot enforce organizer/coordinator permissions atomically.- Coordinators leave events only via `leave_event_coordination`; it removes the assignment and notifies the organizer atomically.

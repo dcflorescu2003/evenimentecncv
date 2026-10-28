@@ -12,6 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { formatDate } from "@/lib/time";
 import { exportFeedbackReportPdf, type FbQuestion, type FbResponse } from "@/lib/feedback-pdf";
 import { exportFeedbackReportXlsx } from "@/lib/feedback-xlsx";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Props {
   mode: "admin" | "cse" | "teacher";
@@ -20,24 +21,29 @@ interface Props {
 export default function FeedbackReportPage({ mode }: Props) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const base = mode === "admin" ? "/admin/feedback" : "/prof/feedback";
 
-  const { data: form } = useQuery({
-    enabled: !!id,
-    queryKey: ["fb-report-form", id],
+  const { data: form, isLoading: formLoading } = useQuery({
+    enabled: !!id && !!user,
+    queryKey: ["fb-report-form", id, user?.id, mode],
     queryFn: async () => {
-      const { data, error } = await supabase.from("feedback_forms").select("*").eq("id", id!).maybeSingle();
+      if (!id || !user) return null;
+      let query = supabase.from("feedback_forms").select("*").eq("id", id);
+      if (mode !== "admin") query = query.eq("created_by", user.id);
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data;
     },
   });
 
   const { data: questions = [] } = useQuery<FbQuestion[]>({
-    enabled: !!id,
-    queryKey: ["fb-report-questions", id],
+    enabled: !!id && !!form,
+    queryKey: ["fb-report-questions", id, user?.id, mode],
     queryFn: async () => {
+      if (!id || !form) return [];
       const { data, error } = await supabase
-        .from("feedback_questions").select("*").eq("form_id", id!).order("position");
+        .from("feedback_questions").select("*").eq("form_id", id).order("position");
       if (error) throw error;
       return (data ?? []).map((q: any) => ({
         id: q.id, position: q.position, question_type: q.question_type, text: q.text,
@@ -48,13 +54,14 @@ export default function FeedbackReportPage({ mode }: Props) {
   });
 
   const { data: responses = [] } = useQuery<FbResponse[]>({
-    enabled: !!id,
-    queryKey: ["fb-report-responses", id],
+    enabled: !!id && !!form,
+    queryKey: ["fb-report-responses", id, user?.id, mode],
     queryFn: async () => {
+      if (!id || !form) return [];
       const { data: resp, error } = await supabase
         .from("feedback_responses")
         .select("id, submitted_at, is_identified, respondent_id, subject_teacher_id")
-        .eq("form_id", id!)
+        .eq("form_id", id)
         .order("submitted_at", { ascending: false });
       if (error) throw error;
       const ids = (resp ?? []).map((r: any) => r.id);
@@ -64,7 +71,7 @@ export default function FeedbackReportPage({ mode }: Props) {
       const byResp = new Map<string, any[]>();
       (ans ?? []).forEach((a: any) => {
         if (!byResp.has(a.response_id)) byResp.set(a.response_id, []);
-        byResp.get(a.response_id)!.push({ question_id: a.question_id, value: a.value });
+        byResp.get(a.response_id)?.push({ question_id: a.question_id, value: a.value });
       });
 
       // Fetch respondent + teacher names separately (no FK -> can't embed via PostgREST)
@@ -116,7 +123,7 @@ export default function FeedbackReportPage({ mode }: Props) {
       const key = r.subject_teacher_id ?? "__none__";
       const label = r.subject_teacher_name ?? "Profesor neselectat";
       if (!map.has(key)) map.set(key, { key, label, responses: [] });
-      map.get(key)!.responses.push(r);
+      map.get(key)?.responses.push(r);
     });
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "ro"));
   }, [responses, isTeacherFeedback]);
@@ -159,7 +166,13 @@ export default function FeedbackReportPage({ mode }: Props) {
     });
   };
 
-  if (!form) return <p className="text-sm text-muted-foreground">Se încarcă…</p>;
+  if (formLoading) return <p className="text-sm text-muted-foreground">Se încarcă…</p>;
+  if (!form) return (
+    <div role="alert" className="space-y-3">
+      <p>Nu ai acces la raportul acestui chestionar.</p>
+      <Button variant="outline" onClick={() => navigate(base)}><ArrowLeft className="mr-2 h-4 w-4" /> Înapoi</Button>
+    </div>
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">
