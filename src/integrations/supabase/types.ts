@@ -692,6 +692,78 @@ export type Database = {
         }
         Relationships: []
       }
+      competition_awards: {
+        Row: {
+          academic_year: string
+          competition_id: string
+          created_at: string
+          id: string
+          prize: Database["public"]["Enums"]["competition_prize"]
+          stage: Database["public"]["Enums"]["competition_stage"]
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          academic_year: string
+          competition_id: string
+          created_at?: string
+          id?: string
+          prize: Database["public"]["Enums"]["competition_prize"]
+          stage: Database["public"]["Enums"]["competition_stage"]
+          student_id: string
+          teacher_id?: string
+        }
+        Update: {
+          academic_year?: string
+          competition_id?: string
+          created_at?: string
+          id?: string
+          prize?: Database["public"]["Enums"]["competition_prize"]
+          stage?: Database["public"]["Enums"]["competition_stage"]
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_awards_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_awards_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitions: {
+        Row: {
+          created_at: string
+          department: Database["public"]["Enums"]["competition_department"]
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          department: Database["public"]["Enums"]["competition_department"]
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          department?: Database["public"]["Enums"]["competition_department"]
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       coordinator_assignments: {
         Row: {
           created_at: string
@@ -3693,6 +3765,34 @@ export type Database = {
       club_attendance_status: "present" | "late" | "absent"
       club_enrollment_status: "enrolled" | "withdrawn" | "pending" | "rejected"
       club_status: "draft" | "active" | "archived"
+      competition_department:
+        | "matematica"
+        | "limba_romana"
+        | "engleza"
+        | "franceza"
+        | "informatica"
+        | "geografie"
+        | "istorie"
+        | "fizica"
+        | "chimie"
+        | "religie"
+        | "arte"
+        | "stiinte_umaniste"
+      competition_prize:
+        | "locul_1"
+        | "locul_2"
+        | "locul_3"
+        | "mentiune"
+        | "aur"
+        | "argint"
+        | "bronz"
+        | "participare"
+      competition_stage:
+        | "locala"
+        | "sector"
+        | "municipiu"
+        | "nationala"
+        | "internationala"
       event_status: "draft" | "published" | "closed" | "cancelled"
       feedback_anonymity: "anonymous" | "identified" | "anonymous_optional"
       feedback_audience: "students" | "teachers"
@@ -3872,6 +3972,37 @@ export const Constants = {
       club_attendance_status: ["present", "late", "absent"],
       club_enrollment_status: ["enrolled", "withdrawn", "pending", "rejected"],
       club_status: ["draft", "active", "archived"],
+      competition_department: [
+        "matematica",
+        "limba_romana",
+        "engleza",
+        "franceza",
+        "informatica",
+        "geografie",
+        "istorie",
+        "fizica",
+        "chimie",
+        "religie",
+        "arte",
+        "stiinte_umaniste",
+      ],
+      competition_prize: [
+        "locul_1",
+        "locul_2",
+        "locul_3",
+        "mentiune",
+        "aur",
+        "argint",
+        "bronz",
+        "participare",
+      ],
+      competition_stage: [
+        "locala",
+        "sector",
+        "municipiu",
+        "nationala",
+        "internationala",
+      ],
       event_status: ["draft", "published", "closed", "cancelled"],
       feedback_anonymity: ["anonymous", "identified", "anonymous_optional"],
       feedback_audience: ["students", "teachers"],
