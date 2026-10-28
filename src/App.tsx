@@ -104,6 +104,7 @@ import StudentPortfolioPage from "./pages/student/StudentPortfolioPage";
 
 import SmartLabLayout from "./components/layouts/SmartLabLayout";
 import { SmartLabRoute } from "./components/SmartLabRoute";
+import CompetitionsPage from "./pages/competitions/CompetitionsPage";
 import SmartLabPage from "./pages/smartlab/SmartLabPage";
 import VrVolunteersPage from "./pages/smartlab/VrVolunteersPage";
 
@@ -303,6 +304,15 @@ const App = () => (
               <Route path="/smartlab" element={<SmartLabPage />} />
               <Route path="/smartlab/volunteers" element={<VrVolunteersPage />} />
             </Route>
+
+            <Route
+              path="/concursuri"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "teacher", "homeroom_teacher", "cse", "manager"]}>
+                  <CompetitionsPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Public routes (no auth) */}
             <Route path="/public/events" element={<PublicEventsPage />} />

@@ -1,4 +1,4 @@
-import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, Headset, QrCode, NotebookPen, GraduationCap, type LucideIcon } from "lucide-react";
+import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, Headset, QrCode, NotebookPen, GraduationCap, Trophy, type LucideIcon } from "lucide-react";
 
 export type AppRole =
   | "admin"
@@ -117,6 +117,19 @@ export const MODULES: AppModule[] = [
       student: "/student/badge",
       teacher: "/prof/badge",
       homeroom_teacher: "/prof/badge",
+    },
+  },
+  {
+    key: "competitions",
+    label: "Concursuri",
+    description: "Evidența premiilor obținute de elevi la concursuri.",
+    icon: Trophy,
+    pathByRole: {
+      admin: "/concursuri",
+      teacher: "/concursuri",
+      homeroom_teacher: "/concursuri",
+      cse: "/concursuri",
+      manager: "/concursuri",
     },
   },
   {
