@@ -50,7 +50,8 @@ export async function downloadFileMobileSafe(filename: string, base64Data: strin
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Safari poate începe citirea după încheierea handlerului de click.
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
     } catch (error) {
       console.error("Eroare la descărcarea fișierului pe web:", error);
       toast.error("Eroare la generarea fișierului.");

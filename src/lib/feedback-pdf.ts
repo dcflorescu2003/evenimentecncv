@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ensureUnicodeFont, PDF_FONT } from "./pdf-font";
+import { downloadFileMobileSafe } from "./download";
 
 export type FbQuestionType = "single_choice" | "multi_choice" | "dropdown" | "scale" | "open_text";
 
@@ -241,5 +242,6 @@ export async function exportFeedbackReportPdf({ title, subtitle, questions, resp
     });
   });
 
-  doc.save(`${title.replace(/\s+/g, "_")}_raport.pdf`);
+  const base64 = doc.output("datauristring").split(",")[1];
+  await downloadFileMobileSafe(`${title.replace(/[<>:"/\\|?*\s]+/g, "_")}_raport.pdf`, base64, "application/pdf");
 }

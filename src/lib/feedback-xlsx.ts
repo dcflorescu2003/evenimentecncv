@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import type { FbQuestion, FbResponse } from "./feedback-pdf";
+import { downloadFileMobileSafe } from "./download";
 
 export interface FbSection {
   label: string;
@@ -85,14 +86,17 @@ function buildSheet(questions: FbQuestion[], responses: FbResponse[]) {
   return ws;
 }
 
-export function exportFeedbackReportXlsx({ title, questions, sections }: ExportArgs) {
+export async function exportFeedbackReportXlsx({ title, questions, sections }: ExportArgs) {
   const wb = XLSX.utils.book_new();
   const used = new Set<string>();
   const addSheet = (label: string, responses: FbResponse[]) => {
     let name = sanitizeSheetName(label);
     let i = 2;
-    while (used.has(name)) name = sanitizeSheetName(`${label} (${i++})`);
-    used.add(name);
+    while (used.has(name.toLocaleLowerCase())) {
+      const suffix = ` (${i++})`;
+      name = `${sanitizeSheetName(label).slice(0, 31 - suffix.length)}${suffix}`;
+    }
+    used.add(name.toLocaleLowerCase());
     XLSX.utils.book_append_sheet(wb, buildSheet(questions, responses), name);
   };
   if (sections.length === 0) {
@@ -100,5 +104,10 @@ export function exportFeedbackReportXlsx({ title, questions, sections }: ExportA
   } else {
     sections.forEach((s) => addSheet(s.label, s.responses));
   }
-  XLSX.writeFile(wb, `${title.replace(/\s+/g, "_")}_raport.xlsx`);
+  const base64 = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+  await downloadFileMobileSafe(
+    `${title.replace(/[<>:"/\\|?*\s]+/g, "_")}_raport.xlsx`,
+    base64,
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
 }
