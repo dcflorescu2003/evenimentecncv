@@ -9,4 +9,4 @@
 
 # Feedback exports
 - [x] Route PDF and Excel through mobile-safe saving and prevent truncated worksheet-name collisions.
-- [ ] Verify export contents, download flow and mobile file delivery calls.
+- [x] Verify PDF/Excel downloads with real feedback in an authenticated browser; inspect PDF and XLSX contents; 8 tests pass including native save/share calls (physical device not available).
