@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/time";
 import { exportFeedbackReportPdf, type FbQuestion, type FbResponse } from "@/lib/feedback-pdf";
 import { exportFeedbackReportXlsx } from "@/lib/feedback-xlsx";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface Props {
   mode: "admin" | "cse" | "teacher";
@@ -37,7 +38,7 @@ export default function FeedbackReportPage({ mode }: Props) {
     },
   });
 
-  const { data: questions = [] } = useQuery<FbQuestion[]>({
+  const { data: questions = [], isLoading: questionsLoading } = useQuery<FbQuestion[]>({
     enabled: !!id && !!form,
     queryKey: ["fb-report-questions", id, user?.id, mode],
     queryFn: async () => {
@@ -53,7 +54,7 @@ export default function FeedbackReportPage({ mode }: Props) {
     },
   });
 
-  const { data: responses = [] } = useQuery<FbResponse[]>({
+  const { data: responses = [], isLoading: responsesLoading } = useQuery<FbResponse[]>({
     enabled: !!id && !!form,
     queryKey: ["fb-report-responses", id, user?.id, mode],
     queryFn: async () => {
@@ -134,6 +135,21 @@ export default function FeedbackReportPage({ mode }: Props) {
   }, [allGroups, selectedTeacher, isTeacherFeedback]);
 
   const exportSections = () => groups.map((g) => ({ label: g.label, responses: g.responses }));
+  const [exporting, setExporting] = useState<"pdf" | "xlsx" | null>(null);
+  const exportDisabled = questionsLoading || responsesLoading || exporting !== null;
+
+  const runExport = async (kind: "pdf" | "xlsx", generate: () => Promise<void>) => {
+    if (exportDisabled) return;
+    setExporting(kind);
+    try {
+      await generate();
+    } catch (error) {
+      console.error("Export feedback eșuat:", error);
+      toast.error("Raportul nu a putut fi exportat. Încearcă din nou.");
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const handleExportPdf = async () => {
     if (!form) return;
@@ -155,9 +171,9 @@ export default function FeedbackReportPage({ mode }: Props) {
     }
   };
 
-  const handleExportXlsx = () => {
+  const handleExportXlsx = async () => {
     if (!form) return;
-    exportFeedbackReportXlsx({
+    await exportFeedbackReportXlsx({
       title: form.title,
       questions,
       sections: isTeacherFeedback
@@ -196,11 +212,11 @@ export default function FeedbackReportPage({ mode }: Props) {
               </SelectContent>
             </Select>
           )}
-          <Button variant="outline" onClick={handleExportXlsx} className="w-full sm:w-auto">
-            <FileSpreadsheet className="h-4 w-4 mr-2" /> Export Excel
+          <Button variant="outline" disabled={exportDisabled} onClick={() => runExport("xlsx", handleExportXlsx)} className="w-full sm:w-auto">
+            <FileSpreadsheet className="h-4 w-4 mr-2" /> {exporting === "xlsx" ? "Se exportă…" : "Export Excel"}
           </Button>
-          <Button onClick={handleExportPdf} className="w-full sm:w-auto">
-            <FileDown className="h-4 w-4 mr-2" /> Export PDF
+          <Button disabled={exportDisabled} onClick={() => runExport("pdf", handleExportPdf)} className="w-full sm:w-auto">
+            <FileDown className="h-4 w-4 mr-2" /> {exporting === "pdf" ? "Se exportă…" : "Export PDF"}
           </Button>
         </div>
       </div>

@@ -6,3 +6,7 @@
 # CSE feedback access
 - [x] Restrict CSE feedback reads in the database and management pages.
 - [x] Test own-form access and denial for other creators (automated tests); administrator report verified in browser. No CSE account exists for authenticated CSE browser verification.
+
+# Feedback exports
+- [x] Route PDF and Excel through mobile-safe saving and prevent truncated worksheet-name collisions.
+- [ ] Verify export contents, download flow and mobile file delivery calls.
