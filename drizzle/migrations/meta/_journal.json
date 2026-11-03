@@ -99,6 +99,13 @@
       "when": 1793207043677,
       "tag": "0013_competitions_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793738374714,
+      "tag": "0014_force_app_version_1_34",
+      "breakpoints": true
     }
   ]
 }
