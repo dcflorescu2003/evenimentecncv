@@ -1,0 +1,1 @@
+UPDATE public.app_versions SET min_version='1.34', latest_version='1.34', updated_at=now() WHERE platform IN ('android','ios');
