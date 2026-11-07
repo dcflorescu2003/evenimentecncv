@@ -82,6 +82,8 @@ import PublicEventBookingPage from "./pages/public/PublicEventBookingPage";
 import PublicTicketViewPage from "./pages/public/PublicTicketViewPage";
 import PrivacyPolicyPage from "./pages/public/PrivacyPolicyPage";
 import SupportPage from "./pages/public/SupportPage";
+import LearnCppPage from "./pages/public/LearnCppPage";
+import LearnCppLessonPage from "./pages/public/LearnCppLessonPage";
 import UnsubscribePage from "./pages/public/UnsubscribePage";
 
 import PortfolioLayout from "./components/layouts/PortfolioLayout";
@@ -321,6 +323,8 @@ const App = () => (
             <Route path="/public/tickets" element={<PublicTicketViewPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/support" element={<SupportPage />} />
+            <Route path="/invata" element={<LearnCppPage />} />
+            <Route path="/invata/cpp-9/:slug" element={<LearnCppLessonPage />} />
             <Route path="/unsubscribe" element={<UnsubscribePage />} />
 
             <Route path="*" element={<NotFound />} />

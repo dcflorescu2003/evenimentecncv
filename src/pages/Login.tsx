@@ -154,6 +154,8 @@ export default function Login() {
         <Link to="/privacy" className="hover:underline">Politica de Confidențialitate</Link>
         <span>·</span>
         <Link to="/support" className="hover:underline">Suport</Link>
+        <span>·</span>
+        <Link to="/invata" className="hover:underline">Învață C++</Link>
       </footer>
       </div>
     </div>
