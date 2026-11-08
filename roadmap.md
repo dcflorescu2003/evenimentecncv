@@ -1,6 +1,7 @@
 # CSE event details
 - [x] Complete public participant and contact visibility on own CSE events only (public events clarified by user), preserving existing access rules.
-- [ ] Run ownership tests and verify the authenticated event page.
+- [x] Run four ownership tests; build OK; existing authenticated admin event shows six real public contacts.
+- [ ] Verify the new view while signed in as the CSE organizer (available browser session belongs to admin; CSE session required).
 
 # Feedback links
 - [x] Add feedback copy-link button and authenticated shared-link entry.
