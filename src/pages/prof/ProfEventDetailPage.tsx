@@ -44,6 +44,7 @@ import { toast } from "sonner";
 import { CseBadge } from "@/components/CseBadge";
 import { exportSimpleAttendancePdf } from "@/lib/attendance-pdf";
 import { buildAttendancePdfRows } from "@/lib/attendance-rows";
+import { canViewCsePublicDetails } from "@/lib/cse-event-details";
 
 const statusLabels: Record<string, string> = {
   draft: "Ciornă", published: "Publicat", closed: "Închis", cancelled: "Anulat",
@@ -155,6 +156,29 @@ export default function ProfEventDetailPage() {
     enabled: !!id,
   });
 
+  const canViewPublicDetails = canViewCsePublicDetails(roles, user?.id, event);
+  const { data: publicReservations = [], isLoading: publicLoading, isError: publicError } = useQuery({
+    queryKey: ["prof_event_public_reservations", user?.id, id],
+    enabled: canViewPublicDetails,
+    queryFn: async () => {
+      if (!id || !canViewPublicDetails) return [];
+      const rows = [];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from("public_reservations")
+          .select("id, guest_name, guest_email, guest_phone, public_tickets(id, attendee_name, status)")
+          .eq("event_id", id).eq("status", "reserved")
+          .order("id").range(offset, offset + 499);
+        if (error) throw error;
+        rows.push(...(data || []));
+        if (!data || data.length < 500) break;
+      }
+      return rows;
+    },
+  });
+  const publicParticipants = canViewPublicDetails
+    ? publicReservations.flatMap((reservation) => reservation.public_tickets.filter((ticket) => ticket.status !== "cancelled"))
+    : [];
+
   const { data: coordinators = [] } = useQuery({
     queryKey: ["prof_coordinators", id],
     queryFn: async () => {
@@ -204,8 +228,13 @@ export default function ProfEventDetailPage() {
   });
 
   const { data: reservationCount = 0 } = useQuery({
-    queryKey: ["prof_reservation_count", id],
+    queryKey: ["prof_reservation_count", id, canViewPublicDetails],
     queryFn: async () => {
+      if (canViewPublicDetails && id) {
+        const { data, error } = await supabase.rpc("get_events_reserved_counts", { _event_ids: [id] });
+        if (error) throw error;
+        return Number((data as Record<string, number> | null)?.[id] || 0);
+      }
       const { count, error } = await supabase
         .from("reservations")
         .select("*", { count: "exact", head: true })
@@ -906,10 +935,35 @@ export default function ProfEventDetailPage() {
       <Tabs defaultValue="coordinators" className="space-y-4">
         <TabsList className="w-full flex-wrap h-auto justify-start">
           <TabsTrigger value="coordinators">Coordonatori ({coordinators.length})</TabsTrigger>
-          <TabsTrigger value="participants">Participanți ({participants.length + assistants.length})</TabsTrigger>
+          <TabsTrigger value="participants">Participanți ({participants.length + assistants.length + publicParticipants.length})</TabsTrigger>
           <TabsTrigger value="dossier">{isCse ? "Dosar / Cerere" : "Dosar"} ({dossierFiles.length})</TabsTrigger>
           <TabsTrigger value="forms">Formulare ({templateFiles.length}{submissions.length > 0 ? ` · ${submissions.length} primite` : ""})</TabsTrigger>
+          {canViewPublicDetails && <TabsTrigger value="contact">Contact ({publicReservations.length})</TabsTrigger>}
         </TabsList>
+
+        {canViewPublicDetails && (
+          <TabsContent value="contact" className="space-y-4">
+            {publicLoading ? <p className="text-muted-foreground">Se încarcă…</p> : publicError ? (
+              <p className="text-destructive">Datele de contact nu au putut fi încărcate.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Nume</TableHead><TableHead>Email</TableHead><TableHead>Telefon</TableHead><TableHead>Locuri rezervate</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {publicReservations.length === 0 ? <TableRow><TableCell colSpan={4} className="py-6 text-center text-muted-foreground">Nicio rezervare publică.</TableCell></TableRow> : publicReservations.map((reservation) => (
+                      <TableRow key={reservation.id}>
+                        <TableCell className="font-medium">{reservation.guest_name}</TableCell>
+                        <TableCell>{reservation.guest_email ? <a className="text-primary underline break-all" href={`mailto:${reservation.guest_email}`}>{reservation.guest_email}</a> : "—"}</TableCell>
+                        <TableCell>{reservation.guest_phone || "—"}</TableCell>
+                        <TableCell>{reservation.public_tickets.filter((ticket) => ticket.status !== "cancelled").length}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+        )}
 
         <TabsContent value="coordinators" className="space-y-4">
           <div className="flex items-center justify-between">
@@ -994,7 +1048,7 @@ export default function ProfEventDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {participants.length === 0 && assistants.length === 0 ? (
+                {participants.length === 0 && assistants.length === 0 && publicParticipants.length === 0 ? (
                   <TableRow><TableCell colSpan={5} className="py-6 text-center text-muted-foreground">Niciun participant.</TableCell></TableRow>
                 ) : (
                   <>
@@ -1043,6 +1097,15 @@ export default function ProfEventDetailPage() {
                         </TableRow>
                       );
                     })}
+                    {publicParticipants.map((ticket) => (
+                      <TableRow key={`public-${ticket.id}`}>
+                        <TableCell className="font-medium">{ticket.attendee_name}</TableCell>
+                        <TableCell>—</TableCell>
+                        <TableCell><Badge variant="outline">Vizitator</Badge></TableCell>
+                        <TableCell><Badge variant="secondary">{statusLabels[ticket.status] || ticket.status}</Badge></TableCell>
+                        <TableCell />
+                      </TableRow>
+                    ))}
                   </>
                 )}
               </TableBody>

@@ -1,4 +1,5 @@
 # Architecture rules
+- CSE public participant/contact views stay in the professor event page, gated by creator identity and user-scoped query keys; existing RLS remains the access boundary.
 - Feedback PDF and Excel exports use the shared mobile-safe file delivery helper, so native apps save through their platform share sheet instead of browser-only downloads.
 
 - Shared feedback links open the respondent form under authentication and existing feedback RLS, never the results report; unreadable forms must not trigger question fetches or expose cached data from another user.
