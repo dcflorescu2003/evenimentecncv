@@ -1,6 +1,5 @@
-# Feedback links
 # CSE event details
-- [ ] Complete public participant and contact visibility on own CSE events, preserving existing access rules.
+- [x] Complete public participant and contact visibility on own CSE events only (public events clarified by user), preserving existing access rules.
 - [ ] Run ownership tests and verify the authenticated event page.
 
 # Feedback links
