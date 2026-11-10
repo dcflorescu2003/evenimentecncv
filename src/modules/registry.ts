@@ -1,4 +1,4 @@
-import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, Headset, QrCode, NotebookPen, GraduationCap, Trophy, type LucideIcon } from "lucide-react";
+import { Calendar, BookOpen, Users, MessageSquare, FolderKanban, Headset, QrCode, NotebookPen, GraduationCap, Trophy, UtensilsCrossed, type LucideIcon } from "lucide-react";
 
 export type AppRole =
   | "admin"
@@ -147,6 +147,14 @@ export const MODULES: AppModule[] = [
     icon: GraduationCap,
     pathByRole: ALL_ROLES("https://classroom.google.com/"),
     externalUrl: "https://classroom.google.com/",
+  },
+  {
+    key: "cantina",
+    label: "Cantina",
+    description: "Meniul și serviciile cantinei.",
+    icon: UtensilsCrossed,
+    pathByRole: ALL_ROLES("https://cantina.wigglycornet.com/"),
+    externalUrl: "https://cantina.wigglycornet.com/",
   },
 ];
 
