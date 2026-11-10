@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, RotateCcw } from "lucide-react";
+import { Download, FileText, RotateCcw } from "lucide-react";
+import { AlignmentType, Document, ImageRun, Packer, Paragraph, TextRun, BorderStyle } from "docx";
 import { downloadFileMobileSafe } from "@/lib/download";
 import { formatDate } from "@/lib/time";
 
@@ -154,24 +155,24 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
       let y = sepY + 8;
 
       doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
-      doc.text(stripDiacritics(`R.N.E.B.   Nr. ${regNumber || "____"}`), marginL, y);
+      doc.setFont("times", "normal");
+      doc.text(stripDiacritics(`RNTCP   Nr. ${regNumber || "____"}`), marginL, y);
       y += 12;
 
-      doc.setFont("helvetica", "bold");
+      doc.setFont("times", "bold");
       const aprobLines = ["APROB,", stripDiacritics(director || ""), "DIRECTOR"];
       aprobLines.forEach((line, i) => {
         doc.text(line, pageW - marginR, y + i * 5, { align: "right" });
       });
       y += aprobLines.length * 5 + 10;
 
-      doc.setFont("helvetica", "bold");
+      doc.setFont("times", "bold");
       doc.setFontSize(14);
       doc.text("C E R E R E", pageW / 2, y, { align: "center" });
       y += 10;
 
       doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
+      doc.setFont("times", "normal");
       doc.text("Stimate Domnule Director,", marginL, y);
       y += 8;
 
@@ -181,7 +182,7 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
         let cursorX = marginL + indent;
         let cursorY = startY;
         const spaceWidth = (bold: boolean) => {
-          doc.setFont("helvetica", bold ? "bold" : "normal");
+          doc.setFont("times", bold ? "bold" : "normal");
           return doc.getTextWidth(" ");
         };
         for (const run of runs) {
@@ -191,7 +192,7 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
               cursorX += spaceWidth(!!run.bold);
               continue;
             }
-            doc.setFont("helvetica", run.bold ? "bold" : "normal");
+            doc.setFont("times", run.bold ? "bold" : "normal");
             const w = doc.getTextWidth(token);
             if (cursorX + w > marginL + indent + maxW) {
               cursorY += lineH;
@@ -213,7 +214,7 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
       y = renderRuns(bodyWithIndent, y);
       y += 6;
 
-      doc.setFont("helvetica", "bold");
+      doc.setFont("times", "bold");
       doc.setFontSize(11);
 
       function renderCenteredRuns(runs: Run[], startY: number): number {
@@ -245,6 +246,54 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
     }
   }
 
+  async function handleExportWord() {
+    try {
+      setGenerating(true);
+      const [l, r] = await Promise.all([
+        loadImageDataUrl("/cerere-header/consiliul-elevilor.png"),
+        loadImageDataUrl("/cerere-header/cncv.png"),
+      ]);
+      const toBytes = (d: string) => Uint8Array.from(atob(d.split(",")[1]), (c) => c.charCodeAt(0));
+      const h = 80;
+      const runs = (rs: Run[]) => rs.map((x) => new TextRun({ text: x.text, bold: x.bold }));
+      const doc = new Document({
+        styles: { default: { document: { run: { font: "Times New Roman", size: 24 } } } },
+        sections: [{
+          properties: { page: { margin: { top: 720, left: 1134, right: 1134, bottom: 1134 } } },
+          children: [
+            new Paragraph({
+              border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000", space: 4 } },
+              tabStops: [{ type: "right" as any, position: 9638 }],
+              children: [
+                new ImageRun({ type: "png", data: toBytes(l.data), transformation: { width: (l.w / l.h) * h, height: h } }),
+                new TextRun("\t"),
+                new ImageRun({ type: "png", data: toBytes(r.data), transformation: { width: (r.w / r.h) * h, height: h } }),
+              ],
+            }),
+            new Paragraph({ spacing: { before: 240, after: 240 }, children: [new TextRun(`RNTCP   Nr. ${regNumber || "____"}`)] }),
+            ...["APROB,", director || "", "DIRECTOR"].map((t) => new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: t, bold: true })] })),
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360, after: 240 }, children: [new TextRun({ text: "C E R E R E", bold: true, size: 28 })] }),
+            new Paragraph({ spacing: { after: 160 }, children: [new TextRun("Stimate Domnule Director,")] }),
+            new Paragraph({ alignment: AlignmentType.JUSTIFIED, indent: { firstLine: 720 }, spacing: { after: 120, line: 360 }, children: runs(introRuns) }),
+            new Paragraph({ alignment: AlignmentType.JUSTIFIED, indent: { firstLine: 720 }, spacing: { after: 240, line: 360 }, children: runs(bodyRuns) }),
+            ...closingLines.map((lr) => new Paragraph({ alignment: AlignmentType.CENTER, children: lr.map((x) => new TextRun({ text: x.text, bold: true })) })),
+          ],
+        }],
+      });
+      const blob = await Packer.toBlob(doc);
+      const base64: string = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res((fr.result as string).split(",")[1]);
+        fr.onerror = rej;
+        fr.readAsDataURL(blob);
+      });
+      const safeName = stripDiacritics((title || "cerere").replace(/[^a-zA-Z0-9-_]+/g, "_")).slice(0, 60);
+      await downloadFileMobileSafe(`Cerere_${safeName}_${(date || "").replace(/\./g, "-")}.docx`, base64, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   function renderPreviewRuns(runs: Run[]) {
     return runs.map((r, i) => (
       r.bold ? <strong key={i}>{r.text}</strong> : <span key={i}>{r.text}</span>
@@ -257,7 +306,7 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
         <CardContent className="space-y-3 pt-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label>R.N.E.B. Nr.</Label>
+              <Label>RNTCP Nr.</Label>
               <Input value={regNumber} onChange={(e) => setRegNumber(e.target.value)} placeholder="ex: 27" />
             </div>
             <div className="space-y-1">
@@ -319,10 +368,10 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
       </Card>
 
       <Card>
-        <CardContent className="space-y-3 pt-4 text-sm leading-relaxed">
+        <CardContent className="space-y-3 pt-4 text-sm leading-relaxed" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p>R.N.E.B.&nbsp;&nbsp;Nr. {regNumber || "____"}</p>
+              <p>RNTCP&nbsp;&nbsp;Nr. {regNumber || "____"}</p>
             </div>
             <div className="text-right font-semibold">
               <p>APROB,</p>
@@ -342,7 +391,11 @@ export function CerereTab({ event, defaultPresident = "" }: CerereTabProps) {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={handleExportWord} disabled={generating}>
+          <FileText className="mr-2 h-4 w-4" />
+          Export Word
+        </Button>
         <Button onClick={handleExport} disabled={generating}>
           <Download className="mr-2 h-4 w-4" />
           {generating ? "Se generează..." : "Export PDF"}
