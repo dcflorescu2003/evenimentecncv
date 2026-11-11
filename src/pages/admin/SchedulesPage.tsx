@@ -357,6 +357,8 @@ export default function SchedulesPage() {
         </Button>
       </div>
 
+      <DutyScheduleSection />
+
 
       {loading ? (
         <Skeleton className="h-32 w-full" />

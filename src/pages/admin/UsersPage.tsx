@@ -66,6 +66,8 @@ export default function UsersPage() {
   const [editForm, setEditForm] = useState({ first_name: "", last_name: "", username: "", teaching_norm: "", initials: "", roles: [] as string[], subject_ids: [] as string[] });
   const [portfolioAccess, setPortfolioAccess] = useState(false);
   const [portfolioInitial, setPortfolioInitial] = useState(false);
+  const [dutyAccess, setDutyAccess] = useState(false);
+  const [dutyInitial, setDutyInitial] = useState(false);
 
   const { data: allModuleAccess = [] } = useQuery({
     queryKey: ["module_access_all"],
@@ -75,6 +77,9 @@ export default function UsersPage() {
       return data ?? [];
     },
   });
+  const dutyUserIds = new Set(
+    allModuleAccess.filter((m) => m.module_key === "duty_editor").map((m) => m.user_id),
+  );
   const portfolioUserIds = new Set(
     allModuleAccess.filter((m) => m.module_key === "portfolio").map((m) => m.user_id),
   );
@@ -285,6 +290,13 @@ export default function UsersPage() {
           .eq("user_id", id)
           .eq("module_key", "portfolio");
         if (delErr) throw delErr;
+      }
+      if (dutyAccess && !dutyInitial) {
+        const { error: e1 } = await supabase.from("module_access").insert({ user_id: id, module_key: "duty_editor" });
+        if (e1) throw e1;
+      } else if (!dutyAccess && dutyInitial) {
+        const { error: e2 } = await supabase.from("module_access").delete().eq("user_id", id).eq("module_key", "duty_editor");
+        if (e2) throw e2;
       }
       return data;
     },
@@ -767,6 +779,15 @@ export default function UsersPage() {
                 checked={portfolioAccess}
                 onCheckedChange={(c) => setPortfolioAccess(!!c)}
               />
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <Label className="cursor-pointer">Poate edita profesorii de serviciu</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Permite modificarea tabelului cu profesorii de serviciu din Orar.
+                </p>
+              </div>
+              <Checkbox checked={dutyAccess} onCheckedChange={(c) => setDutyAccess(!!c)} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Anulează</Button>
