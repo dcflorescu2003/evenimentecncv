@@ -16,3 +16,4 @@
 - Dialogs ignore outside clicks by default (close via X/Cancel) to avoid losing form input; React Query defaults: staleTime 60s, no refetch on focus — pages needing fresh data set their own options.
 - Competition awards store one row per student with `teacher_id` as the coordinating teacher; competitions list is admin-managed, and only teachers and homeroom teachers may insert awards; RLS limits edits to their teacher (reads also for admin/manager/CSE).
 - Android release builds use R8 (minifyEnabled) with keep rules for Capacitor/Cordova/Firebase in proguard-rules.pro; the JS bridge resolves plugins by reflection, so new native plugins may need keep rules.
+- Profesorii de serviciu folosesc ciclu A/B calculat din ; editarea e permisă prin  cheia  (admin implicit), verificată în RLS.

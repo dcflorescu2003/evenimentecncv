@@ -325,6 +325,9 @@ export default function UsersPage() {
     const hasPortfolio = portfolioUserIds.has(p.id);
     setPortfolioAccess(hasPortfolio);
     setPortfolioInitial(hasPortfolio);
+    const hasDuty = dutyUserIds.has(p.id);
+    setDutyAccess(hasDuty);
+    setDutyInitial(hasDuty);
   }
 
   const deleteUserMutation = useMutation({
