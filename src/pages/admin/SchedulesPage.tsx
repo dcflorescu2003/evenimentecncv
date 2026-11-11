@@ -1,3 +1,4 @@
+import DutyScheduleSection from "@/components/duty/DutyScheduleSection";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -355,6 +356,8 @@ export default function SchedulesPage() {
           Import XML — toate clasele
         </Button>
       </div>
+
+      <DutyScheduleSection />
 
 
       {loading ? (

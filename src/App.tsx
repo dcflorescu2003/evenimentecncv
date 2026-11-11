@@ -105,6 +105,7 @@ import StudentPortfolioPage from "./pages/student/StudentPortfolioPage";
 import SmartLabLayout from "./components/layouts/SmartLabLayout";
 import { SmartLabRoute } from "./components/SmartLabRoute";
 import CompetitionsPage from "./pages/competitions/CompetitionsPage";
+import ProfDutyPage from "./pages/prof/ProfDutyPage";
 import SmartLabPage from "./pages/smartlab/SmartLabPage";
 import VrVolunteersPage from "./pages/smartlab/VrVolunteersPage";
 
@@ -209,6 +210,7 @@ const App = () => (
               <Route path="/prof/events" element={<ProfEventsPage />} />
               <Route path="/prof/events/:id" element={<ProfEventDetailPage />} />
               <Route path="/prof/badge" element={<StudentBadgePage />} />
+              <Route path="/prof/orar" element={<ProfDutyPage />} />
               <Route path="/prof/scan/:eventId" element={<ProfScanPage />} />
               <Route path="/prof/event/:eventId" element={<ProfEventParticipantsPage />} />
               <Route path="/prof/clubs" element={<ClubsVolunteerHub mode="cse" />} />

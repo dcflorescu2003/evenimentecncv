@@ -45,11 +45,13 @@ export const MODULES: AppModule[] = [
   {
     key: "schedule",
     label: "Orar & Meniu",
-    description: "Orarul clasei și meniul zilnic al cantinei.",
+    description: "Orarul clasei, meniul cantinei și profesorii de serviciu.",
     icon: BookOpen,
     pathByRole: {
       admin: "/admin/schedules",
       student: "/student/orar",
+      teacher: "/prof/orar",
+      homeroom_teacher: "/prof/orar",
     },
   },
   {

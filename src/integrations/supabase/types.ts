@@ -803,6 +803,62 @@ export type Database = {
           },
         ]
       }
+      duty_schedule: {
+        Row: {
+          id: string
+          position: number
+          shift: string
+          teacher_id: string | null
+          updated_at: string
+          week_slot: string
+          weekday: number
+        }
+        Insert: {
+          id?: string
+          position: number
+          shift: string
+          teacher_id?: string | null
+          updated_at?: string
+          week_slot: string
+          weekday: number
+        }
+        Update: {
+          id?: string
+          position?: number
+          shift?: string
+          teacher_id?: string | null
+          updated_at?: string
+          week_slot?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "duty_schedule_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      duty_settings: {
+        Row: {
+          anchor_monday: string
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          anchor_monday?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          anchor_monday?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -3327,6 +3383,7 @@ export type Database = {
         Args: { _profile_id: string; _viewer: string }
         Returns: boolean
       }
+      can_view_duty_schedule: { Args: { _uid: string }; Returns: boolean }
       can_view_internal_event: {
         Args: { _event_id: string; _user_id: string }
         Returns: boolean
