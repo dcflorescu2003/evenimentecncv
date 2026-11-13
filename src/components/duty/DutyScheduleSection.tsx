@@ -10,9 +10,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeftRight, Pencil, ShieldCheck } from "lucide-react";
+import { ArrowLeftRight, FileDown, Loader2, Pencil, ShieldCheck } from "lucide-react";
+import { exportReportPdf } from "@/lib/report-pdf";
 import {
-  WEEKDAY_LABELS, addDays, bucharestToday, displayMonday, formatDdMm, swapAnchor, weekSlotFor,
+  WEEKDAY_LABELS, addDays, bucharestToday, displayMonday, formatDdMm, nextDutyWeekReport, swapAnchor, weekSlotFor,
   type DutyShift, type WeekSlot,
 } from "@/lib/duty-schedule";
 
@@ -27,8 +28,9 @@ export default function DutyScheduleSection() {
   const canEdit = hasModuleAccess("duty_editor");
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
-  const { data: settings } = useQuery({
+  const { data: settings, isPending: settingsPending, isError: settingsError } = useQuery({
     queryKey: ["duty_settings"],
     queryFn: async () => {
       const { data, error } = await supabase.from("duty_settings").select("anchor_monday").maybeSingle();
@@ -36,7 +38,7 @@ export default function DutyScheduleSection() {
       return data;
     },
   });
-  const { data: rows = [] } = useQuery({
+  const { data: rows = [], isPending: rowsPending, isError: rowsError } = useQuery({
     queryKey: ["duty_schedule"],
     queryFn: async () => {
       const { data, error } = await supabase.from("duty_schedule").select("week_slot, weekday, shift, position, teacher_id");
@@ -44,7 +46,7 @@ export default function DutyScheduleSection() {
       return (data ?? []) as Row[];
     },
   });
-  const { data: teachers = [] } = useQuery({
+  const { data: teachers = [], isPending: teachersPending, isError: teachersError } = useQuery({
     queryKey: ["duty_teachers"],
     queryFn: async () => {
       const { data: r, error } = await supabase.from("user_roles").select("user_id").in("role", ["teacher", "homeroom_teacher"]);
@@ -67,6 +69,25 @@ export default function DutyScheduleSection() {
   const monday = displayMonday(today);
   const weeks = [monday, addDays(monday, 7)];
 
+  const exportNextWeek = async () => {
+    if (!canEdit || exporting || settingsPending || rowsPending || teachersPending || settingsError || rowsError || teachersError) return;
+    setExporting(true);
+    try {
+      const report = nextDutyWeekReport(bucharestToday(), anchor, rows, new Map(teachers.map((teacher) => [teacher.id, name(teacher)])));
+      await exportReportPdf({
+        title: "Profesori de serviciu",
+        subtitle: report.subtitle,
+        headers: ["Ziua / Data", "Dimineața", "După-amiaza"],
+        rows: report.rows,
+        filename: `profesori-de-serviciu-${report.monday}`,
+      });
+    } catch {
+      toast.error("Nu s-a putut genera PDF-ul profesorilor de serviciu. Încearcă din nou.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const swap = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("duty_settings").update({ anchor_monday: swapAnchor(anchor), updated_at: new Date().toISOString() }).eq("id", true);
@@ -81,7 +102,11 @@ export default function DutyScheduleSection() {
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
         <CardTitle className="flex items-center gap-2 text-lg"><ShieldCheck className="h-5 w-5 text-primary" /> Profesori de serviciu</CardTitle>
         {canEdit && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={exportNextWeek} disabled={exporting || settingsPending || rowsPending || teachersPending || settingsError || rowsError || teachersError}>
+              {exporting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <FileDown className="mr-1 h-4 w-4" />}
+              PDF săptămâna următoare
+            </Button>
             <Button size="sm" variant="outline" onClick={() => { if (confirm("Inversezi săptămânile A și B?")) swap.mutate(); }} disabled={swap.isPending}>
               <ArrowLeftRight className="mr-1 h-4 w-4" /> Schimbă A-B
             </Button>

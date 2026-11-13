@@ -1,6 +1,30 @@
 export type WeekSlot = "A" | "B";
 export type DutyShift = "morning" | "afternoon";
 
+export interface DutyAssignment {
+  week_slot: WeekSlot;
+  weekday: number;
+  shift: DutyShift;
+  position: number;
+  teacher_id: string | null;
+}
+
+/** Export the same next week shown in the duty table, using its A/B cycle. */
+export function nextDutyWeekReport(today: string, anchor: string, assignments: DutyAssignment[], teacherNames: Map<string, string>) {
+  const monday = addDays(displayMonday(today), 7);
+  const friday = addDays(monday, 4);
+  const slot = weekSlotFor(monday, anchor);
+  const fullDate = (date: string) => date.split("-").reverse().join(".");
+  const rows = WEEKDAY_LABELS.map((label, index) => {
+    const namesFor = (shift: DutyShift) => [1, 2].map((position) => {
+      const assignment = assignments.find((row) => row.week_slot === slot && row.weekday === index + 1 && row.shift === shift && row.position === position);
+      return assignment?.teacher_id ? teacherNames.get(assignment.teacher_id) ?? "—" : "—";
+    }).join("\n");
+    return [`${label}\n${fullDate(addDays(monday, index))}`, namesFor("morning"), namesFor("afternoon")];
+  });
+  return { monday, subtitle: `${fullDate(monday)} – ${fullDate(friday)} • Săptămâna ${slot}`, rows };
+}
+
 export const WEEKDAY_LABELS = ["Luni", "Marți", "Miercuri", "Joi", "Vineri"];
 
 /** Data curentă (Y-M-D) în fusul Europe/Bucharest. */
