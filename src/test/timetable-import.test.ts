@@ -11,7 +11,8 @@ describe("timetable import", () => {
     expect(roomCodeToName("Inf", rooms)).toBe("Info");
     expect(roomCodeToName("Cph", rooms)).toBe("Cabinet Psih");
     expect(roomCodeToName("1", rooms)).toBe("Sala 1");
-    expect(roomCodeToName("M", rooms)).toBeNull();
+    expect(roomCodeToName("M", [...rooms, "Mansarda"])).toBe("Mansarda");
+    expect(roomCodeToName("E", [...rooms, "ECDL"])).toBe("ECDL");
   });
 
   it("parses group lessons into aligned parts", () => {

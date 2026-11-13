@@ -8,7 +8,7 @@ const DAY_NAMES: Record<string, number> = { luni: 1, marti: 2, miercuri: 3, joi:
 export const ROOM_CODE_MAP: Record<string, string> = {
   AEL: "AEL", Inf: "Info", info1: "Info1", info2: "Info2",
   Lfiz: "Lab. fizică", Lch: "Lab. chimie", Lbio: "Lab. bio", sport: "Sala de sport",
-  A: "Amfiteatru", B: "Biblioteca", Lb: "Cabinet Lb", Cph: "Cabinet Psih",
+  A: "Amfiteatru", B: "Biblioteca", Lb: "Cabinet Lb", Cph: "Cabinet Psih", E: "ECDL", M: "Mansarda",
 };
 
 export function norm(s: string): string {
@@ -87,7 +87,11 @@ export function parseRoomCell(raw: string): { subject: string; classCode: string
 export interface TeacherProfile { id: string; first_name: string; last_name: string; initials: string | null }
 
 /** Potrivește "CIMPOIERU IULIANA SIMONA" cu un profil (nume + primul prenume). */
+/** Nume din fișierele de orar scrise diferit față de cont. */
+export const TEACHER_NAME_ALIASES: Record<string, string> = { voiculescu: "voicescu" };
+
 export function matchTeacherName(fileName: string, profiles: TeacherProfile[]): TeacherProfile | null {
+  fileName = norm(fileName).split(" ").map((t) => TEACHER_NAME_ALIASES[t] ?? t).join(" ");
   const tokens = new Set(norm(fileName.replace(/^Profesor\s+/i, "")).split(" "));
   const hits = profiles.filter((p) => {
     const last = norm(p.last_name).split(" ").filter(Boolean);
