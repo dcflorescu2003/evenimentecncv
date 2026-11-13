@@ -10,6 +10,7 @@ export const SUBJECT_ALIASES: Record<string, string> = {
   Mate: "Matematică",
   Dirig: "Dirigenție",
   Info: "Informatică",
+  Ef: "Educație fizică",
   Bio: "Biologie",
   Fiz: "Fizică",
   Ch: "Chimie",

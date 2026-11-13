@@ -113,6 +113,13 @@
       "when": 1794368955813,
       "tag": "0015_duty_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794591123955,
+      "tag": "0016_schedule_entry_teacher_ids",
+      "breakpoints": true
     }
   ]
 }

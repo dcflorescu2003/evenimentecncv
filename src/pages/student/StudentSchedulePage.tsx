@@ -5,9 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { PERIODS, DAYS, getCurrentPeriod } from "@/lib/schedule-periods";
-import { CalendarRange, ChevronLeft, ChevronRight, MapPin, User } from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import LessonCell from "@/components/timetable/LessonCell";
+import { splitEntry } from "@/lib/timetable-import";
 import CantinaMenuSection from "@/components/schedule/CantinaMenuSection";
 import { fetchTeacherInitialsMap, resolveTeacherDisplay, type TeacherInitialsMap } from "@/lib/teacher-initials";
 
@@ -81,23 +83,14 @@ export default function StudentSchedulePage() {
 
   const renderCell = (e: Entry | undefined) => {
     if (!e) return <span className="text-xs text-muted-foreground/40">—</span>;
-    const teacherDisplay = resolveTeacherDisplay(e.teacher_name, initialsMap);
     return (
-      <div className="flex flex-col gap-0.5 text-left">
-        <span className="text-sm font-medium leading-tight">{e.subject}</span>
-        {teacherDisplay && (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <User className="h-3 w-3" />
-            {teacherDisplay}
-          </span>
-        )}
-        {e.room && (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <MapPin className="h-3 w-3" />
-            {e.room}
-          </span>
-        )}
-      </div>
+      <LessonCell
+        parts={splitEntry(e).map((p) => ({
+          subject: p.subject,
+          room: p.room,
+          teacher: p.teacher ? resolveTeacherDisplay(p.teacher, initialsMap) : null,
+        }))}
+      />
     );
   };
 

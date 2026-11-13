@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import DutyScheduleSection from "@/components/duty/DutyScheduleSection";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -348,6 +349,9 @@ export default function SchedulesPage() {
             Selectează o clasă pentru a edita orarul ei. Zilele sunt L-V, până la 12 ore pe zi.
           </p>
         </div>
+        <Button asChild>
+          <Link to="/admin/schedules/import"><Upload className="mr-2 h-4 w-4" />Import orare (toate fișierele)</Link>
+        </Button>
         <Button
           onClick={() => setXmlBulkOpen(true)}
           disabled={loading || bulkImporting || classes.length === 0}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Orar>
+  <P>Sala AEL</P>
+  <Table>
+    <TR><TH>Zi / Ora</TH><TH>1</TH><TH>2</TH><TH>3</TH><TH>4</TH><TH>5</TH><TH>6</TH><TH>7</TH><TH>8</TH><TH>9</TH><TH>10</TH><TH>11</TH><TH>12</TH></TR>
+    <TR><TH>Lu</TH><TD>Info 11G PC</TD><TD>Info 11F PC</TD><TD>Ti 12D PC</TD><TD>Bio 12F SA</TD><TD>Lf 11E CIS</TD><TD>Info 6A DC</TD><TD>Info 9F DC</TD><TD>Info 10A BS</TD><TD/><TD>Ti 10A BS</TD><TD>Ti 10E BS</TD><TD>Info 10G BS</TD></TR>
+    <TR><TH>Ma</TH><TD>Info 11F PC</TD><TD>Info 11F PC</TD><TD>Info 12F DC</TD><TD>Info 12F DC</TD><TD>Info 11C BS</TD><TD>Info 9G BS</TD><TD>Info 10F BS</TD><TD>Ti 10F BS</TD><TD>Info 9A FC</TD><TD/><TD/><TD/></TR>
+    <TR><TH>Mi</TH><TD/><TD/><TD/><TD/><TD>Info 6A DC</TD><TD>Info 7A DC</TD><TD>Info 9G BS</TD><TD>Ti 10G BS</TD><TD>Ti 9G PC</TD><TD>Info 9D PC</TD><TD>Ti 9D PC</TD><TD/></TR>
+    <TR><TH>Jo</TH><TD>Info 11G PC</TD><TD/><TD>Ti 12E PC</TD><TD/><TD>Ti 11E PC</TD><TD>Ti 11E PC</TD><TD>Ti 10B SIS</TD><TD/><TD>Info 10B FC</TD><TD/><TD/><TD/></TR>
+    <TR><TH>Vi</TH><TD>Info 11C BS</TD><TD>Info 11C BS</TD><TD>Info 11B SIS</TD><TD>Dirig 11B SIS</TD><TD>Ti 11D PC</TD><TD>Ti 11D PC</TD><TD>Fiz 9C BT</TD><TD>Ti 10D PC</TD><TD>Ti 9F PC</TD><TD>Info 10D PC</TD><TD/><TD/></TR>
+  </Table>
+  <P>Sala Inf</P>
+  <Table>
+    <TR><TH>Zi / Ora</TH><TH>1</TH><TH>2</TH><TH>3</TH><TH>4</TH><TH>5</TH><TH>6</TH><TH>7</TH><TH>8</TH><TH>9</TH><TH>10</TH><TH>11</TH><TH>12</TH></TR>
+    <TR><TH>Lu</TH><TD/><TD/><TD/><TD/><TD>Info 5A SC</TD><TD>Info 8A SC</TD><TD>Info 11B SIS</TD><TD>Info 10A DC</TD><TD/><TD/><TD>Ti 9A FC</TD><TD/></TR>
+    <TR><TH>Ma</TH><TD/><TD>Info 12G DC</TD><TD>Info 12C SR</TD><TD>Info 12C SR</TD><TD>L.rom 9C GD</TD><TD>Mate 10C PAI</TD><TD>Dirig 11A SC</TD><TD>Ti 9C SC</TD><TD>Info 9C SC</TD><TD>Info 10C FC</TD><TD>Ti 10C FC</TD><TD/></TR>
+    <TR><TH>Mi</TH><TD/><TD>Info 12A FC</TD><TD>Info 12A FC</TD><TD>Info 12B SIS</TD><TD>Info 12C SR</TD><TD>Info 5A SC</TD><TD>Info 9F DC</TD><TD>Ti 9B SC</TD><TD>Info 10G BS</TD><TD>Info 9E BS</TD><TD>Ti 9E BS</TD><TD>Info 10A BS</TD></TR>
+    <TR><TH>Jo</TH><TD>Info 12G DC</TD><TD>Info 12B SIS</TD><TD/><TD>Info 11C BS</TD><TD>Info 12B SIS</TD><TD>Info 12A FC</TD><TD>Info 8A SC</TD><TD>Info 9B SC</TD><TD>Info 9C SC</TD><TD/><TD/><TD/></TR>
+    <TR><TH>Vi</TH><TD>Info 12B SIS</TD><TD>Info 12F DC</TD><TD>Info 12A FC</TD><TD>Info 12A FC</TD><TD>Info 11A SC</TD><TD>Mate 9F LI</TD><TD>Info 11F PC</TD><TD/><TD/><TD/><TD/><TD/></TR>
+  </Table>
+</Orar>

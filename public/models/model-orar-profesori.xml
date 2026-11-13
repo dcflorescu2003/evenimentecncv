@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Orar>
+  <P>Profesor CRACIUN IONUT</P>
+  <Table>
+    <TR><TH>Zi / Ora</TH><TH>1</TH><TH>2</TH><TH>3</TH><TH>4</TH><TH>5</TH><TH>6</TH><TH>7</TH><TH>8</TH><TH>9</TH><TH>10</TH><TH>11</TH><TH>12</TH></TR>
+    <TR><TH>Lu</TH><TD/><TD>L.rom 12 12A</TD><TD>L.rom 1 5A</TD><TD>L.rom 4 8A</TD><TD>L.rom 4 8A</TD><TD>L.rom 6 9F</TD><TD>L.rom Lfiz 10C</TD><TD>L.rom Lfiz 10C</TD><TD/><TD/><TD/><TD/></TR>
+    <TR><TH>Ma</TH><TD>L.rom 12 12A</TD><TD>L.rom 1 5A</TD><TD>L.rom 1 5A</TD><TD/><TD/><TD/><TD/><TD/><TD/><TD/><TD/><TD/></TR>
+    <TR><TH>Mi</TH><TD>L.rom 10 12A</TD><TD>L.rom 4 8A</TD><TD/><TD/><TD/><TD/><TD/><TD/><TD/><TD/><TD/><TD/></TR>
+    <TR><TH>Jo</TH><TD/><TD/><TD/><TD/><TD/><TD/><TD/><TD/><TD>L.rom Lfiz 10C</TD><TD>L.rom 6 9F</TD><TD>L.rom 6 9F</TD><TD/></TR>
+    <TR><TH>Vi</TH><TD>L.rom 4 8A</TD><TD>Dirig 1 5A</TD><TD>L.rom 1 5A</TD><TD>L.rom 4 8A</TD><TD>L.rom A 9F</TD><TD>L.rom 9 9E</TD><TD/><TD/><TD/><TD/><TD/><TD/></TR>
+  </Table>
+  <P>Profesor GEORGESCU DELIA</P>
+  <Table>
+    <TR><TH>Zi / Ora</TH><TH>1</TH><TH>2</TH><TH>3</TH><TH>4</TH><TH>5</TH><TH>6</TH><TH>7</TH><TH>8</TH><TH>9</TH><TH>10</TH><TH>11</TH><TH>12</TH></TR>
+    <TR><TH>Lu</TH><TD>L.rom 9 11C</TD><TD>L.rom Lbio 12E</TD><TD>L.rom 9 11C</TD><TD>L.rom 8 11D</TD><TD>L.rom 8 9C</TD><TD>L.rom 4 9D</TD><TD/><TD/><TD/><TD/><TD/><TD/></TR>
+    <TR><TH>Ma</TH><TD>Dirig 9 11C</TD><TD>L.rom Lbio 12E</TD><TD>L.rom 9 11C</TD><TD>L.rom 8 11D</TD><TD>L.rom Inf 9C</TD><TD>L.rom 10 9C</TD><TD>L.rom 9 9D</TD><TD/><TD/><TD/><TD/><TD/></TR>
+    <TR><TH>Mi</TH><TD/><TD/><TD/><TD/><TD/><TD>L.rom 5 9B</TD><TD>L.rom 6 9B</TD><TD/><TD/><TD/><TD/><TD/></TR>
+    <TR><TH>Jo</TH><TD/><TD/><TD/><TD/><TD>L.rom 8 9D</TD><TD>L.rom 8 9D</TD><TD>L.rom 11 9B</TD><TD/><TD/><TD/><TD/><TD/></TR>
+    <TR><TH>Vi</TH><TD>L.rom Lbio 12E</TD><TD>L.rom Lbio 12E</TD><TD>L.rom 8 11D</TD><TD/><TD/><TD/><TD/><TD/><TD/><TD/><TD/><TD/></TR>
+  </Table>
+</Orar>

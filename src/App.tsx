@@ -27,6 +27,7 @@ import AuditPage from "./pages/admin/AuditPage";
 import CredentialsPage from "./pages/admin/CredentialsPage";
 import AdminScanPage from "./pages/admin/AdminScanPage";
 import SchedulesPage from "./pages/admin/SchedulesPage";
+import TimetableImportPage from "./pages/admin/TimetableImportPage";
 import SubjectsPage from "./pages/admin/SubjectsPage";
 import RoomsPage from "./pages/admin/RoomsPage";
 import ClubsVolunteerHub from "./components/clubs/ClubsVolunteerHub";
@@ -163,6 +164,7 @@ const App = () => (
               <Route path="/admin/credentials" element={<CredentialsPage />} />
               <Route path="/admin/scan" element={<AdminScanPage />} />
               <Route path="/admin/schedules" element={<SchedulesPage />} />
+              <Route path="/admin/schedules/import" element={<TimetableImportPage />} />
               <Route path="/admin/subjects" element={<SubjectsPage />} />
               <Route path="/admin/rooms" element={<RoomsPage />} />
               <Route path="/admin/clubs" element={<ClubsVolunteerHub mode="admin" />} />

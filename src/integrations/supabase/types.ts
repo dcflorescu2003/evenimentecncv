@@ -2566,6 +2566,7 @@ export type Database = {
           room: string | null
           schedule_id: string
           subject: string
+          teacher_ids: string[]
           teacher_name: string | null
         }
         Insert: {
@@ -2576,6 +2577,7 @@ export type Database = {
           room?: string | null
           schedule_id: string
           subject: string
+          teacher_ids?: string[]
           teacher_name?: string | null
         }
         Update: {
@@ -2586,6 +2588,7 @@ export type Database = {
           room?: string | null
           schedule_id?: string
           subject?: string
+          teacher_ids?: string[]
           teacher_name?: string | null
         }
         Relationships: [

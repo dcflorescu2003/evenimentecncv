@@ -1,0 +1,2 @@
+ALTER TABLE public.schedule_entries ADD COLUMN IF NOT EXISTS teacher_ids uuid[] NOT NULL DEFAULT '{}';
+CREATE INDEX IF NOT EXISTS schedule_entries_teacher_ids_idx ON public.schedule_entries USING gin (teacher_ids);
