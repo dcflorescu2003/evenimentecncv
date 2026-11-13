@@ -152,18 +152,18 @@ function StaffView({ parts }: { parts: TimetablePart[] }) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-xs">
+        <div className="max-h-[70vh] overflow-auto overscroll-contain">
+          <table className="w-full min-w-[900px] border-separate border-spacing-0 text-xs">
             <thead>
               <tr>
-                <th className="sticky left-0 border-b bg-card p-2 text-left font-medium text-muted-foreground">Profesor</th>
-                {PERIODS.map((p) => <th key={p.period} className="border-b p-2 text-left font-medium text-muted-foreground">{p.period}<div className="font-normal">{p.start}</div></th>)}
+                <th className="sticky left-0 top-0 z-30 border-b bg-card p-2 text-left font-medium text-muted-foreground">Profesor</th>
+                {PERIODS.map((p) => <th key={p.period} className="sticky top-0 z-20 border-b bg-card p-2 text-left font-medium text-muted-foreground">{p.period}<div className="font-normal">{p.start}</div></th>)}
               </tr>
             </thead>
             <tbody>
               {filtered.map((t) => (
                 <tr key={t}>
-                  <td className="sticky left-0 border-b bg-card p-2">
+                  <td className="sticky left-0 z-10 border-b bg-card p-2">
                     <button className="text-left font-medium text-primary hover:underline" onClick={() => setColleague(t)}>{t}</button>
                   </td>
                   {PERIODS.map((p) => {
