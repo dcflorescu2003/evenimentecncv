@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, CalendarDays, Users2, BarChart3, LogOut, HeartHandshake, MessageSquare } from "lucide-react";
+import { GraduationCap, LayoutDashboard, CalendarDays, Users2, BarChart3, LogOut, CalendarRange, HeartHandshake, MessageSquare } from "lucide-react";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 
 export default function ProfLayout() {
@@ -22,6 +22,7 @@ export default function ProfLayout() {
     { title: "Evenimentele mele", icon: CalendarDays, path: "/prof/events" },
     { title: "Cluburi & Voluntariat", icon: HeartHandshake, path: "/prof/clubs" },
     { title: "Feedback", icon: MessageSquare, path: "/prof/feedback" },
+    ...(roles.includes("teacher") || roles.includes("homeroom_teacher") ? [{ title: "Orar", icon: CalendarRange, path: "/prof/orar" }] : []),
     ...(isHomeroom ? [{ title: "Clasa mea", icon: Users2, path: "/teacher" }] : []),
     ...(isHomeroom ? [{ title: "Rapoarte", icon: BarChart3, path: "/teacher/reports" }] : []),
   ];

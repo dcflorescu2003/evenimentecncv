@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LayoutDashboard, BarChart3, CalendarDays, LogOut, Users2 } from "lucide-react";
+import { GraduationCap, LayoutDashboard, BarChart3, CalendarDays, LogOut, CalendarRange, Users2 } from "lucide-react";
 import { ModuleSwitcher } from "@/components/ModuleSwitcher";
 
 export default function TeacherLayout() {
@@ -14,6 +14,7 @@ export default function TeacherLayout() {
   const navItems = [
     ...(hasTeacherOrHomeroom ? [{ title: "Dashboard", icon: LayoutDashboard, path: "/prof" }] : []),
     ...(hasTeacherOrHomeroom ? [{ title: "Evenimentele mele", icon: CalendarDays, path: "/prof/events" }] : []),
+    ...(roles.includes("teacher") || roles.includes("homeroom_teacher") ? [{ title: "Orar", icon: CalendarRange, path: "/prof/orar" }] : []),
     { title: "Clasa mea", icon: Users2, path: "/teacher" },
     { title: "Rapoarte", icon: BarChart3, path: "/teacher/reports" },
   ];
