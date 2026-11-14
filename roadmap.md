@@ -1,4 +1,7 @@
 # CSE event details
+- [x] Enable CSE room timetable navigation only, without staffroom or individual teacher/class views.
+- [x] Verify room timetable access rules: seven tests pass and preview build OK.
+- [ ] Verify room timetable navigation with a CSE session (available authenticated session is admin and correctly redirects away from professor pages).
 - [x] Complete public participant and contact visibility on own CSE events only (public events clarified by user), preserving existing access rules.
 - [x] Run four ownership tests; build OK; existing authenticated admin event shows six real public contacts.
 - [ ] Verify the new view while signed in as the CSE organizer (available browser session belongs to admin; CSE session required).

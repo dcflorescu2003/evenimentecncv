@@ -1,4 +1,5 @@
 # Architecture rules
+- Staff timetable navigation uses the shared role-view policy; CSE renders only the rooms view, preserving existing schedule read RLS and preventing staffroom or individual timetable navigation.
 - CSE public participant/contact views stay in the professor event page, gated by creator identity and user-scoped query keys; existing RLS remains the access boundary.
 - Feedback PDF and Excel exports use the shared mobile-safe file delivery helper, so native apps save through their platform share sheet instead of browser-only downloads.
 

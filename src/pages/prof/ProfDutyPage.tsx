@@ -16,8 +16,9 @@ import { CalendarRange, DoorOpen, Search, UserRound, Users } from "lucide-react"
 import { DAYS, PERIODS } from "@/lib/schedule-periods";
 import { norm } from "@/lib/timetable-import";
 import { defaultDay } from "@/components/timetable/TimetableGrid";
+import { timetableViewsForRoles, type TimetableView } from "@/lib/timetable-access";
 
-type View = "mine" | "rooms" | "staff";
+type View = TimetableView;
 
 function groupBy(parts: TimetablePart[]) {
   const m = new Map<string, TimetablePart[]>();
@@ -185,24 +186,28 @@ function StaffView({ parts }: { parts: TimetablePart[] }) {
 }
 
 export default function ProfDutyPage() {
-  const [view, setView] = useState<View>("mine");
+  const { roles } = useAuth();
+  const allowedViews = timetableViewsForRoles(roles);
+  const [selectedView, setView] = useState<View>("mine");
+  const view = allowedViews.includes(selectedView) ? selectedView : allowedViews[0];
   const { data, isLoading, error } = useSchoolTimetable();
   const parts = data?.parts ?? [];
   const titles: Record<View, string> = { mine: "Orarul meu", rooms: "Săli", staff: "Cancelarie" };
+  if (!view) return <p className="text-sm text-destructive">Nu ai acces la acest orar.</p>;
   return (
     <div className="space-y-4 pb-24">
       <h1 className="font-display text-2xl font-semibold">Orar – {titles[view]}</h1>
       {isLoading ? <Skeleton className="h-64 w-full" /> : error ? <p className="text-sm text-destructive">Orarul nu a putut fi încărcat.</p>
         : view === "mine" ? <MineView parts={parts} /> : view === "rooms" ? <RoomsView parts={parts} /> : <StaffView parts={parts} />}
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 backdrop-blur">
+      {allowedViews.length > 1 && <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 backdrop-blur">
         <div className="mx-auto grid max-w-md grid-cols-3 gap-1 p-2">
-          {([["mine", "Orarul meu", CalendarRange], ["rooms", "Săli", DoorOpen], ["staff", "Cancelarie", Users]] as const).map(([v, label, Icon]) => (
+          {([["mine", "Orarul meu", CalendarRange], ["rooms", "Săli", DoorOpen], ["staff", "Cancelarie", Users]] as const).filter(([v]) => allowedViews.includes(v)).map(([v, label, Icon]) => (
             <Button key={v} variant={view === v ? "default" : "ghost"} className="flex h-auto flex-col gap-0.5 py-2" onClick={() => setView(v)}>
               <Icon className="h-5 w-5" /><span className="text-xs">{label}</span>
             </Button>
           ))}
         </div>
-      </nav>
+      </nav>}
     </div>
   );
 }
