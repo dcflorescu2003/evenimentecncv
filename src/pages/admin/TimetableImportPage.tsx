@@ -83,6 +83,7 @@ export default function TimetableImportPage() {
         ok++; rows += c.entries.length;
       }
       for (const u of result.initialsUpdates) await supabase.from("profiles").update({ initials: u.initials }).eq("id", u.id);
+      await supabase.rpc("sync_teacher_classes_from_schedule" as any);
       await qc.invalidateQueries({ queryKey: ["school_timetable"] });
       toast.success(`Orar regenerat: ${ok} clase, ${rows} ore${missing.length ? `. Clase inexistente: ${missing.join(", ")}` : ""}`);
       setResult(null);

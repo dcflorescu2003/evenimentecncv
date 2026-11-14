@@ -120,6 +120,13 @@
       "when": 1794591123955,
       "tag": "0016_schedule_entry_teacher_ids",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794638836987,
+      "tag": "0017_sync_teacher_classes_from_schedule",
+      "breakpoints": true
     }
   ]
 }

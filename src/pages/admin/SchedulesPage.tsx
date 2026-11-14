@@ -352,13 +352,6 @@ export default function SchedulesPage() {
         <Button asChild>
           <Link to="/admin/schedules/import"><Upload className="mr-2 h-4 w-4" />Import orare (toate fișierele)</Link>
         </Button>
-        <Button
-          onClick={() => setXmlBulkOpen(true)}
-          disabled={loading || bulkImporting || classes.length === 0}
-        >
-          <FilePlus2 className="mr-2 h-4 w-4" />
-          Import XML — toate clasele
-        </Button>
       </div>
 
       <DutyScheduleSection />

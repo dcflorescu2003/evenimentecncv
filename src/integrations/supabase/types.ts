@@ -3811,6 +3811,7 @@ export type Database = {
         Args: { _event_id: string }
         Returns: undefined
       }
+      sync_teacher_classes_from_schedule: { Args: never; Returns: number }
       vr_mark_prepared: {
         Args: { _prepared: boolean; _reservation_id: string }
         Returns: Json
