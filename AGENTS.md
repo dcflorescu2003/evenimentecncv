@@ -19,3 +19,4 @@
 - Android release builds use R8 (minifyEnabled) with keep rules for Capacitor/Cordova/Firebase in proguard-rules.pro; the JS bridge resolves plugins by reflection, so new native plugins may need keep rules.
 - Duty teachers use an A/B two-week cycle derived from duty_settings.anchor_monday; editing is gated by module_access key duty_editor (admin implicit) and enforced in RLS.
 - Duty-week PDF exports share the displayed A/B calculation and saved assignments, use the mobile-safe report exporter, and are offered only to duty editors to keep export access aligned with editing access.
+- Duty reminders use a managed authenticated callback with a Bucharest-time gate; deterministic per-teacher/date notification IDs prevent duplicate sends, and the saved A/B anchor determines recipients.

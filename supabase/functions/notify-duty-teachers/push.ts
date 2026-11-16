@@ -1,0 +1,202 @@
+export interface ServiceAccount {
+  client_email: string;
+  private_key: string;
+  project_id: string;
+  token_uri: string;
+}
+
+function base64url(data: Uint8Array): string {
+  return btoa(String.fromCharCode(...data))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function strToBase64url(s: string): string {
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+export async function getAccessToken(sa: ServiceAccount): Promise<string> {
+  const header = strToBase64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const now = Math.floor(Date.now() / 1000);
+  const claimSet = {
+    iss: sa.client_email,
+    scope: "https://www.googleapis.com/auth/firebase.messaging",
+    aud: sa.token_uri,
+    iat: now,
+    exp: now + 3600,
+  };
+  const payload = strToBase64url(JSON.stringify(claimSet));
+  const unsigned = `${header}.${payload}`;
+
+  // Import RSA private key
+  const pemBody = sa.private_key
+    .replace(/-----BEGIN PRIVATE KEY-----/, "")
+    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/\n/g, "");
+  const keyData = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8", keyData,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false, ["sign"]
+  );
+
+  const sig = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5", privateKey,
+    new TextEncoder().encode(unsigned)
+  );
+  const jwt = `${unsigned}.${base64url(new Uint8Array(sig))}`;
+
+  const resp = await fetch(sa.token_uri, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+  });
+  const json = await resp.json();
+  if (!resp.ok) throw new Error(`Token error: ${JSON.stringify(json)}`);
+  return json.access_token;
+}
+
+export async function sendFcmNotification(
+  accessToken: string,
+  projectId: string,
+  deviceToken: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>
+): Promise<{ ok: boolean; invalid: boolean }> {
+  try {
+    const resp = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: {
+            token: deviceToken,
+            notification: { title, body },
+            data: data || {},
+            android: {
+              priority: "high",
+              notification: {
+                channel_id: "default",
+                sound: "default",
+                default_sound: true,
+                default_vibrate_timings: true,
+                notification_priority: "PRIORITY_HIGH",
+              },
+            },
+          },
+        }),
+      }
+    );
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error("FCM send error:", resp.status, err);
+      const invalid =
+        resp.status === 404 ||
+        resp.status === 410 ||
+        (resp.status === 400 &&
+          /UNREGISTERED|INVALID_ARGUMENT|registration-token-not-registered/i.test(err));
+      return { ok: false, invalid };
+    }
+    return { ok: true, invalid: false };
+  } catch (e) {
+    console.error("FCM send exception:", e);
+    return { ok: false, invalid: false };
+  }
+}
+
+// ── Web Push helpers (existing) ─────────────────────────────────────────
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return new Uint8Array([...rawData].map((c) => c.charCodeAt(0)));
+}
+
+export async function importPrivateKey(base64url: string) {
+  const raw = urlBase64ToUint8Array(base64url);
+  return await crypto.subtle.importKey(
+    "raw",
+    raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength) as ArrayBuffer,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"],
+  );
+}
+
+async function createVapidJwt(audience: string, subject: string, privateKey: CryptoKey): Promise<string> {
+  const header = { typ: "JWT", alg: "ES256" };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = { aud: audience, exp: now + 86400, sub: subject };
+
+  const enc = new TextEncoder();
+  const toBase64Url = (buf: ArrayBuffer) =>
+    btoa(String.fromCharCode(...new Uint8Array(buf)))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const strToB64Url = (s: string) =>
+    btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+  const headerB64 = strToB64Url(JSON.stringify(header));
+  const payloadB64 = strToB64Url(JSON.stringify(payload));
+  const unsigned = `${headerB64}.${payloadB64}`;
+
+  const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, privateKey, enc.encode(unsigned));
+
+  const sigArray = new Uint8Array(signature);
+  let r: Uint8Array, s: Uint8Array;
+  if (sigArray.length === 64) {
+    r = sigArray.slice(0, 32);
+    s = sigArray.slice(32, 64);
+  } else {
+    let offset = 2;
+    const rLen = sigArray[offset + 1];
+    offset += 2;
+    r = sigArray.slice(offset, offset + rLen);
+    offset += rLen;
+    const sLen = sigArray[offset + 1];
+    offset += 2;
+    s = sigArray.slice(offset, offset + sLen);
+    if (r.length > 32) r = r.slice(r.length - 32);
+    if (s.length > 32) s = s.slice(s.length - 32);
+    if (r.length < 32) { const p = new Uint8Array(32); p.set(r, 32 - r.length); r = p; }
+    if (s.length < 32) { const p = new Uint8Array(32); p.set(s, 32 - s.length); s = p; }
+  }
+  const rawSig = new Uint8Array(64);
+  rawSig.set(r, 0);
+  rawSig.set(s, 32);
+
+  return `${unsigned}.${toBase64Url(rawSig.buffer)}`;
+}
+
+export async function sendWebPush(
+  subscription: { endpoint: string; p256dh: string; auth_key: string },
+  payload: string,
+  vapidPublicKey: string,
+  vapidPrivateKey: CryptoKey
+): Promise<{ ok: boolean; invalid: boolean }> {
+  try {
+    const url = new URL(subscription.endpoint);
+    const audience = `${url.protocol}//${url.host}`;
+    const jwt = await createVapidJwt(audience, "mailto:noreply@school.local", vapidPrivateKey);
+    const response = await fetch(subscription.endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "TTL": "86400",
+        "Authorization": `vapid t=${jwt}, k=${vapidPublicKey}`,
+      },
+      body: new TextEncoder().encode(payload),
+    });
+    const ok = response.ok || response.status === 201;
+    const invalid = response.status === 404 || response.status === 410;
+    return { ok, invalid };
+  } catch (e) {
+    console.error("Web push send error:", e);
+    return { ok: false, invalid: false };
+  }
+}
+

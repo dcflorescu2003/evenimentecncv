@@ -23,6 +23,12 @@ export function getNotificationUrl(
   const eventId = notification.related_event_id;
   const type = notification.type;
 
+  if (type === "duty_reminder") {
+    if (roles.includes("admin")) return "/admin/schedules";
+    if (roles.includes("teacher") || roles.includes("homeroom_teacher")) return "/prof/orar";
+    return null;
+  }
+
   // Smart Lab (rezervări echipamente VR)
   if (type === "vr_reservation") {
     return "/smartlab";

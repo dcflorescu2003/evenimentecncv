@@ -18,3 +18,7 @@
 # Feedback exports
 - [x] Route PDF and Excel through mobile-safe saving and prevent truncated worksheet-name collisions.
 - [x] Verify PDF/Excel downloads with real feedback in an authenticated browser; inspect PDF and XLSX contents; 8 tests pass including native save/share calls (physical device not available).
+
+# Duty reminders
+- [x] Notify assigned duty teachers the day before at 15:00 Bucharest time, respecting the saved A/B cycle; managed schedule active, summer/winter time gate enabled.
+- [x] Eleven tests pass; deployed authenticated dry run finds four real recipients for 17.11.2026, rejects unauthorized requests, and skips sends outside 15:00. Physical-device delivery has not been tested.
