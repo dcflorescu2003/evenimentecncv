@@ -16,8 +16,9 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     if (!body || typeof body !== "object" || Array.isArray(body) ||
-      Object.keys(body).some((key) => key !== "dry_run") ||
-      (body.dry_run !== undefined && typeof body.dry_run !== "boolean")) {
+      Object.keys(body).some((key) => key !== "dry_run" && key !== "test_send") ||
+      (body.dry_run !== undefined && typeof body.dry_run !== "boolean") ||
+      (body.test_send !== undefined && typeof body.test_send !== "boolean")) {
       return respond({ error: "Invalid request" }, 400);
     }
     const url = Deno.env.get("SUPABASE_URL");
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
     if (settingsError) throw settingsError;
     const context = reminderContext(new Date(), settings.anchor_monday);
     // Two UTC callbacks cover summer/winter; only the one at 15:00 local sends.
-    if (!context.due && !body.dry_run) return respond({ skipped: true, reason: "Outside reminder time", date: context.date });
+    if (!context.due && !body.dry_run && !body.test_send) return respond({ skipped: true, reason: "Outside reminder time", date: context.date });
     const { data: rows, error: rowsError } = await db.from("duty_schedule")
       .select("week_slot,weekday,shift,teacher_id").eq("week_slot", context.weekSlot).eq("weekday", context.weekday).not("teacher_id", "is", null);
     if (rowsError) throw rowsError;
