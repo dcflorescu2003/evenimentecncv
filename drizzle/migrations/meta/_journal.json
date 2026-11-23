@@ -127,6 +127,13 @@
       "when": 1794638836987,
       "tag": "0017_sync_teacher_classes_from_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795459051076,
+      "tag": "0018_student_timetable_lookup",
+      "breakpoints": true
     }
   ]
 }

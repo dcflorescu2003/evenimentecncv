@@ -349,9 +349,12 @@ export default function SchedulesPage() {
             Selectează o clasă pentru a edita orarul ei. Zilele sunt L-V, până la 12 ore pe zi.
           </p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <Button variant="outline" asChild><Link to="/admin/schedules/lookup">Caută elev / clasă</Link></Button>
         <Button asChild>
           <Link to="/admin/schedules/import"><Upload className="mr-2 h-4 w-4" />Import orare (toate fișierele)</Link>
         </Button>
+        </div>
       </div>
 
       <DutyScheduleSection />

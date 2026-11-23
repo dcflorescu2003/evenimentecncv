@@ -3767,6 +3767,17 @@ export type Database = {
           last_name: string
         }[]
       }
+      search_students_for_timetable: {
+        Args: { _limit?: number; _term: string }
+        Returns: {
+          academic_year: string
+          class_id: string
+          class_name: string
+          first_name: string
+          last_name: string
+          student_id: string
+        }[]
+      }
       self_checkin_club: { Args: { _qr_code_data: string }; Returns: Json }
       self_checkin_volunteer: { Args: { _qr_code_data: string }; Returns: Json }
       set_public_ticket_attendance: {

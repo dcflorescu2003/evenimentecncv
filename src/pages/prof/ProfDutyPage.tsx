@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DutyScheduleSection from "@/components/duty/DutyScheduleSection";
+import ClassTimetableView from "@/components/timetable/ClassTimetableView";
 import TimetableGrid, { DayWeekControls, useDayWeek } from "@/components/timetable/TimetableGrid";
 import LessonCell from "@/components/timetable/LessonCell";
 import { useSchoolTimetable, type TimetablePart } from "@/hooks/useSchoolTimetable";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarRange, DoorOpen, Search, UserRound, Users } from "lucide-react";
+import { CalendarRange, DoorOpen, Search, UserRound, Users, GraduationCap } from "lucide-react";
 import { DAYS, PERIODS } from "@/lib/schedule-periods";
 import { norm } from "@/lib/timetable-import";
 import { defaultDay } from "@/components/timetable/TimetableGrid";
@@ -192,16 +193,16 @@ export default function ProfDutyPage() {
   const view = allowedViews.includes(selectedView) ? selectedView : allowedViews[0];
   const { data, isLoading, error } = useSchoolTimetable();
   const parts = data?.parts ?? [];
-  const titles: Record<View, string> = { mine: "Orarul meu", rooms: "Săli", staff: "Cancelarie" };
+  const titles: Record<View, string> = { mine: "Orarul meu", rooms: "Săli", staff: "Cancelarie", classes: "Clase" };
   if (!view) return <p className="text-sm text-destructive">Nu ai acces la acest orar.</p>;
   return (
     <div className="space-y-4 pb-24">
       <h1 className="font-display text-2xl font-semibold">Orar – {titles[view]}</h1>
-      {isLoading ? <Skeleton className="h-64 w-full" /> : error ? <p className="text-sm text-destructive">Orarul nu a putut fi încărcat.</p>
+      {view === "classes" ? <ClassTimetableView /> : isLoading ? <Skeleton className="h-64 w-full" /> : error ? <p className="text-sm text-destructive">Orarul nu a putut fi încărcat.</p>
         : view === "mine" ? <MineView parts={parts} /> : view === "rooms" ? <RoomsView parts={parts} /> : <StaffView parts={parts} />}
       {allowedViews.length > 1 && <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 backdrop-blur">
-        <div className="mx-auto grid max-w-md grid-cols-3 gap-1 p-2">
-          {([["mine", "Orarul meu", CalendarRange], ["rooms", "Săli", DoorOpen], ["staff", "Cancelarie", Users]] as const).filter(([v]) => allowedViews.includes(v)).map(([v, label, Icon]) => (
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1 p-2">
+          {([["mine", "Orarul meu", CalendarRange], ["rooms", "Săli", DoorOpen], ["staff", "Cancelarie", Users], ["classes", "Clase", GraduationCap]] as const).filter(([v]) => allowedViews.includes(v)).map(([v, label, Icon]) => (
             <Button key={v} variant={view === v ? "default" : "ghost"} className="flex h-auto flex-col gap-0.5 py-2" onClick={() => setView(v)}>
               <Icon className="h-5 w-5" /><span className="text-xs">{label}</span>
             </Button>

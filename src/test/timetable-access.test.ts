@@ -9,8 +9,14 @@ describe("timetable access", () => {
     expect(timetableViewsForRoles(["cse", "teacher"])).toEqual(["rooms"]);
   });
   it("preserves all teacher views", () => {
-    expect(timetableViewsForRoles(["teacher"])).toEqual(["mine", "rooms", "staff"]);
-    expect(timetableViewsForRoles(["homeroom_teacher"])).toEqual(["mine", "rooms", "staff"]);
+    expect(timetableViewsForRoles(["teacher"])).toEqual(["mine", "rooms", "staff", "classes"]);
+    expect(timetableViewsForRoles(["homeroom_teacher"])).toEqual(["mine", "rooms", "staff", "classes"]);
+  });
+  it("allows admin class lookup", () => {
+    expect(timetableViewsForRoles(["admin"])).toEqual(["classes"]);
+  });
+  it("keeps class lookup unavailable to CSE even with an admin role", () => {
+    expect(timetableViewsForRoles(["cse", "admin"])).toEqual(["rooms"]);
   });
   it("does not grant unrelated roles timetable navigation", () => {
     expect(timetableViewsForRoles(["student"])).toEqual([]);

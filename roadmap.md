@@ -22,3 +22,7 @@
 # Duty reminders
 - [x] Notify assigned duty teachers the day before at 15:00 Bucharest time, respecting the saved A/B cycle; managed schedule active, summer/winter time gate enabled.
 - [x] Eleven tests pass; deployed authenticated dry run finds four real recipients for 17.11.2026, rejects unauthorized requests, and skips sends outside 15:00. Physical-device delivery has not been tested.
+
+# Class timetable lookup
+- [x] Add class selection and student name lookup with weekly/day timetable for teachers, homeroom teachers and admin; CSE remains rooms-only.
+- [x] Verify secure search permissions (transactional SQL tests for admin/teacher/homeroom and denials), nine unit tests and authenticated admin desktop/mobile lookup with real student/class schedules; no page errors or mobile overflow.
