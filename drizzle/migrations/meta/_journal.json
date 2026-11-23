@@ -134,6 +134,13 @@
       "when": 1795459051076,
       "tag": "0018_student_timetable_lookup",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795468181696,
+      "tag": "0019_bump_app_versions_1_37",
+      "breakpoints": true
     }
   ]
 }
