@@ -26,8 +26,3 @@
 # Class timetable lookup
 - [x] Add class selection and student name lookup with weekly/day timetable for teachers, homeroom teachers and admin; CSE remains rooms-only.
 - [x] Verify secure search permissions (transactional SQL tests for admin/teacher/homeroom and denials), nine unit tests and authenticated admin desktop/mobile lookup with real student/class schedules; no page errors or mobile overflow.
-
-# Public pseudocode simulator
-- [ ] Build a public Romanian pseudocode editor and interpreter with scalar variables, vectors, input/output, conditions and loops.
-- [ ] Add step-by-step and continuous execution, current-line and changed-variable highlighting, examples and syntax help.
-- [ ] Add focused interpreter tests and verify the complete public flow in desktop and mobile browsers.
